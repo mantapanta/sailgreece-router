@@ -266,9 +266,10 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   Sie ist Planungs- und Besprechungswerkzeug; Navigation läuft über Plotter/GPS, Windy
   bleibt parallel im Einsatz. Ein sichtbarer Hinweis stellt klar, dass die App das
   seemännische Urteil nicht ersetzt.
-- **NFR4 — Datenhaltung:** Bibliotheken liegen in einer zentralen Datenbank (Kandidaten:
-  Vercel-Stack oder Firebase Firestore — Entscheidung in der Architektur-Phase);
-  die App ist voll funktionsfähig ohne manuelle Dateipflege.
+- **NFR4 — Datenhaltung & Stack-Prinzip:** Bibliotheken liegen in **Firebase Firestore
+  (GCP)** — entschieden. Solange nichts anderes zwingend nötig ist, bleibt der Stack
+  **komplett im Google-Universum** (Maps, Geolocation, Firestore, Hosting). Die App ist
+  voll funktionsfähig ohne manuelle Dateipflege.
 - **NFR5 — Verfügbarkeit & Transparenz:** Open-Meteo ist kostenlos für
   nicht-kommerzielle Nutzung (CC BY 4.0 — Attribution in der App), Limit 10.000
   Calls/Tag (ein Wind- und ein Wellen-Abruf je Wegpunkt — weit darunter), kein API-Key, aber auch
@@ -312,8 +313,9 @@ zuletzt bei Nebenansichten.
 
 ## 9. Offene Punkte
 
-- **Datenbank-Wahl** (Vercel-Stack vs. Firebase Firestore): Recherche und Entscheidung in
-  der Architektur-Phase; Philipp richtet die Infrastruktur ein.
+- **Datenbank-Wahl:** Entschieden — **Firebase Firestore auf GCP**, Stack bleibt
+  komplett im Google-Universum, solange nichts anderes zwingend nötig ist (NFR4);
+  Philipp richtet die Infrastruktur ein.
 - **Fotoquellen je Platz:** lizenzsauber bei der Kuration mitrecherchieren (FR6).
 - **Heikell-Beschaffung:** *Greek Waters Pilot* (15. Aufl. 2025, ~£65) als Primärquelle
   der Schutzprofile — Kauf empfohlen (Tech-Recherche), Entscheidung bei Philipp.

@@ -14,14 +14,13 @@ nur als Capability erscheint.
 
 Philipp will explizit **keine handgepflegten JSON-Dateien**, sondern eine echte Datenbank
 und eine voll funktionsfähige App. Er richtet die Infrastruktur selbst ein („kein Stress
-mit einer Datenbank"). Genannte Kandidaten:
+mit einer Datenbank").
 
-- **Vercel-Stack** (z. B. Vercel + Postgres/Neon o. ä.)
-- **Firebase Firestore**
-
-Die saubere Auswahl (Datenmodell-Passung, Free-Tier, Aufwand im 9-Tage-Budget) ist in der
-Architektur-Phase zu recherchieren und zu entscheiden — das PRD schreibt nur die
-Capability fest (persistente, zentrale Bibliotheken statt statischer Dateien).
+**Entschieden (2026-07-30): Firebase Firestore auf GCP.** Stack-Prinzip: komplett im
+Google-Universum bleiben, solange nichts anderes zwingend nötig ist — konsistent mit
+Google Maps (FR1) und Browser-Geolocation (FR27). Natürliche Folge-Defaults für die
+Architektur-Phase: Firebase Hosting fürs statische Frontend, ggf. Firebase Auth, falls
+Zugriffsschutz gewünscht. Der zuvor notierte Kandidat Vercel-Stack ist damit vom Tisch.
 
 Hinweis aus der Tech-Recherche (Kontrast): Der ursprüngliche Vorschlag war „statische
 kuratierte JSON-Dateien im Repo, kein Backend". Diese Empfehlung ist durch die
