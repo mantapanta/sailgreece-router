@@ -49,7 +49,12 @@ Gewünschter Ablauf (vom Product Owner formuliert):
    abweichende Distanzangaben der Quellen — siehe Brief-Addendum), dann läuft die App
    auf der Datenbank.
 
-Startliste: die ~25–35 Plätze des Törn-Korridors aus dem Brief-Addendum
+Umfang (Korrektur 2026-07-30 durch Product Owner): Die ursprüngliche Schätzung
+~25–35 Plätze war zu knapp — bei ~10 Inseln mit je 10–15 Buchten/Häfen sind
+**100–150 Plätze** realistisch. Kuration deshalb insel-orientiert und iterativ:
+je Insel die besten Plätze zuerst, Aufwandsschätzung 1–2 Tage gilt pro
+Priorisierungswelle, nicht für die Vollabdeckung. Startliste: die Plätze des
+Törn-Korridors aus dem Brief-Addendum
 (`_bmad-output/planning-artifacts/briefs/brief-sailgreece-router-2026-07-30/addendum.md`
 — Hafen-Kernliste + Zielkatalog mit Koordinaten, Distanzmatrizen, Engpass- und
 Schutzhinweise). Aufwandsschätzung Recherche laut

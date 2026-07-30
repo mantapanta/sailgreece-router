@@ -28,7 +28,10 @@ es aber nicht, und die App setzt auch keinen voraus: Der Mittelfristplan muss je
 neu aus den noch offenen Optionen abgeleitet werden. Genau diese Arbeit —
 **die tägliche Übersetzung von Vorhersage in Entscheidung — passiert heute komplett im
 Kopf des Skippers**: Distanzen × Geschwindigkeit × Windwinkel × Restzeit, morgens und
-abends neu. An Tag 6, wenn der Skipper müde ist, ist genau diese Kaskade fehleranfällig.
+abends neu. Diese Kaskade ist von Tag 1 an anspruchsvoll — schon die erste Frage
+(„Fahren wir direkt nach Hydra oder lassen wir es weg?") hängt an ihr — und sie muss
+über zwölf Tage exakt geplant und mit jedem Forecast-Lauf konsistent aktualisiert
+werden. Im Kopf ist das fehleranfällig.
 
 **Marktlücke (Landschafts-Recherche 2026-07-30):** Kein existierendes Tool kombiniert
 Etappen-Scoring, Ankerplatz-Schutzampel und Umkehrpunkt-Logik. Navily bewertet
@@ -48,8 +51,8 @@ Erfolgskriterien:
   Morgen-/Abendentscheidung genutzt und ersetzt das Kopfrechnen. `[ANNAHME]` aus dem
   Brief übernommen.
 - **E2 — Rechtzeitig fertig:** Nutzbares Tool zum Törnstart am 8. August (9 Tage
-  Entwicklungszeit). Kernfunktionen bereits am 3.–5. August verfügbar, weil dann der
-  Routing-Vorentscheid vor dem Törn ansteht (bestätigt).
+  Entwicklungszeit). Erste reale Nutzung ist die Morgenentscheidung am Samstag —
+  einen separaten Routing-Vorentscheid Tage vorher gibt es nicht.
 - **E3 — Vertrauenswürdige Daten:** Alle Schutzprofile und Routen stammen aus
   verlässlichen Quellen (Heikell, CruisersWiki u. a.), nichts ist erfunden; Philipp hat
   die Daten einmal reviewt.
@@ -64,8 +67,9 @@ Erfolgskriterien:
 
 ## 3. Nutzer & Nutzungsmomente
 
-Einziger Nutzer im MVP ist **Philipp als Skipper** — am PC, mit Internetverbindung, die
-Karte als Besprechungsbild im Gespräch mit der Crew.
+Einziger Nutzer im MVP ist **Philipp als Skipper** — am PC und am Handy (Web-App im
+Browser), mit Internetverbindung, die Karte als Besprechungsbild im Gespräch mit der
+Crew.
 
 - **UM-1 Morgenentscheidung (täglich, ~10 min):** Philipp öffnet die App im Hafen/vor
   Anker — allein oder mit der Crew als Besprechungsbild. Die aktuelle Position kommt
@@ -76,10 +80,6 @@ Karte als Besprechungsbild im Gespräch mit der Crew.
 - **UM-2 Abendcheck (täglich, ~5 min):** Nach dem neuen Forecast-Lauf prüft Philipp, ob
   das Morgen noch auf einem gültigen Mittelfristplan liegt — bestätigt die App den Kurs,
   ist der Abend frei; kippt eine Option, sieht er es hier zuerst.
-- **UM-3 Routing-Vorentscheid (3.–5. August, vor dem Törn):** Ist die Süd-Route
-  (Richtung Naxos und weiter) offen, oder deckelt der Meltemi das Zielbild früher?
-  (Modell-Konsens prüft Philipp parallel in Windy.) Erste reale Bewährungsprobe des
-  Scorings — die App ist hierfür bereits nutzbar (bestätigt, siehe E2).
 
 ## 4. Kernkonzept: Planung auf drei Ebenen
 
@@ -92,12 +92,18 @@ Der Kernsatz des Produkts: **Das Heute muss auf einem sinnvollen Mittelfristplan
    täglich neu aus dem **Möglichkeitsraum** der Best-Practice-Routen.
 3. **Täglich** — die Morgen-/Abendentscheidung: „Was machen wir heute?"
 
-Ziele sind **Plätze, keine Inseln**: Eine geschützte Traumbucht schlägt das Anlaufen
-einer bestimmten Insel. Abgewogen werden ausschließlich Entfernungen, Wind und Welle
-(Richtung und Stärke), Segeldauer pro Etappe sowie Mittelfrist- und Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
+**Tagesziele sind Inseln — Plätze werden dort gewählt.** So denkt der Segler, und so
+routet die App: Man entscheidet „Wir fahren heute nach Sifnos", und dort stellt sich
+die zweite Frage — welche Buchten und Häfen hat die Insel, und welcher davon ist heute
+Nacht der beste (Schutzampel, Qualitäten)? Die geschützte Traumbucht bleibt das
+Sehnsuchtsziel, gefunden wird sie zweistufig: **erst Insel (Routing), dann Platz
+(Ampel).** Abgewogen werden ausschließlich Entfernungen, Wind und Welle (Richtung und
+Stärke), Segeldauer pro Etappe sowie Mittelfrist- und Tagesplan. Der Skipper
+entscheidet, die App rechnet und vergleicht.
 
-**Begriffe** (durchgängig so verwendet): **Platz** = Bucht, Ankerplatz oder Hafen mit
-Qualitäten und Schutzprofil · **Etappe** = Schlag von Platz zu Platz ·
+**Begriffe** (durchgängig so verwendet): **Tagesziel** = Insel; dort wird der beste
+Platz gewählt · **Platz** = Bucht, Ankerplatz oder Hafen mit Qualitäten und
+Schutzprofil · **Etappe** = Schlag von Insel zu Insel (konkret: von Platz zu Platz) ·
 **Routen-Option** = kuratierte Etappenfolge aus der Routenbibliothek ·
 **Möglichkeitsraum** (synonym: Optionsraum) = Menge aller Routen-Optionen ·
 **Mittelfristplan** = die aktuell verfolgte Routen-Option über 3–5 Tage ·
@@ -123,9 +129,12 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 ### F2 — Platzbibliothek
 
-- **FR6:** Datenbankgestützte Bibliothek der ~25–35 Plätze des Törn-Korridors:
-  Koordinaten, Typ (Hafen/Bucht/Marina), Qualitäten (Schönheit, Restaurant, Badestrand),
-  Foto `[ANNAHME: Fotoquelle wird bei der Kuration lizenzsauber mitrecherchiert]`.
+- **FR6:** Datenbankgestützte Bibliothek der Plätze des Törn-Korridors, **organisiert
+  je Insel**. Größenordnung offen: bei ~10 Inseln mit je 10–15 Buchten/Häfen können es
+  **100–150 Plätze** werden — die Kuration priorisiert je Insel die besten Plätze und
+  wächst iterativ; jeder importierte Platz vollständig (NFR6). Je Platz: Koordinaten,
+  Typ (Hafen/Bucht/Marina), Qualitäten (Schönheit, Restaurant, Badestrand), Foto
+  `[ANNAHME: Fotoquelle wird bei der Kuration lizenzsauber mitrecherchiert]`.
   Bewusst schlank: keine Auslastungs-, Engpass- oder Logistik-Attribute (siehe §7).
 - **FR7:** Schutzprofil je Platz: geschützte Wind- und Wellenrichtungssektoren mit
   Stärkegrenzen, quellenbasiert kuratiert (Heikell, CruisersWiki), ergänzt um die
@@ -136,8 +145,9 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 ### F3 — Routenbibliothek
 
-- **FR9:** Kuratierte Best-Practice-Routen als Möglichkeitsraum: Etappenfolgen über
-  Plätze der Bibliothek mit Distanzen (sm) — keine frei erfundenen Routen. Deckt
+- **FR9:** Kuratierte Best-Practice-Routen als Möglichkeitsraum: Etappenfolgen **von
+  Insel zu Insel** mit Distanzen (sm) — je Insel verweist die Bibliothek auf ihre
+  kuratierten Plätze (FR6); keine frei erfundenen Routen. Deckt
   mindestens ab: die Süd-Route bis Naxos mit Verlängerungsoptionen Amorgos/Santorin,
   eine gedeckelte Variante bis Paros/Antiparos, die Rückfallhäfen-Kette westwärts und
   die Saronische Schwachwind-Alternative. Diese Varianten sind als **Eskalationsstufen**
@@ -223,9 +233,10 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 ### F7 — Tagesentscheidung
 
-- **FR21:** Morgen-/Abendansicht „Was machen wir heute?": die 2–3 Tagesoptionen mit
-  Ziel-Ampel (Nachtschutz), Etappen-Score, Dauer und der Auswirkung auf den
-  Mittelfristplan — nebeneinander vergleichbar.
+- **FR21:** Morgen-/Abendansicht „Was machen wir heute?": die 2–3 Tagesoptionen
+  (**Ziel-Inseln**, je mit ihrem besten Platz und dessen Ziel-Ampel für die Nacht),
+  Etappen-Score, Dauer und der Auswirkung auf den Mittelfristplan — nebeneinander
+  vergleichbar.
 - **FR22:** Die App empfiehlt nicht automatisch und blendet nichts aus: Optionen bleiben
   sichtbar, der Skipper entscheidet.
 
@@ -260,8 +271,9 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   gekoppelt), zurückhaltende Palette (Creme/Marine, Farbe aus Fotos und Ampeln), viel
   Weißraum. Keine Marketing-App; Design ist persönlicher Qualitätsmaßstab des Nutzers.
   Pattern-Extrakt fürs UX-Design: siehe `addendum.md`.
-- **NFR2 — Plattform:** Web-App am PC, Internetverbindung vorausgesetzt. Keine
-  Offline-Fähigkeit, keine Mobile-Optimierung im MVP.
+- **NFR2 — Plattform:** Web-App im Browser — **am PC und am Handy** (responsive;
+  Sticky-Split-Layout am PC, gestapelt am Handy). Internetverbindung vorausgesetzt;
+  keine native App, keine Offline-Fähigkeit im MVP.
 - **NFR3 — Abgrenzung Navigation:** Die App navigiert nicht und zeigt keine Seekarte.
   Sie ist Planungs- und Besprechungswerkzeug; Navigation läuft über Plotter/GPS, Windy
   bleibt parallel im Einsatz. Ein sichtbarer Hinweis stellt klar, dass die App das
@@ -284,7 +296,7 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 - Freies Routen-Bauen auf der Karte (Langfrist-Produkt, nach dem Feldtest)
 - Navigation und Seekartendarstellung
 - Stimmungs-/Crew-Zustand als Eingabegröße
-- Offline-Fähigkeit und Mobile-Optimierung
+- Offline-Fähigkeit; native Mobile-Apps (mobil läuft die Web-App im Browser, NFR2)
 - Revierübergreifende Platz-Datenbank (MVP kuratiert nur den Törn-Korridor)
 - Editier-Oberfläche für die Bibliotheken (Daten kommen über die Seeding-Pipeline;
   Korrekturen im Feld via direkter DB-Änderung)
@@ -303,9 +315,8 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 | Termin | Meilenstein |
 |---|---|
-| 3.–5. Aug | App nutzbar für Routing-Vorentscheid: Forecast + Scoring + Optionsraum (bestätigt); Vorbedingung: Polar-Transkript gegen Original verifiziert |
-| 7. Aug | Bibliotheken final reviewt und importiert; Karte + Tagesansicht komplett |
-| 8. Aug | Törnstart — Tool im täglichen Einsatz |
+| 7. Aug | Feature-komplett: Bibliotheken final reviewt und importiert; Karte + Tagesansicht fertig; Polar-Transkript gegen Original verifiziert |
+| 8. Aug | Törnstart — erste reale Morgenentscheidung am Samstagmorgen, danach täglicher Einsatz |
 
 **Priorität bei Zeitnot** `[ANNAHME]` aus dem Brief: Etappen-Scoring und Point of Return
 vor Karten-Politur; Design-Anspruch (NFR1) wird zuerst bei der Tagesansicht eingelöst,
