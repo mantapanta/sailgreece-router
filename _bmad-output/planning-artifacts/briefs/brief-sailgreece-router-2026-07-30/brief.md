@@ -18,12 +18,14 @@ Die Planung dafür existiert bereits — als exzellentes PDF mit Entscheidungsto
 Törnplanung findet auf drei Ebenen statt, die die App als ein zusammenhängendes Modell abbildet:
 
 1. **Langfristig** — das Zielbild: „Wir verfolgen den Santorin-Plan, weil der Wind sich in 3–4 Tagen passend entwickeln könnte."
-2. **Mittelfristig** — die 3–5-Tage-Route: welcher Ast des Entscheidungsbaums aktuell gefahren wird.
+2. **Mittelfristig** — die 3–5-Tage-Route: welche der noch offenen Routen-Optionen aktuell verfolgt wird.
 3. **Täglich** — die Morgen-/Abendentscheidung: „Was machen wir heute?"
 
 Der Kernsatz des Produkts: **Das Heute muss auf einem sinnvollen Mittelfristplan liegen.** Entwickelt sich der Wind wie erhofft, bestätigt die App den Kurs. Entwickelt er sich anders, kippt der Mittelfristplan — und die App zeigt, welche Alternativen noch offen sind und was das neue Heute ist. Optionen bleiben dabei immer sichtbar: Der Skipper entscheidet, die App rechnet und vergleicht.
 
 Die Ziele selbst sind dabei keine Inseln, sondern **Plätze**: Buchten und Häfen mit ihren Qualitäten (Schönheit, Restaurant, Badestrand) und ihrem Nachtschutz gegen Wind *und* Welle bei der vorhergesagten Windrichtung. Ein Tagesziel ist gut, wenn es ein schöner, für die Nacht geschützter Platz ist, der auf einem tragfähigen Mittelfristplan liegt — nicht, weil es eine bestimmte Insel ist.
+
+Der Mittelfristplan ist dabei nichts fest Verdrahtetes: Er entsteht jeden Tag neu aus dem **Möglichkeitsraum** der Best-Practice-Routen und der Frage, welche Optionen von der aktuellen Position aus — bei diesem Forecast und dieser Restzeit — überhaupt noch offen sind.
 
 Abgewogen werden ausschließlich: **Entfernungen, Wind und Welle (Richtung und Stärke je Wettermodell), Segeldauer pro Etappe sowie Mittelfrist- und Tagesplan.**
 
@@ -32,10 +34,10 @@ Abgewogen werden ausschließlich: **Entfernungen, Wind und Welle (Richtung und S
 Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer Seekarte als zentraler Oberfläche:
 
 - **Seekarte mit Wind-Overlay:** Häfen, Buchten und Routen des Reviers (Saronischer Golf, Westkykladen bis Amorgos/Santorin) auf einer Karte; Windvorhersage mehrerer Modelle (ECMWF/GFS/ICON) als Overlay oder Abfrage — via Windy (Widget oder API) `[ANNAHME: Integrationsform offen, siehe Offene Punkte]`.
-- **Best-Practice-Routenbibliothek:** eine kleine, kuratierte Bibliothek etablierter Routen aus verlässlichen Quellen (Sailing-Blogs, Charter-Websites, Standardliteratur wie Rod Heikell) — keine frei erfundenen Routen. Für den Törn vorkonfiguriert: Plan A (Kea–Kythnos–Serifos–Sifnos–Paros–Naxos), Plan B (südlichster Punkt: Paros), Optionen Süd (Santorin) und Ost (Amorgos) samt Rückfallhafen-Kette. Einzelne Etappen sind manuell tauschbar.
+- **Best-Practice-Routenbibliothek:** eine kleine, kuratierte Bibliothek etablierter Routen aus verlässlichen Quellen (Sailing-Blogs, Charter-Websites, Standardliteratur wie Rod Heikell) — keine frei erfundenen Routen. Die Bibliothek ist der **Möglichkeitsraum**, aus dem die App Optionen ableitet — kein fest verdrahteter Törnplan.
 - **Best-Practice-Platzbibliothek:** dieselbe Kuratierung für Buchten, Ankerplätze und Häfen — jeder Platz mit seinen Qualitäten (Schönheit, Restaurant, Badestrand) und einem **Schutzprofil**: bei welcher Wind- und Wellenrichtung/-stärke liegt man dort nachts geschützt. Die Tagesplanung mappt den Wind- und Wellen-Forecast auf dieses Profil und zeigt, welche Zielorte entlang der Route **grün** sind.
-- **Etappen-Scoring mit Ampellogik:** Jede Etappe jedes Routen-Asts wird gegen die Vorhersage zum geplanten Zeitfenster bewertet — Windwinkel zum Kurs, Windstärke, Dauer bei Planungsgeschwindigkeit (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan). Die Familien-Schwellen sind explizit: **kein Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden Segeln pro Tag; bei Leichtwind sind 10–12-Stunden-Schläge oder Nachtetappen zulässig, wenn sie strategisch helfen.**
-- **Mittelfrist-Check:** Die App zeigt pro Routen-Ast, ob er unter der aktuellen Vorhersage noch trägt — inklusive der Rückweg-Rechnung bis Alimos (~103 sm ab Naxos) mit Puffertag.
+- **Etappen-Scoring mit Ampellogik:** Jede Etappe jeder noch offenen Routen-Option wird gegen die Vorhersage zum geplanten Zeitfenster bewertet — Windwinkel zum Kurs, Windstärke, Dauer bei Planungsgeschwindigkeit (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan). Die Familien-Schwellen sind explizit: **kein Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden Segeln pro Tag; bei Leichtwind sind 10–12-Stunden-Schläge oder Nachtetappen zulässig, wenn sie strategisch helfen.**
+- **Predicted Point of Return:** die Kernmechanik der Mittelfristebene. Aus aktueller Position, Törntag und Forecast berechnet die App fortlaufend den spätesten Umkehrpunkt für die rechtzeitige, stressfreie Rückkehr nach Alimos (~103 sm ab Naxos, Rückkehr am Vorabend der Ausschiffung, mit Puffertag). Daraus ergibt sich täglich: Welche Routen-Optionen (z. B. weiter nach Amorgos oder Santorin) sind noch offen, welche haben sich geschlossen — bevor sie sich schließen.
 
 ## Außerhalb des Scopes (bewusst)
 
