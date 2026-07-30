@@ -21,11 +21,13 @@ Amorgos oder Santorin), ohne der Familie brutales Aufkreuzen bei über 30 Knoten
 Kritisch ist der Rückweg gegen den Meltemi — Faustregel des Reviers: zwei Drittel der Zeit
 für den Rückweg.
 
-Die Planung existiert als exzellentes PDF (Etappenpläne, Entscheidungstore,
-Eskalationsleiter), Windvorhersagen liefert Windy. Was fehlt, ist das Bindeglied:
-**Die tägliche Übersetzung von Vorhersage in Entscheidung passiert heute komplett im Kopf
-des Skippers** — Distanzen × Geschwindigkeit × Windwinkel × Restzeit, morgens und abends
-neu. An Tag 6, wenn der Skipper müde ist, ist genau diese Kaskade fehleranfällig.
+Das Wissen dafür ist verfügbar — Revierliteratur, Best-Practice-Routen,
+Multi-Modell-Windvorhersagen. Einen fertigen Törnplan, den man nur abfahren könnte, gibt
+es aber nicht, und die App setzt auch keinen voraus: Der Mittelfristplan muss jeden Tag
+neu aus den noch offenen Optionen abgeleitet werden. Genau diese Arbeit —
+**die tägliche Übersetzung von Vorhersage in Entscheidung — passiert heute komplett im
+Kopf des Skippers**: Distanzen × Geschwindigkeit × Windwinkel × Restzeit, morgens und
+abends neu. An Tag 6, wenn der Skipper müde ist, ist genau diese Kaskade fehleranfällig.
 
 **Marktlücke (Landschafts-Recherche 2026-07-30):** Kein existierendes Tool kombiniert
 Etappen-Scoring, Ankerplatz-Schutzampel und Umkehrpunkt-Logik. Navily bewertet
@@ -46,7 +48,7 @@ Erfolgskriterien:
   Brief übernommen.
 - **E2 — Rechtzeitig fertig:** Nutzbares Tool zum Törnstart am 8. August (9 Tage
   Entwicklungszeit). Wünschenswert: Kernfunktionen bereits am 3.–5. August verfügbar,
-  weil dann der Routing-Vorentscheid (Gate T−5 bis T−3) ansteht. `[ANNAHME]`
+  weil dann der Routing-Vorentscheid vor dem Törn ansteht. `[ANNAHME]`
 - **E3 — Vertrauenswürdige Daten:** Alle Schutzprofile und Routen stammen aus
   verlässlichen Quellen (Heikell, CruisersWiki u. a.), nichts ist erfunden; Philipp hat
   die Daten einmal reviewt.
@@ -72,9 +74,10 @@ Karte als Besprechungsbild im Gespräch mit der Crew.
 - **UM-2 Abendcheck (täglich, ~5 min):** Nach dem neuen Forecast-Lauf prüft Philipp, ob
   das Morgen noch auf einem gültigen Mittelfristplan liegt — bestätigt die App den Kurs,
   ist der Abend frei; kippt eine Option, sieht er es hier zuerst.
-- **UM-3 Routing-Vorentscheid (3.–5. August, vor dem Törn):** Modelle einig? Plan A
-  (Richtung Naxos+) offen oder Plan B (Deckel Paros) enger? Erste reale Bewährungsprobe
-  des Scorings. `[ANNAHME]`, dass die App hierfür schon nutzbar ist — siehe E2.
+- **UM-3 Routing-Vorentscheid (3.–5. August, vor dem Törn):** Laufen die Modelle
+  zusammen? Ist die Süd-Route (Richtung Naxos und weiter) offen, oder deckelt der
+  Meltemi das Zielbild früher? Erste reale Bewährungsprobe des Scorings. `[ANNAHME]`,
+  dass die App hierfür schon nutzbar ist — siehe E2.
 
 ## 4. Kernkonzept: Planung auf drei Ebenen
 
@@ -123,8 +126,9 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 
 - **FR9:** Kuratierte Best-Practice-Routen als Möglichkeitsraum: Etappenfolgen über
   Plätze der Bibliothek mit Distanzen (sm) — keine frei erfundenen Routen. Deckt
-  mindestens ab: Plan A (bis Naxos, Optionen Amorgos/Santorin), Plan B (Deckel
-  Paros/Antiparos), Rückfallhäfen-Kette, Saronische Schwachwind-Alternative.
+  mindestens ab: die Süd-Route bis Naxos mit Verlängerungsoptionen Amorgos/Santorin,
+  eine gedeckelte Variante bis Paros/Antiparos, die Rückfallhäfen-Kette westwärts und
+  die Saronische Schwachwind-Alternative.
 - **FR10:** Etappen tragen statische Warn-Attribute für bekannte Düsen-/Beschleunigungszonen
   (Kea-Kanal, Kafireas, Paros–Antiparos, Paros–Naxos), unabhängig vom Modellwert.
 
@@ -162,9 +166,11 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
   Umkehrpunkts für die stressfreie Rückkehr nach Alimos (~103 sm ab Naxos, Rückkehr am
   Vorabend der Ausschiffung, mit Puffertag) — Restdistanz über die Rückfallhäfen-Kette
   vs. Resttage × Tagesbudget.
-- **FR20:** Die Entscheidungstore des Törnplans (Tag 3, Tag 5/6 Hard Gate, Tag 8,
-  Tag 10) erscheinen als Prüfpunkte mit ihrer jeweiligen Frage („Doppel-Fenster für
-  Rückweg + Bonus?").
+- **FR20:** Aus Optionsraum und Point of Return leitet die App **Entscheidungspunkte**
+  ab und macht sie sichtbar: an welchem Tag welche Frage entschieden sein muss, bevor
+  die zugehörige Option verfällt (z. B. „Verlängerung nach Amorgos nur bei
+  Doppel-Fenster für Hin- und Rückweg") — dynamisch berechnet, keine fest verdrahteten
+  Kalender-Gates.
 
 ### F7 — Tagesentscheidung
 
