@@ -254,7 +254,9 @@ zuletzt bei Nebenansichten.
 - **Fotoquellen je Platz:** lizenzsauber bei der Kuration mitrecherchieren (FR6).
 - **Heikell-Beschaffung:** *Greek Waters Pilot* (15. Aufl. 2025, ~£65) als Primärquelle
   der Schutzprofile — Kauf empfohlen (Tech-Recherche), Entscheidung bei Philipp.
-- **Vlychada/Santorin:** Quelle 1 nennt es grenzwertig für 50-ft-Kat, Quelle 2 rät vom
-  Anlauf per Schiff generell ab — wie die Santorin-Option in der Routenbibliothek
-  abgebildet wird (Fähren-Tagesausflug ab Paros/Naxos statt eigenem Anlauf?), klärt die
-  Kuration.
+- **Vlychada/Santorin:** Entschieden — Santorin bleibt als eigener Schlag in der
+  Routenbibliothek (alles mit dem Boot, kein Fähren-Ausflug). Offen bleibt die
+  Liegeplatz-Frage: Vlychada ist die einzige gut geschützte Liegestelle Thiras, für den
+  50-ft-Kat aber grenzwertig (formal max. ~15 m Länge / ~2,5 m Tiefe) — die Kuration
+  hinterlegt das als Warn-Attribut am Platz; **telefonische Vorabklärung vor dem Törn**
+  nötig, sonst gilt die Santorin-Option nur bei bestätigtem Liegeplatz als offen.
