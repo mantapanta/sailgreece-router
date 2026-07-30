@@ -1,0 +1,27 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "hydra",
+    "name": "Hydra",
+    "coordinates": { "lat": 37.35, "lon": 23.47 },
+    "description": "Autofrei, steinern, mondän — der schönste Hafen des Golfs, aber eng und voll."
+  },
+  "places": [
+    {
+      "id": "hydra-hafen",
+      "islandId": "hydra",
+      "name": "Hydra-Hafen",
+      "type": "hafen",
+      "coordinates": { "lat": 37.3494, "lon": 23.4661 },
+      "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 1 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 330, "maxKn": 20 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 330, "maxM": 0.5 }],
+        "sourceNote": "Quelle 2: Zielkatalog; enges Hafenbecken öffnet nach N — Schwell und Gedränge"
+      },
+      "warnings": ["Sehr enges Hafenbecken, im August früh voll — Schwell bei Nordlagen"],
+      "description": "Amphitheater aus Stein um ein winziges Becken — ankommen heißt hier früh ankommen."
+    }
+  ]
+}

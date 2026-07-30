@@ -1,0 +1,33 @@
+{
+  "approved": false,
+  "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme)",
+  "parameters": {
+    "polarOffsetKn": 0.5,
+    "motorSpeedKn": 8,
+    "fallbackSpeeds": { "sailKn": 6.0, "motorKn": 7.5, "upwindKn": 6.5 },
+    "minSailSpeedKn": 3.5,
+    "upwindTwaDeg": 55,
+    "beatTwaDeg": 50,
+    "maxUpwindTwsKn": 25,
+    "gelbReserveKn": 3,
+    "targetDayHours": 6,
+    "targetMotorHours": 1,
+    "maxSailHours": 6,
+    "maxMotorHours": 2,
+    "lightWindMaxTwsKn": 6,
+    "lightWindMaxHours": 12,
+    "openSectorMaxKn": 10,
+    "openSectorMaxWaveM": 0.5,
+    "departureHourAthens": 9,
+    "nightStartHourAthens": 18,
+    "nightEndHourAthens": 9,
+    "tripStartDate": "2026-08-08",
+    "tripLengthDays": 12,
+    "returnByEveOfDay": 12,
+    "bufferDays": 1,
+    "baseIslandId": "athen",
+    "basePlaceId": "athen-alimos",
+    "forecastModel": "ecmwf_ifs025",
+    "forecastDays": 10
+  }
+}

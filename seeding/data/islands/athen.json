@@ -1,0 +1,26 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Basen); Koordinaten approximiert — vor Freigabe prüfen",
+  "island": {
+    "id": "athen",
+    "name": "Athen (Basis)",
+    "coordinates": { "lat": 37.91, "lon": 23.7 },
+    "description": "Start und Ziel des Törns: Marina Alimos, Charterbasis an der Athener Riviera."
+  },
+  "places": [
+    {
+      "id": "athen-alimos",
+      "islandId": "athen",
+      "name": "Marina Alimos",
+      "type": "marina",
+      "coordinates": { "lat": 37.9103, "lon": 23.7008 },
+      "qualities": { "schoenheit": 2, "restaurant": 4, "badestrand": 1 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 0, "toDeg": 360, "maxKn": 40 }],
+        "waveSectors": [{ "fromDeg": 0, "toDeg": 360, "maxM": 1.5 }],
+        "sourceNote": "Brief-Addendum: Charterbasis, voll ausgebaute Marina — allseitiger Schutz"
+      },
+      "description": "Die Charterbasis: groß, funktional, gut angebunden — Übergabe und Rückgabe."
+    }
+  ]
+}

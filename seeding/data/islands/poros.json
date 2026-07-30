@@ -1,0 +1,26 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "poros",
+    "name": "Poros",
+    "coordinates": { "lat": 37.5, "lon": 23.45 },
+    "description": "Der Kanal zwischen Insel und Peloponnes — geschützt wie ein Binnensee."
+  },
+  "places": [
+    {
+      "id": "poros-stadt",
+      "islandId": "poros",
+      "name": "Poros-Stadt",
+      "type": "hafen",
+      "coordinates": { "lat": 37.4997, "lon": 23.4547 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 0, "toDeg": 360, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 0, "toDeg": 360, "maxM": 0.6 }],
+        "sourceNote": "Quelle 2: Zielkatalog; Kanallage — praktisch allseitiger Schutz"
+      },
+      "description": "Längsseits an der Stadtpromenade, Segler-Klassiker des Saronischen Golfs."
+    }
+  ]
+}

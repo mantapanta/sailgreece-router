@@ -1,0 +1,26 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "aegina",
+    "name": "Ägina",
+    "coordinates": { "lat": 37.75, "lon": 23.43 },
+    "description": "Pistazien, Antikes und kurze Wege — der sanfte Auftakt der Saronischen Alternative."
+  },
+  "places": [
+    {
+      "id": "aegina-stadt",
+      "islandId": "aegina",
+      "name": "Ägina-Stadt",
+      "type": "hafen",
+      "coordinates": { "lat": 37.7469, "lon": 23.4264 },
+      "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 350, "toDeg": 250, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 350, "toDeg": 250, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: Saronischer Golf 4-6 Bft, deutlich milder; Hafen öffnet nach W"
+      },
+      "description": "Lebendiger Inselhauptort eine Handbreit vor Athen — Fährschwell gehört dazu."
+    }
+  ]
+}

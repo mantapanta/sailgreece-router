@@ -1,0 +1,40 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Zielkatalog, Vourkari 37°40'N 24°19.5'E 'sehr gut geschützt'); Schutzsektoren aus Beschreibung abgeleitet — vor Freigabe gegen Heikell/CruisersWiki prüfen",
+  "island": {
+    "id": "kea",
+    "name": "Kea",
+    "coordinates": { "lat": 37.62, "lon": 24.33 },
+    "description": "Erste Kykladeninsel hinter dem Kea-Kanal — grüner und stiller als ihre Nachbarn."
+  },
+  "places": [
+    {
+      "id": "kea-vourkari",
+      "islandId": "kea",
+      "name": "Vourkari",
+      "type": "hafen",
+      "coordinates": { "lat": 37.6667, "lon": 24.325 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 250, "toDeg": 190, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 250, "toDeg": 190, "maxM": 1.2 }],
+        "sourceNote": "Quelle 2: 'sehr gut geschützt'; Bucht öffnet nach SW"
+      },
+      "description": "Tavernen direkt an der Pier, tief in der Bucht von Agios Nikolaos — der klassische erste Stopp."
+    },
+    {
+      "id": "kea-korissia",
+      "islandId": "kea",
+      "name": "Korissia",
+      "type": "hafen",
+      "coordinates": { "lat": 37.6617, "lon": 24.3147 },
+      "qualities": { "schoenheit": 3, "restaurant": 3, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 70, "toDeg": 290, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 70, "toDeg": 290, "maxM": 1.0 }],
+        "sourceNote": "Quelle 1: Rückfallhafen-Kette; Hafenbucht öffnet nach N/NW — Schwell bei Nordlagen"
+      },
+      "description": "Fähranleger und Rückfallhafen — solide, wenn Vourkari voll ist."
+    }
+  ]
+}

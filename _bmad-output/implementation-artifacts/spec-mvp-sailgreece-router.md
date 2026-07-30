@@ -67,22 +67,22 @@ Spines (`src/domain|adapters|ui|app`, `seeding/`, `firebase.json`, `firestore.ru
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `package.json`, `vite.config.ts`, `tsconfig.json`, `vitest.config.ts`, `.env.example`, `index.html` -- Scaffold Vite 8 + React 19 + TS 5.9, Deps exakt aus Spine-Stack -- Fundament
-- [ ] `firebase.json`, `firestore.rules` -- Hosting → `dist/`; Rules `read: true, write: false` -- AD-5/AD-8
-- [ ] `src/domain/schema/*.ts` -- Zod-Schemas: Island, Place (+photoUrl), ShelterProfile/Sector (normativ, AD-4), Route/Leg (escalationRank, Wegpunkte), Polar, Params, Ampel-Typ, PlanningSnapshot/Assessment -- einzige Datenform-Quelle
-- [ ] `src/domain/polar.ts` -- Interpolation f(TWA,TWS), +Offset (einziger Ort), Motor-Param, Fallback-Pauschalen -- FR26/AD-10
-- [ ] `src/domain/time.ts` -- nightWindow/legWindow (Athens) → UTC-Indizes -- AD-9
-- [ ] `src/domain/scoring.ts` -- Etappen-Score: Windwinkel, FR16-Budgets (Ziel/Max), Ampelbänder -- FR15–17
-- [ ] `src/domain/ampel.ts` -- Platz-Ampel (platz, nachtN, snapshot): Sektor-Match inkl. Wrap, Lee/Luv-Laufzeitregel, Welle -- FR8/AD-6
-- [ ] `src/domain/options.ts`, `src/domain/ppr.ts` -- Restplan-Machbarkeit (gemeinsame Dauerfunktion), Optionszustände offen/schließt/zu, PPR, Entscheidungspunkte, bestPlace je Insel -- FR18–20
-- [ ] `src/domain/__tests__/*.test.ts` -- Vitest-Fixtures: Sektorsemantik-Referenzfälle, 25-kn-Regel, Budgets, Polar-Interpolation+Offset, Zeitfenster -- AD-2 Pflicht
-- [ ] `src/adapters/openMeteo.ts` -- Snapshot-Builder: eine Query-Familie, normative Ortsmenge, Stundenachse UTC, `null` jenseits Horizont, Modelllauf-Metadaten -- AD-3
-- [ ] `src/adapters/firestore.ts` -- Read-only-Reader mit tolerantem Zod-Parse; `VITE_DATA_SOURCE=local` liest Staging-JSON (Dev ohne Firebase-Projekt, gleiches Schema) -- AD-4/AD-5
-- [ ] `src/adapters/geolocation.ts` -- Browser-Geolocation → Position {source:'gps'} -- FR27
-- [ ] `src/app/*` -- QueryClient (staleTime 1h), TripContext-Reducer (+localStorage, manual>gps), View-Switch-State -- AD-7/AD-11
-- [ ] `src/ui/*` -- Tagesansicht (Y.CO-Tageskarten, Optionen nebeneinander, kein Empfehlungsfeld), Karte (@vis.gl, Ampel-Marker, kopierte Polyline-Komponente + Symbol-`repeat` gestrichelt, Windpfeile, Hover-Sync), Platz-Detail; Pflicht-Hinweise; responsive (Split→gestapelt); Vanilla CSS Custom Properties, Creme/Navy -- F1/F7/NFR1–3
-- [ ] `seeding/` -- Staging-JSON-Struktur je Insel (approved-Flag), Beispieldaten aus Brief-Addendum mit Quellenvermerk, Review-Generator (Markdown → `seeding/review/`), Import-Skript (firebase-admin, strikte Validierung, approved-Gate, Alimos-Rebasing-Feld) -- F8/AD-10
-- [ ] `README.md` -- Setup: Firebase-Projekt anlegen, Keys/`VITE_`-Vars, Seeding-Ablauf, Deploy -- Übergabe an Philipp
+- [x] `package.json`, `vite.config.ts`, `tsconfig.json`, `vitest.config.ts`, `.env.example`, `index.html` -- Scaffold Vite 8 + React 19 + TS 5.9, Deps exakt aus Spine-Stack -- Fundament
+- [x] `firebase.json`, `firestore.rules` -- Hosting → `dist/`; Rules `read: true, write: false` -- AD-5/AD-8
+- [x] `src/domain/schema/*.ts` -- Zod-Schemas: Island, Place (+photoUrl), ShelterProfile/Sector (normativ, AD-4), Route/Leg (escalationRank, Wegpunkte), Polar, Params, Ampel-Typ, PlanningSnapshot/Assessment -- einzige Datenform-Quelle
+- [x] `src/domain/polar.ts` -- Interpolation f(TWA,TWS), +Offset (einziger Ort), Motor-Param, Fallback-Pauschalen -- FR26/AD-10
+- [x] `src/domain/time.ts` -- nightWindow/legWindow (Athens) → UTC-Indizes -- AD-9
+- [x] `src/domain/scoring.ts` -- Etappen-Score: Windwinkel, FR16-Budgets (Ziel/Max), Ampelbänder -- FR15–17
+- [x] `src/domain/ampel.ts` -- Platz-Ampel (platz, nachtN, snapshot): Sektor-Match inkl. Wrap, Lee/Luv-Laufzeitregel, Welle -- FR8/AD-6
+- [x] `src/domain/options.ts`, `src/domain/ppr.ts` -- Restplan-Machbarkeit (gemeinsame Dauerfunktion), Optionszustände offen/schließt/zu, PPR, Entscheidungspunkte, bestPlace je Insel -- FR18–20
+- [x] `src/domain/__tests__/*.test.ts` -- Vitest-Fixtures: Sektorsemantik-Referenzfälle, 25-kn-Regel, Budgets, Polar-Interpolation+Offset, Zeitfenster -- AD-2 Pflicht
+- [x] `src/adapters/openMeteo.ts` -- Snapshot-Builder: eine Query-Familie, normative Ortsmenge, Stundenachse UTC, `null` jenseits Horizont, Modelllauf-Metadaten -- AD-3
+- [x] `src/adapters/firestore.ts` -- Read-only-Reader mit tolerantem Zod-Parse; `VITE_DATA_SOURCE=local` liest Staging-JSON (Dev ohne Firebase-Projekt, gleiches Schema) -- AD-4/AD-5
+- [x] `src/adapters/geolocation.ts` -- Browser-Geolocation → Position {source:'gps'} -- FR27
+- [x] `src/app/*` -- QueryClient (staleTime 1h), TripContext-Reducer (+localStorage, manual>gps), View-Switch-State -- AD-7/AD-11
+- [x] `src/ui/*` -- Tagesansicht (Y.CO-Tageskarten, Optionen nebeneinander, kein Empfehlungsfeld), Karte (@vis.gl, Ampel-Marker, kopierte Polyline-Komponente + Symbol-`repeat` gestrichelt, Windpfeile, Hover-Sync), Platz-Detail; Pflicht-Hinweise; responsive (Split→gestapelt); Vanilla CSS Custom Properties, Creme/Navy -- F1/F7/NFR1–3
+- [x] `seeding/` -- Staging-JSON-Struktur je Insel (approved-Flag), Beispieldaten aus Brief-Addendum mit Quellenvermerk, Review-Generator (Markdown → `seeding/review/`), Import-Skript (firebase-admin, strikte Validierung, approved-Gate, Alimos-Rebasing-Feld) -- F8/AD-10
+- [x] `README.md` -- Setup: Firebase-Projekt anlegen, Keys/`VITE_`-Vars, Seeding-Ablauf, Deploy -- Übergabe an Philipp
 
 **Acceptance Criteria:**
 - Given `npm install && npm run dev` mit `VITE_DATA_SOURCE=local`, when die App öffnet, then zeigt die Tagesansicht Optionen mit Ampeln aus echten Open-Meteo-Daten für die Beispiel-Plätze.

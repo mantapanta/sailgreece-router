@@ -1,0 +1,30 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Vlychada einzige gut geschützte Liegestelle Thiras, für 50-ft-Kat grenzwertig; Quelle 2 rät vom Anlauf per Schiff ab); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "santorin",
+    "name": "Santorin",
+    "coordinates": { "lat": 36.4, "lon": 25.43 },
+    "description": "Das Sehnsuchtsziel am Südende des Möglichkeitsraums — nur mit bestätigtem Liegeplatz."
+  },
+  "places": [
+    {
+      "id": "santorin-vlychada",
+      "islandId": "santorin",
+      "name": "Vlychada",
+      "type": "marina",
+      "coordinates": { "lat": 36.3353, "lon": 25.4353 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 300, "toDeg": 90, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 300, "toDeg": 90, "maxM": 0.8 }],
+        "sourceNote": "Quelle 1: einzige gut geschützte Liegestelle Thiras; Südküste, geschützt gegen N-Sektoren"
+      },
+      "warnings": [
+        "Für 50-ft-Kat grenzwertig: formal max. ~15 m Länge / ~2,5 m Tiefe — telefonische Vorabklärung vor dem Törn nötig",
+        "Zufahrt zeitweise versandet (Quelle 2 rät vom Anlauf Santorins per Schiff generell ab)"
+      ],
+      "description": "Die einzige realistische Liegestelle Thiras — Santorin-Option gilt nur bei bestätigtem Platz als offen."
+    }
+  ]
+}

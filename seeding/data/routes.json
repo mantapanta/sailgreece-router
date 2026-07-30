@@ -1,0 +1,298 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen.",
+  "routes": [
+    {
+      "id": "saronische-alternative",
+      "name": "Saronische Schwachwind-Alternative",
+      "description": "Ägina – Poros – Hydra: kurze Schläge im milderen Golf, wenn der Meltemi die Kykladen sperrt.",
+      "escalationRank": 0,
+      "isReturnChain": false,
+      "color": "#6b8f71",
+      "legs": [
+        {
+          "id": "athen--aegina",
+          "fromIslandId": "athen", "toIslandId": "aegina",
+          "fromPlaceId": "athen-alimos", "toPlaceId": "aegina-stadt",
+          "distanceNm": 17, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "aegina--poros",
+          "fromIslandId": "aegina", "toIslandId": "poros",
+          "fromPlaceId": "aegina-stadt", "toPlaceId": "poros-stadt",
+          "distanceNm": 15, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "poros--hydra",
+          "fromIslandId": "poros", "toIslandId": "hydra",
+          "fromPlaceId": "poros-stadt", "toPlaceId": "hydra-hafen",
+          "distanceNm": 12, "waypoints": [], "windWarnings": []
+        }
+      ]
+    },
+    {
+      "id": "gedeckelt-paros",
+      "name": "Gedeckelte Variante bis Paros/Antiparos",
+      "description": "Plan B: Kea – Kythnos – Serifos – Sifnos – Paros; Paros ist der südlichste feste Punkt.",
+      "escalationRank": 1,
+      "isReturnChain": false,
+      "color": "#c8a24b",
+      "legs": [
+        {
+          "id": "athen--kea",
+          "fromIslandId": "athen", "toIslandId": "kea",
+          "fromPlaceId": "athen-alimos", "toPlaceId": "kea-vourkari",
+          "distanceNm": 36, "rebasedFrom": "lavrion",
+          "waypoints": [{ "lat": 37.68, "lon": 24.08 }],
+          "windWarnings": ["Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"]
+        },
+        {
+          "id": "kea--kythnos",
+          "fromIslandId": "kea", "toIslandId": "kythnos",
+          "fromPlaceId": "kea-vourkari", "toPlaceId": "kythnos-merichas",
+          "distanceNm": 18, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "kythnos--serifos",
+          "fromIslandId": "kythnos", "toIslandId": "serifos",
+          "fromPlaceId": "kythnos-merichas", "toPlaceId": "serifos-livadi",
+          "distanceNm": 17, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "serifos--sifnos",
+          "fromIslandId": "serifos", "toIslandId": "sifnos",
+          "fromPlaceId": "serifos-livadi", "toPlaceId": "sifnos-kamares",
+          "distanceNm": 13, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "sifnos--paros",
+          "fromIslandId": "sifnos", "toIslandId": "paros",
+          "fromPlaceId": "sifnos-kamares", "toPlaceId": "paros-parikia",
+          "distanceNm": 26,
+          "waypoints": [{ "lat": 37.02, "lon": 24.93 }],
+          "windWarnings": ["Insel-Beschleunigungszonen zwischen Sifnos und Paros"]
+        }
+      ]
+    },
+    {
+      "id": "sued-route-naxos",
+      "name": "Süd-Route bis Naxos",
+      "description": "Plan A: die Westkykladen-Kette bis Naxos — dort fällt der Verlängerungsentscheid.",
+      "escalationRank": 2,
+      "isReturnChain": false,
+      "color": "#4c6b8a",
+      "legs": [
+        {
+          "id": "athen--kea",
+          "fromIslandId": "athen", "toIslandId": "kea",
+          "fromPlaceId": "athen-alimos", "toPlaceId": "kea-vourkari",
+          "distanceNm": 36, "rebasedFrom": "lavrion",
+          "waypoints": [{ "lat": 37.68, "lon": 24.08 }],
+          "windWarnings": ["Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"]
+        },
+        {
+          "id": "kea--kythnos",
+          "fromIslandId": "kea", "toIslandId": "kythnos",
+          "fromPlaceId": "kea-vourkari", "toPlaceId": "kythnos-merichas",
+          "distanceNm": 18, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "kythnos--serifos",
+          "fromIslandId": "kythnos", "toIslandId": "serifos",
+          "fromPlaceId": "kythnos-merichas", "toPlaceId": "serifos-livadi",
+          "distanceNm": 17, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "serifos--sifnos",
+          "fromIslandId": "serifos", "toIslandId": "sifnos",
+          "fromPlaceId": "serifos-livadi", "toPlaceId": "sifnos-kamares",
+          "distanceNm": 13, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "sifnos--paros",
+          "fromIslandId": "sifnos", "toIslandId": "paros",
+          "fromPlaceId": "sifnos-kamares", "toPlaceId": "paros-parikia",
+          "distanceNm": 26,
+          "waypoints": [{ "lat": 37.02, "lon": 24.93 }],
+          "windWarnings": ["Insel-Beschleunigungszonen zwischen Sifnos und Paros"]
+        },
+        {
+          "id": "paros--naxos",
+          "fromIslandId": "paros", "toIslandId": "naxos",
+          "fromPlaceId": "paros-parikia", "toPlaceId": "naxos-stadt",
+          "distanceNm": 12, "waypoints": [],
+          "windWarnings": ["Düse Paros–Naxos: deutlich mehr Wind als der Modellwert"]
+        }
+      ]
+    },
+    {
+      "id": "verlaengerung-amorgos",
+      "name": "Verlängerung Amorgos",
+      "description": "Bonus ab Naxos: Katapola — nur bei Doppel-Fenster für Hin- und Rückweg.",
+      "escalationRank": 3,
+      "isReturnChain": false,
+      "color": "#8a5a83",
+      "legs": [
+        {
+          "id": "athen--kea",
+          "fromIslandId": "athen", "toIslandId": "kea",
+          "fromPlaceId": "athen-alimos", "toPlaceId": "kea-vourkari",
+          "distanceNm": 36, "rebasedFrom": "lavrion",
+          "waypoints": [{ "lat": 37.68, "lon": 24.08 }],
+          "windWarnings": ["Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"]
+        },
+        {
+          "id": "kea--kythnos",
+          "fromIslandId": "kea", "toIslandId": "kythnos",
+          "fromPlaceId": "kea-vourkari", "toPlaceId": "kythnos-merichas",
+          "distanceNm": 18, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "kythnos--serifos",
+          "fromIslandId": "kythnos", "toIslandId": "serifos",
+          "fromPlaceId": "kythnos-merichas", "toPlaceId": "serifos-livadi",
+          "distanceNm": 17, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "serifos--sifnos",
+          "fromIslandId": "serifos", "toIslandId": "sifnos",
+          "fromPlaceId": "serifos-livadi", "toPlaceId": "sifnos-kamares",
+          "distanceNm": 13, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "sifnos--paros",
+          "fromIslandId": "sifnos", "toIslandId": "paros",
+          "fromPlaceId": "sifnos-kamares", "toPlaceId": "paros-parikia",
+          "distanceNm": 26,
+          "waypoints": [{ "lat": 37.02, "lon": 24.93 }],
+          "windWarnings": ["Insel-Beschleunigungszonen zwischen Sifnos und Paros"]
+        },
+        {
+          "id": "paros--naxos",
+          "fromIslandId": "paros", "toIslandId": "naxos",
+          "fromPlaceId": "paros-parikia", "toPlaceId": "naxos-stadt",
+          "distanceNm": 12, "waypoints": [],
+          "windWarnings": ["Düse Paros–Naxos: deutlich mehr Wind als der Modellwert"]
+        },
+        {
+          "id": "naxos--amorgos",
+          "fromIslandId": "naxos", "toIslandId": "amorgos",
+          "fromPlaceId": "naxos-stadt", "toPlaceId": "amorgos-katapola",
+          "distanceNm": 31,
+          "waypoints": [{ "lat": 36.93, "lon": 25.6 }],
+          "windWarnings": ["Nur mit vorgedachtem Fähr-Exit über Naxos (Eskalationsleiter Quelle 1)"]
+        }
+      ]
+    },
+    {
+      "id": "verlaengerung-santorin",
+      "name": "Verlängerung Santorin",
+      "description": "Bonus ab Naxos: Vlychada — nur bei stabilem Fenster und bestätigtem Liegeplatz.",
+      "escalationRank": 4,
+      "isReturnChain": false,
+      "color": "#b0413e",
+      "legs": [
+        {
+          "id": "athen--kea",
+          "fromIslandId": "athen", "toIslandId": "kea",
+          "fromPlaceId": "athen-alimos", "toPlaceId": "kea-vourkari",
+          "distanceNm": 36, "rebasedFrom": "lavrion",
+          "waypoints": [{ "lat": 37.68, "lon": 24.08 }],
+          "windWarnings": ["Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"]
+        },
+        {
+          "id": "kea--kythnos",
+          "fromIslandId": "kea", "toIslandId": "kythnos",
+          "fromPlaceId": "kea-vourkari", "toPlaceId": "kythnos-merichas",
+          "distanceNm": 18, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "kythnos--serifos",
+          "fromIslandId": "kythnos", "toIslandId": "serifos",
+          "fromPlaceId": "kythnos-merichas", "toPlaceId": "serifos-livadi",
+          "distanceNm": 17, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "serifos--sifnos",
+          "fromIslandId": "serifos", "toIslandId": "sifnos",
+          "fromPlaceId": "serifos-livadi", "toPlaceId": "sifnos-kamares",
+          "distanceNm": 13, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "sifnos--paros",
+          "fromIslandId": "sifnos", "toIslandId": "paros",
+          "fromPlaceId": "sifnos-kamares", "toPlaceId": "paros-parikia",
+          "distanceNm": 26,
+          "waypoints": [{ "lat": 37.02, "lon": 24.93 }],
+          "windWarnings": ["Insel-Beschleunigungszonen zwischen Sifnos und Paros"]
+        },
+        {
+          "id": "paros--naxos",
+          "fromIslandId": "paros", "toIslandId": "naxos",
+          "fromPlaceId": "paros-parikia", "toPlaceId": "naxos-stadt",
+          "distanceNm": 12, "waypoints": [],
+          "windWarnings": ["Düse Paros–Naxos: deutlich mehr Wind als der Modellwert"]
+        },
+        {
+          "id": "naxos--santorin",
+          "fromIslandId": "naxos", "toIslandId": "santorin",
+          "fromPlaceId": "naxos-stadt", "toPlaceId": "santorin-vlychada",
+          "distanceNm": 51,
+          "waypoints": [{ "lat": 36.72, "lon": 25.4 }],
+          "windWarnings": ["Langer Schlag, nur bei stabilem Fenster (Quelle 1: 8h30 / 6h50)"]
+        }
+      ]
+    },
+    {
+      "id": "rueckfallkette-west",
+      "name": "Rückfallhäfen-Kette westwärts",
+      "description": "Die normative Rückweg-Kette gegen den Meltemi: Naxos – Paros – Sifnos – Serifos – Kythnos – Kea – Alimos.",
+      "escalationRank": 0,
+      "isReturnChain": true,
+      "color": "#9aa5b1",
+      "legs": [
+        {
+          "id": "naxos--paros",
+          "fromIslandId": "naxos", "toIslandId": "paros",
+          "fromPlaceId": "naxos-stadt", "toPlaceId": "paros-parikia",
+          "distanceNm": 12, "waypoints": [],
+          "windWarnings": ["Düse Paros–Naxos: deutlich mehr Wind als der Modellwert"]
+        },
+        {
+          "id": "paros--sifnos",
+          "fromIslandId": "paros", "toIslandId": "sifnos",
+          "fromPlaceId": "paros-parikia", "toPlaceId": "sifnos-kamares",
+          "distanceNm": 26,
+          "waypoints": [{ "lat": 37.02, "lon": 24.93 }],
+          "windWarnings": ["Insel-Beschleunigungszonen zwischen Sifnos und Paros"]
+        },
+        {
+          "id": "sifnos--serifos",
+          "fromIslandId": "sifnos", "toIslandId": "serifos",
+          "fromPlaceId": "sifnos-kamares", "toPlaceId": "serifos-livadi",
+          "distanceNm": 13, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "serifos--kythnos",
+          "fromIslandId": "serifos", "toIslandId": "kythnos",
+          "fromPlaceId": "serifos-livadi", "toPlaceId": "kythnos-merichas",
+          "distanceNm": 17, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "kythnos--kea",
+          "fromIslandId": "kythnos", "toIslandId": "kea",
+          "fromPlaceId": "kythnos-merichas", "toPlaceId": "kea-vourkari",
+          "distanceNm": 18, "waypoints": [], "windWarnings": []
+        },
+        {
+          "id": "kea--athen",
+          "fromIslandId": "kea", "toIslandId": "athen",
+          "fromPlaceId": "kea-vourkari", "toPlaceId": "athen-alimos",
+          "distanceNm": 36, "rebasedFrom": "lavrion",
+          "waypoints": [{ "lat": 37.68, "lon": 24.08 }],
+          "windWarnings": ["Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"]
+        }
+      ]
+    }
+  ]
+}
