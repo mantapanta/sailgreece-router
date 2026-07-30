@@ -148,14 +148,21 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 ### F5 — Etappen-Scoring
 
 - **FR15:** Jede Etappe jeder offenen Routen-Option wird gegen die Vorhersage zum
-  geplanten Zeitfenster bewertet: Windwinkel zum Kurs, Windstärke, Dauer bei
-  Planungsgeschwindigkeit (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan).
+  geplanten Zeitfenster bewertet: Windwinkel zum Kurs, Windstärke, Dauer aus dem
+  hinterlegten **Polardiagramm** (Geschwindigkeit als Funktion von wahrem Windwinkel
+  und Windstärke — z. B. 12–13 kn bei 130° TWA, 6–7 kn beim Kreuzen); Motorfahrt mit
+  ~8 kn als eigener Parameter.
 - **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
   Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden pro Tag;
   bei Leichtwind sind 10–12-Stunden-Schläge oder Nachtetappen zulässig, wenn sie
   strategisch helfen.**
 - **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option (schwächstes
   Glied sichtbar).
+- **FR26:** Die App hinterlegt das **Polardiagramm des Schiffs** (Fountaine Pajot 45
+  als Näherung für den 50-ft-Kat, Daten liefert Philipp) als Grundlage aller
+  Geschwindigkeits- und Dauerberechnungen. Die pauschalen Planungsgeschwindigkeiten
+  (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan) bleiben nur als Fallback, solange
+  keine Polare geladen ist. *(ID nachgereicht — Nummerierung bleibt stabil.)*
 
 ### F6 — Mittelfrist-Optionsraum & Predicted Point of Return
 
@@ -165,7 +172,8 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 - **FR19:** **Predicted Point of Return:** fortlaufende Berechnung des spätesten
   Umkehrpunkts für die stressfreie Rückkehr nach Alimos (~103 sm ab Naxos, Rückkehr am
   Vorabend der Ausschiffung, mit Puffertag) — Restdistanz über die Rückfallhäfen-Kette
-  vs. Resttage × Tagesbudget.
+  vs. Resttage × Tagesbudget; Etappendauern wie im Etappen-Scoring aus der Polare
+  (FR15/FR26).
 - **FR20:** Aus Optionsraum und Point of Return leitet die App **Entscheidungspunkte**
   ab und macht sie sichtbar: an welchem Tag welche Frage entschieden sein muss, bevor
   die zugehörige Option verfällt (z. B. „Verlängerung nach Amorgos nur bei

@@ -54,6 +54,21 @@ Startliste: die ~25–35 Plätze des Törn-Korridors aus dem Brief-Addendum
 (Hafen-Kernliste + Zielkatalog mit Koordinaten). Aufwandsschätzung Recherche laut
 Tech-Report: 1–2 Tage, parallelisierbar zur Entwicklung.
 
+## Polardiagramm (Detail zu FR15/FR26)
+
+Vom Product Owner im Review eingebracht: Die pauschalen Planungsgeschwindigkeiten des
+Briefs (6,0/7,5/6,5 kn) sind für einen Performance-Katamaran zu grob. Reale Richtwerte
+laut Philipp: **12–13 kn bei 130° zum wahren Wind**, Kreuzen **6–7 kn** je nach
+Windstärke, unter Motor **~8 kn**.
+
+- Datenquelle: Polardiagramm eines **Fountaine Pajot 45** — Philipp liefert die Daten
+  (Näherung für den gecharterten 50-ft-Kat).
+- Datenmodell: Tabelle Geschwindigkeit = f(TWA, TWS); Interpolation zwischen Stützstellen;
+  Motorfahrt als separater Parameter (~8 kn), Zuschlag/Abschlag gegenan über die Polare
+  bzw. Motor-Regel — Detailentscheid in der Architektur-Phase.
+- Fallback: Brief-Pauschalwerte, solange keine Polare geladen ist.
+- Offen: Format der Übergabe (CSV/Tabelle/Foto des Diagramms) — bei der Umsetzung klären.
+
 ## Design-Referenz
 
 - **Y.CO Itinerary-Seite**: <https://y.co/yacht-charter/itinerary/ancient-greece-modern-classic>
