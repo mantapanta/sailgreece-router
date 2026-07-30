@@ -178,7 +178,9 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 - **FR15:** Jede Etappe jeder offenen Routen-Option wird gegen die Vorhersage zum
   geplanten Zeitfenster `[ANNAHME: Standard-Abfahrt 09:00 Ortszeit, konfigurierbar]`
-  bewertet: Windwinkel zum Kurs, Windstärke, Dauer aus dem
+  bewertet. „Geplantes Zeitfenster" heißt: Für eine Etappe an Törntag N+3 zählt die
+  Prognose für **genau diesen künftigen Tag und diese Uhrzeit** (wie das Vorspulen in
+  Windy) — nie der heutige Wind. Bewertet wird: Windwinkel zum Kurs, Windstärke, Dauer aus dem
   hinterlegten **Polardiagramm** (FR26 — Geschwindigkeit als Funktion von wahrem
   Windwinkel und Windstärke); Motorfahrt mit ~8 kn als eigener Parameter.
 - **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
@@ -214,7 +216,11 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   der Ausschiffung inklusive Puffertag erreicht (FR19). **Schließt am Tag X** = ab
   Tag X+1 existiert kein solcher Restplan mehr; **geschlossen** = es existiert keiner.
   Kippt der Mittelfristplan, leitet die App daraus konsistent das neue Heute ab
-  (FR21).
+  (FR21). Alle Bewertungen sind **Momentaufnahmen des aktuellen Forecast-Laufs**:
+  Da sich die Prognose für Tag N+3 mit jedem Modelllauf ändert, werden Scores,
+  Optionszustände und Point of Return bei jedem Abruf (FR13) vollständig neu
+  berechnet — was gestern „offen" war, kann heute „geschlossen" sein, und genau
+  dafür gibt es die Morgen-/Abendroutine (UM-1/UM-2).
 - **FR19:** **Predicted Point of Return:** fortlaufende Berechnung des spätesten
   Umkehrpunkts für die stressfreie Rückkehr nach Alimos (~103 sm ab Naxos, Rückkehr am
   Vorabend der Ausschiffung, mit Puffertag) — Restdistanz über die Rückfallhäfen-Kette
