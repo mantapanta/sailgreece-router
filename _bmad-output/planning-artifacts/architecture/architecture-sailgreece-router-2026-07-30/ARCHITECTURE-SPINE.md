@@ -5,7 +5,7 @@ purpose: build-substrate
 altitude: feature
 paradigm: 'Functional Core, Imperative Shell'
 scope: 'sailgreece-router MVP — Törnplanungs-Web-App (Kykladen), Deadline 8. Aug 2026'
-status: draft
+status: final
 created: '2026-07-30'
 updated: '2026-07-30'
 binds: [F1, F2, F3, F4, F5, F6, F7, F8, NFR0, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
