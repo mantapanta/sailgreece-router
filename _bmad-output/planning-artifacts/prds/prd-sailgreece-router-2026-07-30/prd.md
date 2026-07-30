@@ -1,6 +1,6 @@
 ---
 title: "PRD: sailgreece-router"
-status: draft
+status: final
 created: 2026-07-30
 updated: 2026-07-30
 ---
@@ -69,9 +69,10 @@ Karte als Besprechungsbild im Gespräch mit der Crew.
 
 - **UM-1 Morgenentscheidung (täglich, ~10 min):** Philipp öffnet die App im Hafen/vor
   Anker — allein oder mit der Crew als Besprechungsbild. Die aktuelle Position kommt
-  per GPS/Standortabfrage (FR27), manuell übersteuerbar. Die App zeigt: heutige Tagesoptionen mit Ziel-Ampel und Etappen-Score, den Zustand des
-  Mittelfristplans (welche Optionen noch offen sind) und den Point of Return. Die Crew
-  schaut mit; man entscheidet gemeinsam das Heute.
+  per GPS/Standortabfrage (FR27), manuell übersteuerbar. Die App zeigt: heutige
+  Tagesoptionen mit Ziel-Ampel und Etappen-Score, den Zustand des Mittelfristplans
+  (welche Optionen noch offen sind) und den Point of Return — daraus entsteht die
+  gemeinsame Entscheidung für das Heute.
 - **UM-2 Abendcheck (täglich, ~5 min):** Nach dem neuen Forecast-Lauf prüft Philipp, ob
   das Morgen noch auf einem gültigen Mittelfristplan liegt — bestätigt die App den Kurs,
   ist der Abend frei; kippt eine Option, sieht er es hier zuerst.
@@ -100,8 +101,8 @@ Qualitäten und Schutzprofil · **Etappe** = Schlag von Platz zu Platz ·
 **Routen-Option** = kuratierte Etappenfolge aus der Routenbibliothek ·
 **Möglichkeitsraum** (synonym: Optionsraum) = Menge aller Routen-Optionen ·
 **Mittelfristplan** = die aktuell verfolgte Routen-Option über 3–5 Tage ·
-**Point of Return** (synonym: Umkehrpunkt) = spätester Umkehrpunkt für die
-rechtzeitige Rückkehr zur Basis · **Ampel** = deterministische Rot/Gelb/Grün-Bewertung;
+**Point of Return** (synonym: Umkehrpunkt) = letzter Törntag/Ort, an dem noch
+umgekehrt werden kann, um die Basis rechtzeitig zu erreichen · **Ampel** = deterministische Rot/Gelb/Grün-Bewertung;
 je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 ## 5. Funktionale Anforderungen
@@ -113,8 +114,8 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   Ampelfarbe. Satellit/Hybrid-Ansicht verfügbar (Buchten-Optik).
 - **FR2:** 2–3 Routen-Optionen gleichzeitig als verschiedenfarbige gestrichelte Linien,
   die zeigen, wie der Weg jeweils weitergeht.
-- **FR3:** Windpfeil-Overlay (Richtung und Stärke je Wegpunkt/Platz) aus dem gewählten
-  Wettermodell.
+- **FR3:** Windpfeil-Overlay (Richtung und Stärke je Wegpunkt/Platz) aus dem
+  Basis-Wettermodell (FR11).
 - **FR4:** Itinerar ↔ Karte synchron: Hover/Auswahl eines Tages oder einer Etappe hebt
   das Gegenstück auf der Karte hervor (Design-Referenz: Y.CO-Itinerary, siehe NFR1).
 - **FR5:** Platz-Detailansicht: Foto, Qualitäten (Schönheit, Restaurant, Badestrand),
@@ -173,9 +174,10 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 - **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
   Aufkreuzen gegenan bei >25 kn wahrem Wind.** Tagesbudget: **Ziel maximal ~6 Stunden
   unterwegs** (5 h Segeln + 1 h Motor oder 6 h reines Segeln), **hartes Maximum
-  6 h Segeln + 2 h Motor.** **Bei Leichtwind (~5–8 kn) sind 10–12-Stunden-Schläge oder
-  Nachtetappen mit der ganzen Familie zulässig** — maximal ~2× pro Törn, wenn sie
-  strategisch helfen.
+  6 h Segeln + 2 h Motor.** **Bei Leichtwind sind 10–12-Stunden-Schläge zulässig; bei
+  ~4–6 kn Wind auch Nachtetappen mit der ganzen Familie an Bord** (glattes Wasser —
+  ob Segeln oder Motoren ist dann egal, alle können schlafen) — maximal ~2× pro Törn,
+  wenn sie strategisch helfen.
 - **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option = die Ampel der
   schwächsten Etappe (schwächstes Glied sichtbar). Ampelbänder: **Grün** = Ziel-Budget
   eingehalten (FR16), **Gelb** = zwischen Ziel und hartem Maximum oder Grenzwert
@@ -247,6 +249,11 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 ## 6. Nicht-funktionale Anforderungen
 
+- **NFR0 — Leitprinzip „Reduce it to the max":** Jede Funktion und jedes UI-Element
+  muss die Morgen-/Abendentscheidung direkt unterstützen — im Zweifel weglassen.
+  Dieses Prinzip hat den Scope bereits geformt (ein Wettermodell statt drei, keine
+  Hafen-Logistik, keine Gefahren-Datenbank, keine Notfall-Features) und gilt als
+  Entscheidungsregel für alles, was während der Umsetzung dazukommen will.
 - **NFR1 — Design-Anspruch:** Funktional zuerst, aber gestalterisch hochwertig — ruhige,
   fotogestützte Ästhetik nach dem Vorbild der Y.CO-Itinerary-Seiten: Day-by-Day-Aufbau
   mit Versal-Tageslabels, Sticky-Split-Layout (Tagesliste ↔ fixierte Karte, bidirektional

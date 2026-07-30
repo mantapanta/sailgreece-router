@@ -1,6 +1,6 @@
 ---
 title: "Addendum: PRD sailgreece-router — Technische Tiefe & Downstream-Material"
-status: draft
+status: final
 created: 2026-07-30
 updated: 2026-07-30
 ---
