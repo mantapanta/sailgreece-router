@@ -47,8 +47,8 @@ Erfolgskriterien:
   Morgen-/Abendentscheidung genutzt und ersetzt das Kopfrechnen. `[ANNAHME]` aus dem
   Brief übernommen.
 - **E2 — Rechtzeitig fertig:** Nutzbares Tool zum Törnstart am 8. August (9 Tage
-  Entwicklungszeit). Wünschenswert: Kernfunktionen bereits am 3.–5. August verfügbar,
-  weil dann der Routing-Vorentscheid vor dem Törn ansteht. `[ANNAHME]`
+  Entwicklungszeit). Kernfunktionen bereits am 3.–5. August verfügbar, weil dann der
+  Routing-Vorentscheid vor dem Törn ansteht (bestätigt).
 - **E3 — Vertrauenswürdige Daten:** Alle Schutzprofile und Routen stammen aus
   verlässlichen Quellen (Heikell, CruisersWiki u. a.), nichts ist erfunden; Philipp hat
   die Daten einmal reviewt.
@@ -67,8 +67,8 @@ Einziger Nutzer im MVP ist **Philipp als Skipper** — am PC, mit Internetverbin
 Karte als Besprechungsbild im Gespräch mit der Crew.
 
 - **UM-1 Morgenentscheidung (täglich, ~10 min):** Philipp öffnet die App im Hafen/vor
-  Anker. Aktuelle Position ist gesetzt (manuell gewählt `[ANNAHME]`, kein GPS). Die App
-  zeigt: heutige Tagesoptionen mit Ziel-Ampel und Etappen-Score, den Zustand des
+  Anker. Die aktuelle Position kommt per GPS/Standortabfrage (FR27), manuell
+  übersteuerbar. Die App zeigt: heutige Tagesoptionen mit Ziel-Ampel und Etappen-Score, den Zustand des
   Mittelfristplans (welche Optionen noch offen sind) und den Point of Return. Die Crew
   schaut mit; man entscheidet gemeinsam das Heute.
 - **UM-2 Abendcheck (täglich, ~5 min):** Nach dem neuen Forecast-Lauf prüft Philipp, ob
@@ -76,8 +76,8 @@ Karte als Besprechungsbild im Gespräch mit der Crew.
   ist der Abend frei; kippt eine Option, sieht er es hier zuerst.
 - **UM-3 Routing-Vorentscheid (3.–5. August, vor dem Törn):** Laufen die Modelle
   zusammen? Ist die Süd-Route (Richtung Naxos und weiter) offen, oder deckelt der
-  Meltemi das Zielbild früher? Erste reale Bewährungsprobe des Scorings. `[ANNAHME]`,
-  dass die App hierfür schon nutzbar ist — siehe E2.
+  Meltemi das Zielbild früher? Erste reale Bewährungsprobe des Scorings — die App ist
+  hierfür bereits nutzbar (bestätigt, siehe E2).
 
 ## 4. Kernkonzept: Planung auf drei Ebenen
 
@@ -179,6 +179,11 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
   die zugehörige Option verfällt (z. B. „Verlängerung nach Amorgos nur bei
   Doppel-Fenster für Hin- und Rückweg") — dynamisch berechnet, keine fest verdrahteten
   Kalender-Gates.
+- **FR27:** Die App bestimmt die **aktuelle Position per GPS/Standortabfrage**
+  (Browser-Geolocation, integriert mit der Google-Maps-Karte) — Teil des Produkts,
+  keine reine Handeingabe. Manuelles Übersteuern (Platz aus der Bibliothek wählen)
+  bleibt als Fallback möglich, z. B. wenn der Browser den Standort nicht freigibt.
+  *(ID nachgereicht — Nummerierung bleibt stabil.)*
 
 ### F7 — Tagesentscheidung
 
@@ -239,7 +244,7 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 
 | Termin | Meilenstein |
 |---|---|
-| 3.–5. Aug | App nutzbar für Routing-Vorentscheid: Forecast + Scoring + Optionsraum `[ANNAHME]` |
+| 3.–5. Aug | App nutzbar für Routing-Vorentscheid: Forecast + Scoring + Optionsraum (bestätigt) |
 | 7. Aug | Bibliotheken final reviewt und importiert; Karte + Tagesansicht komplett |
 | 8. Aug | Törnstart — Tool im täglichen Einsatz |
 
