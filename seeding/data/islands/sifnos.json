@@ -1,0 +1,54 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Kamares; Buchten Fikiada, Vathy geschützt, Faros); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "sifnos",
+    "name": "Sifnos",
+    "coordinates": { "lat": 36.97, "lon": 24.7 },
+    "description": "Töpferdörfer, Klöster und die vielleicht beste Küche der Kykladen."
+  },
+  "places": [
+    {
+      "id": "sifnos-kamares",
+      "islandId": "sifnos",
+      "name": "Kamares",
+      "type": "hafen",
+      "coordinates": { "lat": 36.9903, "lon": 24.6603 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 330, "toDeg": 230, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 330, "toDeg": 230, "maxM": 1.0 }],
+        "sourceNote": "Quelle 1: Rückfallhafen-Kette; Fjordbucht öffnet nach W"
+      },
+      "description": "Der Fährhafen in einer tiefen Bucht — Sandstrand direkt neben dem Anleger."
+    },
+    {
+      "id": "sifnos-vathy",
+      "islandId": "sifnos",
+      "name": "Vathy",
+      "type": "bucht",
+      "coordinates": { "lat": 36.9264, "lon": 24.6903 },
+      "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 300, "toDeg": 250, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 300, "toDeg": 250, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: 'Vathy geschützt' — fast geschlossene Bucht, schmale Öffnung nach W"
+      },
+      "description": "Fast ein See: die geschützteste Traumbucht der Insel, Kloster am Strand."
+    },
+    {
+      "id": "sifnos-faros",
+      "islandId": "sifnos",
+      "name": "Faros",
+      "type": "bucht",
+      "coordinates": { "lat": 36.9394, "lon": 24.7458 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 210, "toDeg": 110, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 210, "toDeg": 110, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: Zielkatalog; Bucht öffnet nach S/SE"
+      },
+      "description": "Kleines Fischerdorf mit drei Stränden — ruhig, solange nichts aus Süd steht."
+    }
+  ]
+}

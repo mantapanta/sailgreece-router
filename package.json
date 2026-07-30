@@ -1,0 +1,41 @@
+{
+  "name": "sailgreece-router",
+  "version": "0.1.0",
+  "description": "Toernplanungs-Web-App fuer den 12-Tage-Kykladen-Familientoern ab 8. August 2026",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed:polar": "node seeding/parsePolar.ts",
+    "seed:review": "node seeding/generateReview.ts",
+    "seed:import": "node seeding/importToFirestore.ts"
+  },
+  "author": "Philipp",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "@vis.gl/react-google-maps": "^1.9.0",
+    "firebase": "^12.16.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/google.maps": "^3.65.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.5",
+    "firebase-admin": "^14.2.0",
+    "typescript": "~5.9.0",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  },
+  "private": true,
+  "type": "module"
+}

@@ -1,0 +1,27 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Naxos Entscheidungstag, Marina im Juli/August Engpass); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "naxos",
+    "name": "Naxos",
+    "coordinates": { "lat": 37.06, "lon": 25.42 },
+    "description": "Der Wendepunkt des Törns: hier fällt der Verlängerungsentscheid — Portara inklusive."
+  },
+  "places": [
+    {
+      "id": "naxos-stadt",
+      "islandId": "naxos",
+      "name": "Naxos-Stadt (Marina)",
+      "type": "marina",
+      "coordinates": { "lat": 37.1075, "lon": 25.3736 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 240, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 240, "maxM": 1.0 }],
+        "sourceNote": "Quelle 1: Hafen-Kernliste; Hafen öffnet nach W, Mole gegen N"
+      },
+      "warnings": ["Marina im Juli/August Engpass — früh ankommen oder Alternative planen"],
+      "description": "Chora, Portara und die lange Strandmeile — der große Etappenort des Törns."
+    }
+  ]
+}

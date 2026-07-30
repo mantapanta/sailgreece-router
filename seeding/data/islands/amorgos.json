@@ -1,0 +1,26 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: 'Katapola guter Meltemi-Schutz'); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "amorgos",
+    "name": "Amorgos",
+    "coordinates": { "lat": 36.83, "lon": 25.89 },
+    "description": "Die östlichste Option — steil, wild, mit dem Kloster in der Felswand."
+  },
+  "places": [
+    {
+      "id": "amorgos-katapola",
+      "islandId": "amorgos",
+      "name": "Katapola",
+      "type": "hafen",
+      "coordinates": { "lat": 36.8306, "lon": 25.8583 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 320, "toDeg": 240, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 320, "toDeg": 240, "maxM": 1.2 }],
+        "sourceNote": "Quelle 1: 'Katapola guter Meltemi-Schutz'; tiefe Bucht öffnet nach W"
+      },
+      "description": "Tiefe, gut geschützte Bucht — Basis für das Kloster Hozoviotissa."
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Kolona/Fikiada 37°24.7'N 24°23'E, Merichas, Loutra); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "kythnos",
+    "name": "Kythnos",
+    "coordinates": { "lat": 37.4, "lon": 24.42 },
+    "description": "Karg und echt — mit der Doppelbucht Kolona als erstem Postkartenmoment des Törns."
+  },
+  "places": [
+    {
+      "id": "kythnos-kolona",
+      "islandId": "kythnos",
+      "name": "Kolona / Fikiada",
+      "type": "bucht",
+      "coordinates": { "lat": 37.4117, "lon": 24.3833 },
+      "qualities": { "schoenheit": 5, "restaurant": 2, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 90, "toDeg": 300, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 90, "toDeg": 300, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: Doppelbucht, Sandbank — nach N offen, bei starkem Meltemi Schwell um die Landzunge"
+      },
+      "description": "Die Sandbank zwischen zwei Buchten — türkises Wasser, Ankern vor der Kulisse."
+    },
+    {
+      "id": "kythnos-merichas",
+      "islandId": "kythnos",
+      "name": "Merichas",
+      "type": "hafen",
+      "coordinates": { "lat": 37.3897, "lon": 24.3953 },
+      "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 240, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 240, "maxM": 1.0 }],
+        "sourceNote": "Quelle 1: Rückfallhafen; Bucht öffnet nach W — bei Meltemi brauchbar"
+      },
+      "description": "Der Fährhafen der Insel — Tavernen am Wasser, unaufgeregt."
+    },
+    {
+      "id": "kythnos-loutra",
+      "islandId": "kythnos",
+      "name": "Loutra",
+      "type": "marina",
+      "coordinates": { "lat": 37.4442, "lon": 24.4306 },
+      "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 330, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 330, "maxM": 0.8 }],
+        "sourceNote": "Quelle 1: Alternative zu Merichas; Bucht öffnet nach NE — bei starkem Meltemi Schwell im Vorhafen"
+      },
+      "description": "Heiße Quellen am Strand und eine kleine Marina — besonderer Abendplatz bei ruhiger Lage."
+    }
+  ]
+}

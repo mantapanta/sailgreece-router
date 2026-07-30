@@ -1,0 +1,26 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Livadi); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "serifos",
+    "name": "Serifos",
+    "coordinates": { "lat": 37.15, "lon": 24.5 },
+    "description": "Die Chora thront wie eine weiße Krone über der weiten Bucht von Livadi."
+  },
+  "places": [
+    {
+      "id": "serifos-livadi",
+      "islandId": "serifos",
+      "name": "Livadi",
+      "type": "hafen",
+      "coordinates": { "lat": 37.1458, "lon": 24.5217 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 190, "toDeg": 90, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 190, "toDeg": 90, "maxM": 1.2 }],
+        "sourceNote": "Quelle 1: Rückfallhafen-Kette; große Bucht öffnet nach SE — sehr guter Meltemi-Schutz"
+      },
+      "description": "Weite, gut geschützte Bucht unter der Chora — Ankern auf Sand, Tavernen am Ufer."
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "approved": false,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: 'Parikia bei Meltemi gut geschützt', Naoussa, Piso Livadi; Parikia ~27 Fähranläufe/Tag im Juli); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "island": {
+    "id": "paros",
+    "name": "Paros",
+    "coordinates": { "lat": 37.08, "lon": 25.15 },
+    "description": "Der südlichste feste Punkt des Plan B — lebendig, mit Optionen in alle Richtungen."
+  },
+  "places": [
+    {
+      "id": "paros-parikia",
+      "islandId": "paros",
+      "name": "Parikia",
+      "type": "hafen",
+      "coordinates": { "lat": 37.0853, "lon": 25.1519 },
+      "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 355, "toDeg": 250, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 355, "toDeg": 250, "maxM": 1.0 }],
+        "sourceNote": "Quelle 2: 'expliziter Meltemi-Schutzhafen'; Bucht öffnet nach W; Fährschwell beachten"
+      },
+      "warnings": ["Starker Fährverkehr (~27 Anläufe/Tag im Juli) — Schwell und Rangieren am Anleger"],
+      "description": "Der Meltemi-Schutzhafen der Route — Hauptort mit allem, was die Crew braucht."
+    },
+    {
+      "id": "paros-naoussa",
+      "islandId": "paros",
+      "name": "Naoussa",
+      "type": "hafen",
+      "coordinates": { "lat": 37.1236, "lon": 25.2375 },
+      "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 320, "maxKn": 22 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 320, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: Zielkatalog; große Bucht öffnet nach N — bei Meltemi exponiert"
+      },
+      "description": "Das schönste Hafenstädtchen der Insel — aber die Bucht schaut genau in den Meltemi."
+    },
+    {
+      "id": "paros-piso-livadi",
+      "islandId": "paros",
+      "name": "Piso Livadi",
+      "type": "hafen",
+      "coordinates": { "lat": 37.0106, "lon": 25.2617 },
+      "qualities": { "schoenheit": 3, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 160, "toDeg": 70, "maxKn": 28 }],
+        "waveSectors": [{ "fromDeg": 160, "toDeg": 70, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: Zielkatalog; kleiner Hafen an der Ostküste, öffnet nach SE"
+      },
+      "description": "Kleiner Osthafen — praktischer Absprung Richtung Naxos."
+    }
+  ]
+}
