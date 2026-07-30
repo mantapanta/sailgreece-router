@@ -123,6 +123,8 @@ Quellen: [Overpass/OSM-Tags](https://wiki.openstreetmap.org/wiki/Tag:seamark:typ
 
 Aufwandsschätzung Kuration: für die ~25–35 Plätze des Törn-Korridors (Addendum-Hafenkatalog als Startliste) realistisch 1–2 Tage manuelle Arbeit mit Heikell + CruisersWiki — im 9-Tage-Budget einplanbar, parallelisierbar mit der Entwicklung.
 
+**Primäre Schutzlogik (vom Product Owner bestätigt):** Heikell/CruisersWiki nennen die geschützten Windrichtungssektoren je Bucht explizit (z. B. „geschützt bei N–O"); kombiniert mit der universellen Lee/Luv-Regel (Lee immer geschützt, Luv nie) ergibt sich eine deterministische Rot/Gelb/Grün-Ampel pro Platz und Hauptwindrichtung. Die Wind-Fetch-Heuristik ist damit nur noch Fallback für unkuratierte Plätze, kein Kernmechanismus.
+
 ## 4. Empfohlene Architektur (MVP)
 
 - **Frontend-SPA** (z. B. React oder Vanilla + Vite): Leaflet-Karte, Routen-/Platzbibliothek als **statische, kuratierte JSON-Dateien** im Repo (kein Backend, keine Datenbank für den MVP nötig).
