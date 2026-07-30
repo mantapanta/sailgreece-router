@@ -8,7 +8,7 @@ updated: 2026-07-30
 # PRD: sailgreece-router
 
 **Törnplanungs-Web-App für den 12-Tage-Kykladen-Familientörn ab 8. August 2026.**
-Die App übersetzt Multi-Modell-Windvorhersagen täglich in bewertete Routen-Optionen —
+Die App übersetzt Windvorhersagen täglich in bewertete Routen-Optionen —
 sie ersetzt das Kopfrechnen des Skippers, nicht sein seemännisches Urteil.
 
 ## 1. Problem & Kontext
@@ -23,7 +23,7 @@ Kritisch ist der Rückweg gegen den Meltemi — Faustregel des Reviers: zwei Dri
 für den Rückweg.
 
 Das Wissen dafür ist verfügbar — Revierliteratur, Best-Practice-Routen,
-Multi-Modell-Windvorhersagen. Einen fertigen Törnplan, den man nur abfahren könnte, gibt
+Windvorhersagen. Einen fertigen Törnplan, den man nur abfahren könnte, gibt
 es aber nicht, und die App setzt auch keinen voraus: Der Mittelfristplan muss jeden Tag
 neu aus den noch offenen Optionen abgeleitet werden. Genau diese Arbeit —
 **die tägliche Übersetzung von Vorhersage in Entscheidung — passiert heute komplett im
@@ -75,10 +75,10 @@ Karte als Besprechungsbild im Gespräch mit der Crew.
 - **UM-2 Abendcheck (täglich, ~5 min):** Nach dem neuen Forecast-Lauf prüft Philipp, ob
   das Morgen noch auf einem gültigen Mittelfristplan liegt — bestätigt die App den Kurs,
   ist der Abend frei; kippt eine Option, sieht er es hier zuerst.
-- **UM-3 Routing-Vorentscheid (3.–5. August, vor dem Törn):** Laufen die Modelle
-  zusammen? Ist die Süd-Route (Richtung Naxos und weiter) offen, oder deckelt der
-  Meltemi das Zielbild früher? Erste reale Bewährungsprobe des Scorings — die App ist
-  hierfür bereits nutzbar (bestätigt, siehe E2).
+- **UM-3 Routing-Vorentscheid (3.–5. August, vor dem Törn):** Ist die Süd-Route
+  (Richtung Naxos und weiter) offen, oder deckelt der Meltemi das Zielbild früher?
+  (Modell-Konsens prüft Philipp parallel in Windy.) Erste reale Bewährungsprobe des
+  Scorings — die App ist hierfür bereits nutzbar (bestätigt, siehe E2).
 
 ## 4. Kernkonzept: Planung auf drei Ebenen
 
@@ -93,8 +93,7 @@ Der Kernsatz des Produkts: **Das Heute muss auf einem sinnvollen Mittelfristplan
 
 Ziele sind **Plätze, keine Inseln**: Eine geschützte Traumbucht schlägt das Anlaufen
 einer bestimmten Insel. Abgewogen werden ausschließlich Entfernungen, Wind und Welle
-(Richtung und Stärke je Wettermodell), Segeldauer pro Etappe sowie Mittelfrist- und
-Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
+(Richtung und Stärke), Segeldauer pro Etappe sowie Mittelfrist- und Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 
 **Begriffe** (durchgängig so verwendet): **Platz** = Bucht, Ankerplatz oder Hafen mit
 Qualitäten und Schutzprofil · **Etappe** = Schlag von Platz zu Platz ·
@@ -125,11 +124,8 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 - **FR6:** Datenbankgestützte Bibliothek der ~25–35 Plätze des Törn-Korridors:
   Koordinaten, Typ (Hafen/Bucht/Marina), Qualitäten (Schönheit, Restaurant, Badestrand),
-  Foto `[ANNAHME: Fotoquelle wird bei der Kuration lizenzsauber mitrecherchiert]`,
-  **Warn-/Besonderheits-Attribute** (z. B. Naxos-Marina-Engpass im August,
-  Fährschwell Parikia, Wasserverfügbarkeit) sowie **Exit-Fähigkeit** (Fähr-/
-  Flugverbindung nach Athen — relevant für Familien-Rückreise-Szenarien bei starkem
-  Meltemi).
+  Foto `[ANNAHME: Fotoquelle wird bei der Kuration lizenzsauber mitrecherchiert]`.
+  Bewusst schlank: keine Auslastungs-, Engpass- oder Logistik-Attribute (siehe §7).
 - **FR7:** Schutzprofil je Platz: geschützte Wind- und Wellenrichtungssektoren mit
   Stärkegrenzen, quellenbasiert kuratiert (Heikell, CruisersWiki), ergänzt um die
   universelle Regel „Lee ist immer geschützt, Luv nie".
@@ -148,23 +144,24 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   nächstkonservativere Stufe als natürliche Alternative an.
 - **FR10:** Etappen tragen statische Warn-Attribute — unabhängig vom Modellwert — für
   bekannte Düsen-/Beschleunigungszonen (Kea-Kanal, Kafireas, Andros/Tinos-Sektor,
-  Paros–Antiparos, Paros–Naxos, Mykonos–Paros) und sonstige Gefahren/Besonderheiten
-  (Wracks in der Passage Attika–Kea, Fallwinde an der Peloponnes-Küste südlich
-  Nafplion).
+  Paros–Antiparos, Paros–Naxos, Mykonos–Paros): reine Wind-Planungsinformation, weil
+  Wettermodelle diese Zonen glätten. Navigationsgefahren (Wracks, Untiefen, Fallwinde)
+  bleiben bewusst außen vor — Domäne von Seekarte und Plotter (siehe §7).
 
 ### F4 — Forecast-Integration
 
-- **FR11:** Open-Meteo Forecast-API: Wind 10 m, Böen, Richtung — je Modell **ECMWF, GFS,
-  ICON einzeln** abfragbar; ICON-EU (~7 km) als hochauflösende Ergänzung, weil globale
-  0,25°-Modelle die Düseneffekte der Kanäle glätten.
+- **FR11:** Open-Meteo Forecast-API: Wind 10 m, Böen, Richtung aus **einem
+  Basis-Wettermodell** (Default ECMWF; Modellwahl als Konfigurationsparameter, z. B.
+  ICON-EU ~7 km für höhere Auflösung in den Kanälen). Bewusst **kein
+  Multi-Modell-Vergleich in der App** — Modell-Konsens prüft der Skipper weiterhin
+  parallel in Windy (siehe §7).
 - **FR12:** Open-Meteo Marine-API: Wellenhöhe, -richtung, -periode inkl. Swell für die
   Schutzprofil-Prüfung.
 - **FR13:** Client-Caching der Antworten (TTL 1–3 h); der Datenstand (Modelllauf,
   Abrufzeit) ist in der UI sichtbar.
-- **FR14:** Modell-Vergleich sichtbar: Gleichlauf der Modelle = Vertrauen; bei
-  Abweichung zeigt die App die Spanne statt eines Scheinkonsens.
-  `[ANNAHME: Darstellung als Nebeneinander-Vergleich je Etappe/Platz, keine
-  Ensemble-Statistik im MVP]`
+- **FR14:** *Gestrichen (Scope-Entscheidung 2026-07-30):* Multi-Modell-Vergleich in
+  der App entfällt — ein Basis-Modell genügt (FR11), Modell-Konsens läuft über Windy.
+  ID bleibt reserviert.
 
 ### F5 — Etappen-Scoring
 
@@ -174,16 +171,17 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   hinterlegten **Polardiagramm** (FR26 — Geschwindigkeit als Funktion von wahrem
   Windwinkel und Windstärke); Motorfahrt mit ~8 kn als eigener Parameter.
 - **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
-  Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden Segeln
-  pro Tag** `[ANNAHME: Motorstunden zählen ins selbe Tagesbudget]`; **bei Leichtwind
-  sind 10–12-Stunden-Schläge zulässig, wenn sie strategisch helfen.** Nachtetappen
-  bewertet die App nur als Delivery-Szenario mit Reduktionscrew — nie als
-  Familien-Etappe.
+  Aufkreuzen gegenan bei >25 kn wahrem Wind.** Tagesbudget: **Ziel maximal ~6 Stunden
+  unterwegs** (5 h Segeln + 1 h Motor oder 6 h reines Segeln), **hartes Maximum
+  6 h Segeln + 2 h Motor.** **Bei Leichtwind (~5–8 kn) sind 10–12-Stunden-Schläge oder
+  Nachtetappen mit der ganzen Familie zulässig** — maximal ~2× pro Törn, wenn sie
+  strategisch helfen.
 - **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option = die Ampel der
-  schwächsten Etappe (schwächstes Glied sichtbar). Ampelbänder: **Grün** = alle
-  Schwellen (FR16) mit Reserve eingehalten, **Gelb** = ein Grenzwert tangiert
-  (z. B. Dauer am 6-h-Limit, Wind nahe 25 kn gegenan), **Rot** = Schwelle verletzt.
-  `[ANNAHME: Reserve-Definition kalibrieren wir beim Bauen]`
+  schwächsten Etappe (schwächstes Glied sichtbar). Ampelbänder: **Grün** = Ziel-Budget
+  eingehalten (FR16), **Gelb** = zwischen Ziel und hartem Maximum oder Grenzwert
+  tangiert (z. B. Wind nahe 25 kn gegenan), **Rot** = hartes Maximum oder
+  Aufkreuz-Schwelle verletzt. `[ANNAHME: Wind-Reserve der Bänder kalibrieren wir beim
+  Bauen]`
 - **FR26:** Die App hinterlegt das **Polardiagramm** (Fountaine Pajot 45,
   WindySail-Export, siehe `inputs/` im PRD-Workspace) als Grundlage aller
   Geschwindigkeits- und Dauerberechnungen. Das gecharterte Schiff (Fountaine Pajot
@@ -266,7 +264,7 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   die App ist voll funktionsfähig ohne manuelle Dateipflege.
 - **NFR5 — Verfügbarkeit & Transparenz:** Open-Meteo ist kostenlos für
   nicht-kommerzielle Nutzung (CC BY 4.0 — Attribution in der App), Limit 10.000
-  Calls/Tag (bei ~160 Calls pro Aktualisierung reichlich), kein API-Key, aber auch
+  Calls/Tag (ein Wind- und ein Wellen-Abruf je Wegpunkt — weit darunter), kein API-Key, aber auch
   **kein SLA** — akzeptiertes Restrisiko; benannter Fallback wären direkte
   DWD-/NOAA-Endpunkte. Die App zeigt Datenstand und Modelllauf transparent an, damit
   veraltete Daten erkennbar sind.
@@ -284,6 +282,14 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   Korrekturen im Feld via direkter DB-Änderung)
 - Wind-Fetch-Heuristik als automatisches Schutz-Schätzverfahren (nur als späterer
   Fallback für unkuratierte Plätze vorgemerkt)
+- Multi-Modell-Vergleich in der App — Windy Compare bleibt dafür das Werkzeug
+- Navigationsgefahren-Daten (Wracks, Untiefen, Fallwind-Warnungen) — Domäne von
+  Seekarte und Plotter, die App wird nicht überfrachtet
+- Hafen-Auslastung/Belegung (volle Häfen, Marina-Engpässe, Fährschwell) als
+  Platz-Attribute
+- Notfall-/Exit-Logistik (Crew-Splitting, Delivery mit Reduktionscrew, Fähren-Exits):
+  Notmaßnahme außerhalb der App — greift nur, wenn Wind oder Planung versagt haben,
+  und ist bewusst keine Funktionalität
 
 ## 8. Meilensteine & Prioritäten
 
@@ -316,10 +322,8 @@ zuletzt bei Nebenansichten.
   in die Point-of-Return-Rechnung (FR19) ein.
 - **Annahmen-Index** (alle inline als `[ANNAHME]` markiert): E1 tägliche Nutzung als
   Erfolgskriterium · FR6 Fotoquellen lizenzsauber bei Kuration · FR8 Übernachtungsfenster
-  18:00–09:00 · FR14 Modell-Vergleich als Nebeneinander-Ansicht · FR15 Standard-Abfahrt
-  09:00 · FR16 Motorstunden zählen ins 6-h-Tagesbudget · FR17 Reserve-Definition der
-  Ampelbänder beim Bauen kalibrieren · §8 Priorität bei Zeitnot: Scoring vor
-  Karten-Politur.
+  18:00–09:00 · FR15 Standard-Abfahrt 09:00 · FR17 Wind-Reserve der Ampelbänder beim
+  Bauen kalibrieren · §8 Priorität bei Zeitnot: Scoring vor Karten-Politur.
 - **Vlychada/Santorin:** Entschieden — Santorin bleibt als eigener Schlag in der
   Routenbibliothek (alles mit dem Boot, kein Fähren-Ausflug). Offen bleibt die
   Liegeplatz-Frage: Vlychada ist die einzige gut geschützte Liegestelle Thiras, für den
