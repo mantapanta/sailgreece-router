@@ -31,9 +31,9 @@ Abgewogen werden ausschließlich: **Entfernungen, Wind und Welle (Richtung und S
 
 ## Lösungsumriss (MVP bis 8. August)
 
-Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer Seekarte als zentraler Oberfläche:
+Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer Karte als zentraler Oberfläche:
 
-- **Seekarte mit Wind-Overlay:** Häfen, Buchten und Routen des Reviers (Saronischer Golf, Westkykladen bis Amorgos/Santorin) auf einer Karte; Windvorhersage mehrerer Modelle (ECMWF/GFS/ICON) als Overlay oder Abfrage — via Windy (Widget oder API) `[ANNAHME: Integrationsform offen, siehe Offene Punkte]`.
+- **Karte als Besprechungsbild:** Häfen, Buchten und Routen des Reviers (Saronischer Golf, Westkykladen bis Amorgos/Santorin) auf normalem Kartenmaterial (z. B. Google Maps) — bewusst keine Seekarte, denn die App navigiert nicht (Navigation läuft über Plotter/GPS, Windy wird ohnehin separat genutzt). Die Karte beantwortet für den Skipper allein wie im Gespräch mit der Crew die Frage „Welche Optionen haben wir heute?": Windrichtungs-Pfeile als Overlay, dazu **2–3 prognostizierte Routen-Optionen als verschiedenfarbige gestrichelte Linien**, die zeigen, wie der Weg jeweils weitergeht. Windvorhersage mehrerer Modelle (ECMWF/GFS/ICON) via Windy-API.
 - **Best-Practice-Routenbibliothek:** eine kleine, kuratierte Bibliothek etablierter Routen aus verlässlichen Quellen (Sailing-Blogs, Charter-Websites, Standardliteratur wie Rod Heikell) — keine frei erfundenen Routen. Die Bibliothek ist der **Möglichkeitsraum**, aus dem die App Optionen ableitet — kein fest verdrahteter Törnplan.
 - **Best-Practice-Platzbibliothek:** dieselbe Kuratierung für Buchten, Ankerplätze und Häfen — jeder Platz mit seinen Qualitäten (Schönheit, Restaurant, Badestrand) und einem **Schutzprofil**: bei welcher Wind- und Wellenrichtung/-stärke liegt man dort nachts geschützt. Die Tagesplanung mappt den Wind- und Wellen-Forecast auf dieses Profil und zeigt, welche Zielorte entlang der Route **grün** sind.
 - **Etappen-Scoring mit Ampellogik:** Jede Etappe jeder noch offenen Routen-Option wird gegen die Vorhersage zum geplanten Zeitfenster bewertet — Windwinkel zum Kurs, Windstärke, Dauer bei Planungsgeschwindigkeit (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan). Die Familien-Schwellen sind explizit: **kein Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden Segeln pro Tag; bei Leichtwind sind 10–12-Stunden-Schläge oder Nachtetappen zulässig, wenn sie strategisch helfen.**
@@ -42,6 +42,7 @@ Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer See
 ## Außerhalb des Scopes (bewusst)
 
 - Freies Routen-Bauen auf der Karte (Langfrist-Produkt, nach dem Feldtest)
+- Navigation und Seekartendarstellung — die App ist ein Planungs- und Besprechungswerkzeug, kein Navigationsgerät
 - Stimmungs-/Crew-Zustand als Eingabegröße (bewusste Design-Entscheidung)
 - Offline-Fähigkeit und Mobile-Optimierung
 - Vollständige, revierübergreifende Hafen-/Ankerplatz-Datenbank (der MVP kuratiert nur die Plätze entlang der Törn-Routen; flächendeckende Abdeckung folgt später)
@@ -58,7 +59,7 @@ Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer See
 
 ## Offene Punkte & Risiken
 
-- **Winddaten-Integration** `[ANNAHME]`: Windy-API ist kommerziell lizenziert; ob für die Kartendarstellung ein Widget-Embed reicht und woher das Scoring seine Forecast-Daten bezieht (Windy-API bzw. Open-Meteo), klärt die technische Recherche. Das Scoring braucht in jedem Fall maschinenlesbare Daten — ein reines Widget genügt dafür nicht.
+- **Winddaten-Integration**: Die kommerzielle Windy-API-Lizenz ist akzeptiert (einige Wochen Laufzeit reichen). Offen bleibt nur, welche Windy-Produkte gebraucht werden (Point Forecast fürs Scoring, ggf. Map Forecast fürs Overlay) und ob Wellen-/Schwelldaten dort abgedeckt sind — sonst ergänzend Open-Meteo Marine. Klärt die technische Recherche.
 - **Quellen-Recherche für beide Bibliotheken**: Routen und Platz-Schutzprofile müssen vor dem Törn aus den genannten Quellen zusammengetragen werden — Aufwand unklar, im 9-Tage-Budget einzuplanen; die Schutzprofile (Wind/Welle je Platz) sind dabei der aufwendigste Teil.
 - **Wellendaten** `[ANNAHME]`: Für das Mapping auf die Schutzprofile braucht es neben Wind auch einen Wellen-/Schwell-Forecast (z. B. Open-Meteo Marine, Windy Waves) — Quelle klärt die technische Recherche.
 - **Erfolgskriterium** `[ANNAHME]`: Das Tool wird auf dem Törn täglich real für die Morgen-/Abendentscheidung genutzt und ersetzt das Kopfrechnen — nicht das seemännische Urteil.
