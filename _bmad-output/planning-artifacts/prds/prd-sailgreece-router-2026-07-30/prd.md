@@ -15,9 +15,10 @@ sie ersetzt das Kopfrechnen des Skippers, nicht sein seemännisches Urteil.
 
 Am 8. August 2026 startet ein 12-Tage-Törn mit einem 50-Fuß-Katamaran ab Marina Alimos
 (Athen) in die Kykladen — mitten in der Meltemi-Hochsaison (regelmäßig 6–8 Bft aus N–NE).
-Ziel des Törns sind **schöne Plätze**: Buchten und Häfen mit gutem Restaurant, Badestrand
-und nachts wind- und wellengeschütztem Ankerplatz. So weit wie möglich nach Süden (maximal
-Amorgos oder Santorin), ohne der Familie brutales Aufkreuzen bei über 30 Knoten zuzumuten.
+Ziel des Törns sind **schöne Plätze**: schöne Häfen und vor allem schöne Buchten — mit
+gutem Restaurant, Badestrand und nachts wind- und wellengeschütztem Ankerplatz. So weit
+wie möglich nach Süden (maximal Amorgos oder Santorin), ohne den Kindern den Törn durch
+brutales Aufkreuzen bei über 30 Knoten zu verderben.
 Kritisch ist der Rückweg gegen den Meltemi — Faustregel des Reviers: zwei Drittel der Zeit
 für den Rückweg.
 
@@ -95,6 +96,13 @@ einer bestimmten Insel. Abgewogen werden ausschließlich Entfernungen, Wind und 
 (Richtung und Stärke je Wettermodell), Segeldauer pro Etappe sowie Mittelfrist- und
 Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 
+**Begriffe** (durchgängig so verwendet): **Platz** = Bucht, Ankerplatz oder Hafen mit
+Qualitäten und Schutzprofil · **Etappe** = Schlag von Platz zu Platz ·
+**Routen-Option** = kuratierte Etappenfolge aus der Routenbibliothek ·
+**Möglichkeitsraum** = Menge aller Routen-Optionen · **Mittelfristplan** = die aktuell
+verfolgte Routen-Option über 3–5 Tage · **Point of Return** = spätester Umkehrpunkt für
+die rechtzeitige Rückkehr zur Basis.
+
 ## 5. Funktionale Anforderungen
 
 ### F1 — Karte & Besprechungsbild
@@ -115,12 +123,17 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 
 - **FR6:** Datenbankgestützte Bibliothek der ~25–35 Plätze des Törn-Korridors:
   Koordinaten, Typ (Hafen/Bucht/Marina), Qualitäten (Schönheit, Restaurant, Badestrand),
-  Foto `[ANNAHME: Fotoquelle wird bei der Kuration lizenzsauber mitrecherchiert]`.
+  Foto `[ANNAHME: Fotoquelle wird bei der Kuration lizenzsauber mitrecherchiert]`,
+  **Warn-/Besonderheits-Attribute** (z. B. Naxos-Marina-Engpass im August,
+  Fährschwell Parikia, Wasserverfügbarkeit) sowie **Exit-Fähigkeit** (Fähr-/
+  Flugverbindung nach Athen — relevant für Familien-Rückreise-Szenarien bei starkem
+  Meltemi).
 - **FR7:** Schutzprofil je Platz: geschützte Wind- und Wellenrichtungssektoren mit
   Stärkegrenzen, quellenbasiert kuratiert (Heikell, CruisersWiki), ergänzt um die
   universelle Regel „Lee ist immer geschützt, Luv nie".
-- **FR8:** Deterministische **Rot/Gelb/Grün-Ampel** je Platz: Forecast (Wind + Welle zum
-  Übernachtungszeitfenster) gemappt auf das Schutzprofil.
+- **FR8:** Deterministische **Rot/Gelb/Grün-Ampel** je Platz: Forecast (Wind + Welle)
+  gemappt auf das Schutzprofil, bewertet über das Übernachtungszeitfenster
+  `[ANNAHME: 18:00–09:00 Ortszeit]`.
 
 ### F3 — Routenbibliothek
 
@@ -129,13 +142,17 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
   mindestens ab: die Süd-Route bis Naxos mit Verlängerungsoptionen Amorgos/Santorin,
   eine gedeckelte Variante bis Paros/Antiparos, die Rückfallhäfen-Kette westwärts und
   die Saronische Schwachwind-Alternative.
-- **FR10:** Etappen tragen statische Warn-Attribute für bekannte Düsen-/Beschleunigungszonen
-  (Kea-Kanal, Kafireas, Paros–Antiparos, Paros–Naxos), unabhängig vom Modellwert.
+- **FR10:** Etappen tragen statische Warn-Attribute — unabhängig vom Modellwert — für
+  bekannte Düsen-/Beschleunigungszonen (Kea-Kanal, Kafireas, Andros/Tinos-Sektor,
+  Paros–Antiparos, Paros–Naxos, Mykonos–Paros) und sonstige Gefahren/Besonderheiten
+  (Wracks in der Passage Attika–Kea, Fallwinde an der Peloponnes-Küste südlich
+  Nafplion).
 
 ### F4 — Forecast-Integration
 
 - **FR11:** Open-Meteo Forecast-API: Wind 10 m, Böen, Richtung — je Modell **ECMWF, GFS,
-  ICON einzeln** abfragbar.
+  ICON einzeln** abfragbar; ICON-EU (~7 km) als hochauflösende Ergänzung, weil globale
+  0,25°-Modelle die Düseneffekte der Kanäle glätten.
 - **FR12:** Open-Meteo Marine-API: Wellenhöhe, -richtung, -periode inkl. Swell für die
   Schutzprofil-Prüfung.
 - **FR13:** Client-Caching der Antworten (TTL 1–3 h); der Datenstand (Modelllauf,
@@ -152,11 +169,16 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
   hinterlegten **Polardiagramm** (FR26 — Geschwindigkeit als Funktion von wahrem
   Windwinkel und Windstärke); Motorfahrt mit ~8 kn als eigener Parameter.
 - **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
-  Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden pro Tag;
-  bei Leichtwind sind 10–12-Stunden-Schläge oder Nachtetappen zulässig, wenn sie
-  strategisch helfen.**
-- **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option (schwächstes
-  Glied sichtbar).
+  Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden Segeln
+  pro Tag** `[ANNAHME: Motorstunden zählen ins selbe Tagesbudget]`; **bei Leichtwind
+  sind 10–12-Stunden-Schläge zulässig, wenn sie strategisch helfen.** Nachtetappen
+  bewertet die App nur als Delivery-Szenario mit Reduktionscrew — nie als
+  Familien-Etappe.
+- **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option = die Ampel der
+  schwächsten Etappe (schwächstes Glied sichtbar). Ampelbänder: **Grün** = alle
+  Schwellen (FR16) mit Reserve eingehalten, **Gelb** = ein Grenzwert tangiert
+  (z. B. Dauer am 6-h-Limit, Wind nahe 25 kn gegenan), **Rot** = Schwelle verletzt.
+  `[ANNAHME: Reserve-Definition kalibrieren wir beim Bauen]`
 - **FR26:** Die App hinterlegt das **Polardiagramm** (Fountaine Pajot 45,
   WindySail-Export, siehe `inputs/` im PRD-Workspace) als Grundlage aller
   Geschwindigkeits- und Dauerberechnungen. Das gecharterte Schiff (Fountaine Pajot
@@ -171,6 +193,13 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 - **FR18:** Aus aktueller Position, Törntag und Forecast leitet die App täglich ab,
   welche Routen-Optionen des Möglichkeitsraums noch offen sind — angezeigt als
   **offen / schließt am Tag X / geschlossen**, bevor sie sich schließen.
+  Definition: Eine Option ist **offen**, wenn sich mit dem aktuellen Forecast ein
+  Restplan konstruieren lässt, der (1) jede Etappe innerhalb der Familien-Schwellen
+  (FR16, Dauer aus Polare + Offset) hält und (2) die Rückkehr nach Alimos am Vorabend
+  der Ausschiffung inklusive Puffertag erreicht (FR19). **Schließt am Tag X** = ab
+  Tag X+1 existiert kein solcher Restplan mehr; **geschlossen** = es existiert keiner.
+  Kippt der Mittelfristplan, leitet die App daraus konsistent das neue Heute ab
+  (FR21).
 - **FR19:** **Predicted Point of Return:** fortlaufende Berechnung des spätesten
   Umkehrpunkts für die stressfreie Rückkehr nach Alimos (~103 sm ab Naxos, Rückkehr am
   Vorabend der Ausschiffung, mit Puffertag) — Restdistanz über die Rückfallhäfen-Kette
@@ -198,14 +227,20 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 ### F8 — Daten-Seeding & Kuration
 
 - **FR23:** Die Bibliotheken (F2, F3) werden durch **KI-gestützte Recherche vollständig
-  befüllt** (Quellen: Rod Heikell *Greek Waters Pilot*, CruisersWiki, sailingissues.com,
-  Charter-Itineraries; Gegencheck Navily/mySea) — keine Handpflege durch Philipp.
+  befüllt** — keine Handpflege durch Philipp. Quellen: Rod Heikell *Greek Waters
+  Pilot*, CruisersWiki, sailingissues.com, Charter-Itineraries, dazu das
+  **Detailmaterial des Product Briefs** (Hafenkatalog mit Koordinaten, Distanzen,
+  Schutz- und Engpass-Hinweise) als Startbestand; Positions-Grundgerüst optional aus
+  OSM/Overpass. Gegencheck: Navily/mySea. Lizenzgrenzen beachten: aus Heikell nur
+  Fakten übernehmen (keine Texte/Pläne), CruisersWiki mit Attribution (CC).
 - **FR24:** **Eine Review-Runde:** kompakte Abstimmungssicht der recherchierten Daten —
   Schutzprofile zuerst, denn sie sind sicherheitsrelevant. Philipp bestätigt oder
   korrigiert einmal, dann Import.
-- **FR25:** Import mit Schema-Validierung und Normalisierung (Ortsschreibweisen
-  Merichas/Mericha u. ä.; abweichende Distanzangaben der Quellen werden auf einen
-  Bezugspunkt vereinheitlicht).
+- **FR25:** Import mit Schema-Validierung und Normalisierung: Ortsschreibweisen
+  (Merichas/Mericha u. ä.), abweichende Distanzangaben der Quellen auf einen
+  Bezugspunkt vereinheitlicht — insbesondere **Basis-Rebasing auf Alimos** (viele
+  Seed-Distanzen sind Lavrion-basiert; Rückweg-Distanzen Amorgos/Santorin → Alimos
+  müssen ergänzt werden).
 
 ## 6. Nicht-funktionale Anforderungen
 
@@ -224,9 +259,12 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 - **NFR4 — Datenhaltung:** Bibliotheken liegen in einer zentralen Datenbank (Kandidaten:
   Vercel-Stack oder Firebase Firestore — Entscheidung in der Architektur-Phase);
   die App ist voll funktionsfähig ohne manuelle Dateipflege.
-- **NFR5 — Verfügbarkeit & Transparenz:** Open-Meteo hat im Free-Tier kein SLA —
-  akzeptiertes Restrisiko. Die App zeigt Datenstand und Modelllauf transparent an,
-  damit veraltete Daten erkennbar sind.
+- **NFR5 — Verfügbarkeit & Transparenz:** Open-Meteo ist kostenlos für
+  nicht-kommerzielle Nutzung (CC BY 4.0 — Attribution in der App), Limit 10.000
+  Calls/Tag (bei ~160 Calls pro Aktualisierung reichlich), kein API-Key, aber auch
+  **kein SLA** — akzeptiertes Restrisiko; benannter Fallback wären direkte
+  DWD-/NOAA-Endpunkte. Die App zeigt Datenstand und Modelllauf transparent an, damit
+  veraltete Daten erkennbar sind.
 - **NFR6 — Datenqualität:** Schutzprofile ausschließlich quellenbasiert; unkuratierte
   Plätze erscheinen nicht mit grüner Ampel (kein stiller Fallback im MVP).
 
@@ -261,6 +299,15 @@ zuletzt bei Nebenansichten.
 - **Fotoquellen je Platz:** lizenzsauber bei der Kuration mitrecherchieren (FR6).
 - **Heikell-Beschaffung:** *Greek Waters Pilot* (15. Aufl. 2025, ~£65) als Primärquelle
   der Schutzprofile — Kauf empfohlen (Tech-Recherche), Entscheidung bei Philipp.
+  **Zeitkritisch:** Bei 9 Tagen muss die Bestellung sofort raus (oder digitale
+  Ausgabe), sonst startet die Kuration ohne Primärquelle. Die Schutzprofile sind laut
+  Brief der aufwendigste Teil der Recherche — im Zeitplan entsprechend früh einplanen.
+- **Google-Maps-Billing:** Preis-/Konditionsangaben der Recherche stammen teils aus
+  Sekundärquellen — vor dem Billing-Setup einmal auf der offiziellen Pricing-Seite
+  verifizieren (Free-Tier 10.000 Loads/Monat erwartet).
+- **Rückkehrzeit vertraglich bestätigen:** Rückgabe am Vorabend der Ausschiffung
+  (Annahme 18:00, Alimos) — mit dem Vercharterer fixieren; der Wert geht als Konstante
+  in die Point-of-Return-Rechnung (FR19) ein.
 - **Vlychada/Santorin:** Entschieden — Santorin bleibt als eigener Schlag in der
   Routenbibliothek (alles mit dem Boot, kein Fähren-Ausflug). Offen bleibt die
   Liegeplatz-Frage: Vlychada ist die einzige gut geschützte Liegestelle Thiras, für den
