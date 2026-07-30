@@ -25,7 +25,7 @@ Der Kernsatz des Produkts: **Das Heute muss auf einem sinnvollen Mittelfristplan
 
 Die Ziele selbst sind dabei keine Inseln, sondern **Plätze**: Buchten und Häfen mit ihren Qualitäten (Schönheit, Restaurant, Badestrand) und ihrem Nachtschutz gegen Wind *und* Welle bei der vorhergesagten Windrichtung. Ein Tagesziel ist gut, wenn es ein schöner, für die Nacht geschützter Platz ist, der auf einem tragfähigen Mittelfristplan liegt — nicht, weil es eine bestimmte Insel ist.
 
-Abgewogen werden ausschließlich: **Entfernungen, Wind (Richtung und Stärke je Wettermodell), Segeldauer pro Etappe sowie Mittelfrist- und Tagesplan.**
+Abgewogen werden ausschließlich: **Entfernungen, Wind und Welle (Richtung und Stärke je Wettermodell), Segeldauer pro Etappe sowie Mittelfrist- und Tagesplan.**
 
 ## Lösungsumriss (MVP bis 8. August)
 
@@ -33,6 +33,7 @@ Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer See
 
 - **Seekarte mit Wind-Overlay:** Häfen, Buchten und Routen des Reviers (Saronischer Golf, Westkykladen bis Amorgos/Santorin) auf einer Karte; Windvorhersage mehrerer Modelle (ECMWF/GFS/ICON) als Overlay oder Abfrage — via Windy (Widget oder API) `[ANNAHME: Integrationsform offen, siehe Offene Punkte]`.
 - **Best-Practice-Routenbibliothek:** eine kleine, kuratierte Bibliothek etablierter Routen aus verlässlichen Quellen (Sailing-Blogs, Charter-Websites, Standardliteratur wie Rod Heikell) — keine frei erfundenen Routen. Für den Törn vorkonfiguriert: Plan A (Kea–Kythnos–Serifos–Sifnos–Paros–Naxos), Plan B (südlichster Punkt: Paros), Optionen Süd (Santorin) und Ost (Amorgos) samt Rückfallhafen-Kette. Einzelne Etappen sind manuell tauschbar.
+- **Best-Practice-Platzbibliothek:** dieselbe Kuratierung für Buchten, Ankerplätze und Häfen — jeder Platz mit seinen Qualitäten (Schönheit, Restaurant, Badestrand) und einem **Schutzprofil**: bei welcher Wind- und Wellenrichtung/-stärke liegt man dort nachts geschützt. Die Tagesplanung mappt den Wind- und Wellen-Forecast auf dieses Profil und zeigt, welche Zielorte entlang der Route **grün** sind.
 - **Etappen-Scoring mit Ampellogik:** Jede Etappe jedes Routen-Asts wird gegen die Vorhersage zum geplanten Zeitfenster bewertet — Windwinkel zum Kurs, Windstärke, Dauer bei Planungsgeschwindigkeit (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan). Die Familien-Schwellen sind explizit: **kein Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden Segeln pro Tag; bei Leichtwind sind 10–12-Stunden-Schläge oder Nachtetappen zulässig, wenn sie strategisch helfen.**
 - **Mittelfrist-Check:** Die App zeigt pro Routen-Ast, ob er unter der aktuellen Vorhersage noch trägt — inklusive der Rückweg-Rechnung bis Alimos (~103 sm ab Naxos) mit Puffertag.
 
@@ -41,7 +42,7 @@ Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer See
 - Freies Routen-Bauen auf der Karte (Langfrist-Produkt, nach dem Feldtest)
 - Stimmungs-/Crew-Zustand als Eingabegröße (bewusste Design-Entscheidung)
 - Offline-Fähigkeit und Mobile-Optimierung
-- Vollständige Hafen-/Ankerplatz-Datenbank (weitere Recherche folgt später; MVP nutzt die Häfen der Routenbibliothek)
+- Vollständige, revierübergreifende Hafen-/Ankerplatz-Datenbank (der MVP kuratiert nur die Plätze entlang der Törn-Routen; flächendeckende Abdeckung folgt später)
 
 ## Rahmenbedingungen & Termine
 
@@ -56,6 +57,7 @@ Eine **Web-App** (Nutzung am PC, Internetverbindung vorausgesetzt) mit einer See
 ## Offene Punkte & Risiken
 
 - **Winddaten-Integration** `[ANNAHME]`: Windy-API ist kommerziell lizenziert; ob für die Kartendarstellung ein Widget-Embed reicht und woher das Scoring seine Forecast-Daten bezieht (Windy-API bzw. Open-Meteo), klärt die technische Recherche. Das Scoring braucht in jedem Fall maschinenlesbare Daten — ein reines Widget genügt dafür nicht.
-- **Routenquellen-Recherche**: Die Best-Practice-Routen müssen vor dem Törn aus den genannten Quellen zusammengetragen werden — Aufwand unklar, im 9-Tage-Budget einzuplanen.
+- **Quellen-Recherche für beide Bibliotheken**: Routen und Platz-Schutzprofile müssen vor dem Törn aus den genannten Quellen zusammengetragen werden — Aufwand unklar, im 9-Tage-Budget einzuplanen; die Schutzprofile (Wind/Welle je Platz) sind dabei der aufwendigste Teil.
+- **Wellendaten** `[ANNAHME]`: Für das Mapping auf die Schutzprofile braucht es neben Wind auch einen Wellen-/Schwell-Forecast (z. B. Open-Meteo Marine, Windy Waves) — Quelle klärt die technische Recherche.
 - **Erfolgskriterium** `[ANNAHME]`: Das Tool wird auf dem Törn täglich real für die Morgen-/Abendentscheidung genutzt und ersetzt das Kopfrechnen — nicht das seemännische Urteil.
 - **Zeitrisiko**: 9 Tage bis zum Törnstart sind knapp; bei Verzug hat das Etappen-Scoring Vorrang vor der Kartendarstellung `[ANNAHME]`.

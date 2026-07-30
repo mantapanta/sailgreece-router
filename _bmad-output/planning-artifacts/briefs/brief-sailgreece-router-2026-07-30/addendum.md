@@ -32,7 +32,7 @@ Optionen: Naxos → Santorin ~51 sm (8h30 / 6h50, nur stabiles Fenster); Naxos �
 Rückweg-Distanzen: Naxos→Lavrion ~79 sm, Naxos→Alimos ~103 sm, Santorin→Lavrion ~115 sm, Amorgos→Lavrion ~110 sm.
 Basisdistanzen bis Kea: Lavrion ~14 sm, Alimos ~36 sm, Rafina ~29 sm.
 
-### Entscheidungstore (Gates)
+### Entscheidungstore (Gates) & Fallback-Logik
 
 - **T−5 bis T−3 (3.–5. Aug):** Modelle (ECMWF/GFS/ICON/PWE/PWG) einig? → Plan A offen, sonst Plan B enger.
 - **Tag 3 (Kythnos/Serifos/Sifnos):** Fenster Tag 5–8 unter Kontrolle? → weiter Paros/Naxos, sonst auf Paros/Antiparos deckeln.
@@ -44,7 +44,7 @@ Basisdistanzen bis Kea: Lavrion ~14 sm, Alimos ~36 sm, Rafina ~29 sm.
 
 ### Wind-Szenarien & Komfort-Regeln
 
-- Zeitraum = Meltemi-Hochsaison (spät Juli/früh August), N–NE, mehrtägiges Etesien-Regime.
+- Zeitraum = Meltemi-Hochsaison (Ende Juli/Anfang August), N–NE, mehrtägiges Etesien-Regime.
 - Kritisch ist der **Rückweg gegen N–NE**, nicht der Hinweg.
 - Szenario schwach → Plan A voll + Bonus realistisch; moderat → Naxos ja, Verlängerung nur bei klarem Rückweg; stark → auf Paros/Antiparos deckeln, Fähre/Flug + Delivery-Modus.
 - Exponierte Zonen: Kafireas Strait, Andros/Tinos-Sektor, Insel-Beschleunigungszonen.
@@ -60,7 +60,7 @@ Basisdistanzen bis Kea: Lavrion ~14 sm, Alimos ~36 sm, Rafina ~29 sm.
 ### Häfen-Kernliste (aus Quelle 1)
 
 Basen: Lavrion/Olympic Marine (primär), Alimos, Rafina. Rückfallhäfen-Kette: Korissia (Kea), Loutra/Merichas (Kythnos), Livadi (Serifos), Kamares (Sifnos), Parikia (Paros), Naxos.
-Besonderheiten: Vlychada (Santorin) einzige gut geschützte Liegestelle Thira, für 50-ft-Cat grenzwertig (formal ~15 m/~2,5 m) — Vorabklärung nötig; Katapola (Amorgos) guter Meltemi-Schutz; Naxos Marina im Juli/August Engpass; Parikia ~27 Fähranläufe/Tag im Juli.
+Besonderheiten: Vlychada (Santorin) einzige gut geschützte Liegestelle Thira, für 50-ft-Kat grenzwertig (formal max. Länge ~15 m / Tiefe ~2,5 m) — Vorabklärung nötig (Quelle 2 rät vom Anlauf Santorins per Schiff generell ab, siehe unten); Katapola (Amorgos) guter Meltemi-Schutz; Naxos Marina im Juli/August Engpass; Parikia ~27 Fähranläufe/Tag im Juli.
 
 ## Quelle 2: Revierinfos Saronischer Golf & Kykladen
 
@@ -80,11 +80,13 @@ Besonderheiten: Vlychada (Santorin) einzige gut geschützte Liegestelle Thira, f
 
 ### Distanzmatrix-Auszüge (sm, aus Törnvorschlägen)
 
+> **Hinweis für das Datenmodell:** Die Distanzangaben der beiden Quellen differieren teils (z. B. Lavrion–Kea: Q1 ~14 sm, Q2 17 sm; Paros–Naxos: Q1 ~12 sm, Q2 9 sm) — vermutlich unterschiedliche Bezugspunkte (Hafen vs. Inselmitte). Auch Ortsschreibweisen variieren je Quelle (Merichas/Mericha, Parikia/Paroikia, Santorin/Santorini); Normalisierung erfolgt im Datenmodell.
+
 - Lavrion–Kea 17 · Kea–Finikas/Syros 32 · Finikas–Paroikia 32 · Paroikia–Livadi/Serifos 30 · Livadi–Mericha 23 · Mericha–Lavrion 20.
 - 2-Wochen-Route ab Lavrion: Loutra/Kythnos 39 – Finikas/Syros 19 – Naoussa/Paros 24 – Naxos 9 – Amorgos 41 – Iraklia 17 – Kamares/Sifnos 44 – Serifos 9 – Mericha 31 – Kea 19 – Lavrion 17.
 - Ab Paros: Parikia–Ios 26 – Santorini 25 – Iraklia/Koufonisia 32 – Naxos 20 – Delos/Mykonos 28 – Paros 10.
 - Hinweis: Die 2 Entfernungskarten im PDF (S. 7, S. 12) sind Rastergrafiken — Werte nicht maschinell extrahiert.
 
-### Tool-Hinweise aus der Quelle
+### Tool- & Praxishinweise aus der Quelle
 
 Empfohlen: My-Sea, Navily, Portbooker.com; Wetter: Windy, Windfinder, HNMS. Ortszeit UTC+3 (Sommer). Ankergrund: Sand ohne Seegras. Wasserarme Kykladen — sparsam bunkern.
