@@ -70,6 +70,12 @@ Windstärke, unter Motor **~8 kn**.
 - Beobachtung: Die Polare ist konservativer als die mündlichen Richtwerte
   (Maximum ~9,9 kn bei 110° TWA / 25 kn TWS statt „12–13 kn bei 130°") — für die
   Törnplanung ist die konservative Kurve die sichere Rechengrundlage.
+- **Schiffs-Offset (vom Product Owner vorgegeben):** Das gecharterte Schiff ist eine
+  Fountaine Pajot **Saona** (Philipps Angabe: „Saona 57"; das gängige Modell heißt
+  Saona 47 — Bezeichnung bei Gelegenheit bestätigen, ändert am Offset nichts) und läuft
+  im Schnitt **+0,5 kn** gegenüber der FP45-Polare. Umsetzung: additiver Offset auf
+  alle Polar-Werte, als Parameter konfigurierbar; gilt nicht für die Motorfahrt
+  (~8 kn bleibt eigener Parameter).
 - Datenmodell: Tabelle Geschwindigkeit = f(TWA, TWS); Interpolation zwischen Stützstellen;
   Motorfahrt als separater Parameter (~8 kn), Zuschlag/Abschlag gegenan über die Polare
   bzw. Motor-Regel — Detailentscheid in der Architektur-Phase.

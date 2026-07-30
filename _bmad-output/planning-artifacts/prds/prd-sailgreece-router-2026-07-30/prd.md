@@ -157,12 +157,14 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
   strategisch helfen.**
 - **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option (schwächstes
   Glied sichtbar).
-- **FR26:** Die App hinterlegt das **Polardiagramm des Schiffs** (Fountaine Pajot 45
-  als Näherung für den 50-ft-Kat; Daten liegen vor — WindySail-Export, siehe
-  `inputs/` im PRD-Workspace) als Grundlage aller Geschwindigkeits- und
-  Dauerberechnungen. Die pauschalen Planungsgeschwindigkeiten
-  (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan) bleiben nur als Fallback, solange
-  keine Polare geladen ist. *(ID nachgereicht — Nummerierung bleibt stabil.)*
+- **FR26:** Die App hinterlegt das **Polardiagramm** (Fountaine Pajot 45,
+  WindySail-Export, siehe `inputs/` im PRD-Workspace) als Grundlage aller
+  Geschwindigkeits- und Dauerberechnungen. Das gecharterte Schiff (Fountaine Pajot
+  Saona) ist im Schnitt **0,5 kn schneller** — die App rechnet mit Polare
+  **+ 0,5 kn Offset** (als Parameter konfigurierbar). Die pauschalen
+  Planungsgeschwindigkeiten (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan) bleiben
+  nur als Fallback, solange keine Polare geladen ist.
+  *(ID nachgereicht — Nummerierung bleibt stabil.)*
 
 ### F6 — Mittelfrist-Optionsraum & Predicted Point of Return
 
