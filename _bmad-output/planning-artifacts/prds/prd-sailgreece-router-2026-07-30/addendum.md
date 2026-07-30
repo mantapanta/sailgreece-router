@@ -61,13 +61,19 @@ Briefs (6,0/7,5/6,5 kn) sind für einen Performance-Katamaran zu grob. Reale Ric
 laut Philipp: **12–13 kn bei 130° zum wahren Wind**, Kreuzen **6–7 kn** je nach
 Windstärke, unter Motor **~8 kn**.
 
-- Datenquelle: Polardiagramm eines **Fountaine Pajot 45** — Philipp liefert die Daten
-  (Näherung für den gecharterten 50-ft-Kat).
+- Datenquelle: Polardiagramm eines **Fountaine Pajot 45** — **geliefert** (2026-07-30,
+  WindySail-Export „Fountaine Pajot 45.txt", per Screenshot übermittelt). Transkript:
+  `inputs/polar-fountaine-pajot-45.txt` (Raster: TWA 0–180° in 13 Stufen × TWS
+  4/6/8/10/12/14/16/20/25 kn).
+- **Verifikation vor DB-Import nötig:** Transkript aus Phone-Screenshot rekonstruiert
+  (Zeilenumbrüche); ideal die Original-`.txt` direkt einchecken.
+- Beobachtung: Die Polare ist konservativer als die mündlichen Richtwerte
+  (Maximum ~9,9 kn bei 110° TWA / 25 kn TWS statt „12–13 kn bei 130°") — für die
+  Törnplanung ist die konservative Kurve die sichere Rechengrundlage.
 - Datenmodell: Tabelle Geschwindigkeit = f(TWA, TWS); Interpolation zwischen Stützstellen;
   Motorfahrt als separater Parameter (~8 kn), Zuschlag/Abschlag gegenan über die Polare
   bzw. Motor-Regel — Detailentscheid in der Architektur-Phase.
 - Fallback: Brief-Pauschalwerte, solange keine Polare geladen ist.
-- Offen: Format der Übergabe (CSV/Tabelle/Foto des Diagramms) — bei der Umsetzung klären.
 
 ## Design-Referenz
 

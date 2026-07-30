@@ -149,9 +149,8 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 
 - **FR15:** Jede Etappe jeder offenen Routen-Option wird gegen die Vorhersage zum
   geplanten Zeitfenster bewertet: Windwinkel zum Kurs, Windstärke, Dauer aus dem
-  hinterlegten **Polardiagramm** (Geschwindigkeit als Funktion von wahrem Windwinkel
-  und Windstärke — z. B. 12–13 kn bei 130° TWA, 6–7 kn beim Kreuzen); Motorfahrt mit
-  ~8 kn als eigener Parameter.
+  hinterlegten **Polardiagramm** (FR26 — Geschwindigkeit als Funktion von wahrem
+  Windwinkel und Windstärke); Motorfahrt mit ~8 kn als eigener Parameter.
 - **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
   Aufkreuzen gegenan bei >25 kn wahrem Wind; im Normalfall maximal 6 Stunden pro Tag;
   bei Leichtwind sind 10–12-Stunden-Schläge oder Nachtetappen zulässig, wenn sie
@@ -159,8 +158,9 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 - **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option (schwächstes
   Glied sichtbar).
 - **FR26:** Die App hinterlegt das **Polardiagramm des Schiffs** (Fountaine Pajot 45
-  als Näherung für den 50-ft-Kat, Daten liefert Philipp) als Grundlage aller
-  Geschwindigkeits- und Dauerberechnungen. Die pauschalen Planungsgeschwindigkeiten
+  als Näherung für den 50-ft-Kat; Daten liegen vor — WindySail-Export, siehe
+  `inputs/` im PRD-Workspace) als Grundlage aller Geschwindigkeits- und
+  Dauerberechnungen. Die pauschalen Planungsgeschwindigkeiten
   (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan) bleiben nur als Fallback, solange
   keine Polare geladen ist. *(ID nachgereicht — Nummerierung bleibt stabil.)*
 
