@@ -2,7 +2,7 @@
 title: 'sailgreece-router MVP — kompletter Build in einem Rutsch'
 type: 'feature'
 created: '2026-07-30'
-status: 'in-progress'
+status: 'in-review'
 baseline_commit: 'ee58689afc88410ddbb553434eab2984ec70d065'
 review_loop_iteration: 0
 context:
