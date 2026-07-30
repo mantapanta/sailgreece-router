@@ -151,19 +151,26 @@ Abhängigkeitsrichtung ist Regel: `domain` importiert nichts aus den anderen Sch
   über die eine Snapshot-Query-Familie (AD-3). Kein zusätzlicher globaler
   State-Manager; den Törnkontext regelt AD-11.
 
-### AD-8 — Betrieb: ein Projekt, klassisches Hosting `[ADOPTED]`
+### AD-8 — Betrieb: ein Datenprojekt, Hosting via Vercel `[ADOPTED]`
+*(Amendiert 2026-07-30: Hosting von Firebase Hosting auf Vercel umgestellt —
+Product-Owner-Entscheidung; Auslöser: Vercel-GitHub-Integration mit Auto-Deploy und
+direktem Vercel-Zugriff aus der Arbeitsumgebung. Daten bleiben vollständig bei
+Google/Firestore.)*
 
 - **Binds:** NFR2, NFR4, Deployment
-- **Prevents:** Multi-Env-Overhead und Fehlgriff zu Firebase App Hosting (zielt auf
-  SSR-Frameworks, braucht Blaze).
-- **Rule:** Ein GCP-/Firebase-Projekt (prod). Build `vite build` → Deploy von `dist/`
-  via **klassischem Firebase Hosting** (`firebase deploy`, manuell, kein CI). Der
-  Maps-Key wird per HTTP-Referrer-**und** API-Restriction abgesichert und liegt als
-  `VITE_`-Variable im Bundle (öffentlich by design). **Alle Tuning-Parameter liegen im
-  `config`-Dokument, nicht im Code** — Polar-Offset (+0,5 kn), Motorfahrt
-  (`motorSpeedKn` = 8), Fallback-Pauschalgeschwindigkeiten (6,0/7,5/6,5 kn, aktiv nur
-  ohne geladene Polare), FR16-Schwellen und -Budgets, Zeitfenster, Gelb-Reserve —
-  Feldkorrektur ohne Redeploy.
+- **Prevents:** Multi-Env-Overhead; manueller Deploy-Handstand; Fehlgriff zu Firebase
+  App Hosting.
+- **Rule:** Ein GCP-/Firebase-Projekt für die **Daten** (Firestore, Maps-Key). Das
+  **Hosting läuft über Vercel**: GitHub-Repo als Quelle, Framework-Preset Vite,
+  Production-Deploys automatisch vom `main`-Branch; die `VITE_`-Variablen (Maps-Key,
+  Firebase-Config, `VITE_DATA_SOURCE`) liegen als **Vercel-Env-Vars** im Projekt.
+  `firebase deploy --only firestore:rules` bleibt der Weg für die Security Rules. Der
+  Maps-Key wird per HTTP-Referrer- (inkl. `*.vercel.app` bzw. Custom-Domain) **und**
+  API-Restriction abgesichert und liegt im Bundle (öffentlich by design). **Alle
+  Tuning-Parameter liegen im `config`-Dokument, nicht im Code** — Polar-Offset
+  (+0,5 kn), Motorfahrt (`motorSpeedKn` = 8), Fallback-Pauschalgeschwindigkeiten
+  (aktiv nur ohne geladene Polare), FR16-Schwellen und -Budgets, Zeitfenster,
+  Gelb-Reserve — Feldkorrektur ohne Redeploy.
 
 ### AD-9 — Zeitfenster sind Domänenobjekte
 

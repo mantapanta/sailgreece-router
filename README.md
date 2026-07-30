@@ -13,7 +13,7 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
 - **Platz-Detail:** Foto, Qualitäten, kuratiertes Schutzprofil, Nacht-Ampel.
 
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
-@vis.gl/react-google-maps 1.x · Firebase (Firestore + Hosting) · Vitest 4.
+@vis.gl/react-google-maps 1.x · Firebase Firestore · Vercel (Hosting) · Vitest 4.
 
 ## Schnellstart (Entwicklung, ohne Firebase)
 
@@ -136,14 +136,24 @@ Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
    müssen aber ins Staging-JSON zurückgetragen werden, sonst überschreibt
    der nächste Import sie (AD-5).
 
-### 5. Deploy (klassisches Firebase Hosting)
+### 5. Deploy (Vercel, aus GitHub)
+
+Hosting läuft über **Vercel** (AD-8, amendiert): [vercel.com/new](https://vercel.com/new)
+→ GitHub-Repo `mantapanta/sailgreece-router` importieren → Framework-Preset **Vite**
+(auto-erkannt, Build `npm run build`, Output `dist`) → unter *Environment Variables*
+die Werte aus `.env.example` setzen (`VITE_GOOGLE_MAPS_API_KEY`,
+`VITE_GOOGLE_MAPS_MAP_ID`, `VITE_FIREBASE_*`, `VITE_DATA_SOURCE=firestore` — solange
+das Seeding noch nicht gelaufen ist: `local`). Danach deployt jeder Push auf `main`
+automatisch; Branches bekommen Preview-URLs.
+
+Wichtig: Die Vercel-Domain (`*.vercel.app` bzw. Custom-Domain) in die
+**HTTP-Referrer-Restriction des Maps-Keys** aufnehmen.
+
+Die Firestore Security Rules deployt weiterhin die Firebase-CLI:
 
 ```bash
-npm run build          # baut nach dist/
-firebase deploy        # Hosting (dist/) + Rules
+firebase deploy --only firestore:rules
 ```
-
-Manuell, kein CI — reicht für einen Nutzer und 9 Tage (AD-8).
 
 ## Tuning-Parameter
 
