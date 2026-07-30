@@ -68,8 +68,8 @@ Einziger Nutzer im MVP ist **Philipp als Skipper** — am PC, mit Internetverbin
 Karte als Besprechungsbild im Gespräch mit der Crew.
 
 - **UM-1 Morgenentscheidung (täglich, ~10 min):** Philipp öffnet die App im Hafen/vor
-  Anker. Die aktuelle Position kommt per GPS/Standortabfrage (FR27), manuell
-  übersteuerbar. Die App zeigt: heutige Tagesoptionen mit Ziel-Ampel und Etappen-Score, den Zustand des
+  Anker — allein oder mit der Crew als Besprechungsbild. Die aktuelle Position kommt
+  per GPS/Standortabfrage (FR27), manuell übersteuerbar. Die App zeigt: heutige Tagesoptionen mit Ziel-Ampel und Etappen-Score, den Zustand des
   Mittelfristplans (welche Optionen noch offen sind) und den Point of Return. Die Crew
   schaut mit; man entscheidet gemeinsam das Heute.
 - **UM-2 Abendcheck (täglich, ~5 min):** Nach dem neuen Forecast-Lauf prüft Philipp, ob
@@ -99,9 +99,11 @@ Tagesplan. Der Skipper entscheidet, die App rechnet und vergleicht.
 **Begriffe** (durchgängig so verwendet): **Platz** = Bucht, Ankerplatz oder Hafen mit
 Qualitäten und Schutzprofil · **Etappe** = Schlag von Platz zu Platz ·
 **Routen-Option** = kuratierte Etappenfolge aus der Routenbibliothek ·
-**Möglichkeitsraum** = Menge aller Routen-Optionen · **Mittelfristplan** = die aktuell
-verfolgte Routen-Option über 3–5 Tage · **Point of Return** = spätester Umkehrpunkt für
-die rechtzeitige Rückkehr zur Basis.
+**Möglichkeitsraum** (synonym: Optionsraum) = Menge aller Routen-Optionen ·
+**Mittelfristplan** = die aktuell verfolgte Routen-Option über 3–5 Tage ·
+**Point of Return** (synonym: Umkehrpunkt) = spätester Umkehrpunkt für die
+rechtzeitige Rückkehr zur Basis · **Ampel** = deterministische Rot/Gelb/Grün-Bewertung;
+je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 ## 5. Funktionale Anforderungen
 
@@ -141,7 +143,9 @@ die rechtzeitige Rückkehr zur Basis.
   Plätze der Bibliothek mit Distanzen (sm) — keine frei erfundenen Routen. Deckt
   mindestens ab: die Süd-Route bis Naxos mit Verlängerungsoptionen Amorgos/Santorin,
   eine gedeckelte Variante bis Paros/Antiparos, die Rückfallhäfen-Kette westwärts und
-  die Saronische Schwachwind-Alternative.
+  die Saronische Schwachwind-Alternative. Diese Varianten sind als **Eskalationsstufen**
+  zueinander geordnet: Verschärft sich der Forecast, bietet die App die
+  nächstkonservativere Stufe als natürliche Alternative an.
 - **FR10:** Etappen tragen statische Warn-Attribute — unabhängig vom Modellwert — für
   bekannte Düsen-/Beschleunigungszonen (Kea-Kanal, Kafireas, Andros/Tinos-Sektor,
   Paros–Antiparos, Paros–Naxos, Mykonos–Paros) und sonstige Gefahren/Besonderheiten
@@ -165,7 +169,8 @@ die rechtzeitige Rückkehr zur Basis.
 ### F5 — Etappen-Scoring
 
 - **FR15:** Jede Etappe jeder offenen Routen-Option wird gegen die Vorhersage zum
-  geplanten Zeitfenster bewertet: Windwinkel zum Kurs, Windstärke, Dauer aus dem
+  geplanten Zeitfenster `[ANNAHME: Standard-Abfahrt 09:00 Ortszeit, konfigurierbar]`
+  bewertet: Windwinkel zum Kurs, Windstärke, Dauer aus dem
   hinterlegten **Polardiagramm** (FR26 — Geschwindigkeit als Funktion von wahrem
   Windwinkel und Windstärke); Motorfahrt mit ~8 kn als eigener Parameter.
 - **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
@@ -284,7 +289,7 @@ die rechtzeitige Rückkehr zur Basis.
 
 | Termin | Meilenstein |
 |---|---|
-| 3.–5. Aug | App nutzbar für Routing-Vorentscheid: Forecast + Scoring + Optionsraum (bestätigt) |
+| 3.–5. Aug | App nutzbar für Routing-Vorentscheid: Forecast + Scoring + Optionsraum (bestätigt); Vorbedingung: Polar-Transkript gegen Original verifiziert |
 | 7. Aug | Bibliotheken final reviewt und importiert; Karte + Tagesansicht komplett |
 | 8. Aug | Törnstart — Tool im täglichen Einsatz |
 
@@ -300,14 +305,21 @@ zuletzt bei Nebenansichten.
 - **Heikell-Beschaffung:** *Greek Waters Pilot* (15. Aufl. 2025, ~£65) als Primärquelle
   der Schutzprofile — Kauf empfohlen (Tech-Recherche), Entscheidung bei Philipp.
   **Zeitkritisch:** Bei 9 Tagen muss die Bestellung sofort raus (oder digitale
-  Ausgabe), sonst startet die Kuration ohne Primärquelle. Die Schutzprofile sind laut
-  Brief der aufwendigste Teil der Recherche — im Zeitplan entsprechend früh einplanen.
+  Ausgabe), sonst startet die Kuration ohne Primärquelle — Fallback dann: CruisersWiki
+  als Primärquelle mit konservativeren Ampeln. Die Schutzprofile sind laut Brief der
+  aufwendigste Teil der Recherche — im Zeitplan entsprechend früh einplanen.
 - **Google-Maps-Billing:** Preis-/Konditionsangaben der Recherche stammen teils aus
   Sekundärquellen — vor dem Billing-Setup einmal auf der offiziellen Pricing-Seite
   verifizieren (Free-Tier 10.000 Loads/Monat erwartet).
 - **Rückkehrzeit vertraglich bestätigen:** Rückgabe am Vorabend der Ausschiffung
   (Annahme 18:00, Alimos) — mit dem Vercharterer fixieren; der Wert geht als Konstante
   in die Point-of-Return-Rechnung (FR19) ein.
+- **Annahmen-Index** (alle inline als `[ANNAHME]` markiert): E1 tägliche Nutzung als
+  Erfolgskriterium · FR6 Fotoquellen lizenzsauber bei Kuration · FR8 Übernachtungsfenster
+  18:00–09:00 · FR14 Modell-Vergleich als Nebeneinander-Ansicht · FR15 Standard-Abfahrt
+  09:00 · FR16 Motorstunden zählen ins 6-h-Tagesbudget · FR17 Reserve-Definition der
+  Ampelbänder beim Bauen kalibrieren · §8 Priorität bei Zeitnot: Scoring vor
+  Karten-Politur.
 - **Vlychada/Santorin:** Entschieden — Santorin bleibt als eigener Schlag in der
   Routenbibliothek (alles mit dem Boot, kein Fähren-Ausflug). Offen bleibt die
   Liegeplatz-Frage: Vlychada ist die einzige gut geschützte Liegestelle Thiras, für den

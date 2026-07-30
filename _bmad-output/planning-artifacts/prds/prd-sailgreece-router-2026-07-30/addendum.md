@@ -51,7 +51,9 @@ Gewünschter Ablauf (vom Product Owner formuliert):
    auf der Datenbank.
 
 Startliste: die ~25–35 Plätze des Törn-Korridors aus dem Brief-Addendum
-(Hafen-Kernliste + Zielkatalog mit Koordinaten). Aufwandsschätzung Recherche laut
+(`_bmad-output/planning-artifacts/briefs/brief-sailgreece-router-2026-07-30/addendum.md`
+— Hafen-Kernliste + Zielkatalog mit Koordinaten, Distanzmatrizen, Engpass- und
+Schutzhinweise). Aufwandsschätzung Recherche laut
 Tech-Report: 1–2 Tage, parallelisierbar zur Entwicklung.
 
 ## Polardiagramm (Detail zu FR15/FR26)
