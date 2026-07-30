@@ -59,8 +59,11 @@ export function restPlanFeasible(
   // route's final island. We search over the arrival day of the last leg.
   const lastIsland = legs[legs.length - 1]!.toIslandId;
   let best: Feasibility = 'infeasible';
+  // Earliest possible arrival: packLegsFeasible allows TWO short legs on one
+  // day, so the fastest plan needs ceil(legs/2) days — starting the scan at
+  // one-leg-per-day would silently skip double-leg plans at the deadline edge.
   for (
-    let arrivalDay = startDay + legs.length - 1;
+    let arrivalDay = startDay + Math.ceil(legs.length / 2) - 1;
     arrivalDay <= deadline;
     arrivalDay++
   ) {
@@ -142,13 +145,19 @@ export function assessRouteOption(
 
   // Open today: does it close? Latest start day D with a feasible rest plan.
   let closesOnDay: number | null = null;
+  let closingScanHitHorizon = false;
   for (let d = today + 1; d <= deadline; d++) {
     const f = restPlanFeasible(route, currentIslandId, d, snapshot);
     if (f === 'infeasible') {
       closesOnDay = d - 1;
       break;
     }
-    if (f === 'horizon') break; // beyond horizon we cannot claim a closing day
+    if (f === 'horizon') {
+      // Beyond the horizon we cannot claim a closing day — that is a VISIBLE
+      // caveat (I/O-Matrix), not an unqualified 'offen'.
+      closingScanHitHorizon = true;
+      break;
+    }
   }
   if (closesOnDay !== null && closesOnDay <= deadline) {
     reasons.push(`Ab Tag ${closesOnDay + 1} existiert kein zulässiger Restplan mehr`);
@@ -156,6 +165,17 @@ export function assessRouteOption(
       routeId: route.id,
       state: 'schliesst',
       closesOnDay,
+      ampel,
+      legAssessments,
+      reasons,
+    };
+  }
+  if (closingScanHitHorizon) {
+    reasons.push('Schließtag jenseits des Forecast-Horizonts nicht bestimmbar (Vorbehalt)');
+    return {
+      routeId: route.id,
+      state: 'offen-horizont',
+      closesOnDay: null,
       ampel,
       legAssessments,
       reasons,
@@ -186,7 +206,11 @@ export function deriveDayOptions(
   if (!currentIslandId) return [];
 
   const options: DayOption[] = [];
-  const seenTargets = new Set<string>();
+  // Dedupe over the LEG id, not the target island: two routes may reach the
+  // same island via DIFFERENT legs (other waypoints/places/distance) — those
+  // must stay separate options, otherwise the displayed duration/score of the
+  // first route would silently claim to serve the second one too.
+  const seenLegs = new Set<string>();
 
   const routesSorted = [...snapshot.library.routes].sort(
     (a, b) => a.escalationRank - b.escalationRank,
@@ -195,14 +219,14 @@ export function deriveDayOptions(
     const legs = remainingRouteLegs(route, currentIslandId);
     const next = legs?.[0];
     if (!next) continue;
-    if (seenTargets.has(next.toIslandId)) {
-      const existing = options.find((o) => o.targetIslandId === next.toIslandId);
+    if (seenLegs.has(next.id)) {
+      const existing = options.find((o) => o.legId === next.id);
       if (existing && !existing.servesRouteIds.includes(route.id)) {
         existing.servesRouteIds.push(route.id);
       }
       continue;
     }
-    seenTargets.add(next.toIslandId);
+    seenLegs.add(next.id);
     const bestPlaceId = bestPlaceByIsland[next.toIslandId]?.[today] ?? null;
     options.push({
       kind: 'leg',

@@ -107,7 +107,8 @@ export function PlaceDetailView({
           </ul>
         )}
         <p className="beschreibung">
-          Bewertungszeitraum: 18:00–09:00 Uhr Ortszeit (Athen).
+          Bewertungszeitraum: {snapshot.params.nightStartHourAthens}:00–
+          {snapshot.params.nightEndHourAthens}:00 Uhr Ortszeit (Athen).
         </p>
       </section>
 

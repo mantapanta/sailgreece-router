@@ -25,7 +25,10 @@ function interp1(xs: number[], x: number): { i0: number; i1: number; t: number }
 
 /** Raw polar lookup (kn) WITHOUT offset — bilinear over TWA x TWS, clamped at grid edges. */
 export function rawPolarSpeedKn(polar: Polar, twa: number, twsKn: number): number {
-  const twaFolded = Math.min(Math.abs(twa), 360 - Math.abs(twa)) % 360;
+  // Fold ANY angle to 0-180 (e.g. -90 -> 90, 270 -> 90, 540 -> 180). The old
+  // `min(|twa|, 360-|twa|)` folded 540 to 0 (upwind instead of downwind).
+  const t = Math.abs(twa) % 360;
+  const twaFolded = t > 180 ? 360 - t : t;
   const a = interp1(polar.twaDeg, Math.min(180, Math.max(0, twaFolded)));
   const w = interp1(polar.twsKn, Math.max(0, twsKn));
   const s00 = polar.speeds[a.i0]![w.i0]!;

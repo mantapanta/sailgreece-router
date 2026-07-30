@@ -17,6 +17,11 @@ Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
 
 ## Schnellstart (Entwicklung, ohne Firebase)
 
+**Voraussetzung: Node.js ≥ 22.18** (die Seeding-Skripte `npm run seed:*`
+laufen über natives TypeScript-Type-Stripping, das es erst ab dieser Version
+gibt — mit Node 20 scheitern sie kryptisch). Deklariert im `engines`-Feld
+der `package.json`.
+
 ```bash
 npm install
 cp .env.example .env        # VITE_DATA_SOURCE=local ist der Standard
@@ -148,6 +153,26 @@ Forecast-Modell …) liegen im Firestore-Dokument `config/parameters`
 (bzw. `seeding/data/config.json` im local-Modus) — Feldkorrektur ohne
 Redeploy. Das Forecast-Modell (Default `ecmwf_ifs025`) lässt sich dort
 z. B. auf `icon_eu` umstellen.
+
+Inkonsistente Kombinationen (z. B. `nightEndHourAthens >= nightStartHourAthens`
+oder `targetDayHours > maxSailHours + maxMotorHours`) werden vom Zod-Schema
+abgelehnt — ein fehlerhaft editiertes Config-Dokument fällt sichtbar auf die
+Defaults zurück statt stumm falsche Fenster/Ampeln zu erzeugen.
+
+### Trip-Parameter (Törn-Rahmen)
+
+| Feld | Bedeutung | Default |
+|---|---|---|
+| `tripStartDate` | Kalenderdatum von Törntag 1 (`YYYY-MM-DD`) | `2026-08-08` |
+| `tripLengthDays` | Törnlänge in Tagen (Tag 1 … Tag N) | `12` |
+| `disembarkDay` | **Ausschiffungstag** (1-basiert). Die Rückkehr nach Alimos am **Vorabend** wird intern gerechnet: effektiver Stichtag = `disembarkDay − 1 − bufferDays`. Hier den Ausschiffungstag eintragen, **nicht** den Vorabend! | `12` |
+| `bufferDays` | Zusätzlicher Puffertag vor dem Vorabend (FR19) | `1` |
+| `baseIslandId` / `basePlaceId` | Heimatbasis (Start/Ziel der Rückfallkette) | `athen` / `athen-alimos` |
+| `maxSnapNm` | Max. Distanz (sm), bis zu der ein GPS-Fix auf den nächsten Bibliotheksplatz gesnappt wird; weiter entfernte Fixes gelten als „außerhalb des Reviers" (sichtbare Meldung statt stummer Zuordnung) | `30` |
+| `nightLookaheadDays` | Wie viele Nächte ab heute für die Anzeige bewertet werden | `10` |
+
+Beispiel: `disembarkDay: 12`, `bufferDays: 1` ⇒ Basis muss bis **Tag 10**
+erreicht sein (Vorabend Tag 11, minus 1 Puffertag).
 
 ## Projektstruktur
 

@@ -144,9 +144,18 @@ export interface Assessment {
   /** bestPlaceByIsland[islandId][nightDay] = placeId | null (AD-2: ranking is domain). */
   bestPlaceByIsland: Record<string, Record<number, string | null>>;
   dayOptions: DayOption[];
+  /**
+   * Route options ORDERED by escalation rank (conservative first) — ordering
+   * by domain criteria is computing (AD-2), so it happens here, not in views.
+   */
   routeOptions: RouteOptionAssessment[];
   ppr: PprResult;
   decisionPoints: DecisionPoint[];
   /** Island the boat is currently at (derived from position). */
   currentIslandId: string | null;
+  /**
+   * Why currentIslandId is null although a position exists (e.g. fix beyond
+   * the snap radius) — or null when the derivation is unremarkable.
+   */
+  positionNote: string | null;
 }

@@ -2,7 +2,7 @@
 title: 'sailgreece-router MVP — kompletter Build in einem Rutsch'
 type: 'feature'
 created: '2026-07-30'
-status: 'in-review'
+status: 'done'
 baseline_commit: 'ee58689afc88410ddbb553434eab2984ec70d065'
 review_loop_iteration: 0
 context:
@@ -110,3 +110,57 @@ Firebase-Setup lauffähig sind — gleiche Zod-Schemas, gleicher Reader-Vertrag.
 
 **Manual checks (if no CLI):**
 - `npm run dev` → Tagesansicht lädt mit lokalen Beispieldaten und echten Forecasts; Karte zeigt Ampel-Marker + gestrichelte Routen; Handy-Viewport (DevTools) stapelt das Layout.
+
+## Suggested Review Order
+
+**Engine-Vertrag & Assessment (Einstiegspunkt)**
+
+- Der eine Engine-Einstieg: Snapshot rein, komplettes Assessment mit Zeitstempeln raus (AD-3).
+  [`assess.ts:64`](../../src/domain/assess.ts#L64)
+
+- Optionszustände offen/offen-horizont/schließt/zu — die FR18-Definition als Code.
+  [`options.ts:46`](../../src/domain/options.ts#L46)
+
+- Etappen-Score gegen das künftige Zeitfenster; Override nur für heute.
+  [`scoring.ts:124`](../../src/domain/scoring.ts#L124)
+
+**Sicherheitslogik (Schutzampel & Polare)**
+
+- Sektor-Semantik mit Nord-Wrap, inklusiv; Lee/Luv als Laufzeitregel.
+  [`ampel.ts:34`](../../src/domain/ampel.ts#L34)
+
+- Punkt-Sektor-Verbot und getrennte Wind-/Wellensektoren im normativen Schema (AD-4).
+  [`shelter.ts:24`](../../src/domain/schema/shelter.ts#L24)
+
+- Polar-Offset wird genau hier addiert — nirgendwo sonst (AD-10).
+  [`polar.ts:4`](../../src/domain/polar.ts#L4)
+
+**Zeit & Rückweg**
+
+- Athens-definierte Fenster → UTC-Indizes; die einzige Zeitzonen-Übersetzung (AD-9).
+  [`time.ts:85`](../../src/domain/time.ts#L85)
+
+- Umgedrehte Etappen behalten die Forecast-Keys der Originale (Review-Kernfix).
+  [`ppr.ts:181`](../../src/domain/ppr.ts#L181)
+
+**Schale (Adapter & App-State)**
+
+- Normative Ortsmenge: eine Query-Familie für Plätze + Wegpunkte (AD-3).
+  [`openMeteo.ts:45`](../../src/adapters/openMeteo.ts#L45)
+
+- Eine Engine-Instanz pro App statt doppelter Berechnung.
+  [`planningContext.tsx:2`](../../src/app/planningContext.tsx#L2)
+
+- TripContext-Reducer: manual schlägt GPS, localStorage validiert (AD-11).
+  [`tripContext.tsx:2`](../../src/app/tripContext.tsx#L2)
+
+**UI & Seeding (Peripherie)**
+
+- Tagesansicht: Optionen nebeneinander, kein Empfehlungsfeld (FR21/22).
+  [`DayView.tsx:1`](../../src/ui/views/DayView.tsx#L1)
+
+- Import mit Per-Datei-Freigabe-Gate, Uniqueness- und Referenz-Checks (AD-10).
+  [`importToFirestore.ts:4`](../../seeding/importToFirestore.ts#L4)
+
+- 83 Fixture-Tests, darunter die Referenzfälle der Sektor-/Budget-/Horizont-Semantik.
+  [`__tests__/`](../../src/domain/__tests__)

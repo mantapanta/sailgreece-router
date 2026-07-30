@@ -126,11 +126,8 @@ export function DayView({
     ? islandName(snapshot, assessment.currentIslandId)
     : 'Position unbekannt';
 
-  const sortedRoutes = [...assessment.routeOptions].sort((a, b) => {
-    const ra = snapshot.library.routes.find((r) => r.id === a.routeId)?.escalationRank ?? 0;
-    const rb = snapshot.library.routes.find((r) => r.id === b.routeId)?.escalationRank ?? 0;
-    return ra - rb;
-  });
+  // AD-2: routeOptions arrive ORDERED by escalation rank from the assessment.
+  const orderedRoutes = assessment.routeOptions;
 
   return (
     <div>
@@ -142,6 +139,9 @@ export function DayView({
         {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
         {' · '}Abfahrt {snapshot.trip.departureHourOverride ?? params.departureHourAthens}:00 Uhr (Athen)
       </p>
+      {assessment.positionNote && (
+        <div className="hint-panel">{assessment.positionNote}</div>
+      )}
 
       {assessment.dayOptions.length === 0 ? (
         <div className="hint-panel">
@@ -163,7 +163,7 @@ export function DayView({
       <section className="section">
         <span className="versal">Mittelfristplan · Möglichkeitsraum (FR18)</span>
         <h2>Routen-Optionen</h2>
-        {sortedRoutes.map((opt) => {
+        {orderedRoutes.map((opt) => {
           const route = snapshot.library.routes.find((r) => r.id === opt.routeId);
           return (
             <div className="route-state" key={opt.routeId}>

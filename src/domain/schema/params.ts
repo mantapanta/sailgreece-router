@@ -6,7 +6,7 @@ import { z } from 'zod';
  * redeploy. Defaults here mirror PRD FR15/FR16/FR26 and the brief.
  * Parameters reach the snapshot RAW; they are applied ONLY in the core (AD-10).
  */
-export const ParamsSchema = z.object({
+const ParamsObjectSchema = z.object({
   // --- speeds / polar (FR26, AD-10) ---------------------------------------
   /** Additive offset on all polar values (Saona vs FP45). Applied ONLY in domain/polar.ts. */
   polarOffsetKn: z.number().default(0.5),
@@ -63,18 +63,81 @@ export const ParamsSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .default('2026-08-08'),
   tripLengthDays: z.number().int().positive().default(12),
-  /** Return to Alimos on the eve of disembarkation => trip day lengthDays-1. */
-  returnByEveOfDay: z.number().int().positive().default(12),
+  /**
+   * Trip day of DISEMBARKATION (1-based; default = last trip day). The
+   * return to the base on the EVE of this day is computed internally:
+   * effectiveDeadlineDay = disembarkDay - 1 - bufferDays. Enter the
+   * disembarkation day itself here, NOT the eve.
+   */
+  disembarkDay: z.number().int().positive().default(12),
   /** Additional buffer day before that deadline (FR19). */
   bufferDays: z.number().int().min(0).default(1),
   /** Home base island / place. */
   baseIslandId: z.string().default('athen'),
   basePlaceId: z.string().default('athen-alimos'),
 
+  // --- position derivation ----------------------------------------------------
+  /**
+   * Maximum distance (nm) between a position fix and the nearest library
+   * place for the fix to be snapped to that place's island. Beyond this the
+   * position counts as "outside the cruising area" (no island, visible reason)
+   * instead of silently snapping to the closest island.
+   */
+  maxSnapNm: z.number().positive().default(30),
+
+  // --- display ------------------------------------------------------------------
+  /** Nights ahead of the current day assessed for display (AD-8: config, not code). */
+  nightLookaheadDays: z.number().int().positive().default(10),
+
   // --- forecast (FR11) --------------------------------------------------------
   /** Open-Meteo model id; default ECMWF. Model choice is a config parameter. */
   forecastModel: z.string().default('ecmwf_ifs025'),
   forecastDays: z.number().int().min(1).max(16).default(10),
+});
+
+/**
+ * Cross-field validation: the config document is editable in Firestore
+ * without redeploy (AD-8) — inconsistent combinations must fail loudly
+ * instead of silently producing nonsense windows/ampeln.
+ */
+export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
+  const p = ctx.value;
+  if (p.nightEndHourAthens >= p.nightStartHourAthens) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'nightEndHourAthens muss < nightStartHourAthens sein (Nachtfenster endet fix am Folgetag)',
+      input: p,
+    });
+  }
+  if (p.targetDayHours > p.maxSailHours + p.maxMotorHours) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'targetDayHours darf das harte Maximum (maxSailHours + maxMotorHours) nicht überschreiten',
+      input: p,
+    });
+  }
+  if (p.gelbReserveKn >= p.maxUpwindTwsKn) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'gelbReserveKn muss kleiner als maxUpwindTwsKn sein (sonst ist gruen unerreichbar)',
+      input: p,
+    });
+  }
+  if (p.disembarkDay - 1 - p.bufferDays < 1) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'disembarkDay - 1 - bufferDays muss >= 1 sein (effektiver Stichtag vor Törnbeginn)',
+      input: p,
+    });
+  }
+  if (p.disembarkDay > p.tripLengthDays) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'disembarkDay darf tripLengthDays nicht überschreiten',
+      input: p,
+    });
+  }
 });
 export type Params = z.infer<typeof ParamsSchema>;
 

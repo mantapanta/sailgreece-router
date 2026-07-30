@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeNightAmpel, sectorContains, windHourAmpel } from '../ampel.ts';
+import { placeNightAmpel, sectorContains, waveHourAmpel, windHourAmpel } from '../ampel.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
 import {
   constantForecast,
@@ -60,6 +60,32 @@ describe('wind hour verdict (FR8)', () => {
   it('unprotected direction (luv) is never gruen: calm => gelb, strong => rot', () => {
     expect(windHourAmpel(sectors, 180, 5, params)).toBe('gelb');
     expect(windHourAmpel(sectors, 180, 25, params)).toBe('rot');
+  });
+
+  it('DECISION fixture: overlapping sectors => the MOST GENEROUS limit wins (Math.max)', () => {
+    const overlapping = [
+      { fromDeg: 0, toDeg: 180, maxKn: 20 },
+      { fromDeg: 90, toDeg: 270, maxKn: 30 },
+    ];
+    // Wind from 120 deg lies in BOTH sectors: limit 30 governs, so 25 kn is
+    // still gruen (25 <= 30 - gelbReserve 3) although sector 1 alone caps 20.
+    expect(windHourAmpel(overlapping, 120, 25, params)).toBe('gruen');
+    expect(windHourAmpel(overlapping, 120, 29, params)).toBe('gelb');
+    expect(windHourAmpel(overlapping, 120, 31, params)).toBe('rot');
+  });
+});
+
+describe('wave hour verdict (FR8) — DECISION: no yellow reserve band for waves', () => {
+  const waveSectors = [{ fromDeg: 330, toDeg: 60, maxM: 1.5 }];
+
+  it('protected sector: gruen up to the limit (inclusive), rot directly above — no gelb band', () => {
+    expect(waveHourAmpel(waveSectors, 10, 1.5, params)).toBe('gruen');
+    expect(waveHourAmpel(waveSectors, 10, 1.6, params)).toBe('rot');
+  });
+
+  it('unprotected wave direction: gelb only in near-calm, rot above', () => {
+    expect(waveHourAmpel(waveSectors, 180, 0.4, params)).toBe('gelb');
+    expect(waveHourAmpel(waveSectors, 180, 0.8, params)).toBe('rot');
   });
 });
 

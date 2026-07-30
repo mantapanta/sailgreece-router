@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TripProvider, useTrip } from './tripContext.tsx';
-import { usePlanning, STALE_TIME_MS } from './usePlanning.ts';
+import { STALE_TIME_MS } from './usePlanning.ts';
+import { PlanningProvider, usePlanning } from './planningContext.tsx';
 import { getCurrentGpsPosition } from '../adapters/geolocation.ts';
 import { DayView } from '../ui/views/DayView.tsx';
 import { MapView } from '../ui/views/MapView.tsx';
 import { PlaceDetailView } from '../ui/views/PlaceDetailView.tsx';
-import { formatStamp } from '../ui/format.ts';
+import { formatStamp, formatTripRange } from '../ui/format.ts';
 import '../ui/styles.css';
 
 const queryClient = new QueryClient({
@@ -141,7 +142,7 @@ function ControlsBar() {
 function Shell() {
   const [view, setView] = useState<View>({ kind: 'tag' });
   const planning = usePlanning();
-  const { libraryQuery, forecastQuery, snapshot, assessment } = planning;
+  const { libraryQuery, forecastQuery, snapshot, assessment, bundle } = planning;
 
   const openPlace = (placeId: string) =>
     setView((v) => ({
@@ -150,24 +151,32 @@ function Shell() {
       returnTo: v.kind === 'karte' ? 'karte' : 'tag',
     }));
 
+  // Place detail keeps the tab of the view it was opened from active.
+  const activeTab: 'tag' | 'karte' = view.kind === 'platz' ? view.returnTo : view.kind;
+
   return (
     <div className="shell">
       <header className="topbar">
         <div className="brand">
           sailgreece-router
-          <small>Kykladen · 8.–19. August 2026</small>
+          <small>
+            Kykladen
+            {bundle
+              ? ` · ${formatTripRange(bundle.params.tripStartDate, bundle.params.tripLengthDays)}`
+              : ''}
+          </small>
         </div>
         <nav className="tabs">
           <button
             type="button"
-            className={view.kind === 'tag' ? 'active' : ''}
+            className={activeTab === 'tag' ? 'active' : ''}
             onClick={() => setView({ kind: 'tag' })}
           >
             Tagesansicht
           </button>
           <button
             type="button"
-            className={view.kind !== 'tag' ? 'active' : ''}
+            className={activeTab === 'karte' ? 'active' : ''}
             onClick={() => setView({ kind: 'karte' })}
           >
             Karte
@@ -256,7 +265,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TripProvider>
-        <Shell />
+        <PlanningProvider>
+          <Shell />
+        </PlanningProvider>
       </TripProvider>
     </QueryClientProvider>
   );

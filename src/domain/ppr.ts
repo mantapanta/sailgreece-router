@@ -12,7 +12,7 @@
 import type { Leg, Route } from './schema/route.ts';
 import type { PlanningSnapshot, PprResult } from './schema/snapshot.ts';
 import { RETURN_CHAIN_ROUTE_ID } from './schema/route.ts';
-import { assessLeg } from './scoring.ts';
+import { assessLeg, legWaypointKey } from './scoring.ts';
 
 export type Feasibility = 'feasible' | 'infeasible' | 'horizon';
 
@@ -22,10 +22,14 @@ export function routeIslandSequence(route: Route): string[] {
   return [route.legs[0]!.fromIslandId, ...route.legs.map((l) => l.toIslandId)];
 }
 
-/** Trip day by which the base must be reached (eve of disembarkation minus buffer). */
+/**
+ * Trip day by which the base must be reached: the EVE of the disembarkation
+ * day (disembarkDay - 1) minus the buffer. The eve is computed HERE — the
+ * config field is the disembarkation day itself (see params.ts).
+ */
 export function effectiveDeadlineDay(snapshot: PlanningSnapshot): number {
   const { params } = snapshot;
-  return params.returnByEveOfDay - 1 - params.bufferDays;
+  return params.disembarkDay - 1 - params.bufferDays;
 }
 
 /**
@@ -74,8 +78,13 @@ export function packLegsFeasible(
       best = combine(search(legIdx + 1, day + 1), a.ampel === 'unbewertet');
 
       // Two short legs today, if the combined day stays inside the hard max.
-      if (best !== 'feasible' && legIdx + 1 < legs.length) {
-        const b = assessLeg(legs[legIdx + 1]!, day, snapshot);
+      // The second leg starts at the REAL arrival time of the first one, not
+      // at the morning departure again — afternoon wind build-up (Meltemi)
+      // must hit the second leg's simulation.
+      if (best !== 'feasible' && legIdx + 1 < legs.length && a.totalHours !== null) {
+        const b = assessLeg(legs[legIdx + 1]!, day, snapshot, {
+          departureOffsetHours: a.totalHours,
+        });
         const hoursKnown = a.totalHours !== null && b.totalHours !== null;
         const combinedSail = (a.sailHours ?? 0) + (b.sailHours ?? 0);
         const combinedMotor = (a.motorHours ?? 0) + (b.motorHours ?? 0);
@@ -163,6 +172,13 @@ export function remainingReturnLegs(
 }
 
 function reverseLeg(leg: Leg): Leg {
+  // The snapshot only fetches forecast keys of the STORED direction
+  // (collectLocations, AD-3). A reversed leg therefore keeps the original
+  // leg's waypoint keys, mirrored — otherwise every waypoint lookup misses
+  // and the whole return leg degrades to 'unbewertet' despite full coverage.
+  const lastIdx = leg.waypoints.length - 1;
+  const originalKeyOf = (n: number): string =>
+    leg.waypointKeys?.[n] ?? legWaypointKey(leg.id, n);
   return {
     ...leg,
     id: `${leg.toIslandId}--${leg.fromIslandId}`,
@@ -171,6 +187,7 @@ function reverseLeg(leg: Leg): Leg {
     fromPlaceId: leg.toPlaceId,
     toPlaceId: leg.fromPlaceId,
     waypoints: [...leg.waypoints].reverse(),
+    waypointKeys: leg.waypoints.map((_, n) => originalKeyOf(lastIdx - n)),
   };
 }
 

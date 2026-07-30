@@ -126,6 +126,29 @@ describe('assessLeg — integration against a synthetic snapshot (AD-3)', () => 
     expect(assessLeg(leg, 1, snapshot).ampel).toBe('unbewertet');
   });
 
+  it('departureHourOverride applies ONLY to the current day, never to simulated future days', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 0,
+      southbound: false, // northbound = beating against the northerly
+    });
+    // Every day: 28 kn from N between 03:00 and 05:59 UTC (early morning),
+    // gentle 12 kn otherwise. Only a 06:00-Athens departure hits the blast.
+    for (const key of Object.keys(snapshot.forecast)) {
+      const fc = snapshot.forecast[key]!;
+      for (let i = 0; i < snapshot.times.length; i++) {
+        fc.windKn[i] = i % 24 >= 3 && i % 24 < 6 ? 28 : 12;
+        fc.windDirDeg[i] = 0;
+      }
+    }
+    snapshot.trip.currentDay = 1;
+    snapshot.trip.departureHourOverride = 6; // 06:00 Athens = 03:00 UTC
+    // Today the override applies: departure into the 28-kn window => rot.
+    expect(assessLeg(leg, 1, snapshot).ampel).toBe('rot');
+    // Tomorrow the default 09:00 departure applies (06:00 UTC) => not rot.
+    expect(assessLeg(leg, 2, snapshot).ampel).not.toBe('rot');
+  });
+
   it('without a polar the flat fallback speeds are used (FR26)', () => {
     const { snapshot, leg } = northSouthScenario({
       windKn: 15,

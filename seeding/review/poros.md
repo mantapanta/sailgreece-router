@@ -14,8 +14,8 @@ Quelle der Datei: Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Al
 
 | Art | Sektor |
 |---|---|
-| Wind | geschützt aus 0°–360°, bis 35 kn |
-| Welle | geschützt aus 0°–360°, bis 0.6 m |
+| Wind | **RUNDUMSCHUTZ (0°–360°, alle Richtungen!)**, bis 35 kn |
+| Welle | **RUNDUMSCHUTZ (0°–360°, alle Richtungen!)**, bis 0.6 m |
 
 Quelle: Quelle 2: Zielkatalog; Kanallage — praktisch allseitiger Schutz
 

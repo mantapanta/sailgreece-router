@@ -15,7 +15,9 @@ const dtf = new Intl.DateTimeFormat('en-US', {
   hour: '2-digit',
   minute: '2-digit',
   second: '2-digit',
-  hour12: false,
+  // 'h23' is mandatory: plain `hour12: false` may yield hour "24" at
+  // midnight on some ICU builds, which would shift wallMs by a full day.
+  hourCycle: 'h23',
 });
 
 /** Offset of Europe/Athens vs UTC in minutes at the given UTC instant. */
@@ -27,14 +29,26 @@ export function athensOffsetMinutes(utcMs: number): number {
     get('year'),
     get('month') - 1,
     get('day'),
-    get('hour') % 24,
+    get('hour'),
     get('minute'),
     get('second'),
   );
   return Math.round((wallMs - utcMs) / 60000);
 }
 
-/** Convert an Athens wall-clock time to a UTC epoch (ms). */
+/**
+ * Convert an Athens wall-clock time to a UTC epoch (ms).
+ *
+ * DST edge rule (deterministic, documented): the two fixed-point iterations
+ * converge for every existing wall time. For a NON-EXISTENT wall time
+ * (spring-forward gap, e.g. 03:30 on the last Sunday of March) the result is
+ * the instant shifted by the jump — i.e. the moment the clock actually
+ * showed one hour later. For an AMBIGUOUS wall time (autumn fall-back) the
+ * SECOND iteration settles on the PRE-transition (summer-time) offset, so
+ * the EARLIER of the two instants wins. Business windows are therefore off
+ * by at most 1 h on the two DST days of the year — acceptable and visible
+ * here rather than silently implementation-defined.
+ */
 export function athensToUtcMs(
   dateIso: string,
   hour: number,
@@ -43,7 +57,7 @@ export function athensToUtcMs(
   const [y, m, d] = dateIso.split('-').map(Number) as [number, number, number];
   // First guess: interpret wall time as UTC, then correct by the offset.
   let utcMs = Date.UTC(y, m - 1, d, hour, minute) - athensOffsetMinutes(Date.UTC(y, m - 1, d, hour, minute)) * 60000;
-  // Second iteration handles DST edges.
+  // Second iteration handles DST edges (choice rule documented above).
   utcMs = Date.UTC(y, m - 1, d, hour, minute) - athensOffsetMinutes(utcMs) * 60000;
   return utcMs;
 }
@@ -82,18 +96,23 @@ export function nightWindow(
 }
 
 /**
+ * Upper simulation bound for a single leg in hours — the ONE source for this
+ * limit (legWindow end and the scoring loop both use it).
+ */
+export const MAX_LEG_HOURS = 24;
+
+/**
  * Normative: legWindow(N) starts at day N departureTime (default 09:00 Athens).
- * The end is an upper simulation bound; arrival is determined by the scoring
- * simulation itself.
+ * The end is an upper simulation bound (MAX_LEG_HOURS); arrival is determined
+ * by the scoring simulation itself.
  */
 export function legWindow(
   tripStartDate: string,
   dayN: number,
   departureHourAthens = 9,
-  maxDurationHours = 24,
 ): TimeWindow {
   const startMs = athensToUtcMs(dateForTripDay(tripStartDate, dayN), departureHourAthens);
-  return { startMs, endMs: startMs + maxDurationHours * 3600_000 };
+  return { startMs, endMs: startMs + MAX_LEG_HOURS * 3600_000 };
 }
 
 /**

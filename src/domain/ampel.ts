@@ -27,8 +27,9 @@ import { hourIndices, nightWindow } from './time.ts';
 
 /**
  * Sector membership: CW from->to, wrap over 360->0 allowed, inclusive.
- * A sector whose bounds normalize to the same direction (e.g. 0-360)
- * covers the full circle.
+ * A sector whose bounds normalize to the same direction covers the full
+ * circle — by schema (shelter.ts) this is only reachable as exactly 0-360;
+ * point sectors (350-350 typos) are rejected at validation time.
  */
 export function sectorContains(
   sector: { fromDeg: number; toDeg: number },
@@ -52,6 +53,10 @@ export function windHourAmpel(
 ): Ampel {
   const matching = sectors.filter((s) => sectorContains(s, windFromDeg));
   if (matching.length > 0) {
+    // DECISION (documented, fixture-covered): overlapping curated sectors are
+    // independent shelter statements about the same direction — the MOST
+    // GENEROUS limit wins (Math.max). A curator who wants a stricter limit
+    // must narrow the broader sector instead of overlaying a stricter one.
     const limit = Math.max(...matching.map((s) => s.maxKn));
     if (windKn <= limit - params.gelbReserveKn) return 'gruen';
     if (windKn <= limit) return 'gelb';
@@ -70,7 +75,13 @@ export function waveHourAmpel(
 ): Ampel {
   const matching = sectors.filter((s) => sectorContains(s, waveFromDeg));
   if (matching.length > 0) {
+    // Overlap decision as in windHourAmpel: most generous limit wins.
     const limit = Math.max(...matching.map((s) => s.maxM));
+    // DECISION (documented, fixture-covered): waves have NO yellow reserve
+    // band — curated wave limits are already conservative comfort limits and
+    // wave forecasts are coarser than wind; a synthetic yellow band would
+    // suggest precision the marine model does not have. Green up to the
+    // limit (inclusive), red above — asymmetric to wind on purpose.
     return waveM <= limit ? 'gruen' : 'rot';
   }
   return waveM <= params.openSectorMaxWaveM ? 'gelb' : 'rot';

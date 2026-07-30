@@ -21,6 +21,20 @@ export function formatTripDayDate(tripStartDate: string, day: number): string {
   return dayFmt.format(new Date(`${dateForTripDay(tripStartDate, day)}T12:00:00Z`));
 }
 
+const rangeFmt = new Intl.DateTimeFormat('de-DE', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'Europe/Athens',
+});
+
+/** Trip date range derived from the config params (no hardcoded trip dates). */
+export function formatTripRange(tripStartDate: string, tripLengthDays: number): string {
+  const start = new Date(`${dateForTripDay(tripStartDate, 1)}T12:00:00Z`);
+  const end = new Date(`${dateForTripDay(tripStartDate, tripLengthDays)}T12:00:00Z`);
+  return rangeFmt.formatRange(start, end);
+}
+
 export function formatStamp(iso: string | null): string {
   if (!iso) return 'unbekannt';
   return `${stampFmt.format(new Date(iso))} (Athen)`;

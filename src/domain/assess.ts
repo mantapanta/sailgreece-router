@@ -16,37 +16,60 @@ import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './opt
 import { predictedPointOfReturn } from './ppr.ts';
 import { distanceNm } from './geo.ts';
 
-/** Nights ahead of the current day assessed for display. */
-const NIGHT_LOOKAHEAD_DAYS = 7;
-
-/** Island the boat is currently at, derived from the injected position. */
-export function deriveCurrentIslandId(snapshot: PlanningSnapshot): string | null {
+/**
+ * Island the boat is currently at, derived from the injected position, plus
+ * a visible note when the derivation cannot name an island. A GPS fix is
+ * snapped to the nearest library place only within params.maxSnapNm — a fix
+ * far outside the cruising area must NOT silently claim the closest island.
+ */
+export function deriveCurrentIsland(snapshot: PlanningSnapshot): {
+  islandId: string | null;
+  note: string | null;
+} {
   const { trip, library, params } = snapshot;
   const pos = trip.position;
   if (!pos) {
-    // Before the first fix the boat is at the base.
-    return trip.currentDay === 1 ? params.baseIslandId : null;
+    // Before the first fix the boat is at the base — but only on day 1.
+    return trip.currentDay === 1
+      ? { islandId: params.baseIslandId, note: null }
+      : {
+          islandId: null,
+          note: 'Keine Position gesetzt — GPS abfragen oder Platz wählen',
+        };
   }
   if (pos.placeId) {
     const place = library.places.find((p) => p.id === pos.placeId);
-    if (place) return place.islandId;
+    if (place) return { islandId: place.islandId, note: null };
   }
   let best: { islandId: string; nm: number } | null = null;
   for (const place of library.places) {
     const nm = distanceNm({ lat: pos.lat, lon: pos.lon }, place.coordinates);
     if (!best || nm < best.nm) best = { islandId: place.islandId, nm };
   }
-  return best?.islandId ?? null;
+  if (!best) return { islandId: null, note: 'Keine Plätze in der Bibliothek' };
+  if (best.nm > params.maxSnapNm) {
+    return {
+      islandId: null,
+      note: `Position liegt ${Math.round(best.nm)} sm vom nächsten Bibliotheksplatz entfernt (Limit ${params.maxSnapNm} sm) — keiner Insel zugeordnet`,
+    };
+  }
+  return { islandId: best.islandId, note: null };
+}
+
+/** Backwards-compatible shorthand (islandId only). */
+export function deriveCurrentIslandId(snapshot: PlanningSnapshot): string | null {
+  return deriveCurrentIsland(snapshot).islandId;
 }
 
 export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
-  const { library, trip } = snapshot;
-  const currentIslandId = deriveCurrentIslandId(snapshot);
+  const { library, trip, params } = snapshot;
+  const { islandId: currentIslandId, note: positionNote } =
+    deriveCurrentIsland(snapshot);
 
   // --- place night ampeln (valid places; invalid ones stay 'unbewertet') ---
   const nightAmpeln: Record<string, Record<number, PlaceNightAssessment>> = {};
   const nights: number[] = [];
-  for (let n = trip.currentDay; n < trip.currentDay + NIGHT_LOOKAHEAD_DAYS; n++) {
+  for (let n = trip.currentDay; n < trip.currentDay + params.nightLookaheadDays; n++) {
     nights.push(n);
   }
   for (const place of library.places) {
@@ -86,7 +109,12 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
   }
 
   // --- option space, PPR, decision points, day options ---------------------
-  const routeOptions = library.routes.map((route) =>
+  // Ordering by escalation rank is a domain criterion (AD-2): the assessment
+  // delivers routeOptions ORDERED (conservative first); views only consume.
+  const routesByRank = [...library.routes].sort(
+    (a, b) => a.escalationRank - b.escalationRank,
+  );
+  const routeOptions = routesByRank.map((route) =>
     assessRouteOption(route, currentIslandId, snapshot),
   );
   const ppr = predictedPointOfReturn(snapshot, currentIslandId);
@@ -109,5 +137,6 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
     ppr,
     decisionPoints,
     currentIslandId,
+    positionNote,
   };
 }

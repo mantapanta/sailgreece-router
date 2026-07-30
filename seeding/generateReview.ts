@@ -22,6 +22,12 @@ const REVIEW = join(here, 'review');
 
 function sectorLine(s: { fromDeg: number; toDeg: number } & Record<string, unknown>): string {
   const limit = 'maxKn' in s ? `bis ${s['maxKn']} kn` : `bis ${s['maxM']} m`;
+  // Full circle is only expressible as exactly 0–360 (schema rejects point
+  // sectors like 350–350) — mark it VISIBLY so a reviewer questions
+  // "protected from every direction" instead of skimming past it.
+  if (s.fromDeg === 0 && s.toDeg === 360) {
+    return `**RUNDUMSCHUTZ (0°–360°, alle Richtungen!)**, ${limit}`;
+  }
   const wrap = s.fromDeg > s.toDeg ? ' (Wrap über Nord)' : '';
   return `geschützt aus ${s.fromDeg}°–${s.toDeg}°${wrap}, ${limit}`;
 }

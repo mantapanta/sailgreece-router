@@ -12,7 +12,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PolarSchema } from '../src/domain/schema/polar.ts';
+import { PolarSchema, isStrictlyAscending } from '../src/domain/schema/polar.ts';
 import type { Polar } from '../src/domain/schema/polar.ts';
 import { PolarStagingFileSchema } from '../src/domain/schema/seeding.ts';
 
@@ -54,6 +54,15 @@ export function parseWindySailPolar(text: string, sourceNote: string): Polar {
     }
     twaDeg.push(cells[0]!);
     speeds.push(cells.slice(1));
+  }
+
+  // Explicit, message-friendly duplicate/sort check (the schema enforces it
+  // too — interp1 relies on strictly ascending grid axes).
+  if (!isStrictlyAscending(twsKn)) {
+    throw new Error('TWS-Kopfzeile ist nicht streng aufsteigend (Duplikat/Sortierfehler im Export?)');
+  }
+  if (!isStrictlyAscending(twaDeg)) {
+    throw new Error('TWA-Spalte ist nicht streng aufsteigend (Duplikat/Sortierfehler im Export?)');
   }
 
   return PolarSchema.parse({ twaDeg, twsKn, speeds, sourceNote });

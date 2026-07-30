@@ -54,10 +54,14 @@ export function MapView({
   const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID';
   const day = snapshot.trip.currentDay;
 
+  // AD-2: the assessment delivers routeOptions ORDERED by escalation rank —
+  // the view only consumes that order, it does not sort by domain criteria.
   const displayRoutes = useMemo(
     () =>
-      [...snapshot.library.routes].sort((a, b) => a.escalationRank - b.escalationRank),
-    [snapshot.library.routes],
+      assessment.routeOptions
+        .map((o) => snapshot.library.routes.find((r) => r.id === o.routeId))
+        .filter((r): r is Route => r !== undefined),
+    [assessment.routeOptions, snapshot.library.routes],
   );
   const [visibleRoutes, setVisibleRoutes] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -66,16 +70,28 @@ export function MapView({
   });
   const [hoverIslandId, setHoverIslandId] = useState<string | null>(null);
 
-  // Wind arrows: forecast hour closest to "now" (display only; FR3).
+  // Wind arrows: forecast hour containing "now" (display only; FR3). When
+  // "now" lies OFF the axis (stale cached snapshot, clock before the axis)
+  // no arrows are shown — hour 0 must never masquerade as current wind.
   const nowIdx = useMemo(
-    () => hourIndexAt(Date.now(), snapshot.times) ?? 0,
+    () => hourIndexAt(Date.now(), snapshot.times),
     [snapshot.times],
   );
 
-  // Itinerary: legs of the tracked route (or the most ambitious open one).
+  // Itinerary: legs of the tracked route — or, without tracking, the most
+  // AMBITIOUS route whose option is not closed (highest escalation rank;
+  // routeOptions are ordered conservative -> ambitious).
+  const openStates = new Set(['offen', 'offen-horizont', 'schliesst']);
+  const fallbackRouteId = [...assessment.routeOptions]
+    .reverse()
+    .find((o) => {
+      const r = snapshot.library.routes.find((x) => x.id === o.routeId);
+      return r !== undefined && !r.isReturnChain && openStates.has(o.state);
+    })?.routeId;
   const trackedRoute =
     displayRoutes.find((r) => r.id === snapshot.trip.trackedRouteId) ??
-    displayRoutes.find((r) => !r.isReturnChain) ??
+    displayRoutes.find((r) => r.id === fallbackRouteId) ??
+    [...displayRoutes].reverse().find((r) => !r.isReturnChain) ??
     null;
   const trackedAssessment = trackedRoute
     ? assessment.routeOptions.find((o) => o.routeId === trackedRoute.id)
@@ -210,7 +226,7 @@ export function MapView({
               );
             })}
 
-            {snapshot.library.places.map((place) => {
+            {nowIdx !== null && snapshot.library.places.map((place) => {
               const fc = snapshot.forecast[place.id];
               const kn = fc?.windKn[nowIdx] ?? null;
               const dir = fc?.windDirDeg[nowIdx] ?? null;

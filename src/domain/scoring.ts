@@ -20,7 +20,7 @@ import { worstAmpel, type Ampel } from './schema/common.ts';
 import type { Coordinates } from './schema/common.ts';
 import { bearingDeg, distanceNm, twaDeg } from './geo.ts';
 import { fallbackSpeedKn, motorSpeedKn, sailSpeedKn } from './polar.ts';
-import { hourIndexAt, legWindow } from './time.ts';
+import { hourIndexAt, legWindow, MAX_LEG_HOURS } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
 
@@ -91,8 +91,10 @@ function legPoints(leg: Leg, snapshot: PlanningSnapshot): LegPoint[] | null {
   if (!from || !to) return null;
   return [
     { key: from.id, coordinates: from.coordinates },
+    // Derived legs (e.g. reversed connectors) carry the forecast keys of
+    // their ORIGINAL stored leg via waypointKeys — only those were fetched.
     ...leg.waypoints.map((w, n) => ({
-      key: legWaypointKey(leg.id, n),
+      key: leg.waypointKeys?.[n] ?? legWaypointKey(leg.id, n),
       coordinates: w,
     })),
     { key: to.id, coordinates: to.coordinates },
@@ -114,11 +116,16 @@ function windAt(
  * time. Speed is taken from the polar (+ offset) at the current progress
  * point; the FR16 wind rule is checked each hour at EVERY leg point (worst
  * point governs). Hours beyond the horizon (null) => 'unbewertet'.
+ *
+ * `opts.departureOffsetHours` shifts the departure past the day's normal
+ * departure time — used for the SECOND leg of a double-leg day, which starts
+ * at the real arrival time of the first leg, not at 09:00 again.
  */
 export function assessLeg(
   leg: Leg,
   day: number,
   snapshot: PlanningSnapshot,
+  opts: { departureOffsetHours?: number } = {},
 ): LegAssessment {
   const { params, polar } = snapshot;
   const points = legPoints(leg, snapshot);
@@ -152,10 +159,15 @@ export function assessLeg(
   const scale = geoTotal > 0 ? leg.distanceNm / geoTotal : 1;
   const segments = segGeo.map((s) => ({ ...s, nm: s.nm * scale }));
 
+  // AD-11 / snapshot.ts: the departure override is TODAY's decision — it
+  // must not shift the simulated departure of future trip days.
   const departureHour =
-    snapshot.trip.departureHourOverride ?? params.departureHourAthens;
+    (day === snapshot.trip.currentDay ? snapshot.trip.departureHourOverride : null) ??
+    params.departureHourAthens;
   const window = legWindow(params.tripStartDate, day, departureHour);
-  const startIdx = hourIndexAt(window.startMs, snapshot.times);
+  const departureMs =
+    window.startMs + (opts.departureOffsetHours ?? 0) * 3600_000;
+  const startIdx = hourIndexAt(departureMs, snapshot.times);
   if (startIdx === null) return unbewertet('Abfahrtszeit außerhalb der Forecast-Achse');
 
   const verdicts: Ampel[] = [];
@@ -167,7 +179,8 @@ export function assessLeg(
   let twaSum = 0;
   let samples = 0;
   const total = leg.distanceNm;
-  const maxHours = 24;
+  // Single source for the simulation bound: time.ts (legWindow uses it too).
+  const maxHours = MAX_LEG_HOURS;
 
   for (let h = 0; traveled < total && h < maxHours; h++) {
     const idx = startIdx + h;

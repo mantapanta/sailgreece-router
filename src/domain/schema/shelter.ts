@@ -9,18 +9,34 @@ import { z } from 'zod';
  * sector), boundaries inclusive. Strength limits in kn / m — Bft is converted
  * during seeding, never stored.
  */
-export const WindSectorSchema = z.object({
-  fromDeg: z.number().min(0).max(360),
-  toDeg: z.number().min(0).max(360),
-  maxKn: z.number().positive(),
-});
+const norm = (d: number) => ((d % 360) + 360) % 360;
+
+/**
+ * Point sectors (fromDeg === toDeg after normalisation, e.g. a 350–350 typo)
+ * would silently become FULL-CIRCLE shelter in sectorContains — safety
+ * relevant. A full circle is therefore only expressible as exactly 0–360.
+ */
+const noPointSector = (s: { fromDeg: number; toDeg: number }) =>
+  norm(s.fromDeg) !== norm(s.toDeg) || (s.fromDeg === 0 && s.toDeg === 360);
+const POINT_SECTOR_MSG =
+  'Punkt-Sektor (fromDeg === toDeg) verboten — Rundumschutz nur als 0–360';
+
+export const WindSectorSchema = z
+  .object({
+    fromDeg: z.number().min(0).max(360),
+    toDeg: z.number().min(0).max(360),
+    maxKn: z.number().positive(),
+  })
+  .refine(noPointSector, { message: POINT_SECTOR_MSG });
 export type WindSector = z.infer<typeof WindSectorSchema>;
 
-export const WaveSectorSchema = z.object({
-  fromDeg: z.number().min(0).max(360),
-  toDeg: z.number().min(0).max(360),
-  maxM: z.number().positive(),
-});
+export const WaveSectorSchema = z
+  .object({
+    fromDeg: z.number().min(0).max(360),
+    toDeg: z.number().min(0).max(360),
+    maxM: z.number().positive(),
+  })
+  .refine(noPointSector, { message: POINT_SECTOR_MSG });
 export type WaveSector = z.infer<typeof WaveSectorSchema>;
 
 /** Separate sector sets for wind and waves — normative (AD-4). */

@@ -16,6 +16,14 @@ export const LegSchema = z.object({
   /** Intermediate waypoints (forecast is fetched for these too, AD-3). */
   waypoints: z.array(CoordinatesSchema).default([]),
   /**
+   * Normative forecast keys per waypoint, overriding the default
+   * `leg:<id>:<n>`. NEVER curated: set only by domain code for DERIVED legs
+   * (e.g. reversed connectors), whose waypoints must keep the forecast keys
+   * of the ORIGINAL stored leg — the snapshot only ever fetches keys of the
+   * stored direction (AD-3).
+   */
+  waypointKeys: z.array(z.string()).optional(),
+  /**
    * Static wind-planning warnings for known acceleration zones
    * (FR10: Kea-Kanal, Kafireas, Paros-Antiparos, Paros-Naxos, ...).
    * Independent of the model value — models smooth these zones.

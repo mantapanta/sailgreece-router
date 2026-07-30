@@ -14,8 +14,8 @@ Quelle der Datei: Brief-Addendum 2026-07-30 (Quelle 1: Basen); Koordinaten appro
 
 | Art | Sektor |
 |---|---|
-| Wind | geschützt aus 0°–360°, bis 40 kn |
-| Welle | geschützt aus 0°–360°, bis 1.5 m |
+| Wind | **RUNDUMSCHUTZ (0°–360°, alle Richtungen!)**, bis 40 kn |
+| Welle | **RUNDUMSCHUTZ (0°–360°, alle Richtungen!)**, bis 1.5 m |
 
 Quelle: Brief-Addendum: Charterbasis, voll ausgebaute Marina — allseitiger Schutz
 

@@ -26,6 +26,21 @@ describe('polar — interpolation + single offset (FR26 / AD-10)', () => {
     expect(rawPolarSpeedKn(TEST_POLAR, 105, 10)).toBeCloseTo(7.65, 5);
   });
 
+  it('folds ANY angle to 0-180 (also |twa| > 360: 540 => 180, not 0)', () => {
+    expect(rawPolarSpeedKn(TEST_POLAR, 540, 10)).toBeCloseTo(
+      rawPolarSpeedKn(TEST_POLAR, 180, 10),
+      10,
+    );
+    expect(rawPolarSpeedKn(TEST_POLAR, -90, 10)).toBeCloseTo(
+      rawPolarSpeedKn(TEST_POLAR, 90, 10),
+      10,
+    );
+    expect(rawPolarSpeedKn(TEST_POLAR, 270, 10)).toBeCloseTo(
+      rawPolarSpeedKn(TEST_POLAR, 90, 10),
+      10,
+    );
+  });
+
   it('clamps at grid edges', () => {
     expect(rawPolarSpeedKn(TEST_POLAR, 90, 60)).toBeCloseTo(9.6, 5);
     expect(rawPolarSpeedKn(TEST_POLAR, 90, 1)).toBeCloseTo(3.9, 5);
