@@ -107,7 +107,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: meltemi },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
   });
@@ -128,7 +128,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: meltemi },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     const result = placeNightAmpel(bay, 1, snapshot);
     expect(result.ampel).toBe('gelb');
@@ -149,7 +149,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
       const snapshot = makeSnapshot({
         times,
         forecast: { [bay.id]: meltemi },
-        library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+        library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
       });
       expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
     }
@@ -167,7 +167,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: meltemi },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(bay.confidence).toBeUndefined();
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
@@ -186,7 +186,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: meltemi },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('rot');
   });
@@ -203,7 +203,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: meltemi },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('rot');
   });
@@ -221,7 +221,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: wind10 },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
   });
@@ -232,7 +232,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: gap },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     const result = placeNightAmpel(bay, 1, snapshot);
     expect(result.ampel).toBe('unbewertet');
@@ -244,7 +244,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: fc },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('unbewertet');
   });
@@ -267,7 +267,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: fc },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('rot');
   });

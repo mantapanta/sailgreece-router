@@ -80,11 +80,9 @@ export function MapView({
   // Record instead of a JS Map: the identifier `Map` is taken by @vis.gl here.
   const legsById = useMemo(() => {
     const byId: Record<string, Leg> = {};
-    for (const route of snapshot.library.routes) {
-      for (const leg of route.legs) byId[leg.id] ??= leg;
-    }
+    for (const leg of snapshot.library.legs) byId[leg.id] ??= leg;
     return byId;
-  }, [snapshot.library.routes]);
+  }, [snapshot.library.legs]);
 
   const main = assessment.mainRoute;
   const sailingStages = useMemo(

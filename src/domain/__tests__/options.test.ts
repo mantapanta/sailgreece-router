@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { assessRouteOption, deriveDayOptions, restPlanFeasible } from '../options.ts';
 import { predictedPointOfReturn } from '../ppr.ts';
-import type { Route } from '../schema/route.ts';
+
 import {
   constantForecast,
   makeLeg,
@@ -9,6 +9,7 @@ import {
   makeSnapshot,
   makeTimes,
   TRIP_START,
+  makeVariant,
 } from './fixtures.ts';
 import { TEST_POLAR } from './fixtures.ts';
 import { dateForTripDay } from '../time.ts';
@@ -50,21 +51,14 @@ function twoIslandSnapshot(opts: {
     toPlaceId: base.id,
     distanceNm: 20,
   });
-  const routes: Route[] = [
-    {
-      id: 'sued-route',
-      name: 'Süd-Route',
-      escalationRank: 1,
-      legs: [outLeg],
-      isReturnChain: false,
-    },
-    {
-      id: 'rueckfallkette-west',
-      name: 'Rückfallkette West',
+  const legs = [outLeg, backLeg];
+  const variants = [
+    makeVariant('sued-route', [outLeg], { escalationRank: 1, name: 'Süd-Route' }),
+    makeVariant('rueckfallkette-west', [backLeg], {
       escalationRank: 0,
-      legs: [backLeg],
       isReturnChain: true,
-    },
+      name: 'Rückfallkette West',
+    }),
   ];
   const times = makeTimes(12);
   const fc = constantForecast(times.length, opts.windKn, opts.windFromDeg);
@@ -86,7 +80,8 @@ function twoIslandSnapshot(opts: {
       ],
       places: [base, target],
       invalidPlaces: [],
-      routes,
+      legs,
+      variants,
     },
     trip: {
       currentDay: opts.currentDay ?? 1,
@@ -112,7 +107,7 @@ describe('options — FR18 open / closes / closed', () => {
     // arrival on the deadline date minus the buffer day, review finding H3)
     // is day 10.
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     expect(result.state).toBe('schliesst');
     expect(result.closesOnDay).toBe(10);
@@ -127,7 +122,7 @@ describe('options — FR18 open / closes / closed', () => {
         fc[k] = fc[k].slice(0, 4 * 24);
       }
     }
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     // Today's rest plan is fully computable within the horizon, but the
     // closing day may lie just beyond it — that is NOT an unqualified
@@ -146,7 +141,7 @@ describe('options — FR18 open / closes / closed', () => {
         fc[k] = fc[k].slice(0, 30);
       }
     }
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     // Outbound today fits the axis, the return leg does not: the whole rest
     // plan is only assessable up to the horizon.
@@ -157,14 +152,14 @@ describe('options — FR18 open / closes / closed', () => {
   it('permanent 28 kn northerly makes the northbound return impossible: option zu', () => {
     // Outbound south is fine, but the return leg north beats against 28 kn.
     const snapshot = twoIslandSnapshot({ windKn: 28, windFromDeg: 0 });
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     expect(result.state).toBe('zu');
   });
 
   it('no position => zu with reason', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, null, snapshot);
     expect(result.state).toBe('zu');
     expect(result.reasons.join(' ')).toContain('Position');
@@ -204,13 +199,10 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
       toPlaceId: base.id,
       distanceNm: 12,
     });
-    const route: Route = {
-      id: 'heimweg',
-      name: 'Heimweg',
+    const homeVariant = makeVariant('heimweg', [leg1, leg2], {
       escalationRank: 1,
-      legs: [leg1, leg2],
-      isReturnChain: false,
-    };
+      name: 'Heimweg',
+    });
     const times = makeTimes(12);
     const fc = constantForecast(times.length, 12, 0);
     const snapshot = makeSnapshot({
@@ -225,7 +217,8 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
         ],
         places: [sued, mitte, base],
         invalidPlaces: [],
-        routes: [route],
+        legs: [leg1, leg2],
+        variants: [homeVariant],
       },
       trip: {
         currentDay: 10, // = effective deadline (disembark 12 - 1 - buffer 1)
@@ -237,7 +230,7 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
     // One leg per day would need days 10+11 (> deadline). packLegsFeasible
     // allows two short legs on one day — the arrival-day scan must start at
     // startDay + ceil(legs/2) - 1 = day 10, not at day 11.
-    expect(restPlanFeasible(route, 'sued', 10, snapshot)).toBe('feasible');
+    expect(restPlanFeasible([leg1, leg2], 'sued', 10, snapshot)).toBe('feasible');
   });
 });
 
@@ -246,7 +239,7 @@ describe('options — deriveDayOptions dedupe over the leg id (FR21)', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
     const base = snapshot.library.places[0]!;
     const target = snapshot.library.places[1]!;
-    const sharedLeg = snapshot.library.routes[0]!.legs[0]!; // athen--zielinsel
+    const sharedLeg = snapshot.library.legs[0]!; // athen--zielinsel
     const otherLeg = makeLeg({
       id: 'athen--zielinsel-b',
       fromIslandId: 'athen',
@@ -255,10 +248,11 @@ describe('options — deriveDayOptions dedupe over the leg id (FR21)', () => {
       toPlaceId: target.id,
       distanceNm: 26, // different definition, same target island
     });
-    snapshot.library.routes = [
-      { id: 'r1', name: 'R1', escalationRank: 1, legs: [sharedLeg], isReturnChain: false },
-      { id: 'r2', name: 'R2', escalationRank: 2, legs: [sharedLeg], isReturnChain: false },
-      { id: 'r3', name: 'R3', escalationRank: 3, legs: [otherLeg], isReturnChain: false },
+    snapshot.library.legs = [sharedLeg, otherLeg];
+    snapshot.library.variants = [
+      makeVariant('r1', [sharedLeg], { escalationRank: 1, name: 'R1' }),
+      makeVariant('r2', [sharedLeg], { escalationRank: 2, name: 'R2' }),
+      makeVariant('r3', [otherLeg], { escalationRank: 3, name: 'R3' }),
     ];
     const options = deriveDayOptions(snapshot, 'athen', {}, {});
     const legOptions = options.filter((o) => o.kind === 'leg');

@@ -23,7 +23,7 @@
  * 65°/25 kn threshold and the pickup condition can never be relaxed away.
  */
 
-import type { Leg, Route } from './schema/route.ts';
+import type { Leg, Variant } from './schema/route.ts';
 import type { Params } from './schema/params.ts';
 import type { PlanningSnapshot } from './schema/snapshot.ts';
 import type {
@@ -48,6 +48,7 @@ import {
   type Feasibility,
   type PackedLeg,
 } from './ppr.ts';
+import { legIndex, legsOfVariant } from './legs.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
 
 // ---------------------------------------------------------------------------
@@ -107,19 +108,13 @@ export function relaxParams(params: Params, level: RelaxationLevel): Params {
  * first-writer-wins keeps it deterministic.
  */
 export function legLibrary(snapshot: PlanningSnapshot): Map<string, Leg> {
-  const legs = new Map<string, Leg>();
-  for (const route of snapshot.library.routes) {
-    for (const leg of route.legs) {
-      if (!legs.has(leg.id)) legs.set(leg.id, leg);
-    }
-  }
-  return legs;
+  return legIndex(snapshot.library);
 }
 
 /** Outbound variants (everything that is not the fallback chain), conservative first. */
-function outboundVariants(snapshot: PlanningSnapshot): Route[] {
-  return [...snapshot.library.routes]
-    .filter((r) => !r.isReturnChain)
+function outboundVariants(snapshot: PlanningSnapshot): Variant[] {
+  return [...snapshot.library.variants]
+    .filter((v) => !v.isReturnChain)
     .sort((a, b) => a.escalationRank - b.escalationRank || a.id.localeCompare(b.id));
 }
 
@@ -157,11 +152,12 @@ export function buildCandidates(
   };
 
   for (const variant of outboundVariants(snapshot)) {
-    const seq = routeIslandSequence(variant);
+    const vLegs = legsOfVariant(variant, snapshot.library);
+    const seq = routeIslandSequence(vLegs);
     const startIdx = seq.indexOf(startIslandId);
     if (startIdx < 0) continue;
     for (let turnIdx = startIdx; turnIdx < seq.length; turnIdx++) {
-      const outbound = variant.legs.slice(startIdx, turnIdx);
+      const outbound = vLegs.slice(startIdx, turnIdx);
       const turnIslandId = seq[turnIdx]!;
       const ret = remainingReturnLegs(turnIslandId, snapshot);
       if (!ret) continue;
@@ -573,11 +569,9 @@ function dayConstraintFor(
   // otherwise the search would have no attainable target at all (see
   // validatePlan for the full reasoning).
   const reachable = new Set<string>();
-  for (const route of library.routes) {
-    for (const leg of route.legs) {
-      reachable.add(leg.fromIslandId);
-      reachable.add(leg.toIslandId);
-    }
+  for (const leg of library.legs) {
+    reachable.add(leg.fromIslandId);
+    reachable.add(leg.toIslandId);
   }
   const ferryDataCurated = library.islands.some(
     (i) => reachable.has(i.id) && i.guestPickup !== undefined,

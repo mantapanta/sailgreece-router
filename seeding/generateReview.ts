@@ -11,7 +11,8 @@ import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   IslandStagingFileSchema,
-  RoutesStagingFileSchema,
+  LegsStagingFileSchema,
+  VariantsStagingFileSchema,
   PolarStagingFileSchema,
 } from '../src/domain/schema/seeding.ts';
 import type { Place } from '../src/domain/schema/place.ts';
@@ -36,7 +37,7 @@ function placeSection(p: Place): string {
   const lines: string[] = [];
   lines.push(`### ${p.name} (\`${p.id}\`, ${p.type})`);
   lines.push('');
-  lines.push('**Schutzprofil (sicherheitsrelevant — zuerst prüfen!):**');
+  lines.push('**Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**');
   lines.push('');
   lines.push('| Art | Sektor |');
   lines.push('|---|---|');
@@ -83,7 +84,7 @@ function main() {
     md.push(`Quelle der Datei: ${sourceNote}`);
     md.push('');
     md.push(
-      '> FR24: Schutzprofile zuerst prüfen — sie steuern die Nacht-Ampel. ' +
+      '> FR24: Sichere Liegeplätze zuerst prüfen — sie steuern die Nacht-Ampel. ' +
         'Sektorsemantik: „geschützt gegen Wind/Welle KOMMEND AUS fromDeg° im ' +
         'Uhrzeigersinn bis toDeg°", Grenzen inklusiv, Wrap über Nord erlaubt.',
     );
@@ -100,33 +101,86 @@ function main() {
     count++;
   }
 
-  // Routes overview
+  // Leg library + variants overview (AD-4: legs are first-class)
   try {
-    const raw = JSON.parse(readFileSync(join(DATA, 'routes.json'), 'utf8'));
-    const parsed = RoutesStagingFileSchema.safeParse(raw);
-    if (parsed.success) {
-      const md: string[] = ['# Review: Routenbibliothek', ''];
-      md.push(`Status: **${parsed.data.approved ? 'FREIGEGEBEN' : 'NICHT freigegeben'}**`);
+    const legsRaw = JSON.parse(readFileSync(join(DATA, 'legs.json'), 'utf8'));
+    const variantsRaw = JSON.parse(readFileSync(join(DATA, 'variants.json'), 'utf8'));
+    const legsParsed = LegsStagingFileSchema.safeParse(legsRaw);
+    const variantsParsed = VariantsStagingFileSchema.safeParse(variantsRaw);
+    if (legsParsed.success && variantsParsed.success) {
+      const legs = legsParsed.data.legs;
+      const md: string[] = ['# Review: Etappen- und Variantenbibliothek', ''];
+      md.push(
+        `Status Etappen: **${legsParsed.data.approved ? 'FREIGEGEBEN' : 'NICHT freigegeben'}** · ` +
+          `Varianten: **${variantsParsed.data.approved ? 'FREIGEGEBEN' : 'NICHT freigegeben'}**`,
+      );
       md.push('');
-      md.push(`Quelle: ${parsed.data.sourceNote}`);
+      md.push(`Quelle: ${legsParsed.data.sourceNote}`);
       md.push('');
-      for (const r of [...parsed.data.routes].sort((a, b) => a.escalationRank - b.escalationRank)) {
-        md.push(`## ${r.name} (\`${r.id}\`, Eskalationsstufe ${r.escalationRank}${r.isReturnChain ? ', Rückfallkette' : ''})`);
+
+      // BREAKING notice: legs a variant names but the library no longer has.
+      // A removed leg id silently shortens a route at runtime, so it must be
+      // visible in the review rather than discovered on the water.
+      const legIds = new Set(legs.map((l) => l.id));
+      const dangling = variantsParsed.data.variants.flatMap((v) =>
+        v.legIds.filter((id) => !legIds.has(id)).map((id) => `${v.id} → ${id}`),
+      );
+      if (dangling.length > 0) {
+        md.push('## BREAKING — Varianten referenzieren fehlende Etappen');
         md.push('');
-        md.push('| Etappe | Distanz | Warnungen | Rebasing |');
-        md.push('|---|---|---|---|');
-        for (const leg of r.legs) {
-          md.push(
-            `| ${leg.fromIslandId} → ${leg.toIslandId} | ${leg.distanceNm} sm | ${leg.windWarnings.join('; ') || '—'} | ${leg.rebasedFrom ? `ursprünglich ${leg.rebasedFrom}-basiert` : '—'} |`,
-          );
-        }
+        for (const d of dangling) md.push(`- ${d}`);
         md.push('');
       }
-      writeFileSync(join(REVIEW, 'routes.md'), md.join('\n'));
+      const unused = legs
+        .filter((l) => !variantsParsed.data.variants.some((v) => v.legIds.includes(l.id)))
+        .map((l) => l.id);
+      if (unused.length > 0) {
+        md.push(`## Nicht referenzierte Etappen (${unused.length})`);
+        md.push('');
+        md.push(unused.join(', '));
+        md.push('');
+      }
+
+      md.push(`## Etappen (${legs.length})`);
+      md.push('');
+      md.push('| Etappe | Distanz | Wegpunkte | Warnungen | Rebasing |');
+      md.push('|---|---|---|---|---|');
+      for (const leg of [...legs].sort((a, b) => a.id.localeCompare(b.id))) {
+        md.push(
+          `| \`${leg.id}\` | ${leg.distanceNm} sm | ${leg.waypoints.length} | ` +
+            `${leg.windWarnings.join('; ') || '—'} | ` +
+            `${leg.rebasedFrom ? `ursprünglich ${leg.rebasedFrom}-basiert` : '—'} |`,
+        );
+      }
+      md.push('');
+
+      md.push('## Varianten');
+      md.push('');
+      for (const v of [...variantsParsed.data.variants].sort(
+        (a, b) => a.escalationRank - b.escalationRank,
+      )) {
+        const vLegs = v.legIds.map((id) => legs.find((l) => l.id === id)).filter((l) => l);
+        const nm = vLegs.reduce((s, l) => s + (l ? l.distanceNm : 0), 0);
+        md.push(
+          `### ${v.name} (\`${v.id}\`, Eskalationsstufe ${v.escalationRank}` +
+            `${v.isReturnChain ? ', Rückfallkette' : ''})`,
+        );
+        md.push('');
+        md.push(`${v.legIds.length} Etappen, ${nm} sm gesamt`);
+        md.push('');
+        md.push(v.legIds.map((id) => `\`${id}\``).join(' → '));
+        md.push('');
+      }
+      writeFileSync(join(REVIEW, 'legs-und-varianten.md'), md.join('\n'));
       count++;
+    } else {
+      console.error(
+        'legs.json/variants.json ungültig:',
+        legsParsed.success ? variantsParsed.error?.issues : legsParsed.error.issues,
+      );
     }
   } catch (e) {
-    console.error('routes.json nicht lesbar:', e);
+    console.error('legs.json/variants.json nicht lesbar:', e);
   }
 
   // Polar overview

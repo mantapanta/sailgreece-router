@@ -1,0 +1,87 @@
+{
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | Varianten referenzieren Leg-IDs (AD-4); saronische-alternative ersatzlos gestrichen (PRD 2026-08-02).",
+  "variants": [
+    {
+      "id": "gedeckelt-paros",
+      "name": "Gedeckelte Variante bis Paros/Antiparos",
+      "description": "Plan B: Kea – Kythnos – Serifos – Sifnos – Paros; Paros ist der südlichste feste Punkt.",
+      "escalationRank": 1,
+      "isReturnChain": false,
+      "color": "#c8a24b",
+      "legIds": [
+        "athen--kea",
+        "kea--kythnos",
+        "kythnos--serifos",
+        "serifos--sifnos",
+        "sifnos--paros"
+      ]
+    },
+    {
+      "id": "sued-route-naxos",
+      "name": "Süd-Route bis Naxos",
+      "description": "Plan A: die Westkykladen-Kette bis Naxos — dort fällt der Verlängerungsentscheid.",
+      "escalationRank": 2,
+      "isReturnChain": false,
+      "color": "#4c6b8a",
+      "legIds": [
+        "athen--kea",
+        "kea--kythnos",
+        "kythnos--serifos",
+        "serifos--sifnos",
+        "sifnos--paros",
+        "paros--naxos"
+      ]
+    },
+    {
+      "id": "verlaengerung-amorgos",
+      "name": "Verlängerung Amorgos",
+      "description": "Bonus ab Naxos: Katapola — nur bei Doppel-Fenster für Hin- und Rückweg.",
+      "escalationRank": 3,
+      "isReturnChain": false,
+      "color": "#8a5a83",
+      "legIds": [
+        "athen--kea",
+        "kea--kythnos",
+        "kythnos--serifos",
+        "serifos--sifnos",
+        "sifnos--paros",
+        "paros--naxos",
+        "naxos--amorgos"
+      ]
+    },
+    {
+      "id": "verlaengerung-santorin",
+      "name": "Verlängerung Santorin",
+      "description": "Bonus ab Naxos: Vlychada — nur bei stabilem Fenster und bestätigtem Liegeplatz.",
+      "escalationRank": 4,
+      "isReturnChain": false,
+      "color": "#b0413e",
+      "legIds": [
+        "athen--kea",
+        "kea--kythnos",
+        "kythnos--serifos",
+        "serifos--sifnos",
+        "sifnos--paros",
+        "paros--naxos",
+        "naxos--santorin"
+      ]
+    },
+    {
+      "id": "rueckfallkette-west",
+      "name": "Rückfallhäfen-Kette westwärts",
+      "description": "Die normative Rückweg-Kette gegen den Meltemi: Naxos – Paros – Sifnos – Serifos – Kythnos – Kea – Alimos.",
+      "escalationRank": 0,
+      "isReturnChain": true,
+      "color": "#9aa5b1",
+      "legIds": [
+        "naxos--paros",
+        "paros--sifnos",
+        "sifnos--serifos",
+        "serifos--kythnos",
+        "kythnos--kea",
+        "kea--athen"
+      ]
+    }
+  ]
+}

@@ -48,16 +48,14 @@ export function collectLocations(library: Library): LocationEntry[] {
     coordinates: p.coordinates,
   }));
   const seen = new Set(entries.map((e) => e.key));
-  for (const route of library.routes) {
-    for (const leg of route.legs) {
-      leg.waypoints.forEach((w, n) => {
-        const key = legWaypointKey(leg.id, n);
-        if (!seen.has(key)) {
-          seen.add(key);
-          entries.push({ key, coordinates: w });
-        }
-      });
-    }
+  for (const leg of library.legs) {
+    leg.waypoints.forEach((w, n) => {
+      const key = legWaypointKey(leg.id, n);
+      if (!seen.has(key)) {
+        seen.add(key);
+        entries.push({ key, coordinates: w });
+      }
+    });
   }
   return entries;
 }

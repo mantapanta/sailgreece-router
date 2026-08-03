@@ -23,7 +23,7 @@ import { deadlineFrame } from '../time.ts';
 import { ParamsSchema } from '../schema/params.ts';
 import { PlanSchema, stageNumber, stagesOf } from '../schema/plan.ts';
 import type { Island } from '../schema/island.ts';
-import type { Route } from '../schema/route.ts';
+
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
 import {
   TEST_POLAR,
@@ -35,6 +35,7 @@ import {
   makeSnapshot,
   makeStage,
   makeTimes,
+  makeVariant,
 } from './fixtures.ts';
 
 /**
@@ -72,21 +73,16 @@ function realSnapshot(
       distanceNm: nm,
     });
 
-  const routes: Route[] = [
-    {
-      id: 'sued-route',
-      name: 'Südroute',
-      escalationRank: 1,
-      legs: [leg(a, b), leg(b, c)],
-      isReturnChain: false,
-    },
-    {
-      id: 'rueckfallkette-west',
-      name: 'Rückfallkette West',
+  const outbound = [leg(a, b), leg(b, c)];
+  const homeward = [leg(c, b), leg(b, a)];
+  const legs = [...outbound, ...homeward];
+  const variants = [
+    makeVariant('sued-route', outbound, { escalationRank: 1, name: 'Südroute' }),
+    makeVariant('rueckfallkette-west', homeward, {
       escalationRank: 0,
-      legs: [leg(c, b), leg(b, a)],
       isReturnChain: true,
-    },
+      name: 'Rückfallkette West',
+    }),
   ];
 
   const ferry = new Set(opts.ferryIslands ?? ['athen', 'b', 'c']);
@@ -102,7 +98,7 @@ function realSnapshot(
     times,
     polar: TEST_POLAR,
     forecast: { [a.id]: fc, [b.id]: fc, [c.id]: fc },
-    library: { islands, places: [a, b, c], invalidPlaces: [], routes },
+    library: { islands, places: [a, b, c], invalidPlaces: [], legs, variants },
     trip: {
       currentDay: opts.currentDay ?? 1,
       position: { source: 'manual', lat: a.coordinates.lat, lon: a.coordinates.lon, placeId: a.id },
@@ -124,7 +120,7 @@ function realSnapshot(
 describe('regression: Meltemi worst case binds beyond the reliable horizon', () => {
   it('substitutes the worst case for a day past the horizon even when the axis has values', () => {
     const snapshot = realSnapshot({ windKn: 6, windFromDeg: 90 });
-    const leg = snapshot.library.routes[1]!.legs[1]!; // b -> athen (northbound)
+    const leg = snapshot.library.legs.find((l) => l.id === 'b--athen')!; // northbound
     // Day 10 lies beyond the 7-day horizon but well inside the 16-day axis.
     const worst = assessLeg(leg, 10, snapshot, { scenario: 'worstCase' });
     expect(worst.breakdown.length).toBeGreaterThan(0);
@@ -135,7 +131,7 @@ describe('regression: Meltemi worst case binds beyond the reliable horizon', () 
 
   it('keeps using the real forecast inside the horizon', () => {
     const snapshot = realSnapshot({ windKn: 6, windFromDeg: 90 });
-    const leg = snapshot.library.routes[0]!.legs[0]!;
+    const leg = snapshot.library.legs.find((l) => l.id === 'athen--b')!;
     const inside = assessLeg(leg, 2, snapshot, { scenario: 'worstCase' });
     expect(inside.breakdown.some((h) => h.worstCase)).toBe(false);
     expect(inside.breakdown[0]!.twsKn).toBe(6);
@@ -143,7 +139,7 @@ describe('regression: Meltemi worst case binds beyond the reliable horizon', () 
 
   it('reports a far stage as unbewertet in the forecast scenario', () => {
     const snapshot = realSnapshot();
-    const leg = snapshot.library.routes[0]!.legs[0]!;
+    const leg = snapshot.library.legs.find((l) => l.id === 'athen--b')!;
     expect(assessLeg(leg, 10, snapshot).ampel).toBe('unbewertet');
   });
 });
@@ -257,7 +253,7 @@ describe('regression: double-leg days can satisfy pins and the pickup', () => {
     // 6 nm legs: two of them fit comfortably into one day.
     const snapshot = realSnapshot({ legNm: 6, windKn: 10, windFromDeg: 90 });
     const packed = packLegs(
-      snapshot.library.routes[0]!.legs,
+      snapshot.library.legs.filter((l) => ['athen--b', 'b--c'].includes(l.id)),
       1,
       12,
       snapshot,
@@ -410,7 +406,7 @@ describe('regression: FR16 night-leg quota is enforced', () => {
 
   it('marks a long light-wind passage as a night leg in the assessment', () => {
     const snapshot = realSnapshot({ windKn: 4, windFromDeg: 90, legNm: 90 });
-    const leg = snapshot.library.routes[0]!.legs[0]!;
+    const leg = snapshot.library.legs.find((l) => l.id === 'athen--b')!;
     const a = assessLeg(leg, 2, snapshot);
     expect(a.nightLeg).toBe(true);
     expect(a.arrivalHourAthens).not.toBeNull();

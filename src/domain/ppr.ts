@@ -9,9 +9,10 @@
  * else — there is only one feasibility notion (AD-3).
  */
 
-import type { Leg, Route } from './schema/route.ts';
+import type { Leg } from './schema/route.ts';
 import type { PlanningSnapshot, PprResult } from './schema/snapshot.ts';
 import { RETURN_CHAIN_ROUTE_ID } from './schema/route.ts';
+import { islandSequence, legsOfVariant } from './legs.ts';
 import { assessLeg, legWaypointKey, type LegScenario } from './scoring.ts';
 import { deadlineFrame } from './time.ts';
 
@@ -36,9 +37,8 @@ export interface PackResult {
 }
 
 /** Ordered island sequence of a route, derived from its legs. */
-export function routeIslandSequence(route: Route): string[] {
-  if (route.legs.length === 0) return [];
-  return [route.legs[0]!.fromIslandId, ...route.legs.map((l) => l.toIslandId)];
+export function routeIslandSequence(legs: Leg[]): string[] {
+  return islandSequence(legs);
 }
 
 /**
@@ -212,13 +212,14 @@ export function packLegsFeasible(
   return packLegs(legs, startDay, deadlineDay, snapshot, opts).verdict;
 }
 
-/** The normative return chain from the snapshot (fixed id, AD-10). */
-export function returnChain(snapshot: PlanningSnapshot): Route | null {
-  return (
-    snapshot.library.routes.find((r) => r.id === RETURN_CHAIN_ROUTE_ID) ??
-    snapshot.library.routes.find((r) => r.isReturnChain) ??
-    null
-  );
+/** The normative return chain from the snapshot (fixed id, AD-10), as legs. */
+export function returnChain(snapshot: PlanningSnapshot): Leg[] | null {
+  const variant =
+    snapshot.library.variants.find((v) => v.id === RETURN_CHAIN_ROUTE_ID) ??
+    snapshot.library.variants.find((v) => v.isReturnChain);
+  if (!variant) return null;
+  const legs = legsOfVariant(variant, snapshot.library);
+  return legs.length > 0 ? legs : null;
 }
 
 /**
@@ -234,37 +235,36 @@ export function remainingReturnLegs(
   if (!chain) return null;
   const seq = routeIslandSequence(chain);
   const idx = seq.indexOf(islandId);
-  if (idx >= 0) return chain.legs.slice(idx);
+  if (idx >= 0) return chain.slice(idx);
 
   // Connector: any curated leg from the island onto the chain (earliest join).
   let best: { leg: Leg; joinIdx: number } | null = null;
-  for (const route of snapshot.library.routes) {
-    for (const leg of route.legs) {
-      const joinIdx =
-        leg.fromIslandId === islandId ? seq.indexOf(leg.toIslandId) : -1;
-      if (joinIdx >= 0 && (!best || joinIdx < best.joinIdx)) {
-        best = { leg, joinIdx };
-      }
-      // Curated legs may be stored in outbound direction: use them reversed.
-      const revJoinIdx =
-        leg.toIslandId === islandId ? seq.indexOf(leg.fromIslandId) : -1;
-      if (revJoinIdx >= 0 && (!best || revJoinIdx < best.joinIdx)) {
-        best = { leg: reverseLeg(leg), joinIdx: revJoinIdx };
-      }
+  for (const leg of snapshot.library.legs) {
+    const joinIdx =
+      leg.fromIslandId === islandId ? seq.indexOf(leg.toIslandId) : -1;
+    if (joinIdx >= 0 && (!best || joinIdx < best.joinIdx)) {
+      best = { leg, joinIdx };
+    }
+    // Curated legs may be stored in outbound direction: use them reversed.
+    const revJoinIdx =
+      leg.toIslandId === islandId ? seq.indexOf(leg.fromIslandId) : -1;
+    if (revJoinIdx >= 0 && (!best || revJoinIdx < best.joinIdx)) {
+      best = { leg: reverseLeg(leg), joinIdx: revJoinIdx };
     }
   }
-  if (best) return [best.leg, ...chain.legs.slice(best.joinIdx)];
+  if (best) return [best.leg, ...chain.slice(best.joinIdx)];
 
   // Last resort: sail back the way we came — reverse the legs of a route
   // that starts at the base and reaches this island (e.g. Saronic circuit,
   // which is not on the westward chain).
-  for (const route of snapshot.library.routes) {
-    if (route.isReturnChain) continue;
-    const rSeq = routeIslandSequence(route);
+  for (const variant of snapshot.library.variants) {
+    if (variant.isReturnChain) continue;
+    const vLegs = legsOfVariant(variant, snapshot.library);
+    const rSeq = routeIslandSequence(vLegs);
     if (rSeq[0] !== snapshot.params.baseIslandId) continue;
     const rIdx = rSeq.indexOf(islandId);
     if (rIdx <= 0) continue;
-    return route.legs
+    return vLegs
       .slice(0, rIdx)
       .reverse()
       .map((leg) => reverseLeg(leg));

@@ -218,14 +218,14 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
   // --- option space, PPR, decision points, day options ---------------------
   // Ordering by escalation rank is a domain criterion (AD-2): the assessment
   // delivers routeOptions ORDERED (conservative first); views only consume.
-  const routesByRank = [...library.routes].sort(
+  const routesByRank = [...library.variants].sort(
     (a, b) => a.escalationRank - b.escalationRank,
   );
   const routeOptions = routesByRank.map((route) =>
     assessRouteOption(route, currentIslandId, snapshot),
   );
   const ppr = predictedPointOfReturn(snapshot, currentIslandId);
-  const decisionPoints = deriveDecisionPoints(routeOptions, ppr, library.routes);
+  const decisionPoints = deriveDecisionPoints(routeOptions, ppr, library.variants);
   const dayOptions = deriveDayOptions(
     snapshot,
     currentIslandId,

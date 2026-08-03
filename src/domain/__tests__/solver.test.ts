@@ -12,7 +12,7 @@ import {
 import { stagesOf } from '../schema/plan.ts';
 import { assessPlanning } from '../assess.ts';
 import type { Island } from '../schema/island.ts';
-import type { Route } from '../schema/route.ts';
+
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
 import {
   TEST_POLAR,
@@ -25,6 +25,7 @@ import {
   makeSnapshot,
   makeStage,
   makeTimes,
+  makeVariant,
 } from './fixtures.ts';
 
 /**
@@ -72,21 +73,16 @@ function roundTripSnapshot(
       distanceNm: nm,
     });
 
-  const routes: Route[] = [
-    {
-      id: 'sued-route',
-      name: 'Südroute',
-      escalationRank: 1,
-      legs: [leg(base, mitte, 20), leg(mitte, sued, 20)],
-      isReturnChain: false,
-    },
-    {
-      id: 'rueckfallkette-west',
-      name: 'Rückfallkette West',
+  const outbound = [leg(base, mitte, 20), leg(mitte, sued, 20)];
+  const homeward = [leg(sued, mitte, 20), leg(mitte, base, 20)];
+  const legs = [...outbound, ...homeward];
+  const variants = [
+    makeVariant('sued-route', outbound, { escalationRank: 1, name: 'Südroute' }),
+    makeVariant('rueckfallkette-west', homeward, {
       escalationRank: 0,
-      legs: [leg(sued, mitte, 20), leg(mitte, base, 20)],
       isReturnChain: true,
-    },
+      name: 'Rückfallkette West',
+    }),
   ];
 
   const ferry = new Set(opts.ferryIslands ?? ['athen', 'mitte', 'sued']);
@@ -104,7 +100,7 @@ function roundTripSnapshot(
     times,
     polar: TEST_POLAR,
     forecast: { [base.id]: fc, [mitte.id]: fc, [sued.id]: fc },
-    library: { islands, places: [base, mitte, sued], invalidPlaces: [], routes },
+    library: { islands, places: [base, mitte, sued], invalidPlaces: [], legs, variants },
     trip: {
       currentDay: opts.currentDay ?? 1,
       position: {

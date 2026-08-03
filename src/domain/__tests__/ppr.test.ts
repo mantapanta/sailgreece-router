@@ -4,7 +4,7 @@ import {
   predictedPointOfReturn,
   returnFeasibleStarting,
 } from '../ppr.ts';
-import type { Route } from '../schema/route.ts';
+
 import type { PlanningSnapshot, PointForecast } from '../schema/snapshot.ts';
 import {
   constantForecast,
@@ -13,6 +13,7 @@ import {
   makeSnapshot,
   makeTimes,
   TEST_POLAR,
+  makeVariant,
 } from './fixtures.ts';
 
 /**
@@ -56,21 +57,17 @@ function amorgosWorld(): PlanningSnapshot {
     toPlaceId: base.id,
     distanceNm: 20,
   });
-  const routes: Route[] = [
-    {
-      id: 'verlaengerung-amorgos',
-      name: 'Verlängerung Amorgos',
+  const legs = [naxosAmorgos, naxosAthen];
+  const variants = [
+    makeVariant('verlaengerung-amorgos', [naxosAmorgos], {
       escalationRank: 3,
-      legs: [naxosAmorgos],
-      isReturnChain: false,
-    },
-    {
-      id: 'rueckfallkette-west',
-      name: 'Rückfallkette West',
+      name: 'Verlängerung Amorgos',
+    }),
+    makeVariant('rueckfallkette-west', [naxosAthen], {
       escalationRank: 0,
-      legs: [naxosAthen],
       isReturnChain: true,
-    },
+      name: 'Rückfallkette West',
+    }),
   ];
   const times = makeTimes(12);
   const fc = constantForecast(times.length, 12, 90);
@@ -92,7 +89,8 @@ function amorgosWorld(): PlanningSnapshot {
       ],
       places: [base, naxos, amorgos],
       invalidPlaces: [],
-      routes,
+      legs,
+      variants,
     },
     trip: {
       currentDay: 2,
@@ -188,7 +186,8 @@ function doubleLegWorld(opts: { afternoon28kn: boolean }): {
       ],
       places: [a, b, c],
       invalidPlaces: [],
-      routes: [],
+      legs: [],
+      variants: [],
     },
   });
   return { snapshot, legs: [legAB, legBC] };

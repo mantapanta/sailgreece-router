@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { IslandSchema } from './island.ts';
 import { PlaceSchema } from './place.ts';
-import { RouteSchema } from './route.ts';
+import { LegSchema, RouteSchema, VariantSchema } from './route.ts';
 import { ParamsSchema } from './params.ts';
 import { PolarSchema } from './polar.ts';
 
@@ -19,12 +19,37 @@ export const IslandStagingFileSchema = z.object({
 });
 export type IslandStagingFile = z.infer<typeof IslandStagingFileSchema>;
 
+/**
+ * @deprecated Superseded by the leg/variant split (AD-4). Kept so an older
+ * routes.json still parses during the transition; new data goes into
+ * legs.json + variants.json.
+ */
 export const RoutesStagingFileSchema = z.object({
   approved: z.boolean(),
   sourceNote: z.string().min(1),
   routes: z.array(RouteSchema).min(1),
 });
 export type RoutesStagingFile = z.infer<typeof RoutesStagingFileSchema>;
+
+/** Deduplicated leg library (seeding/data/legs.json) — legs are first-class (AD-4). */
+export const LegsStagingFileSchema = z.object({
+  approved: z.boolean(),
+  sourceNote: z.string().min(1),
+  legs: z.array(LegSchema).min(1),
+});
+export type LegsStagingFile = z.infer<typeof LegsStagingFileSchema>;
+
+/**
+ * Curated round-trip variants (seeding/data/variants.json) as ORDERED LEG-ID
+ * SEQUENCES. Referential integrity against legs.json is checked at import time,
+ * not here — the schema alone cannot see the other file.
+ */
+export const VariantsStagingFileSchema = z.object({
+  approved: z.boolean(),
+  sourceNote: z.string().min(1),
+  variants: z.array(VariantSchema).min(1),
+});
+export type VariantsStagingFile = z.infer<typeof VariantsStagingFileSchema>;
 
 export const ConfigStagingFileSchema = z.object({
   approved: z.boolean(),

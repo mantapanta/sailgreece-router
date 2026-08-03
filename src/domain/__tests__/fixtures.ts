@@ -2,7 +2,7 @@
 
 import type { Place } from '../schema/place.ts';
 import type { Polar } from '../schema/polar.ts';
-import type { Leg, Route } from '../schema/route.ts';
+import type { Leg, Variant } from '../schema/route.ts';
 import type {
   PlanningSnapshot,
   PointForecast,
@@ -94,7 +94,7 @@ export function makeSnapshot(
     model: 'ecmwf_ifs025',
     times,
     forecast: {},
-    library: { islands: [], places: [], invalidPlaces: [], routes: [] },
+    library: { islands: [], places: [], invalidPlaces: [], legs: [], variants: [] },
     polar: null,
     params: { ...DEFAULT_PARAMS, tripStartDate: TRIP_START },
     trip: {
@@ -129,6 +129,21 @@ export function makeHarbourDay(
 
 export function makePlan(days: PlanDay[]): Plan {
   return { schemaVersion: PLAN_SCHEMA_VERSION, days };
+}
+
+/** A curated variant referencing legs by id (AD-4). */
+export function makeVariant(
+  id: string,
+  legs: Leg[],
+  opts: { escalationRank?: number; isReturnChain?: boolean; name?: string } = {},
+): Variant {
+  return {
+    id,
+    name: opts.name ?? id,
+    escalationRank: opts.escalationRank ?? 0,
+    isReturnChain: opts.isReturnChain ?? false,
+    legIds: legs.map((l) => l.id),
+  };
 }
 
 /**
@@ -175,7 +190,8 @@ export function northSouthScenario(opts: {
       ],
       places: [north, south],
       invalidPlaces: [],
-      routes: [] as Route[],
+      legs: [],
+      variants: [],
     },
   });
   return { snapshot, leg };

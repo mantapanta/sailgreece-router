@@ -1,7 +1,7 @@
 import type { Ampel } from './common.ts';
 import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
-import type { Route } from './route.ts';
+import type { Leg, Variant } from './route.ts';
 import type { Plan, PlanValidity } from './plan.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
@@ -49,7 +49,13 @@ export interface Library {
   islands: Island[];
   places: Place[];
   invalidPlaces: InvalidPlace[];
-  routes: Route[];
+  /**
+   * Deduplicated leg library (AD-4): every leg exists exactly once, so a
+   * waypoint correction lands in one place instead of four.
+   */
+  legs: Leg[];
+  /** Curated round-trip variants as ordered leg-id sequences (FR9). */
+  variants: Variant[];
 }
 
 export interface PlanningSnapshot {

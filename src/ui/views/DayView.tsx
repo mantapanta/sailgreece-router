@@ -175,7 +175,7 @@ function StageCard({
   const { params } = snapshot;
   const totalHours = stage.legs.reduce((s, l) => s + (l.totalHours ?? 0), 0);
   const distance = stage.legs.reduce((s, l) => {
-    const leg = snapshot.library.routes.flatMap((r) => r.legs).find((x) => x.id === l.legId);
+    const leg = snapshot.library.legs.find((x) => x.id === l.legId);
     return s + (leg?.distanceNm ?? 0);
   }, 0);
 
