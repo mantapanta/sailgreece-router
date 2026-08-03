@@ -16,7 +16,6 @@ import type { Params } from './params.ts';
 export interface PointForecast {
   windKn: (number | null)[];
   windDirDeg: (number | null)[];
-  gustKn: (number | null)[];
   waveM: (number | null)[];
   waveDirDeg: (number | null)[];
   wavePeriodS: (number | null)[];

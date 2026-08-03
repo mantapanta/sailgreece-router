@@ -1,4 +1,5 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-mvp-sailgreece-router.md`
+  status: ENTSCHIEDEN (2026-08-03, Philipp: "böen raus") — gustKn ersatzlos entfernt (Abruf, Schema, Fixtures); Planungsgröße bleibt der Mittelwind. wavePeriodS bleibt erhalten: Wellenhöhe plus Periode beschreiben den Schwell-Charakter einer Bucht und sind für die Platz-Ampel fachlich anschlussfähig — falls auch das raus soll, separat entscheiden.
   summary: Böen (gustKn) und Wellenperiode werden abgerufen, fließen aber weder in die 25-kn-Regel noch in die Platz-Ampel ein — Produktentscheidung nötig (z. B. Böen-Schwelle als config-Parameter).
   evidence: Beide Review-Agenten unabhängig; PRD FR11 nennt Böen als Datenpunkt, definiert aber keine Verwendungsregel — jede Implementierung wäre erfundenes Produktverhalten.
 - source_spec: `_bmad-output/implementation-artifacts/spec-round-trip-umbau.md`

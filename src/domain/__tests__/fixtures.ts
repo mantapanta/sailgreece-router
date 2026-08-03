@@ -34,7 +34,6 @@ export function constantForecast(
   return {
     windKn: Array(hours).fill(windKn),
     windDirDeg: Array(hours).fill(windDirDeg),
-    gustKn: Array(hours).fill(windKn === null ? null : windKn * 1.3),
     waveM: Array(hours).fill(waveM),
     waveDirDeg: Array(hours).fill(waveDirDeg),
     wavePeriodS: Array(hours).fill(waveM === null ? null : 4),
