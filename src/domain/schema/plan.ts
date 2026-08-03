@@ -62,10 +62,36 @@ export const PlanDaySchema = z.discriminatedUnion('kind', [
 ]);
 export type PlanDay = z.infer<typeof PlanDaySchema>;
 
-export const PlanSchema = z.object({
-  schemaVersion: z.literal(PLAN_SCHEMA_VERSION),
-  days: z.array(PlanDaySchema).min(1),
-});
+export const PlanSchema = z
+  .object({
+    schemaVersion: z.literal(PLAN_SCHEMA_VERSION),
+    days: z.array(PlanDaySchema).min(1),
+  })
+  // A plan covers each trip day exactly once and without gaps. Persisted state
+  // is untrusted input (hand edits, older versions); a duplicate day would make
+  // `planDay` pick an arbitrary entry and a gap would silently drop a stage from
+  // the numbering — both would surface as a wrong plan rather than an error.
+  .check((ctx) => {
+    const days = ctx.value.days.map((d) => d.day).sort((a, b) => a - b);
+    const dupes = days.filter((d, i) => i > 0 && d === days[i - 1]);
+    if (dupes.length > 0) {
+      ctx.issues.push({
+        code: 'custom',
+        message: `Plan enthält Törntage doppelt: ${[...new Set(dupes)].join(', ')}`,
+        input: ctx.value,
+      });
+    }
+    for (let i = 1; i < days.length; i++) {
+      if (days[i]! !== days[i - 1]! + 1) {
+        ctx.issues.push({
+          code: 'custom',
+          message: `Lücke im Plan zwischen Tag ${days[i - 1]} und Tag ${days[i]}`,
+          input: ctx.value,
+        });
+        break;
+      }
+    }
+  });
 export type Plan = z.infer<typeof PlanSchema>;
 
 // ---------------------------------------------------------------------------

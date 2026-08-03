@@ -1,5 +1,6 @@
 export * from './common.ts';
 export * from './shelter.ts';
+export * from './berthing.ts';
 export * from './island.ts';
 export * from './place.ts';
 export * from './route.ts';

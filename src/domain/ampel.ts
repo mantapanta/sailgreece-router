@@ -12,6 +12,11 @@
  * a RUNTIME rule living here (AD-10): curated sectors are the lee statement;
  * any direction outside all sectors is treated as unprotected (luv) — it can
  * never be green under meaningful wind, only yellow (calm) or red.
+ *
+ * Curation confidence is part of the same rule family: a place whose SECTORS
+ * are disputed is not a place the app may recommend for the night, however
+ * favourable the forecast reads. `confidence: 'niedrig'` therefore caps the
+ * verdict at yellow — the same shape as "uncurated places never go green".
  */
 
 import type { WindSector, WaveSector } from './schema/shelter.ts';
@@ -88,6 +93,32 @@ export function waveHourAmpel(
 }
 
 /**
+ * Cap a forecast verdict by how well the curation is backed by sources.
+ *
+ * Only 'niedrig' caps, and only green -> yellow. Rationale:
+ *   - 'niedrig' marks a place whose SECTORS are in dispute between sources
+ *     (e.g. a bay one source calls Meltemi-safe and another calls exposed).
+ *     Green would recommend it for the night on evidence that is contested.
+ *   - Yellow, not red: the forecast statement is not wrong, it is unverified.
+ *     Red would hide the place from the planner and overstate the knowledge
+ *     just as much as green does.
+ *   - An ABSENT confidence field changes nothing. Most of the library predates
+ *     the field; treating "not stated" as "doubtful" would turn the whole
+ *     library yellow and make the signal worthless.
+ *
+ * Deliberately NOT included: `berthingDetails.confidence`. That grades
+ * berth-level facts (depth, holding ground, fees), a different axis from the
+ * shelter sectors this verdict is built on.
+ */
+function capByConfidence(ampel: Ampel, place: Place, reasons: string[]): Ampel {
+  if (place.confidence !== 'niedrig' || ampel !== 'gruen') return ampel;
+  reasons.push(
+    'Kuratierung unsicher (Quellen widersprechen sich) — nicht als sicherer Liegeplatz für die Nacht empfohlen',
+  );
+  return 'gelb';
+}
+
+/**
  * Place traffic light for night N: forecast (wind + waves) mapped onto the
  * shelter profile over the overnight window [N 18:00, N+1 09:00) Athens.
  * Missing hours (null / beyond horizon) => 'unbewertet' contribution —
@@ -152,12 +183,14 @@ export function placeNightAmpel(
     }
   }
 
-  const ampel = worstAmpel(verdicts);
+  const forecastAmpel = worstAmpel(verdicts);
   if (sawNullWind) reasons.push('Wind-Forecast unvollständig (Horizont)');
   if (sawNullWave) reasons.push('Wellen-Forecast unvollständig (Marine-Horizont)');
-  if (ampel === 'rot') reasons.push('Nacht außerhalb des Schutzprofils');
-  if (ampel === 'gelb' && !sawNullWind && !sawNullWave)
+  if (forecastAmpel === 'rot') reasons.push('Nacht außerhalb der Schutzsektoren');
+  if (forecastAmpel === 'gelb' && !sawNullWind && !sawNullWave)
     reasons.push('Nahe an der Schutzgrenze oder ungeschützte Richtung bei Schwachwind');
+
+  const ampel = capByConfidence(forecastAmpel, place, reasons);
 
   return { placeId: place.id, nightDay, ampel, maxWindKn, windDirDeg, maxWaveM, reasons };
 }

@@ -19,8 +19,9 @@ import {
 import { assessPlanning } from '../assess.ts';
 import { assessLeg } from '../scoring.ts';
 import { packLegs } from '../ppr.ts';
+import { deadlineFrame } from '../time.ts';
 import { ParamsSchema } from '../schema/params.ts';
-import { stageNumber, stagesOf } from '../schema/plan.ts';
+import { PlanSchema, stageNumber, stagesOf } from '../schema/plan.ts';
 import type { Island } from '../schema/island.ts';
 import type { Route } from '../schema/route.ts';
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
@@ -456,5 +457,76 @@ describe('regression: the return deadline is a time, not just a day', () => {
     const v = validatePlan(plan, snapshot);
     expect(v.violations.some((x) => x.text.includes('Rückgabe'))).toBe(false);
     expect(v.horizonDependent).toBe(true);
+  });
+});
+
+/**
+ * Robustness at the edges of the plan: gaps that let a wrong plan look right.
+ */
+describe('regression: plan integrity at the edges', () => {
+  it('rejects a persisted plan with duplicate days', () => {
+    const raw = {
+      schemaVersion: 1,
+      days: [
+        { kind: 'stage', day: 3, legIds: ['athen--b'], toIslandId: 'b', source: 'solver' },
+        { kind: 'harbour', day: 3, islandId: 'b', source: 'solver' },
+      ],
+    };
+    expect(PlanSchema.safeParse(raw).success).toBe(false);
+  });
+
+  it('rejects a persisted plan with a gap between days', () => {
+    const raw = {
+      schemaVersion: 1,
+      days: [
+        { kind: 'stage', day: 1, legIds: ['athen--b'], toIslandId: 'b', source: 'solver' },
+        { kind: 'stage', day: 4, legIds: ['b--c'], toIslandId: 'c', source: 'solver' },
+      ],
+    };
+    expect(PlanSchema.safeParse(raw).success).toBe(false);
+  });
+
+  it('flags a berth that lies on a different island than its day', () => {
+    const snapshot = realSnapshot();
+    // Day target is island b, but the chosen berth is the harbour on c.
+    const plan = makePlan([makeStage(2, ['athen--b'], 'b', 'skipper', 'c-hafen')]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.text.includes('liegt auf c'))).toBe(true);
+  });
+
+  it('flags a missing pickup day inside the planning window', () => {
+    const snapshot = realSnapshot({ ferryIslands: ['b'] });
+    // Plan covers days 1-2 only; the pickup day (8) is absent.
+    const plan = makePlan([
+      makeStage(1, ['athen--b'], 'b', 'solver'),
+      makeStage(2, ['b--c'], 'c', 'solver'),
+    ]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.kind === 'pickup' && x.text.includes('fehlt im Plan'))).toBe(
+      true,
+    );
+  });
+
+  it('reports an off-plan position instead of quietly reinterpreting it', () => {
+    const sailed = makePlan([
+      makeStage(1, ['athen--b'], 'b', 'solver'),
+      makeStage(2, ['b--c'], 'c', 'solver'),
+    ]);
+    // Plan says the boat spent day 1 at b; it actually lies at the base.
+    const snapshot = realSnapshot({ currentDay: 2, plan: sailed });
+    const assessment = assessPlanning(snapshot);
+    expect(assessment.offPlan).toBe(true);
+    expect(assessment.positionNote).toContain('weicht vom Plan ab');
+  });
+
+  it('reports a clamped PoR instead of silently moving it to day 1', () => {
+    const frame = deadlineFrame({
+      tripStartDate: '2026-08-08',
+      returnDeadlineDate: '2026-08-09', // day 2
+      returnDeadlineHourAthens: 18,
+      bufferDays: 5, // would push the PoR to day -3
+    });
+    expect(frame.porDeadlineDay).toBe(1);
+    expect(frame.porClamped).toBe(true);
   });
 });

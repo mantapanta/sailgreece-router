@@ -17,6 +17,7 @@
   summary: Die Rückkehr-Deadline wird nur tagesgenau geprüft — returnDeadlineHourAthens (18:00) und deadlineUtcMs aus deadlineFrame() werden nirgends ausgewertet, ein Plan mit Ankunft am 19.8. um 23:00 gilt als rechtzeitig.
   evidence: Edge Case 4.3. Verifiziert: deadlineUtcMs hat keine Leseverwendung. Für den Chartervertrag (Rückgabe 18:00) ist die Stunde die eigentliche Grenze.
 - source_spec: `_bmad-output/implementation-artifacts/spec-round-trip-umbau.md`
+  status: ERLEDIGT (2026-08-03: Pickup-Tag-else-Zweig, Platz-Insel-Konsistenz, PlanSchema Dubletten+Lücken, offPlan im Assessment, porClamped; 6 Tests)
   summary: Robustheitslücken im Plan-Randbereich — Pickup-Tag nicht im Plan enthalten (Bedingung 3 ohne else-Zweig), Insel eines Hafentag-Pins geht verloren, PlanSchema erlaubt doppelte und lückenhafte Tage, Off-Plan-Position wird nicht markiert, porDeadlineDay wird stumm auf 1 geklemmt, kein Check ob der Deadline-Tag in tripLengthDays passt.
   evidence: Edge Case 2.3, 2.7, 2.8, 2.9, 4.1, 4.2 — je mit Fundstelle belegt. Keiner davon ist sicherheitskritisch, alle sind billig nachzuziehen.
 - source_spec: `_bmad-output/implementation-artifacts/spec-round-trip-umbau.md`

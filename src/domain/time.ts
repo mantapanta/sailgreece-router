@@ -101,6 +101,8 @@ export interface DeadlineFrame {
    * independently maintained deadline.
    */
   porDeadlineDay: number;
+  /** True when the buffer would have pushed the PoR before trip day 1. */
+  porClamped: boolean;
 }
 
 export function deadlineFrame(params: {
@@ -110,10 +112,15 @@ export function deadlineFrame(params: {
   bufferDays: number;
 }): DeadlineFrame {
   const deadlineDay = tripDayForDate(params.tripStartDate, params.returnDeadlineDate);
+  const rawPor = deadlineDay - params.bufferDays;
   return {
     deadlineDay,
     deadlineUtcMs: athensToUtcMs(params.returnDeadlineDate, params.returnDeadlineHourAthens),
-    porDeadlineDay: Math.max(1, deadlineDay - params.bufferDays),
+    // Clamped so the PoR never lands before the trip starts. The clamp is
+    // REPORTED rather than silent: a buffer that eats the whole trip is a
+    // config error, and quietly moving the deadline to day 1 would hide it.
+    porDeadlineDay: Math.max(1, rawPor),
+    porClamped: rawPor < 1,
   };
 }
 

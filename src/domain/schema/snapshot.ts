@@ -248,7 +248,10 @@ export interface Assessment {
   currentIslandId: string | null;
   /**
    * Why currentIslandId is null although a position exists (e.g. fix beyond
-   * the snap radius) — or null when the derivation is unremarkable.
+   * the snap radius), or that the boat is off plan — null when the derivation
+   * is unremarkable.
    */
   positionNote: string | null;
+  /** True when the boat is not where the plan expected it to be. */
+  offPlan: boolean;
 }

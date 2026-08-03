@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CoordinatesSchema } from './common.ts';
 import { ShelterProfileSchema } from './shelter.ts';
+import { BerthingDetailsSchema, ConfidenceSchema } from './berthing.ts';
 
 export const PlaceTypeSchema = z.enum(['hafen', 'bucht', 'marina']);
 export type PlaceType = z.infer<typeof PlaceTypeSchema>;
@@ -28,6 +29,15 @@ export const PlaceSchema = z.object({
   description: z.string().optional(),
   /** Static warning notes, e.g. Vlychada size limits. */
   warnings: z.array(z.string()).optional(),
+  /** Berth-level facts (depth, holding ground, size limit) — see berthing.ts. */
+  berthingDetails: BerthingDetailsSchema.optional(),
+  /**
+   * How well the CURATION of this place is backed by sources. Drives nothing in
+   * the solver; it tells the reviewer where to look first before `approved`.
+   */
+  confidence: ConfidenceSchema.optional(),
+  /** Sources for the place as a whole (shelter sources live in shelter.sourceNote). */
+  sources: z.array(z.string().min(1)).optional(),
 });
 export type Place = z.infer<typeof PlaceSchema>;
 

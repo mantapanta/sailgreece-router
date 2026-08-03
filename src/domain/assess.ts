@@ -244,6 +244,22 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
       toPlaceId: d.kind === 'stage' ? d.toPlaceId : d.placeId,
     }));
 
+  // Off-plan position: the boat is somewhere the plan did not expect (weather,
+  // a change of mind, a night at anchor elsewhere). Everything downstream is
+  // computed from the REAL position, so the plan is what needs correcting —
+  // but the divergence has to be visible instead of silently reinterpreted.
+  const expectedIsland = trip.plan
+    ? (() => {
+        const yesterday = trip.plan.days.find((d) => d.day === trip.currentDay - 1);
+        if (!yesterday) return null;
+        return yesterday.kind === 'stage' ? yesterday.toIslandId : yesterday.islandId;
+      })()
+    : null;
+  const offPlan =
+    currentIslandId !== null &&
+    expectedIsland !== null &&
+    currentIslandId !== expectedIsland;
+
   const solved = currentIslandId
     ? completePlan(snapshot, currentIslandId, pins)
     : null;
@@ -327,6 +343,9 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
     ppr,
     decisionPoints,
     currentIslandId,
-    positionNote,
+    positionNote: offPlan
+      ? `Position (${currentIslandId}) weicht vom Plan ab — erwartet war ${expectedIsland}. Der Rest-Trip ist ab der echten Position gerechnet.${positionNote ? ` ${positionNote}` : ''}`
+      : positionNote,
+    offPlan,
   };
 }

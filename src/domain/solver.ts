@@ -340,6 +340,23 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
     }
   }
 
+  // (1d) A chosen berth must lie on the island of its day. Otherwise the place
+  // ampel shown for that night comes from a different island — a wrong shelter
+  // verdict, which is the one class of error NFR6 rules out.
+  for (const entry of plan.days) {
+    const placeId = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
+    if (!placeId) continue;
+    const place = library.places.find((p) => p.id === placeId);
+    const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+    if (place && place.islandId !== islandId) {
+      violations.push({
+        kind: 'incomplete',
+        day: entry.day,
+        text: `Tag ${entry.day}: Platz ${place.name} liegt auf ${place.islandId}, nicht auf ${islandId}`,
+      });
+    }
+  }
+
   // (2) arrival at the base by the one deadline.
   const lastDay = Math.max(...plan.days.map((d) => d.day));
   const endIsland = (() => {
@@ -459,6 +476,17 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
   const pickupEntry = planDay(plan, pickupDay);
   if (!ferryDataCurated) {
     horizonDependent = true;
+  } else if (!pickupEntry) {
+    // The pickup day is not covered by the plan at all — e.g. it lies before
+    // today or past the deadline. A hard condition that cannot be evaluated
+    // must say so; without this branch the guests were silently forgotten.
+    if (pickupDay >= snapshot.trip.currentDay && pickupDay <= frame.deadlineDay) {
+      violations.push({
+        kind: 'pickup',
+        day: pickupDay,
+        text: `Der Gäste-Zustiegstag (Törntag ${pickupDay}) fehlt im Plan`,
+      });
+    }
   } else if (pickupEntry) {
     const islandId =
       pickupEntry.kind === 'stage' ? pickupEntry.toIslandId : pickupEntry.islandId;
