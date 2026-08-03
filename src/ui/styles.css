@@ -447,9 +447,10 @@ hr.hairline,
 }
 
 .wind-arrow {
-  font-size: 1.05rem;
+  font-size: 1.9rem;
+  font-weight: 700;
   color: var(--navy);
-  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+  text-shadow: 0 0 4px #fff, 0 0 4px #fff, 0 0 6px #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -458,11 +459,12 @@ hr.hairline,
 }
 
 .wind-arrow .kn {
-  font-size: 0.6rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 0 0.2rem;
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid var(--navy);
   transform: none;
 }
 

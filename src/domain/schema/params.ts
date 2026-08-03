@@ -64,17 +64,73 @@ const ParamsObjectSchema = z.object({
     .default('2026-08-08'),
   tripLengthDays: z.number().int().positive().default(12),
   /**
-   * Trip day of DISEMBARKATION (1-based; default = last trip day). The
-   * return to the base on the EVE of this day is computed internally:
-   * effectiveDeadlineDay = disembarkDay - 1 - bufferDays. Enter the
-   * disembarkation day itself here, NOT the eve.
+   * THE ONE deadline (AD-8/AD-9): contractual return to the base.
+   * Everything else — effective deadline day, PoR reserve — is DERIVED from
+   * this in domain/time.ts; never maintain a second deadline in parallel.
    */
-  disembarkDay: z.number().int().positive().default(12),
-  /** Additional buffer day before that deadline (FR19). */
+  returnDeadlineDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .default('2026-08-19'),
+  returnDeadlineHourAthens: z.number().int().min(0).max(23).default(18),
+  /** PoR reserve in days — the buffer/harbour day IS this reserve (AD-9, FR19). */
   bufferDays: z.number().int().min(0).default(1),
+  /**
+   * Planning TARGET for harbour days (days without a leg): normally one, the
+   * buffer/pickup day. Not a limit — waiting out weather is legitimate.
+   */
+  harbourDays: z.number().int().min(0).default(1),
+  /**
+   * Emergency ceiling for harbour days (skipper's call, 2026-08-03: "at a
+   * pinch up to 5"). Beyond this the plan is no longer the trip that was
+   * intended and says so — but it stays a structural finding, never a red
+   * alarm, since lying in port is safe.
+   */
+  harbourDaysMax: z.number().int().min(0).default(5),
   /** Home base island / place. */
   baseIslandId: z.string().default('athen'),
   basePlaceId: z.string().default('athen-alimos'),
+
+  // --- forecast horizon & worst case (AD-13) --------------------------------
+  /**
+   * Stages beyond this many days from the current day are 'unbewertet' and
+   * count NEITHER for nor against validity (FR18). Only the return check
+   * falls back to the worst case below.
+   */
+  reliableHorizonDays: z.number().int().positive().default(7),
+  /**
+   * "Full Meltemi" as a computable scenario — binds EXACTLY ONE calculation:
+   * the return check (AD-13 condition 2'), never the outbound stages.
+   */
+  meltemiWorstCase: z
+    .object({
+      twsKn: z.number().positive().default(30),
+      fromDeg: z.number().min(0).max(360).default(0),
+      toDeg: z.number().min(0).max(360).default(45),
+      waveM: z.number().min(0).default(2.0),
+    })
+    .default({ twsKn: 30, fromDeg: 0, toDeg: 45, waveM: 2.0 }),
+
+  // --- guest pickup (FR31) ----------------------------------------------------
+  /** Hard validity condition: ferry-reachable harbour reached on this date. */
+  pickupDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .default('2026-08-15'),
+  /** Latest arrival (Athens hour) if the pickup day itself carries a leg. */
+  pickupLatestArrivalHourAthens: z.number().int().min(0).max(23).default(16),
+
+  // --- night legs (FR16) --------------------------------------------------------
+  /** Night leg only below this TWS, over the WHOLE leg duration. */
+  nightLegMaxTwsKn: z.number().positive().default(10),
+  /** At most this many night legs per trip. */
+  nightLegMaxPerTrip: z.number().int().min(0).default(2),
+  /** Night legs only from this trip day on (second week). */
+  nightLegEarliestDay: z.number().int().positive().default(8),
+
+  // --- solver (FR29, AD-13) -------------------------------------------------------
+  /** Max alternatives offered besides the main route. */
+  alternativesMax: z.number().int().min(0).default(3),
 
   // --- position derivation ----------------------------------------------------
   /**
@@ -124,19 +180,51 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
       input: p,
     });
   }
-  if (p.disembarkDay - 1 - p.bufferDays < 1) {
+  if (p.returnDeadlineDate < p.tripStartDate) {
     ctx.issues.push({
       code: 'custom',
-      message: 'disembarkDay - 1 - bufferDays muss >= 1 sein (effektiver Stichtag vor Törnbeginn)',
+      message: 'returnDeadlineDate darf nicht vor tripStartDate liegen',
       input: p,
     });
   }
-  if (p.disembarkDay > p.tripLengthDays) {
+  if (p.pickupDate < p.tripStartDate || p.pickupDate > p.returnDeadlineDate) {
     ctx.issues.push({
       code: 'custom',
-      message: 'disembarkDay darf tripLengthDays nicht überschreiten',
+      message: 'pickupDate muss innerhalb des Törnfensters liegen (FR31 ist harte Bedingung)',
       input: p,
     });
+  }
+  if (p.meltemiWorstCase.twsKn <= p.maxUpwindTwsKn) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'meltemiWorstCase.twsKn muss über maxUpwindTwsKn liegen — sonst ist das Worst-Case-Szenario kein Worst Case',
+      input: p,
+    });
+  }
+  // The worst-case sector is read CLOCKWISE from fromDeg to toDeg. A full
+  // circle has no meaningful middle, and swapped bounds would silently turn
+  // the northerly Meltemi into a harmless southerly — both must fail loudly
+  // rather than produce a scenario that is no longer a worst case.
+  {
+    const { fromDeg, toDeg } = p.meltemiWorstCase;
+    const span = (toDeg - fromDeg + 360) % 360;
+    if (span === 0 && fromDeg !== toDeg) {
+      ctx.issues.push({
+        code: 'custom',
+        message:
+          'meltemiWorstCase: Vollkreis-Sektor (0–360) ist unzulässig — die Sektormitte ist dann nicht definiert',
+        input: p,
+      });
+    }
+    if (span > 180) {
+      ctx.issues.push({
+        code: 'custom',
+        message:
+          'meltemiWorstCase: Sektor über 180° im Uhrzeigersinn — fromDeg/toDeg vermutlich vertauscht (die Sektormitte läge gegenüber der gemeinten Richtung)',
+        input: p,
+      });
+    }
   }
 });
 export type Params = z.infer<typeof ParamsSchema>;

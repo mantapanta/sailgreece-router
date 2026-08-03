@@ -53,5 +53,29 @@ export const RouteSchema = z.object({
 });
 export type Route = z.infer<typeof RouteSchema>;
 
+/**
+ * AD-4 — a curated round-trip variant as an ORDERED SEQUENCE OF LEG IDS.
+ * Legs are first-class and deduplicated; variants reference them and never
+ * copy their content (the old shape stored the same leg up to four times, so
+ * a waypoint correction had to be made in four places or silently drifted).
+ *
+ * The solver treats the union of all variant legs as its search GRAPH rather
+ * than replaying a variant verbatim — otherwise FR28 (skipper picks a
+ * different island for one day, rest recomputed) would only work for days
+ * that happen to lie on a curated variant.
+ */
+export const VariantSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  /** FR9 escalation levels: lower rank = more conservative. */
+  escalationRank: z.number().int().min(0),
+  legIds: z.array(z.string()).min(1),
+  /** True for the westward fallback chain used by the return check (AD-10). */
+  isReturnChain: z.boolean().default(false),
+  color: z.string().optional(),
+});
+export type Variant = z.infer<typeof VariantSchema>;
+
 /** Fixed id of the normative fallback-harbour chain (AD-10). */
 export const RETURN_CHAIN_ROUTE_ID = 'rueckfallkette-west';

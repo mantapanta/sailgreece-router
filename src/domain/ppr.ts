@@ -12,9 +12,28 @@
 import type { Leg, Route } from './schema/route.ts';
 import type { PlanningSnapshot, PprResult } from './schema/snapshot.ts';
 import { RETURN_CHAIN_ROUTE_ID } from './schema/route.ts';
-import { assessLeg, legWaypointKey } from './scoring.ts';
+import { assessLeg, legWaypointKey, type LegScenario } from './scoring.ts';
+import { deadlineFrame } from './time.ts';
 
 export type Feasibility = 'feasible' | 'infeasible' | 'horizon';
+
+/** One leg placed on a trip day by the packer. */
+export interface PackedLeg {
+  legIdx: number;
+  leg: Leg;
+  day: number;
+}
+
+/**
+ * The packer's answer: the verdict AND the day assignment that produced it.
+ * Returning the assignment is what turns the old boolean feasibility check
+ * into a plan builder (AD-13) — the schedule used to be computed and thrown
+ * away on every call.
+ */
+export interface PackResult {
+  verdict: Feasibility;
+  packed: PackedLeg[];
+}
 
 /** Ordered island sequence of a route, derived from its legs. */
 export function routeIslandSequence(route: Route): string[] {
@@ -23,13 +42,12 @@ export function routeIslandSequence(route: Route): string[] {
 }
 
 /**
- * Trip day by which the base must be reached: the EVE of the disembarkation
- * day (disembarkDay - 1) minus the buffer. The eve is computed HERE — the
- * config field is the disembarkation day itself (see params.ts).
+ * Trip day the PoR calculates against — derived from the ONE deadline in the
+ * config through the single derivation in time.ts (AD-9), so solver validity
+ * and PoR can never count trip days differently.
  */
 export function effectiveDeadlineDay(snapshot: PlanningSnapshot): number {
-  const { params } = snapshot;
-  return params.disembarkDay - 1 - params.bufferDays;
+  return deadlineFrame(snapshot.params).porDeadlineDay;
 }
 
 /**
@@ -42,14 +60,42 @@ export function effectiveDeadlineDay(snapshot: PlanningSnapshot): number {
  * forecast horizon ('unbewertet') are treated as admissible-but-unconfirmed;
  * if every surviving plan relies on such days the result is 'horizon'.
  */
-export function packLegsFeasible(
+export function packLegs(
   legs: Leg[],
   startDay: number,
   deadlineDay: number,
   snapshot: PlanningSnapshot,
-): Feasibility {
-  const memo = new Map<string, Feasibility>();
+  opts: {
+    scenario?: LegScenario;
+    maxWaitDays?: number;
+    /**
+     * Island the boat starts from — needed to answer "where are we at the end
+     * of a waiting day?" for the day constraints below.
+     */
+    startIslandId?: string;
+    /**
+     * Hard per-day requirement: where must the boat be when day N ends?
+     * Checked INSIDE the DP, because pins and the FR31 pickup pick a specific
+     * DAY while the packer chooses the days — verifying afterwards would
+     * discard almost every packing instead of steering the search.
+     */
+    dayConstraint?: (day: number, endIslandId: string) => boolean;
+  } = {},
+): PackResult {
+  const memo = new Map<string, PackResult>();
   const { params } = snapshot;
+  const scenario = opts.scenario;
+  const ok = (day: number, endIslandId: string): boolean =>
+    opts.dayConstraint ? opts.dayConstraint(day, endIslandId) : true;
+  /** Island the boat sits on before leg `legIdx` is sailed. */
+  const islandBefore = (legIdx: number): string =>
+    legIdx === 0
+      ? (opts.startIslandId ?? legs[0]?.fromIslandId ?? '')
+      : (legs[legIdx - 1]?.toIslandId ?? '');
+  // A plan carries exactly one harbour day (AD-12), so the packer never needs
+  // more waiting days than that — which SHRINKS the search space instead of
+  // growing it. Callers that only ask about feasibility (PoR) leave it open.
+  const maxWaitDays = opts.maxWaitDays ?? Number.POSITIVE_INFINITY;
 
   const combine = (rest: Feasibility, unconfirmed: boolean): Feasibility =>
     rest === 'infeasible'
@@ -58,32 +104,58 @@ export function packLegsFeasible(
         ? 'horizon'
         : 'feasible';
 
-  const better = (a: Feasibility, b: Feasibility): Feasibility => {
-    if (a === 'feasible' || b === 'feasible') return 'feasible';
-    if (a === 'horizon' || b === 'horizon') return 'horizon';
-    return 'infeasible';
+  const rank = (f: Feasibility): number =>
+    f === 'feasible' ? 2 : f === 'horizon' ? 1 : 0;
+
+  /** Prefer the better verdict; on a tie prefer the EARLIER finish (fewer days). */
+  const better = (a: PackResult, b: PackResult): PackResult => {
+    if (rank(a.verdict) !== rank(b.verdict))
+      return rank(a.verdict) > rank(b.verdict) ? a : b;
+    const lastA = a.packed[a.packed.length - 1]?.day ?? -1;
+    const lastB = b.packed[b.packed.length - 1]?.day ?? -1;
+    return lastA <= lastB ? a : b;
   };
 
-  const search = (legIdx: number, day: number): Feasibility => {
-    if (legIdx >= legs.length) return 'feasible';
-    if (day > deadlineDay) return 'infeasible';
-    const key = `${legIdx}:${day}`;
+  const search = (legIdx: number, day: number, waitsUsed: number): PackResult => {
+    if (legIdx >= legs.length) {
+      // All legs placed: the boat lies at the last island for every remaining
+      // day. Those days still have to satisfy the day constraints — otherwise
+      // a pin or the FR31 pickup falling AFTER the last leg would never be
+      // checked, and the plan would quietly park on the wrong island.
+      const island = islandBefore(legIdx);
+      for (let d = day; d <= deadlineDay; d++) {
+        if (!ok(d, island)) return { verdict: 'infeasible', packed: [] };
+      }
+      return { verdict: 'feasible', packed: [] };
+    }
+    if (day > deadlineDay) return { verdict: 'infeasible', packed: [] };
+    const key = `${legIdx}:${day}:${waitsUsed}`;
     const cached = memo.get(key);
     if (cached) return cached;
 
-    let best: Feasibility = 'infeasible';
-    const a = assessLeg(legs[legIdx]!, day, snapshot);
+    let best: PackResult = { verdict: 'infeasible', packed: [] };
+    const a = assessLeg(legs[legIdx]!, day, snapshot, { scenario });
     if (a.ampel !== 'rot') {
-      // One leg today.
-      best = combine(search(legIdx + 1, day + 1), a.ampel === 'unbewertet');
+      // One leg today — the day constraint asks about the island we END at.
+      if (ok(day, legs[legIdx]!.toIslandId)) {
+        const rest = search(legIdx + 1, day + 1, waitsUsed);
+        best = {
+          verdict: combine(rest.verdict, a.ampel === 'unbewertet'),
+          packed: [{ legIdx, leg: legs[legIdx]!, day }, ...rest.packed],
+        };
+      }
 
       // Two short legs today, if the combined day stays inside the hard max.
       // The second leg starts at the REAL arrival time of the first one, not
       // at the morning departure again — afternoon wind build-up (Meltemi)
       // must hit the second leg's simulation.
-      if (best !== 'feasible' && legIdx + 1 < legs.length && a.totalHours !== null) {
+      // Checked SEPARATELY from the single-leg move: a pin or the pickup that
+      // is only reachable via a double leg must not be blocked by the
+      // single-leg destination failing the constraint.
+      if (best.verdict !== 'feasible' && legIdx + 1 < legs.length && a.totalHours !== null) {
         const b = assessLeg(legs[legIdx + 1]!, day, snapshot, {
           departureOffsetHours: a.totalHours,
+          scenario,
         });
         const hoursKnown = a.totalHours !== null && b.totalHours !== null;
         const combinedSail = (a.sailHours ?? 0) + (b.sailHours ?? 0);
@@ -94,21 +166,50 @@ export function packLegsFeasible(
           a.ampel !== 'unbewertet' &&
           hoursKnown &&
           combinedSail <= params.maxSailHours &&
-          combinedMotor <= params.maxMotorHours
+          combinedMotor <= params.maxMotorHours &&
+          ok(day, legs[legIdx + 1]!.toIslandId)
         ) {
-          best = better(best, combine(search(legIdx + 2, day + 1), false));
+          const rest2 = search(legIdx + 2, day + 1, waitsUsed);
+          best = better(best, {
+            verdict: combine(rest2.verdict, false),
+            packed: [
+              { legIdx, leg: legs[legIdx]!, day },
+              { legIdx: legIdx + 1, leg: legs[legIdx + 1]!, day },
+              ...rest2.packed,
+            ],
+          });
         }
       }
     }
-    if (best !== 'feasible') {
-      // Waiting a day is always allowed (costs a day).
-      best = better(best, combine(search(legIdx, day + 1), false));
+    if (
+      best.verdict !== 'feasible' &&
+      waitsUsed < maxWaitDays &&
+      ok(day, islandBefore(legIdx))
+    ) {
+      // Waiting a day is always allowed (costs a day) — that day becomes the
+      // harbour day when the caller builds a plan from this packing.
+      const rest = search(legIdx, day + 1, waitsUsed + 1);
+      best = better(best, {
+        verdict: combine(rest.verdict, false),
+        packed: rest.packed,
+      });
     }
     memo.set(key, best);
     return best;
   };
 
-  return search(0, startDay);
+  return search(0, startDay, 0);
+}
+
+/** Feasibility-only view of {@link packLegs} — same notion, no schedule (AD-3). */
+export function packLegsFeasible(
+  legs: Leg[],
+  startDay: number,
+  deadlineDay: number,
+  snapshot: PlanningSnapshot,
+  opts: { scenario?: LegScenario } = {},
+): Feasibility {
+  return packLegs(legs, startDay, deadlineDay, snapshot, opts).verdict;
 }
 
 /** The normative return chain from the snapshot (fixed id, AD-10). */
@@ -191,16 +292,25 @@ function reverseLeg(leg: Leg): Leg {
   };
 }
 
-/** Feasibility of starting the full return from `islandId` on `startDay`. */
+/**
+ * AD-13 condition (2') — THE return check, shared by the solver and the PoR.
+ * Hours beyond the reliable horizon are computed against the Meltemi worst
+ * case: a harbour only counts as "meltemi-safe" if the chain home is sailable
+ * even under the configured worst case. This is the only calculation the
+ * worst case binds — it never governs the outbound stages.
+ */
 export function returnFeasibleStarting(
   islandId: string,
   startDay: number,
   snapshot: PlanningSnapshot,
+  scenario: LegScenario = 'worstCase',
 ): Feasibility {
   if (islandId === snapshot.params.baseIslandId) return 'feasible';
   const legs = remainingReturnLegs(islandId, snapshot);
   if (!legs) return 'infeasible';
-  return packLegsFeasible(legs, startDay, effectiveDeadlineDay(snapshot), snapshot);
+  return packLegsFeasible(legs, startDay, effectiveDeadlineDay(snapshot), snapshot, {
+    scenario,
+  });
 }
 
 /** FR19: the Predicted Point of Return for the current position. */
@@ -240,7 +350,9 @@ export function predictedPointOfReturn(
   let latest: number | null = null;
   let sawHorizon = false;
   for (let d = deadline; d >= snapshot.trip.currentDay; d--) {
-    const f = packLegsFeasible(legs, d, deadline, snapshot);
+    const f = packLegsFeasible(legs, d, deadline, snapshot, {
+      scenario: 'worstCase',
+    });
     if (f === 'feasible') {
       latest = d;
       break;

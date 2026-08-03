@@ -75,6 +75,48 @@ export function dateForTripDay(tripStartDate: string, dayN: number): string {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
 
+/** 1-based trip day containing a calendar date (inverse of dateForTripDay). */
+export function tripDayForDate(tripStartDate: string, dateIso: string): number {
+  const [sy, sm, sd] = tripStartDate.split('-').map(Number) as [number, number, number];
+  const [dy, dm, dd] = dateIso.split('-').map(Number) as [number, number, number];
+  const startMs = Date.UTC(sy, sm - 1, sd, 12);
+  const dateMs = Date.UTC(dy, dm - 1, dd, 12);
+  return Math.round((dateMs - startMs) / 86_400_000) + 1;
+}
+
+/**
+ * AD-9 — the ONE deadline derivation. `returnDeadlineDate/Hour` from the
+ * config is the single source; the effective deadline day and the PoR reserve
+ * are computed here and nowhere else, so the solver's validity condition (2)
+ * and the Predicted Point of Return can never count trip days differently.
+ */
+export interface DeadlineFrame {
+  /** Trip day on which the boat must be back at the base (FR18 condition 2). */
+  deadlineDay: number;
+  /** Hard arrival instant, UTC epoch ms. */
+  deadlineUtcMs: number;
+  /**
+   * Trip day the PoR calculates against: the deadline minus the buffer.
+   * The buffer/harbour day IS this reserve (AD-9) — it is not a second,
+   * independently maintained deadline.
+   */
+  porDeadlineDay: number;
+}
+
+export function deadlineFrame(params: {
+  tripStartDate: string;
+  returnDeadlineDate: string;
+  returnDeadlineHourAthens: number;
+  bufferDays: number;
+}): DeadlineFrame {
+  const deadlineDay = tripDayForDate(params.tripStartDate, params.returnDeadlineDate);
+  return {
+    deadlineDay,
+    deadlineUtcMs: athensToUtcMs(params.returnDeadlineDate, params.returnDeadlineHourAthens),
+    porDeadlineDay: Math.max(1, deadlineDay - params.bufferDays),
+  };
+}
+
 export interface TimeWindow {
   /** Inclusive start, UTC epoch ms. */
   startMs: number;

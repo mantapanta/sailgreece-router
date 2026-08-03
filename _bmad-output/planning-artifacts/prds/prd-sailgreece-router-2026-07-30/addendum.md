@@ -121,6 +121,56 @@ Marker, Route zeichnet sich etappenweise nach).
    Karte reduziert gestylt (monochrome Basemap), Ampelfarben bleiben dadurch das
    dominante Signal.
 
+## Best-Practice-Rundrouten (Feldtest-Feedback 2026-08-02, Detail zu FR9)
+
+Vom Product Owner vorgegebene Rundrouten-Varianten als Routing-Grundgerüst
+(Quelle: Feedback-PDF „App sailgreece-router refinment", 2026-08-02). Distanzen wie
+angegeben; bei der Kuration gegen die Distanzmatrix des Brief-Addendums abgleichen
+(Alimos-Rebasing, FR25).
+
+**Variante 1 — Westkykladen-Runde:**
+
+1. Athen (Alimos) – Sounion (22 sm)
+2. Sounion – Kea (15 sm)
+3. Kea – Mericha/Kythnos (19 sm)
+4. Mericha/Kythnos – Serifos (31 sm)
+5. Serifos – Kamares/Sifnos (9 sm)
+6. Kamares/Sifnos – Milos (24 sm)
+7. Polyaigos – Paroikia/Paros (33 sm)
+8. Paroikia/Paros – Naoussa/Paros (10 sm)
+9. Naoussa/Paros – Ermoupolis/Syros (24 sm)
+10. Ermoupolis/Syros – Loutra/Kythnos (27 sm)
+11. Loutra/Kythnos – Athen (48 sm)
+
+**Variante 2 — Ostkykladen-Runde (Santorin-Schleife):**
+
+1. Athen – Vourkari/Kea (37 sm)
+2. Vourkari/Kea – Ermoupolis/Syros (34 sm)
+3. Ermoupolis/Syros – Tinos – Mykonos (21 sm)
+4. Mykonos – Naoussa/Paros (20 sm)
+5. Naoussa/Paros – Ios (32 sm)
+6. Ios – Santorini (21 sm)
+7. Santorini – Folegandros (25 sm)
+8. Folegandros – Adamas/Milos (34 sm)
+9. Adamas/Milos – Kamares/Sifnos (24 sm)
+10. Kamares/Sifnos – Livadi/Serifos (12 sm)
+11. Livadi/Serifos – Mericha/Kythnos (21 sm)
+12. Mericha/Kythnos – Athen (45 sm)
+
+Hinweise: Variante 2 hat 12 Einträge bei 11 Etappentagen — beim Seeding als
+Etappen-Pool behandeln (Tinos–Mykonos ist im Original ein Tag), nicht als starres
+Tagesraster. Die Saronische Schwachwind-Alternative ist ersatzlos gestrichen
+(Feldtest-Entscheidung 2026-08-02). Schreibweise „Vouraki" im Original als
+Vourkari normalisiert (FR25).
+
+## Feldtest-Feedback als Quelle (2026-08-02)
+
+Vollständiges Nutzer-Feedback nach App-Test:
+`inputs/feldtest-feedback-2026-08-02.pdf` (Original: „App sailgreece-router
+refinment.pdf"). Enthält neben den eingearbeiteten Anforderungen die
+Meltemi-Planungslogik in Philipps eigenen Worten (nützlich als
+Verständnis-Referenz für die Architektur-Phase).
+
 ## Comparables-Digest (Kurzfassung, Quelle: Landschafts-Recherche 2026-07-30)
 
 Kein Tool am Markt kombiniert Etappen-Scoring + Ankerplatz-Schutzampel +

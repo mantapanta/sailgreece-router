@@ -102,7 +102,7 @@ function amorgosWorld(): PlanningSnapshot {
         lon: amorgos.coordinates.lon,
         placeId: amorgos.id,
       },
-      trackedRouteId: null,
+      plan: null,
       departureHourOverride: null,
     },
   });

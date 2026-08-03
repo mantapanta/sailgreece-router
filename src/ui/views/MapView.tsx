@@ -88,8 +88,9 @@ export function MapView({
       const r = snapshot.library.routes.find((x) => x.id === o.routeId);
       return r !== undefined && !r.isReturnChain && openStates.has(o.state);
     })?.routeId;
+  // The round-trip overlay (FR2) replaces this in the UI rework; until then the
+  // most ambitious still-open option stands in for the tracked route.
   const trackedRoute =
-    displayRoutes.find((r) => r.id === snapshot.trip.trackedRouteId) ??
     displayRoutes.find((r) => r.id === fallbackRouteId) ??
     [...displayRoutes].reverse().find((r) => !r.isReturnChain) ??
     null;

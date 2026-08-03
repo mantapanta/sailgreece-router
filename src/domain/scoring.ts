@@ -14,6 +14,7 @@ import type { Params } from './schema/params.ts';
 import type {
   PlanningSnapshot,
   LegAssessment,
+  LegHourBreakdown,
   PointForecast,
 } from './schema/snapshot.ts';
 import { worstAmpel, type Ampel } from './schema/common.ts';
@@ -112,6 +113,48 @@ function windAt(
 }
 
 /**
+ * AD-13 — the Meltemi worst case as a wind value: the direction WITHIN the
+ * configured sector that is worst for the given course, i.e. the one producing
+ * the smallest true wind angle (most on the nose).
+ *
+ * Taking the sector's midpoint instead would not be a worst case at all: for a
+ * course of 310° a northerly from 000° stands dead on the nose and blocks the
+ * leg, while the midpoint of the 0–45° sector (022°) comes in at 72° TWA and
+ * reads as comfortably sailable. The return check would then clear a passage
+ * the real Meltemi makes impossible — the opposite of a safety margin.
+ *
+ * `meltemiWorstCase.waveM` is deliberately NOT used here: assessLeg judges wind
+ * only; wave limits belong to the place ampel (domain/ampel.ts).
+ */
+function worstCaseWind(
+  params: Params,
+  courseDeg: number,
+): { twsKn: number; fromDeg: number } {
+  const { twsKn, fromDeg, toDeg } = params.meltemiWorstCase;
+  const span = (toDeg - fromDeg + 360) % 360;
+  // Degenerate sector (from === to): that single bearing is the scenario.
+  if (span === 0) return { twsKn, fromDeg: fromDeg % 360 };
+  // If sailing straight into the sector is possible, dead upwind is the worst.
+  const offsetToCourse = (courseDeg - fromDeg + 360) % 360;
+  if (offsetToCourse <= span) return { twsKn, fromDeg: courseDeg };
+  // Otherwise the sector edge that sits closest to the nose governs.
+  return {
+    twsKn,
+    fromDeg: twaDeg(courseDeg, fromDeg) <= twaDeg(courseDeg, toDeg) ? fromDeg : toDeg,
+  };
+}
+
+/**
+ * How a leg is assessed relative to the forecast horizon (AD-13).
+ * - `forecast` (default): days beyond params.reliableHorizonDays are
+ *   'unbewertet' — they count NEITHER for nor against plan validity (FR18).
+ * - `worstCase`: hours beyond the horizon fall back to the Meltemi worst
+ *   case instead. This binds EXACTLY ONE calculation — the return check
+ *   (validity condition 2'), which is also the PoR calculation.
+ */
+export type LegScenario = 'forecast' | 'worstCase';
+
+/**
  * Assess one leg for trip day N: hour-by-hour simulation from the departure
  * time. Speed is taken from the polar (+ offset) at the current progress
  * point; the FR16 wind rule is checked each hour at EVERY leg point (worst
@@ -125,9 +168,10 @@ export function assessLeg(
   leg: Leg,
   day: number,
   snapshot: PlanningSnapshot,
-  opts: { departureOffsetHours?: number } = {},
+  opts: { departureOffsetHours?: number; scenario?: LegScenario } = {},
 ): LegAssessment {
   const { params, polar } = snapshot;
+  const scenario: LegScenario = opts.scenario ?? 'forecast';
   const points = legPoints(leg, snapshot);
   const unbewertet = (reason: string): LegAssessment => ({
     legId: leg.id,
@@ -140,8 +184,31 @@ export function assessLeg(
     avgTwaDeg: null,
     upwind: false,
     reasons: [reason],
+    breakdown: [],
   });
   if (!points) return unbewertet('Start- oder Zielplatz fehlt in der Bibliothek');
+
+  // AD-13: beyond the reliable horizon a forecast-based verdict would be
+  // false precision. Such a stage is 'unbewertet' and makes a plan neither
+  // valid nor invalid (FR18) — only the return check substitutes the worst
+  // case, and it asks for it explicitly via the scenario.
+  const beyondHorizon =
+    day - snapshot.trip.currentDay > params.reliableHorizonDays;
+  if (beyondHorizon && scenario === 'forecast') {
+    return unbewertet(
+      `Fernbereich: Etappentag liegt jenseits des verlässlichen Horizonts (${params.reliableHorizonDays} Tage)`,
+    );
+  }
+  /**
+   * The worst case substitutes wherever the forecast must not be trusted:
+   * beyond the reliable horizon (even though Open-Meteo still returns numbers
+   * out to 10–16 days) AND wherever values are missing. Binding it to missing
+   * values alone would let 8-to-16-day forecast noise pass the return check —
+   * exactly the false precision AD-13 rules out. The substitute depends on the
+   * segment's course, so it is resolved inside the hourly loop below.
+   */
+  const substitutes = (w: { twsKn: number; fromDeg: number } | null): boolean =>
+    scenario === 'worstCase' && (beyondHorizon || !w);
 
   // Segment geometry, scaled so the (curated) total distance is authoritative.
   const segGeo: { fromIdx: number; toIdx: number; nm: number; course: number }[] = [];
@@ -172,6 +239,7 @@ export function assessLeg(
 
   const verdicts: Ampel[] = [];
   const reasons = new Set<string>();
+  const breakdown: LegHourBreakdown[] = [];
   let traveled = 0;
   let sailHours = 0;
   let motorHours = 0;
@@ -184,8 +252,12 @@ export function assessLeg(
 
   for (let h = 0; traveled < total && h < maxHours; h++) {
     const idx = startIdx + h;
-    if (idx >= snapshot.times.length)
-      return unbewertet('Etappe reicht über den Forecast-Horizont hinaus');
+    if (idx >= snapshot.times.length) {
+      // Off the hour axis entirely: only the worst-case scenario can still
+      // answer — the forecast scenario has nothing left to say.
+      if (scenario !== 'worstCase')
+        return unbewertet('Etappe reicht über den Forecast-Horizont hinaus');
+    }
 
     // Current segment by progress.
     let acc = 0;
@@ -199,16 +271,26 @@ export function assessLeg(
     }
     const progressPointIdx =
       traveled / total < (acc - seg.nm / 2) / total ? seg.fromIdx : seg.toIdx;
-    const progressWind = windAt(
+    // Worst case for THIS segment's course (most on the nose within the sector).
+    const wc = worstCaseWind(params, seg.course);
+    const rawProgressWind = windAt(
       snapshot.forecast[points[progressPointIdx]!.key],
       idx,
     );
+    const usedWorstCase = substitutes(rawProgressWind);
+    const progressWind = usedWorstCase ? wc : rawProgressWind;
     if (!progressWind)
       return unbewertet('Forecast-Stunden fehlen im Etappenfenster (Horizont)');
+    if (usedWorstCase) {
+      reasons.add(
+        `Fernbereich gegen Meltemi-Worst-Case gerechnet (${wc.twsKn} kn aus ${Math.round(wc.fromDeg)}°)`,
+      );
+    }
 
     // FR16 rule at EVERY point this hour — worst point governs.
     for (const p of points) {
-      const w = windAt(snapshot.forecast[p.key], idx);
+      const raw = windAt(snapshot.forecast[p.key], idx);
+      const w = substitutes(raw) ? wc : raw;
       if (!w) {
         verdicts.push('unbewertet');
         reasons.add('Forecast an einem Wegpunkt unvollständig (Horizont)');
@@ -253,6 +335,19 @@ export function assessLeg(
     traveled += speed * hourFraction;
     if (motoring) motorHours += hourFraction;
     else sailHours += hourFraction;
+
+    // FR30: record what this hour contributed, so the day card can explain
+    // the total instead of asking the skipper to trust it.
+    breakdown.push({
+      timeIso: snapshot.times[idx] ?? `+${h}h`,
+      courseDeg: seg.course,
+      twsKn: progressWind.twsKn,
+      twaDeg: twa,
+      speedKn: speed,
+      motoring,
+      distanceNm: speed * hourFraction,
+      worstCase: usedWorstCase,
+    });
   }
 
   if (traveled < total) {
@@ -277,5 +372,6 @@ export function assessLeg(
     avgTwaDeg,
     upwind: avgTwaDeg !== null && avgTwaDeg < params.upwindTwaDeg,
     reasons: [...reasons],
+    breakdown,
   };
 }

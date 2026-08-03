@@ -8,8 +8,10 @@ import {
   makePlace,
   makeSnapshot,
   makeTimes,
+  TRIP_START,
 } from './fixtures.ts';
 import { TEST_POLAR } from './fixtures.ts';
+import { dateForTripDay } from '../time.ts';
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
 
 /**
@@ -69,6 +71,13 @@ function twoIslandSnapshot(opts: {
   const snapshot = makeSnapshot({
     times,
     polar: TEST_POLAR,
+    // These cases probe the CALENDAR limit (when does an option close?), so
+    // the reliable horizon must not be the binding constraint — the horizon
+    // rule itself has its own tests. Default is 7 days (AD-13).
+    params: {
+      ...makeSnapshot().params,
+      reliableHorizonDays: 14,
+    },
     forecast: { [base.id]: fc, [target.id]: fc },
     library: {
       islands: [
@@ -82,7 +91,7 @@ function twoIslandSnapshot(opts: {
     trip: {
       currentDay: opts.currentDay ?? 1,
       position: { source: 'manual', lat: base.coordinates.lat, lon: base.coordinates.lon, placeId: base.id },
-      trackedRouteId: null,
+      plan: null,
       departureHourOverride: null,
     },
   });
@@ -90,7 +99,7 @@ function twoIslandSnapshot(opts: {
     snapshot.params = {
       ...snapshot.params,
       tripLengthDays: opts.tripLengthDays,
-      disembarkDay: opts.tripLengthDays,
+      returnDeadlineDate: dateForTripDay(TRIP_START, opts.tripLengthDays),
     };
   }
   return snapshot;
@@ -99,12 +108,14 @@ function twoIslandSnapshot(opts: {
 describe('options — FR18 open / closes / closed', () => {
   it('gentle broad-reach wind, full forecast axis: option closes on the last startable day (FR18)', () => {
     // Axis covers the whole trip, so the calendar limit is computable: the
-    // last day to sail out AND still return by the deadline (day 10) is day 9.
+    // last day to sail out AND still return by the PoR deadline (day 11 —
+    // arrival on the deadline date minus the buffer day, review finding H3)
+    // is day 10.
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
     const route = snapshot.library.routes[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     expect(result.state).toBe('schliesst');
-    expect(result.closesOnDay).toBe(9);
+    expect(result.closesOnDay).toBe(10);
   });
 
   it('feasible now, closing-day scan hits the horizon: offen-horizont with visible caveat', () => {
@@ -219,7 +230,7 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
       trip: {
         currentDay: 10, // = effective deadline (disembark 12 - 1 - buffer 1)
         position: { source: 'manual', lat: sued.coordinates.lat, lon: sued.coordinates.lon, placeId: sued.id },
-        trackedRouteId: null,
+        plan: null,
         departureHourOverride: null,
       },
     });
@@ -270,9 +281,11 @@ describe('ppr — FR19 predicted point of return', () => {
   it('away from base: latest return start day = deadline (one easy day-leg home)', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90, currentDay: 3 });
     const ppr = predictedPointOfReturn(snapshot, 'zielinsel');
-    // deadline = disembarkDay(12) - 1 - buffer(1) = 10; leg takes ~3 h.
-    expect(ppr.effectiveDeadlineDay).toBe(10);
-    expect(ppr.latestReturnStartDay).toBe(10);
+    // Deadline semantics per review finding H3 (2026-08-02): arrival is due ON
+    // the return deadline date (2026-08-19 = trip day 12), and the PoR
+    // additionally keeps the buffer/harbour day in reserve => day 11.
+    expect(ppr.effectiveDeadlineDay).toBe(11);
+    expect(ppr.latestReturnStartDay).toBe(11);
     expect(ppr.remainingDistanceNm).toBe(20);
   });
 

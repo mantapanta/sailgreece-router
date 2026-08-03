@@ -8,6 +8,8 @@ import type {
   PointForecast,
 } from '../schema/snapshot.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
+import type { Plan, PlanDay, PlanSource } from '../schema/plan.ts';
+import { PLAN_SCHEMA_VERSION } from '../schema/plan.ts';
 
 export const TRIP_START = '2026-08-08';
 
@@ -99,11 +101,35 @@ export function makeSnapshot(
     trip: {
       currentDay: 1,
       position: null,
-      trackedRouteId: null,
+      plan: null,
       departureHourOverride: null,
     },
     ...overrides,
   };
+}
+
+/** A stage day for plan fixtures (AD-12). */
+export function makeStage(
+  day: number,
+  legIds: string[],
+  toIslandId: string,
+  source: PlanSource = 'solver',
+  toPlaceId?: string,
+): PlanDay {
+  return { kind: 'stage', day, legIds, toIslandId, source, toPlaceId };
+}
+
+/** A harbour day for plan fixtures. */
+export function makeHarbourDay(
+  day: number,
+  islandId: string,
+  source: PlanSource = 'solver',
+): PlanDay {
+  return { kind: 'harbour', day, islandId, source };
+}
+
+export function makePlan(days: PlanDay[]): Plan {
+  return { schemaVersion: PLAN_SCHEMA_VERSION, days };
 }
 
 /**

@@ -32,7 +32,6 @@ function ControlsBar() {
 
   const params = bundle?.params;
   const places = bundle?.library.places ?? [];
-  const routes = bundle?.library.routes ?? [];
 
   const requestGps = async () => {
     setGpsError(null);
@@ -99,22 +98,9 @@ function ControlsBar() {
           Manuelle Position lösen
         </button>
       )}
-      <label>
-        Verfolgte Option
-        <select
-          value={state.trackedRouteId ?? ''}
-          onChange={(e) =>
-            dispatch({ type: 'TRACK_ROUTE', routeId: e.target.value || null })
-          }
-        >
-          <option value="">— keine —</option>
-          {routes.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      {/* FR21: no header select for route options — there is ONE main route,
+          edited through the day cards (FR28) or checked in from the
+          alternatives (FR29). */}
       <label>
         Abfahrt
         <select
