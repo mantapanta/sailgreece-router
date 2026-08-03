@@ -368,6 +368,128 @@ hr.hairline,
   font-size: 0.9rem;
 }
 
+/* ---- auth (login gate + account chip) ------------------------------------ */
+
+.auth-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.4rem;
+  background: var(--creme);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--creme-card);
+  border: 1px solid var(--hairline);
+  padding: 2.2rem 2rem;
+  text-align: center;
+}
+
+.auth-brand {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  color: var(--navy);
+  letter-spacing: 0.02em;
+}
+
+.auth-brand small {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.auth-lead {
+  margin: 1.6rem 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.google-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  width: 100%;
+  background: var(--navy);
+  border: 1px solid var(--navy);
+  color: var(--creme);
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+}
+
+.google-button:hover {
+  background: var(--navy-soft);
+}
+
+.google-button svg {
+  background: #fff;
+  border-radius: 2px;
+  padding: 2px;
+  box-sizing: content-box;
+}
+
+.auth-card .error-panel {
+  margin: 1.2rem 0 0;
+  text-align: left;
+}
+
+.auth-card code {
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.auth-note {
+  margin: 1.8rem 0 0;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.72rem;
+  color: #dfe6ee;
+  max-width: 100%;
+}
+
+.account-chip img {
+  border-radius: 50%;
+}
+
+.account-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 16ch;
+}
+
+.account-chip button {
+  background: transparent;
+  border: 1px solid rgba(247, 243, 234, 0.35);
+  color: var(--creme);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+}
+
 /* ---- map view (sticky split, stacked on mobile) --------------------------- */
 
 .map-split {
@@ -564,7 +686,200 @@ footer.attribution a {
     padding: 0.7rem 1rem;
   }
 
+  /* On narrow screens the tabs already claim the row — the account chip wraps
+     onto its own line instead of squeezing the navigation. */
+  .account-chip {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   main.content {
     padding: 1rem 0.9rem 2.4rem;
   }
+}
+
+/* ===================================================================== */
+/* Round-Trip-Umbau: Rest-Trip-Banner, Etappen-Cards, FR30-Rechnung      */
+/* ===================================================================== */
+
+.resttrip-banner {
+  border: 1px solid var(--hairline);
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: var(--creme-card);
+  padding: 0.8rem 1rem;
+  margin: 1rem 0 1.5rem;
+}
+.resttrip-banner.ampel-gruen { border-left-color: var(--gruen); }
+.resttrip-banner.ampel-gelb { border-left-color: var(--gelb); }
+.resttrip-banner.ampel-rot { border-left-color: var(--rot); }
+.resttrip-banner.ampel-unbewertet { border-left-color: var(--grau); }
+
+.resttrip-head {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+/* --- Etappen-Cards ---------------------------------------------------- */
+
+.stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.stage-card.today {
+  border-color: var(--navy);
+  box-shadow: 0 1px 0 var(--navy);
+}
+
+.stage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pin-chip,
+.suggestion-chip {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--hairline);
+  border-radius: 2px;
+  padding: 0.1rem 0.35rem;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+  color: var(--navy-soft);
+}
+
+.stage-actions,
+.editor-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+/* --- Etappen-Editor (FR28) -------------------------------------------- */
+
+.stage-editor {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.stage-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--navy-soft);
+}
+
+/* --- FR30-Berechnungsausweis ------------------------------------------ */
+
+.breakdown {
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+.breakdown-table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  min-width: 32rem;
+}
+.breakdown-table th,
+.breakdown-table td {
+  text-align: right;
+  padding: 0.2rem 0.6rem;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.breakdown-table th {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  color: var(--navy-soft);
+}
+.breakdown-table tr.worst-case td {
+  background: rgba(176, 65, 62, 0.07);
+}
+
+.past-list {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  opacity: 0.7;
+}
+
+/* --- Karte: Etappen-Nummern und Legende ------------------------------- */
+
+.stage-number {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--creme);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--creme);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+.stage-number.past {
+  background: var(--gruen);
+}
+.stage-number.highlight {
+  transform: scale(1.25);
+  z-index: 2;
+}
+
+.marker-pin.muted {
+  background: var(--grau);
+  opacity: 0.5;
+  transform: scale(0.7);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--navy-soft);
+}
+.legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.legend-line {
+  display: inline-block;
+  width: 1.6rem;
+  height: 0;
+}
+.legend-line.solid {
+  height: 3px;
+  border-radius: 2px;
+}
+.legend-line.dashed {
+  border-top: 3px dashed currentColor;
+}
+
+.itinerary-card.past {
+  opacity: 0.6;
+}
+.itinerary-card.harbour {
+  border-style: dashed;
 }

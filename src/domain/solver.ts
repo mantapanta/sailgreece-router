@@ -362,9 +362,27 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
   }
 
   // (3) FR31 pickup — hard, never relaxed.
+  //
+  // A MISSING guestPickup field means "not reachable" (AD-4) — but the rule may
+  // only bind while the data can actually carry it. Decisive is not whether ANY
+  // island has ferry data, but whether any island the solver can REACH does:
+  // during curation, newly researched islands may carry it while the ones the
+  // routes run over do not. Binding the rule then makes the condition
+  // permanently unsatisfiable, and the app answers "stay in port for twelve
+  // days" to a perfectly good forecast.
+  const reachableIslands = new Set<string>();
+  for (const leg of legs.values()) {
+    reachableIslands.add(leg.fromIslandId);
+    reachableIslands.add(leg.toIslandId);
+  }
+  const ferryDataCurated = library.islands.some(
+    (i) => reachableIslands.has(i.id) && i.guestPickup !== undefined,
+  );
   const pickupDay = tripDayForDate(params.tripStartDate, params.pickupDate);
   const pickupEntry = planDay(plan, pickupDay);
-  if (pickupEntry) {
+  if (!ferryDataCurated) {
+    horizonDependent = true;
+  } else if (pickupEntry) {
     const islandId =
       pickupEntry.kind === 'stage' ? pickupEntry.toIslandId : pickupEntry.islandId;
     const island = library.islands.find((i) => i.id === islandId);
@@ -446,13 +464,26 @@ function dayConstraintFor(
   const { params, library } = snapshot;
   const pickupDay = tripDayForDate(params.tripStartDate, params.pickupDate);
   const pinByDay = new Map(pins.map((p) => [p.day, p]));
+  // Only constrain the pickup day while a REACHABLE island carries ferry data —
+  // otherwise the search would have no attainable target at all (see
+  // validatePlan for the full reasoning).
+  const reachable = new Set<string>();
+  for (const route of library.routes) {
+    for (const leg of route.legs) {
+      reachable.add(leg.fromIslandId);
+      reachable.add(leg.toIslandId);
+    }
+  }
+  const ferryDataCurated = library.islands.some(
+    (i) => reachable.has(i.id) && i.guestPickup !== undefined,
+  );
 
   return (day, endIslandId) => {
     const pin = pinByDay.get(day);
     // A harbour-day pin (toIslandId === null) fixes the island only
     // implicitly — the packer decides whether the day carries a leg.
     if (pin?.toIslandId && pin.toIslandId !== endIslandId) return false;
-    if (day === pickupDay) {
+    if (ferryDataCurated && day === pickupDay) {
       const island = library.islands.find((i) => i.id === endIslandId);
       // Missing data counts as NOT reachable (AD-4) — never silent optimism.
       if (!island?.guestPickup?.ferryReachable) return false;

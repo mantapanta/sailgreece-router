@@ -1,26 +1,26 @@
 /**
- * FR21/FR22 — Tagesansicht "Was machen wir heute?".
- * 2-3 day options (target islands with best place + night ampel), leg score,
- * duration and mid-term plan effect — side by side. The app recommends
- * nothing and hides nothing; the skipper decides. All values come from the
- * assessment (AD-2: views never compute domain values).
+ * FR21/FR22/FR28/FR29/FR30 — Tagesansicht "Was machen wir heute?".
+ *
+ * The round trip IS the view: one main route over all trip days, today's stage
+ * up front, every stage editable (FR28) and every duration explainable (FR30).
+ * There is no header select for route options — there is one main route, and
+ * alternatives are checked in explicitly (FR29).
+ *
+ * All values come from the assessment (AD-2: views never compute domain
+ * values, not even the stage number — that comes from domain/schema/plan.ts).
  */
 
+import { useState } from 'react';
 import type {
   Assessment,
+  PlanAssessment,
   PlanningSnapshot,
-  DayOption,
-  RouteOptionAssessment,
+  StageAssessment,
+  LegHourBreakdown,
 } from '../../domain/schema/snapshot.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
+import { usePlanning } from '../../app/planningContext.tsx';
 import { formatHours, formatKn, formatTripDayDate } from '../format.ts';
-
-const STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
-  offen: 'offen',
-  'offen-horizont': 'offen (Horizont)',
-  schliesst: 'schließt',
-  zu: 'geschlossen',
-};
 
 function islandName(snapshot: PlanningSnapshot, islandId: string): string {
   return snapshot.library.islands.find((i) => i.id === islandId)?.name ?? islandId;
@@ -31,83 +31,268 @@ function placeName(snapshot: PlanningSnapshot, placeId: string | null): string {
   return snapshot.library.places.find((p) => p.id === placeId)?.name ?? placeId;
 }
 
-function OptionCard({
-  option,
+/** FR30 — how this duration came about, hour by hour. */
+function Breakdown({ hours }: { hours: LegHourBreakdown[] }) {
+  if (hours.length === 0) {
+    return <p className="beschreibung">Keine Berechnung verfügbar (unbewertet).</p>;
+  }
+  const sailed = hours.filter((h) => !h.motoring).length;
+  const motored = hours.length - sailed;
+  return (
+    <div className="breakdown">
+      <p className="beschreibung">
+        {hours.length} simulierte Stunden · {sailed} unter Segeln, {motored} unter
+        Motor
+        {hours.some((h) => h.worstCase) && ' · Fernbereich gegen Meltemi-Worst-Case'}
+      </p>
+      <table className="breakdown-table">
+        <thead>
+          <tr>
+            <th>Zeit (UTC)</th>
+            <th>Kurs</th>
+            <th>Wind</th>
+            <th>TWA</th>
+            <th>Speed</th>
+            <th>Distanz</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hours.map((h, i) => (
+            <tr key={`${h.timeIso}-${i}`} className={h.worstCase ? 'worst-case' : ''}>
+              <td>{h.timeIso.slice(11, 16)}</td>
+              <td>{Math.round(h.courseDeg)}°</td>
+              <td>{formatKn(h.twsKn)}</td>
+              <td>{Math.round(h.twaDeg)}°</td>
+              <td>
+                {h.speedKn.toFixed(1)} kn{h.motoring ? ' (Motor)' : ''}
+              </td>
+              <td>{h.distanceNm.toFixed(1)} sm</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** FR28 — change this day's target: another island, another berth, or stay. */
+function StageEditor({
+  stage,
   snapshot,
-  onOpenPlace,
+  onClose,
 }: {
-  option: DayOption;
+  stage: StageAssessment;
   snapshot: PlanningSnapshot;
-  onOpenPlace: (placeId: string) => void;
+  onClose: () => void;
 }) {
-  const target = islandName(snapshot, option.targetIslandId);
-  const leg = option.leg;
-  const legDef = option.legId
-    ? snapshot.library.routes
-        .flatMap((r) => r.legs)
-        .find((l) => l.id === option.legId)
-    : null;
-  const island = snapshot.library.islands.find((i) => i.id === option.targetIslandId);
-  const routeNames = option.servesRouteIds
-    .map((id) => snapshot.library.routes.find((r) => r.id === id)?.name ?? id)
-    .join(', ');
+  const { editStage, releasePin } = usePlanning();
+  const [error, setError] = useState<string | null>(null);
+  const placesOnIsland = snapshot.library.places.filter(
+    (p) => p.islandId === stage.toIslandId,
+  );
+
+  const apply = (islandId: string | null, placeId?: string) => {
+    setError(null);
+    const ok = editStage(stage.day, islandId, placeId);
+    if (!ok) {
+      setError(
+        'Mit diesem Ziel lässt sich kein Round-Trip bauen — es führt keine Etappe der Bibliothek dorthin.',
+      );
+      return;
+    }
+    onClose();
+  };
 
   return (
-    <article className="card">
-      <span className="versal">
-        {option.kind === 'liegetag' ? 'Liegetag' : 'Tagesoption'}
-      </span>
-      <div className="headline">
-        {option.kind === 'liegetag' ? `Bleiben: ${target}` : target}
-      </div>
-      {island?.description && <div className="beschreibung">{island.description}</div>}
-      {leg && legDef && (
-        <>
-          <div className="badges">
-            <span className="badge">{legDef.distanceNm} sm</span>
-            <span className="badge">{formatHours(leg.totalHours)}</span>
-            {leg.motorHours !== null && leg.motorHours > 0.1 && (
-              <span className="badge">davon Motor {formatHours(leg.motorHours)}</span>
-            )}
-            <span className="badge">
-              Wind {formatKn(leg.avgTwsKn)}, TWA {leg.avgTwaDeg === null ? '–' : `${Math.round(leg.avgTwaDeg)}°`}
-              {leg.upwind ? ' (gegenan)' : ''}
-            </span>
-          </div>
-          <AmpelBadge ampel={leg.ampel} label={`Etappe: ${leg.ampel}`} />
-          {legDef.windWarnings.length > 0 && (
-            <ul className="reasons">
-              {legDef.windWarnings.map((w) => (
-                <li key={w}>⚠ {w}</li>
-              ))}
-            </ul>
-          )}
-          {leg.reasons.length > 0 && (
-            <ul className="reasons">
-              {leg.reasons.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          )}
-        </>
+    <div className="stage-editor">
+      <label>
+        Tagesziel (Insel)
+        <select
+          value={stage.kind === 'harbour' ? '' : stage.toIslandId}
+          onChange={(e) => apply(e.target.value || null)}
+        >
+          <option value="">— Hafentag: hier bleiben —</option>
+          {snapshot.library.islands.map((i) => (
+            <option key={i.id} value={i.id}>
+              {i.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {placesOnIsland.length > 0 && (
+        <label>
+          Platz auf {islandName(snapshot, stage.toIslandId)}
+          <select
+            value={stage.placeIsSuggestion ? '' : (stage.placeId ?? '')}
+            onChange={(e) =>
+              apply(stage.toIslandId, e.target.value || undefined)
+            }
+          >
+            <option value="">— Vorschlag der App übernehmen —</option>
+            {placesOnIsland.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
+      <div className="editor-actions">
+        {stage.pinned && (
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              releasePin(stage.day);
+              onClose();
+            }}
+          >
+            Festlegung lösen
+          </button>
+        )}
+        <button type="button" className="secondary" onClick={onClose}>
+          Schließen
+        </button>
+      </div>
+      {error && <div className="hint-panel">{error}</div>}
+    </div>
+  );
+}
+
+function StageCard({
+  stage,
+  snapshot,
+  isToday,
+  onOpenPlace,
+}: {
+  stage: StageAssessment;
+  snapshot: PlanningSnapshot;
+  isToday: boolean;
+  onOpenPlace: (placeId: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const { params } = snapshot;
+  const totalHours = stage.legs.reduce((s, l) => s + (l.totalHours ?? 0), 0);
+  const distance = stage.legs.reduce((s, l) => {
+    const leg = snapshot.library.routes.flatMap((r) => r.legs).find((x) => x.id === l.legId);
+    return s + (leg?.distanceNm ?? 0);
+  }, 0);
+
+  return (
+    <article className={`card stage-card${isToday ? ' today' : ''}`}>
+      <div className="stage-head">
+        <span className="versal">
+          {stage.kind === 'harbour'
+            ? 'Hafentag'
+            : `Etappe ${stage.stageNumber ?? '–'}`}
+          {' · '}
+          Tag {stage.day} · {formatTripDayDate(params.tripStartDate, stage.day)}
+          {isToday && ' · HEUTE'}
+        </span>
+        <AmpelBadge ampel={stage.ampel} />
+      </div>
+
+      <div className="headline">
+        {stage.kind === 'harbour'
+          ? `Bleiben: ${islandName(snapshot, stage.toIslandId)}`
+          : islandName(snapshot, stage.toIslandId)}
+        {stage.pinned && <span className="pin-chip" title="Vom Skipper festgelegt">📌 festgelegt</span>}
+      </div>
+
+      {stage.kind === 'stage' && (
+        <div className="badges">
+          {distance > 0 && <span className="badge">{Math.round(distance)} sm</span>}
+          <span className="badge">{formatHours(totalHours || null)}</span>
+          {stage.legs.length > 1 && (
+            <span className="badge">{stage.legs.length} Schläge an einem Tag</span>
+          )}
+        </div>
+      )}
+
       <div className="platz-zeile">
         <span>
-          Bester Platz heute Nacht:{' '}
-          {option.bestPlaceId ? (
-            <button type="button" onClick={() => onOpenPlace(option.bestPlaceId!)}>
-              {placeName(snapshot, option.bestPlaceId)}
+          Platz:{' '}
+          {stage.placeId ? (
+            <button type="button" onClick={() => onOpenPlace(stage.placeId!)}>
+              {placeName(snapshot, stage.placeId)}
             </button>
           ) : (
             '–'
           )}
+          {stage.placeIsSuggestion && stage.placeId && (
+            <span className="suggestion-chip" title="Aktueller Vorschlag — ändert sich mit dem Forecast">
+              Vorschlag
+            </span>
+          )}
         </span>
-        <AmpelBadge ampel={option.bestPlaceAmpel} />
+        <AmpelBadge ampel={stage.placeAmpel} />
       </div>
-      {routeNames && (
-        <div className="beschreibung">Teil von: {routeNames}</div>
+
+      {stage.legs.some((l) => l.reasons.length > 0) && (
+        <ul className="reasons">
+          {stage.legs.flatMap((l) => l.reasons).map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
       )}
+
+      <div className="stage-actions">
+        <button type="button" className="secondary" onClick={() => setEditing((v) => !v)}>
+          {editing ? 'Bearbeiten abbrechen' : 'Etappe ändern'}
+        </button>
+        {stage.kind === 'stage' && (
+          <button type="button" className="secondary" onClick={() => setExpanded((v) => !v)}>
+            {expanded ? 'Rechnung ausblenden' : 'Wie kommt die Zeit zustande?'}
+          </button>
+        )}
+      </div>
+
+      {editing && (
+        <StageEditor stage={stage} snapshot={snapshot} onClose={() => setEditing(false)} />
+      )}
+      {expanded &&
+        stage.legs.map((l) => (
+          <div key={l.legId}>
+            <div className="beschreibung">
+              <strong>{l.legId.replace('--', ' → ')}</strong>
+            </div>
+            <Breakdown hours={l.breakdown} />
+          </div>
+        ))}
     </article>
+  );
+}
+
+/** FR29 — an alternative round trip the skipper can check in. */
+function AlternativeRow({
+  alt,
+  snapshot,
+}: {
+  alt: PlanAssessment;
+  snapshot: PlanningSnapshot;
+}) {
+  const { checkIn } = usePlanning();
+  const stages = alt.stages.filter((s) => s.kind === 'stage');
+  return (
+    <div className="route-state">
+      <span>
+        <strong>Wendepunkt {islandName(snapshot, alt.turnIslandId)}</strong>
+        {' · '}
+        {stages.length} Etappen
+      </span>
+      <span className="legs-inline">
+        {stages.slice(0, 6).map((s) => (
+          <span className="leg-chip" key={s.day}>
+            {islandName(snapshot, s.toIslandId)}
+          </span>
+        ))}
+        {stages.length > 6 && <span className="leg-chip">…</span>}
+      </span>
+      <button type="button" onClick={() => checkIn(alt.plan)}>
+        Als Hauptroute übernehmen
+      </button>
+    </div>
   );
 }
 
@@ -122,93 +307,133 @@ export function DayView({
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
+  const { checkIn } = usePlanning();
   const hereName = assessment.currentIslandId
     ? islandName(snapshot, assessment.currentIslandId)
     : 'Position unbekannt';
 
-  // AD-2: routeOptions arrive ORDERED by escalation rank from the assessment.
-  const orderedRoutes = assessment.routeOptions;
+  const main = assessment.mainRoute;
+  const todayStage = main?.stages.find((s) => s.day === day) ?? null;
+  const restStages = main?.stages.filter((s) => s.day > day) ?? [];
+  const pastStages = main?.stages.filter((s) => s.day < day) ?? [];
 
   return (
     <div>
-      <span className="versal">Tag {day} · {formatTripDayDate(params.tripStartDate, day)}</span>
+      <span className="versal">
+        Tag {day} · {formatTripDayDate(params.tripStartDate, day)}
+      </span>
       <h1>Was machen wir heute?</h1>
       <p className="beschreibung">
         Aktuelle Position: <strong>{hereName}</strong>
         {snapshot.trip.position?.source === 'manual' && ' (manuell gesetzt)'}
         {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
-        {' · '}Abfahrt {snapshot.trip.departureHourOverride ?? params.departureHourAthens}:00 Uhr (Athen)
+        {' · '}Abfahrt{' '}
+        {snapshot.trip.departureHourOverride ?? params.departureHourAthens}:00 Uhr
+        (Athen)
       </p>
       {assessment.positionNote && (
         <div className="hint-panel">{assessment.positionNote}</div>
       )}
 
-      {assessment.dayOptions.length === 0 ? (
-        <div className="hint-panel">
-          Keine Tagesoptionen ableitbar — Position setzen (GPS oder Platz wählen).
+      {/* FR2 — the rest-trip light governs the whole view. */}
+      <div className={`resttrip-banner ampel-${assessment.restTripAmpel}`}>
+        <div className="resttrip-head">
+          <AmpelBadge
+            ampel={assessment.restTripAmpel}
+            label={
+              assessment.restTripAmpel === 'gruen'
+                ? 'Round-Trip trägt'
+                : assessment.restTripAmpel === 'gelb'
+                  ? 'Round-Trip unter Vorbehalt'
+                  : assessment.restTripAmpel === 'rot'
+                    ? 'Kein tragfähiger Round-Trip'
+                    : 'Round-Trip unbewertet'
+            }
+          />
+          <span className="beschreibung">
+            Rückkehr Alimos bis Tag {assessment.ppr.effectiveDeadlineDay} (inkl.
+            Puffertag)
+          </span>
         </div>
-      ) : (
-        <div className="options-grid">
-          {assessment.dayOptions.map((option) => (
-            <OptionCard
-              key={option.legId ?? `liegetag-${option.targetIslandId}`}
-              option={option}
-              snapshot={snapshot}
-              onOpenPlace={onOpenPlace}
-            />
-          ))}
+        {assessment.restTripReasons.length > 0 && (
+          <ul className="reasons">
+            {assessment.restTripReasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {!main && assessment.proposal && (
+        <div className="hint-panel">
+          Noch keine Hauptroute festgelegt.{' '}
+          <button type="button" onClick={() => checkIn(assessment.proposal!.plan)}>
+            Vorschlag der App übernehmen
+          </button>
         </div>
       )}
 
-      <section className="section">
-        <span className="versal">Mittelfristplan · Möglichkeitsraum (FR18)</span>
-        <h2>Routen-Optionen</h2>
-        {orderedRoutes.map((opt) => {
-          const route = snapshot.library.routes.find((r) => r.id === opt.routeId);
-          return (
-            <div className="route-state" key={opt.routeId}>
-              <span
-                className={`state-chip state-${opt.state}`}
-                title={opt.reasons.join(' · ')}
-              >
-                {STATE_LABEL[opt.state]}
-                {opt.state === 'schliesst' && opt.closesOnDay !== null
-                  ? ` am Tag ${opt.closesOnDay}`
-                  : ''}
+      {todayStage && (
+        <section className="section">
+          <span className="versal">Heute</span>
+          <StageCard
+            stage={todayStage}
+            snapshot={snapshot}
+            isToday
+            onOpenPlace={onOpenPlace}
+          />
+        </section>
+      )}
+
+      {restStages.length > 0 && (
+        <section className="section">
+          <span className="versal">Rest-Trip · bis zurück nach Alimos</span>
+          <h2>Die weiteren Etappen</h2>
+          <div className="stage-list">
+            {restStages.map((s) => (
+              <StageCard
+                key={s.day}
+                stage={s}
+                snapshot={snapshot}
+                isToday={false}
+                onOpenPlace={onOpenPlace}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {assessment.alternatives.length > 0 && (
+        <section className="section">
+          <span className="versal">Alternativ-Routen (FR29)</span>
+          <h2>Andere Round-Trips</h2>
+          <p className="beschreibung">
+            Erst ansehen, dann einchecken — eingecheckt wird die Alternative zur
+            neuen Hauptroute, bisherige Festlegungen werden dabei gelöst.
+          </p>
+          {assessment.alternatives.map((alt) => (
+            <AlternativeRow
+              key={`${alt.variantId}-${alt.turnIslandId}`}
+              alt={alt}
+              snapshot={snapshot}
+            />
+          ))}
+        </section>
+      )}
+
+      {pastStages.length > 0 && (
+        <section className="section">
+          <span className="versal">Bereits gefahren</span>
+          <div className="past-list">
+            {pastStages.map((s) => (
+              <span className="badge" key={s.day}>
+                {s.stageNumber !== null ? `Etappe ${s.stageNumber}: ` : ''}
+                {islandName(snapshot, s.toIslandId)} (Tag {s.day})
               </span>
-              <span>
-                <strong>{route?.name ?? opt.routeId}</strong>
-                {route?.isReturnChain ? ' · Rückfallkette' : ''}
-                {route ? ` · Eskalationsstufe ${route.escalationRank}` : ''}
-              </span>
-              <AmpelBadge ampel={opt.ampel} />
-              {opt.legAssessments.length > 0 && (
-                <span className="legs-inline">
-                  {opt.legAssessments.map((la) => (
-                    <span className="leg-chip" key={`${opt.routeId}-${la.legId}-${la.day}`}>
-                      <span
-                        className="dot"
-                        style={{
-                          background:
-                            la.ampel === 'gruen'
-                              ? 'var(--gruen)'
-                              : la.ampel === 'gelb'
-                                ? 'var(--gelb)'
-                                : la.ampel === 'rot'
-                                  ? 'var(--rot)'
-                                  : 'var(--grau)',
-                        }}
-                      />
-                      {la.legId.replace('--', ' → ')} (Tag {la.day},{' '}
-                      {formatHours(la.totalHours)})
-                    </span>
-                  ))}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <span className="versal">Point of Return (FR19)</span>
@@ -227,9 +452,6 @@ export function DayView({
             {assessment.ppr.remainingDistanceNm !== null
               ? `${Math.round(assessment.ppr.remainingDistanceNm)} sm`
               : '–'}
-          </span>
-          <span className="badge">
-            Ankunft Basis bis Tag {assessment.ppr.effectiveDeadlineDay} (inkl. Puffertag)
           </span>
         </div>
         {assessment.ppr.reasons.length > 0 && (
@@ -261,7 +483,8 @@ export function DayView({
         <span className="versal">Platzbibliothek</span>
         <h2>Alle Plätze mit Nacht-Ampel</h2>
         <p className="beschreibung">
-          Nacht-Ampeln für Tag {day} — Details je Platz in der Karten- und Detailansicht.
+          Nacht-Ampeln für Tag {day} — Details je Platz in der Karten- und
+          Detailansicht.
         </p>
         <div className="badges">
           {snapshot.library.places.map((p) => (
