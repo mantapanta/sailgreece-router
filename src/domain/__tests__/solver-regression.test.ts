@@ -367,3 +367,94 @@ describe('regression: no position means no verdict, not red', () => {
     expect(assessment.restTripAmpel).toBe('unbewertet');
   });
 });
+
+/**
+ * FR16 night-leg quota. The parameters existed from the start but nothing
+ * enforced them — a solver could propose five night passages in week one.
+ */
+describe('regression: FR16 night-leg quota is enforced', () => {
+  it('flags a night leg before the second week', () => {
+    const snapshot = realSnapshot({ windKn: 4, windFromDeg: 90, legNm: 90 });
+    // 90 nm in light air runs well past 18:00 => night leg, on day 1.
+    const plan = makePlan([makeStage(1, ['athen--b'], 'b', 'solver')]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.text.includes('erst ab Tag'))).toBe(true);
+  });
+
+  it('flags more night legs than the per-trip quota allows', () => {
+    // Mid-trip (day 8), so days 8-10 lie INSIDE the reliable horizon and their
+    // durations are known — beyond it a night leg cannot even be recognised.
+    const snapshot = realSnapshot({
+      windKn: 4,
+      windFromDeg: 90,
+      legNm: 90,
+      currentDay: 8,
+    });
+    // Three long light-wind passages, all in the second week: quota is two.
+    const plan = makePlan([
+      makeStage(8, ['athen--b'], 'b', 'solver'),
+      makeStage(9, ['b--c'], 'c', 'solver'),
+      makeStage(10, ['c--b'], 'b', 'solver'),
+    ]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.text.includes('Nachtetappen'))).toBe(true);
+  });
+
+  it('does not flag a normal daytime leg', () => {
+    const snapshot = realSnapshot({ windKn: 12, windFromDeg: 90, legNm: 20 });
+    const plan = makePlan([makeStage(2, ['athen--b'], 'b', 'solver')]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.text.includes('Nachtetappe'))).toBe(false);
+  });
+
+  it('marks a long light-wind passage as a night leg in the assessment', () => {
+    const snapshot = realSnapshot({ windKn: 4, windFromDeg: 90, legNm: 90 });
+    const leg = snapshot.library.routes[0]!.legs[0]!;
+    const a = assessLeg(leg, 2, snapshot);
+    expect(a.nightLeg).toBe(true);
+    expect(a.arrivalHourAthens).not.toBeNull();
+    expect(a.arrivalHourAthens!).toBeGreaterThan(snapshot.params.nightStartHourAthens);
+  });
+});
+
+/**
+ * The return deadline is a TIME (charter handback 18:00), not just a date.
+ * Checking the day alone passed an arrival at 23:00 as punctual.
+ */
+describe('regression: the return deadline is a time, not just a day', () => {
+  it('flags an arrival after the handback hour on the deadline day', () => {
+    // Long leg in light air: departure 09:00, arrival well past 18:00.
+    const snapshot = realSnapshot({
+      windKn: 4,
+      windFromDeg: 90,
+      legNm: 90,
+      currentDay: 12,
+    });
+    const plan = makePlan([makeStage(12, ['b--athen'], 'athen', 'solver')]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.kind === 'deadline' && x.text.includes('Rückgabe'))).toBe(
+      true,
+    );
+  });
+
+  it('accepts an arrival before the handback hour', () => {
+    const snapshot = realSnapshot({
+      windKn: 12,
+      windFromDeg: 90,
+      legNm: 20,
+      currentDay: 12,
+    });
+    const plan = makePlan([makeStage(12, ['b--athen'], 'athen', 'solver')]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.kind === 'deadline')).toBe(false);
+  });
+
+  it('does not judge the hour when the duration is unknown', () => {
+    // currentDay 1 => day 12 lies beyond the horizon, duration unknown.
+    const snapshot = realSnapshot({ windKn: 4, windFromDeg: 90, legNm: 90 });
+    const plan = makePlan([makeStage(12, ['b--athen'], 'athen', 'solver')]);
+    const v = validatePlan(plan, snapshot);
+    expect(v.violations.some((x) => x.text.includes('Rückgabe'))).toBe(false);
+    expect(v.horizonDependent).toBe(true);
+  });
+});

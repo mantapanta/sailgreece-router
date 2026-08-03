@@ -5,12 +5,15 @@
   summary: Seeding-Umbau — routes.json in deduplizierte legs.json + variants.json überführen (Wegpunkte verlustfrei), saronische-alternative entfernen, M3-Kettenbruch Milos→Polyaigos auflösen, importToFirestore.ts um die legs-Collection erweitern, Leg-Löschung als BREAKING in der Review-Sicht ausweisen.
   evidence: Aus dem Round-Trip-Umbau gesplittet (Spec ~3200 Token, Richtwert 1600). Hängt am Leg/Variant-Schema des Domänen-Kerns, ist danach aber mechanisch und ohne Solver-Risiko.
 - source_spec: `_bmad-output/implementation-artifacts/spec-round-trip-umbau.md`
+  status: ERLEDIGT (Commit 01741c0, 2026-08-03)
   summary: UI des Round-Trip-Umbaus — DayView mit editierbaren Etappen-Cards (Insel/Platz je Tag, "heute bleiben") und aufklappbarem FR30-Berechnungsausweis, MapView mit Round-Trip-Overlay (gefahren grün durchgezogen, Rest gestrichelt in Rest-Trip-Ampelfarbe, Etappen-Nummern via stageNumber), Ampel-Marker nur für aktuelle und Ziel-Insel.
   evidence: Aus dem Round-Trip-Umbau gesplittet. Setzt das neue Assessment und den TripContext-Plan des Domänen-Kerns voraus; bis dahin bleibt die alte UI auf dem Feature-Branch vorübergehend gebrochen.
 - source_spec: `_bmad-output/implementation-artifacts/spec-round-trip-umbau.md`
+  status: ERLEDIGT (2026-08-03: nightLeg in assessLeg, Kontingent/Fenster/Windgrenze in validatePlan, 4 Tests)
   summary: FR16-Nachtetappen-Kontingent ist nicht implementiert — die Parameter (nightLegMaxTwsKn, nightLegMaxPerTrip=2, nightLegEarliestDay=8) existieren, aber der Solver zählt Nachtetappen nicht, begrenzt sie nicht auf zwei pro Törn und nicht auf die zweite Woche; die nightLeg-Relaxationsstufe hebt nur das Zeitbudget.
   evidence: Beide Reviewer unabhängig (Edge Case 1.8, Blind Hunter 6). Verifiziert: grep über src/domain zeigt keine Verwendung von nightLegMaxPerTrip/nightLegEarliestDay. PRD FR16 fordert beide Grenzen explizit.
 - source_spec: `_bmad-output/implementation-artifacts/spec-round-trip-umbau.md`
+  status: ERLEDIGT (2026-08-03: Ankunftszeit gegen returnDeadlineHourAthens, unbekannte Dauer -> Vorbehalt, 3 Tests)
   summary: Die Rückkehr-Deadline wird nur tagesgenau geprüft — returnDeadlineHourAthens (18:00) und deadlineUtcMs aus deadlineFrame() werden nirgends ausgewertet, ein Plan mit Ankunft am 19.8. um 23:00 gilt als rechtzeitig.
   evidence: Edge Case 4.3. Verifiziert: deadlineUtcMs hat keine Leseverwendung. Für den Chartervertrag (Rückgabe 18:00) ist die Stunde die eigentliche Grenze.
 - source_spec: `_bmad-output/implementation-artifacts/spec-round-trip-umbau.md`

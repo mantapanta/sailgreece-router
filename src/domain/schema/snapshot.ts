@@ -121,6 +121,15 @@ export interface LegAssessment {
   avgTwaDeg: number | null;
   upwind: boolean;
   reasons: string[];
+  /**
+   * FR16 night leg: departure before the night window ends or arrival after it
+   * begins (AD-9 window bounds) — the passage reaches into darkness while the
+   * family sleeps. The solver counts and caps these (max 2 per trip, second
+   * week only); null when the duration is unknown.
+   */
+  nightLeg: boolean | null;
+  /** Arrival time in Athens hours from midnight of the departure day (display). */
+  arrivalHourAthens: number | null;
   /** FR30 calculation trail; empty when the leg could not be simulated. */
   breakdown: LegHourBreakdown[];
 }

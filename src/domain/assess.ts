@@ -114,6 +114,8 @@ function assessPlan(
                     avgTwaDeg: null,
                     upwind: false,
                     reasons: [`Etappe ${legId} nicht in der Bibliothek`],
+                    nightLeg: null,
+                    arrivalHourAthens: null,
                     breakdown: [],
                   };
                 }

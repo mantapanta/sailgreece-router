@@ -299,6 +299,47 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
     });
   }
 
+  // (1c) FR16 night-leg quota. The params existed but nothing enforced them:
+  // at most `nightLegMaxPerTrip` night legs, none before `nightLegEarliestDay`
+  // (second week), and each one only in light wind — the family sleeps through
+  // it, so it is admissible only when the sea is smooth.
+  const nightStages = stagesOf(plan).filter((s) =>
+    s.legIds.some((legId) => {
+      const leg = legs.get(legId);
+      if (!leg) return false;
+      return assessLeg(leg, s.day, snapshot).nightLeg === true;
+    }),
+  );
+  if (nightStages.length > params.nightLegMaxPerTrip) {
+    violations.push({
+      kind: 'budget',
+      day: nightStages[params.nightLegMaxPerTrip]?.day ?? null,
+      text: `${nightStages.length} Nachtetappen — erlaubt sind ${params.nightLegMaxPerTrip} pro Törn (FR16)`,
+    });
+  }
+  for (const s of nightStages) {
+    if (s.day < params.nightLegEarliestDay) {
+      violations.push({
+        kind: 'budget',
+        day: s.day,
+        text: `Nachtetappe an Tag ${s.day} — erst ab Tag ${params.nightLegEarliestDay} zulässig (FR16: zweite Woche)`,
+      });
+    }
+    for (const legId of s.legIds) {
+      const leg = legs.get(legId);
+      if (!leg) continue;
+      const a = assessLeg(leg, s.day, snapshot);
+      if (a.nightLeg !== true || a.avgTwsKn === null) continue;
+      if (a.avgTwsKn > params.nightLegMaxTwsKn) {
+        violations.push({
+          kind: 'budget',
+          day: s.day,
+          text: `Nachtetappe an Tag ${s.day} bei ${Math.round(a.avgTwsKn)} kn — nur unter ${params.nightLegMaxTwsKn} kn zulässig (FR16)`,
+        });
+      }
+    }
+  }
+
   // (2) arrival at the base by the one deadline.
   const lastDay = Math.max(...plan.days.map((d) => d.day));
   const endIsland = (() => {
@@ -318,6 +359,42 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       day: lastDay,
       text: `Ankunft an Törntag ${lastDay} liegt nach dem Stichtag (Tag ${frame.deadlineDay})`,
     });
+  } else {
+    // The deadline is a TIME, not just a day (AD-9): the charter is handed back
+    // at returnDeadlineHourAthens. Checking the day alone would pass an arrival
+    // at 23:00 on the return date as punctual.
+    const arrivingStage = stagesOf(plan)
+      .filter((s) => s.toIslandId === params.baseIslandId)
+      .pop();
+    if (arrivingStage && arrivingStage.day === frame.deadlineDay) {
+      let arrival: number | null = null;
+      let offset = 0;
+      for (const legId of arrivingStage.legIds) {
+        const leg = legs.get(legId);
+        if (!leg) {
+          arrival = null;
+          break;
+        }
+        const a = assessLeg(leg, arrivingStage.day, snapshot, {
+          departureOffsetHours: offset || undefined,
+        });
+        if (a.arrivalHourAthens === null) {
+          // Unknown duration must not silently pass the deadline (nor fail it).
+          arrival = null;
+          horizonDependent = true;
+          break;
+        }
+        offset += a.totalHours ?? 0;
+        arrival = a.arrivalHourAthens;
+      }
+      if (arrival !== null && arrival > params.returnDeadlineHourAthens) {
+        violations.push({
+          kind: 'deadline',
+          day: arrivingStage.day,
+          text: `Ankunft an der Basis erst um ${arrival.toFixed(1)} Uhr — die Rückgabe ist um ${params.returnDeadlineHourAthens}:00 (Athen)`,
+        });
+      }
+    }
   }
 
   // (2') the return must stay sailable under the worst case — checked from

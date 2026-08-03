@@ -184,6 +184,8 @@ export function assessLeg(
     avgTwaDeg: null,
     upwind: false,
     reasons: [reason],
+    nightLeg: null,
+    arrivalHourAthens: null,
     breakdown: [],
   });
   if (!points) return unbewertet('Start- oder Zielplatz fehlt in der Bibliothek');
@@ -355,6 +357,16 @@ export function assessLeg(
     reasons.add('Etappe in 24 h nicht zu schaffen');
   }
 
+  // FR16 night leg (AD-9 window bounds): the passage starts before the night
+  // window ends or reaches past its start, i.e. it sails into darkness. Athens
+  // hours from midnight of the departure day; an arrival past 24 is the next
+  // morning and therefore always a night leg.
+  const departureAthens = departureHour + (opts.departureOffsetHours ?? 0);
+  const arrivalAthens = departureAthens + sailHours + motorHours;
+  const nightLeg =
+    arrivalAthens > params.nightStartHourAthens ||
+    departureAthens < params.nightEndHourAthens;
+
   const avgTwsKn = samples > 0 ? twsSum / samples : null;
   const avgTwaDeg = samples > 0 ? twaSum / samples : null;
   const budget = budgetVerdict(sailHours, motorHours, avgTwsKn, params);
@@ -372,6 +384,8 @@ export function assessLeg(
     avgTwaDeg,
     upwind: avgTwaDeg !== null && avgTwaDeg < params.upwindTwaDeg,
     reasons: [...reasons],
+    nightLeg,
+    arrivalHourAthens: arrivalAthens,
     breakdown,
   };
 }
