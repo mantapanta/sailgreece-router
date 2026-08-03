@@ -790,8 +790,13 @@ export function deriveAlternatives(
   }
 
   const constraint = dayConstraintFor(snapshot, []);
+  // Collect ALL safe candidates first, then SPREAD the selection (AD-13: at
+  // least one more conservative escalation step and — if open — a more
+  // ambitious southern option). Taking the first N in candidate order would
+  // only ever show the most conservative ones, hiding exactly the curated
+  // round trips the skipper wants to weigh.
+  const safe: SolveResult[] = [];
   for (const candidate of buildCandidates(snapshot, startIslandId)) {
-    if (out.length >= snapshot.params.alternativesMax) break;
     const daysAvailable = frame.deadlineDay - startDay + 1;
     const packing = packLegs(candidate.legs, startDay, frame.deadlineDay, snapshot, {
       maxWaitDays: Math.max(
@@ -818,7 +823,7 @@ export function deriveAlternatives(
     // shortfalls (extra harbour days) are tolerable in an alternative.
     if (validity.safetyViolations.length > 0) continue;
     seen.add(key);
-    out.push({
+    safe.push({
       plan,
       validity,
       relaxedTo: 'none',
@@ -827,8 +832,26 @@ export function deriveAlternatives(
     });
   }
 
+  // Spread by reach: most ambitious, least ambitious, then fill from the middle.
+  // Alternatives are only useful if they differ in how far south they go.
+  const byReach = [...safe].sort(
+    (a, b) => stagesOf(b.plan).length - stagesOf(a.plan).length,
+  );
+  const room = () => out.length < snapshot.params.alternativesMax;
+  const take = (r: SolveResult | undefined) => {
+    if (!r || !room()) return;
+    const k = planKey(r.plan);
+    if (seen.has(k) && out.some((o) => planKey(o.plan) === k)) return;
+    out.push(r);
+  };
+  take(byReach[0]);
+  take(byReach[byReach.length - 1]);
+  for (let i = Math.floor(byReach.length / 2); i < byReach.length && room(); i++) {
+    if (!out.includes(byReach[i]!)) take(byReach[i]);
+  }
+
   // Conservative first, so the escalation ladder reads naturally (FR9).
-  return out.sort((a, b) => a.turnIslandId.localeCompare(b.turnIslandId));
+  return out.sort((a, b) => stagesOf(a.plan).length - stagesOf(b.plan).length);
 }
 
 /** Stages of a plan that could not be assessed — for display (AD-12). */

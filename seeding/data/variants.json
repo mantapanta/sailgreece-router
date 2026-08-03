@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | Varianten referenzieren Leg-IDs (AD-4); saronische-alternative ersatzlos gestrichen (PRD 2026-08-02).",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | Varianten referenzieren Leg-IDs (AD-4); saronische-alternative ersatzlos gestrichen (PRD 2026-08-02). | FR9-Rundrouten (Westkykladen, Ostkykladen) ergänzt 2026-08-03.",
   "variants": [
     {
       "id": "gedeckelt-paros",
@@ -81,6 +81,49 @@
         "serifos--kythnos",
         "kythnos--kea",
         "kea--athen"
+      ]
+    },
+    {
+      "id": "westkykladen-runde",
+      "name": "Westkykladen-Runde",
+      "description": "Sounion – Kea – Kythnos – Serifos – Sifnos – Milos/Polyaigos – Paros – Syros – Kythnos – Alimos.",
+      "escalationRank": 5,
+      "isReturnChain": false,
+      "color": "#4c8a6b",
+      "legIds": [
+        "athen--attika",
+        "attika--kea",
+        "kea--kythnos",
+        "kythnos--serifos",
+        "serifos--sifnos",
+        "sifnos--milos",
+        "milos--polyaigos",
+        "polyaigos--paros",
+        "paros--syros",
+        "syros--kythnos",
+        "kythnos--athen"
+      ]
+    },
+    {
+      "id": "ostkykladen-runde",
+      "name": "Ostkykladen-Runde (Santorin-Schleife)",
+      "description": "Kea – Syros – Tinos/Mykonos – Paros – Ios – Santorin – Folegandros – Milos – Sifnos – Serifos – Kythnos – Alimos.",
+      "escalationRank": 6,
+      "isReturnChain": false,
+      "color": "#8a5a83",
+      "legIds": [
+        "athen--kea",
+        "kea--syros",
+        "syros--mykonos",
+        "mykonos--paros",
+        "paros--ios",
+        "ios--santorin",
+        "santorin--folegandros",
+        "folegandros--milos",
+        "milos--sifnos",
+        "sifnos--serifos",
+        "serifos--kythnos",
+        "kythnos--athen"
       ]
     }
   ]

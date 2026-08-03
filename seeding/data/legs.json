@@ -1,7 +1,19 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen.",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert.",
   "legs": [
+    {
+      "id": "athen--attika",
+      "fromIslandId": "athen",
+      "toIslandId": "attika",
+      "fromPlaceId": "athen-alimos",
+      "toPlaceId": "attika-sounion",
+      "distanceNm": 22,
+      "waypoints": [],
+      "windWarnings": [
+        "Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"
+      ]
+    },
     {
       "id": "athen--kea",
       "fromIslandId": "athen",
@@ -27,6 +39,40 @@
       "windWarnings": [
         "Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"
       ]
+    },
+    {
+      "id": "attika--kea",
+      "fromIslandId": "attika",
+      "toIslandId": "kea",
+      "fromPlaceId": "attika-sounion",
+      "toPlaceId": "kea-vourkari",
+      "distanceNm": 15,
+      "waypoints": [],
+      "windWarnings": [
+        "Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"
+      ]
+    },
+    {
+      "id": "folegandros--milos",
+      "fromIslandId": "folegandros",
+      "toIslandId": "milos",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "milos-adamas",
+      "distanceNm": 34,
+      "waypoints": [],
+      "windWarnings": [
+        "Langer offener Schlag (34 sm), keine Zwischenoption"
+      ]
+    },
+    {
+      "id": "ios--santorin",
+      "fromIslandId": "ios",
+      "toIslandId": "santorin",
+      "fromPlaceId": "ios-ormos",
+      "toPlaceId": "santorin-vlychada",
+      "distanceNm": 21,
+      "waypoints": [],
+      "windWarnings": []
     },
     {
       "id": "kea--athen",
@@ -78,6 +124,30 @@
       "windWarnings": []
     },
     {
+      "id": "kea--syros",
+      "fromIslandId": "kea",
+      "toIslandId": "syros",
+      "fromPlaceId": "kea-vourkari",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 34,
+      "waypoints": [],
+      "windWarnings": [
+        "Kafireas-/Andros-Sektor: Beschleunigung, Modellwerte zu niedrig"
+      ]
+    },
+    {
+      "id": "kythnos--athen",
+      "fromIslandId": "kythnos",
+      "toIslandId": "athen",
+      "fromPlaceId": "kythnos-loutra",
+      "toPlaceId": "athen-alimos",
+      "distanceNm": 48,
+      "waypoints": [],
+      "windWarnings": [
+        "Düse Kea-Kanal auf dem letzten Schlag; langer Törn (48 sm)"
+      ]
+    },
+    {
       "id": "kythnos--kea",
       "fromIslandId": "kythnos",
       "toIslandId": "kea",
@@ -122,6 +192,40 @@
         }
       ],
       "windWarnings": []
+    },
+    {
+      "id": "milos--polyaigos",
+      "fromIslandId": "milos",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "milos-adamas",
+      "toPlaceId": "polyaigos-manolis",
+      "distanceNm": 8.1,
+      "waypoints": [],
+      "windWarnings": [
+        "Distanz 8.1 sm GEOMETRISCH aus Koordinaten berechnet (keine Quellenangabe im Addendum) — Luftlinie unterschätzt den Seeweg, vor dem Törn verifizieren"
+      ]
+    },
+    {
+      "id": "milos--sifnos",
+      "fromIslandId": "milos",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "milos-adamas",
+      "toPlaceId": "sifnos-kamares",
+      "distanceNm": 24,
+      "waypoints": [],
+      "windWarnings": []
+    },
+    {
+      "id": "mykonos--paros",
+      "fromIslandId": "mykonos",
+      "toIslandId": "paros",
+      "fromPlaceId": "mykonos-ornos",
+      "toPlaceId": "paros-naoussa",
+      "distanceNm": 20,
+      "waypoints": [],
+      "windWarnings": [
+        "Düse Mykonos–Paros: deutlich mehr Wind als der Modellwert"
+      ]
     },
     {
       "id": "naxos--amorgos",
@@ -203,6 +307,16 @@
       ]
     },
     {
+      "id": "paros--ios",
+      "fromIslandId": "paros",
+      "toIslandId": "ios",
+      "fromPlaceId": "paros-naoussa",
+      "toPlaceId": "ios-ormos",
+      "distanceNm": 32,
+      "waypoints": [],
+      "windWarnings": []
+    },
+    {
       "id": "paros--naxos",
       "fromIslandId": "paros",
       "toIslandId": "naxos",
@@ -249,6 +363,38 @@
       ]
     },
     {
+      "id": "paros--syros",
+      "fromIslandId": "paros",
+      "toIslandId": "syros",
+      "fromPlaceId": "paros-naoussa",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 24,
+      "waypoints": [],
+      "windWarnings": []
+    },
+    {
+      "id": "polyaigos--paros",
+      "fromIslandId": "polyaigos",
+      "toIslandId": "paros",
+      "fromPlaceId": "polyaigos-manolis",
+      "toPlaceId": "paros-parikia",
+      "distanceNm": 33,
+      "waypoints": [],
+      "windWarnings": []
+    },
+    {
+      "id": "santorin--folegandros",
+      "fromIslandId": "santorin",
+      "toIslandId": "folegandros",
+      "fromPlaceId": "santorin-vlychada",
+      "toPlaceId": "folegandros-karavostasi",
+      "distanceNm": 25,
+      "waypoints": [],
+      "windWarnings": [
+        "Offener Schlag westwärts, kein Schutz unterwegs"
+      ]
+    },
+    {
       "id": "serifos--kythnos",
       "fromIslandId": "serifos",
       "toIslandId": "kythnos",
@@ -291,6 +437,16 @@
       "windWarnings": []
     },
     {
+      "id": "sifnos--milos",
+      "fromIslandId": "sifnos",
+      "toIslandId": "milos",
+      "fromPlaceId": "sifnos-kamares",
+      "toPlaceId": "milos-adamas",
+      "distanceNm": 24,
+      "waypoints": [],
+      "windWarnings": []
+    },
+    {
       "id": "sifnos--paros",
       "fromIslandId": "sifnos",
       "toIslandId": "paros",
@@ -329,6 +485,33 @@
         }
       ],
       "windWarnings": []
+    },
+    {
+      "id": "syros--kythnos",
+      "fromIslandId": "syros",
+      "toIslandId": "kythnos",
+      "fromPlaceId": "syros-ermoupoli",
+      "toPlaceId": "kythnos-loutra",
+      "distanceNm": 27,
+      "waypoints": [],
+      "windWarnings": []
+    },
+    {
+      "id": "syros--mykonos",
+      "fromIslandId": "syros",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "syros-ermoupoli",
+      "toPlaceId": "mykonos-ornos",
+      "distanceNm": 21,
+      "waypoints": [
+        {
+          "lat": 37.5361,
+          "lon": 25.1606
+        }
+      ],
+      "windWarnings": [
+        "Andros/Tinos-Sektor: Düsenwirkung zwischen den Inseln"
+      ]
     }
   ]
 }
