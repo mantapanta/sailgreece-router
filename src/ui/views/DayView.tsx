@@ -824,7 +824,7 @@ export function DayView({
 
       {assessment.alternatives.length > 0 && (
         <section className="section">
-          <span className="versal">Alternativ-Routen (FR29)</span>
+          <span className="versal">Alternativ-Routen</span>
           <h2>Andere Round-Trips</h2>
           <p className="beschreibung">
             Erst ansehen, dann einchecken — eingecheckt wird die Alternative zur
@@ -855,7 +855,7 @@ export function DayView({
       )}
 
       <section className="section">
-        <span className="versal">Point of Return (FR19)</span>
+        <span className="versal">Point of Return</span>
         <h2>Rückweg nach Alimos</h2>
         <div className="badges">
           <span className="badge">
@@ -883,7 +883,7 @@ export function DayView({
       </section>
 
       <section className="section">
-        <span className="versal">Entscheidungspunkte (FR20)</span>
+        <span className="versal">Entscheidungspunkte</span>
         <h2>Was muss wann entschieden sein?</h2>
         {assessment.decisionPoints.length === 0 ? (
           <p className="beschreibung">Aktuell keine terminierten Entscheidungen.</p>

@@ -209,7 +209,7 @@ export function assessRouteOption(
 
   const now = restPlanFeasible(vLegs, currentIslandId, today, snapshot);
   if (now === 'infeasible') {
-    reasons.push('Kein zulässiger Restplan mit aktuellem Forecast (FR18)');
+    reasons.push('Kein zulässiger Restplan mit aktuellem Forecast');
     return leer({ state: 'zu', ampel, legAssessments });
   }
 
