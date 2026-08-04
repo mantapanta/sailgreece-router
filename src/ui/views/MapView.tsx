@@ -158,7 +158,7 @@ export function MapView({
   // Itinerary: legs of the tracked route — or, without tracking, the most
   // AMBITIOUS route whose option is not closed (highest escalation rank;
   // routeOptions are ordered conservative -> ambitious).
-  const openStates = new Set(['offen', 'offen-horizont', 'schliesst']);
+  const openStates = new Set(['offen', 'offen-annahme', 'schliesst']);
   const fallbackRouteId = [...assessment.routeOptions]
     .reverse()
     .find((o) => {
