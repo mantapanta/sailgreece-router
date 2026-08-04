@@ -13,14 +13,73 @@ import type {
   RouteOptionAssessment,
 } from '../../domain/schema/snapshot.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
-import { formatHours, formatKn, formatTripDayDate } from '../format.ts';
+import { formatHours, formatKn, formatStamp, formatTripDayDate } from '../format.ts';
 
 const STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
   offen: 'offen',
-  'offen-horizont': 'offen (Horizont)',
+  'offen-annahme': 'offen (Annahme)',
   schliesst: 'schließt',
   zu: 'geschlossen',
 };
+
+/**
+ * Collapsed derivation of a verdict (FR22): the skipper must be able to follow
+ * WHY, not just WHAT — which window, which wind, which parameter, which rule.
+ * Collapsed by default so the cards stay readable at a glance.
+ */
+function Reasoning({ lines, label }: { lines: string[]; label: string }) {
+  if (lines.length === 0) return null;
+  return (
+    <details className="reasoning">
+      <summary>{label}</summary>
+      <ol>
+        {lines.map((l, i) => (
+          <li key={`${i}-${l.slice(0, 24)}`}>{l}</li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+/**
+ * Reasoning for the plan as a whole. The one-sentence summary is always
+ * visible, the blocks below unfold — the question "why does the plan look like
+ * this?" is asked once in the morning, not on every card.
+ */
+function PlanReasoning({ rationale }: { rationale: Assessment['planRationale'] }) {
+  return (
+    <section className="section plan-reasoning">
+      <span className="versal">Gesamtbild (FR22)</span>
+      <h2>Wie kommt dieser Plan zustande?</h2>
+      <p className="plan-summary">{rationale.summary}</p>
+      <div className="plan-sections">
+        {rationale.sections.map((s) => (
+          <details className="reasoning" key={s.title}>
+            <summary>{s.title}</summary>
+            <ol>
+              {s.lines.map((l, i) => (
+                <li key={`${i}-${l.slice(0, 24)}`}>{l}</li>
+              ))}
+            </ol>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Visible marker that a verdict rests on the persistence assumption. */
+function BasisBadge({ basis }: { basis: 'forecast' | 'annahme' }) {
+  if (basis === 'forecast') return null;
+  return (
+    <span
+      className="badge badge-annahme"
+      title="Teile dieser Bewertung liegen jenseits des Forecast-Horizonts und wurden mit dem typischen Tagesgang der vorliegenden Forecast-Tage fortgeschrieben."
+    >
+      Annahme
+    </span>
+  );
+}
 
 function islandName(snapshot: PlanningSnapshot, islandId: string): string {
   return snapshot.library.islands.find((i) => i.id === islandId)?.name ?? islandId;
@@ -73,6 +132,7 @@ function OptionCard({
               Wind {formatKn(leg.avgTwsKn)}, TWA {leg.avgTwaDeg === null ? '–' : `${Math.round(leg.avgTwaDeg)}°`}
               {leg.upwind ? ' (gegenan)' : ''}
             </span>
+            <BasisBadge basis={leg.basis} />
           </div>
           <AmpelBadge ampel={leg.ampel} label={`Etappe: ${leg.ampel}`} />
           {legDef.windWarnings.length > 0 && (
@@ -89,6 +149,7 @@ function OptionCard({
               ))}
             </ul>
           )}
+          <Reasoning lines={leg.rationale} label="Warum diese Bewertung?" />
         </>
       )}
       <div className="platz-zeile">
@@ -143,6 +204,32 @@ export function DayView({
         <div className="hint-panel">{assessment.positionNote}</div>
       )}
 
+      {/* The app always routes — where the forecast runs out it says so instead
+          of falling silent. This panel is the one place that states the extent
+          of the assumption for the whole plan. */}
+      {assessment.assumedFromDay !== null && (
+        <div className="hint-panel hint-annahme">
+          <strong>Ab Tag {assessment.assumedFromDay} beruht die Planung auf einer Annahme.</strong>{' '}
+          {assessment.assumptionNote}
+          <ul className="reasons">
+            <li>
+              Windvorhersage ({assessment.model}) reicht bis{' '}
+              {formatStamp(assessment.forecastHorizonIso)}.
+            </li>
+            <li>
+              Wellenvorhersage reicht bis {formatStamp(assessment.waveHorizonIso)} — sie
+              endet in der Regel deutlich früher als der Wind und bestimmt damit oft, ab
+              wann die Nacht-Ampeln auf der Annahme beruhen.
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {/* Frames everything below: one sentence always visible, the derivation
+          folded away. Placed before the day options so the skipper reads the
+          situation before the choices. */}
+      <PlanReasoning rationale={assessment.planRationale} />
+
       {assessment.dayOptions.length === 0 ? (
         <div className="hint-panel">
           Keine Tagesoptionen ableitbar — Position setzen (GPS oder Platz wählen).
@@ -182,6 +269,7 @@ export function DayView({
                 {route ? ` · Eskalationsstufe ${route.escalationRank}` : ''}
               </span>
               <AmpelBadge ampel={opt.ampel} />
+              <BasisBadge basis={opt.basis} />
               {opt.legAssessments.length > 0 && (
                 <span className="legs-inline">
                   {opt.legAssessments.map((la) => (
@@ -205,6 +293,10 @@ export function DayView({
                   ))}
                 </span>
               )}
+              <Reasoning
+                lines={opt.rationale}
+                label={`Warum „${STATE_LABEL[opt.state]}"?`}
+              />
             </div>
           );
         })}
@@ -231,6 +323,7 @@ export function DayView({
           <span className="badge">
             Ankunft Basis bis Tag {assessment.ppr.effectiveDeadlineDay} (inkl. Puffertag)
           </span>
+          <BasisBadge basis={assessment.ppr.basis} />
         </div>
         {assessment.ppr.reasons.length > 0 && (
           <ul className="reasons">
@@ -239,6 +332,10 @@ export function DayView({
             ))}
           </ul>
         )}
+        <Reasoning
+          lines={assessment.ppr.rationale}
+          label="Wie kommt der Umkehrtag zustande?"
+        />
       </section>
 
       <section className="section">

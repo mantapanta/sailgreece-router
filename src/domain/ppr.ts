@@ -14,7 +14,13 @@ import type { PlanningSnapshot, PprResult } from './schema/snapshot.ts';
 import { RETURN_CHAIN_ROUTE_ID } from './schema/route.ts';
 import { assessLeg, legWaypointKey } from './scoring.ts';
 
-export type Feasibility = 'feasible' | 'infeasible' | 'horizon';
+/**
+ * 'annahme' = a plan exists, but at least one of its legs rests on the
+ * persistence assumption beyond the forecast horizon (persistence.ts). It is
+ * a real, sailable plan — only unconfirmed. It must never be silently upgraded
+ * to 'feasible': the caveat is what makes it correctable.
+ */
+export type Feasibility = 'feasible' | 'infeasible' | 'annahme';
 
 /** Ordered island sequence of a route, derived from its legs. */
 export function routeIslandSequence(route: Route): string[] {
@@ -38,9 +44,10 @@ export function effectiveDeadlineDay(snapshot: PlanningSnapshot): number {
  * Normally one leg per day; TWO consecutive short legs may share a day when
  * their combined duration stays inside the FR16 hard maximum (the brief's
  * plan does exactly that, e.g. Serifos -> Sifnos -> Paros on one day).
- * A leg day is admissible when its assessment is not red. Days beyond the
- * forecast horizon ('unbewertet') are treated as admissible-but-unconfirmed;
- * if every surviving plan relies on such days the result is 'horizon'.
+ * A leg day is admissible when its assessment is not red. Days whose wind
+ * comes from the persistence assumption — or which have no data at all
+ * ('unbewertet') — are admissible-but-unconfirmed; if every surviving plan
+ * relies on such days the result is 'annahme'.
  */
 export function packLegsFeasible(
   legs: Leg[],
@@ -54,13 +61,13 @@ export function packLegsFeasible(
   const combine = (rest: Feasibility, unconfirmed: boolean): Feasibility =>
     rest === 'infeasible'
       ? 'infeasible'
-      : unconfirmed || rest === 'horizon'
-        ? 'horizon'
+      : unconfirmed || rest === 'annahme'
+        ? 'annahme'
         : 'feasible';
 
   const better = (a: Feasibility, b: Feasibility): Feasibility => {
     if (a === 'feasible' || b === 'feasible') return 'feasible';
-    if (a === 'horizon' || b === 'horizon') return 'horizon';
+    if (a === 'annahme' || b === 'annahme') return 'annahme';
     return 'infeasible';
   };
 
@@ -73,9 +80,10 @@ export function packLegsFeasible(
 
     let best: Feasibility = 'infeasible';
     const a = assessLeg(legs[legIdx]!, day, snapshot);
+    const aUnconfirmed = a.ampel === 'unbewertet' || a.basis === 'annahme';
     if (a.ampel !== 'rot') {
       // One leg today.
-      best = combine(search(legIdx + 1, day + 1), a.ampel === 'unbewertet');
+      best = combine(search(legIdx + 1, day + 1), aUnconfirmed);
 
       // Two short legs today, if the combined day stays inside the hard max.
       // The second leg starts at the REAL arrival time of the first one, not
@@ -96,7 +104,10 @@ export function packLegsFeasible(
           combinedSail <= params.maxSailHours &&
           combinedMotor <= params.maxMotorHours
         ) {
-          best = better(best, combine(search(legIdx + 2, day + 1), false));
+          best = better(
+            best,
+            combine(search(legIdx + 2, day + 1), a.basis === 'annahme' || b.basis === 'annahme'),
+          );
         }
       }
     }
@@ -208,21 +219,32 @@ export function predictedPointOfReturn(
   snapshot: PlanningSnapshot,
   currentIslandId: string | null,
 ): PprResult {
+  const { params } = snapshot;
   const deadline = effectiveDeadlineDay(snapshot);
   const reasons: string[] = [];
+  const deadlineRule =
+    `Stichtag Tag ${deadline} = Ausschiffung Tag ${params.disembarkDay} minus Vorabend ` +
+    `minus ${params.bufferDays} ${params.bufferDays === 1 ? 'Puffertag' : 'Puffertage'}.`;
+
   if (!currentIslandId) {
     return {
       latestReturnStartDay: null,
       remainingDistanceNm: null,
       effectiveDeadlineDay: deadline,
+      legAssessments: [],
+      basis: 'forecast',
+      rationale: [deadlineRule, 'Ohne Position ist kein Rückweg berechenbar.'],
       reasons: ['Keine Position — PPR nicht berechenbar'],
     };
   }
-  if (currentIslandId === snapshot.params.baseIslandId) {
+  if (currentIslandId === params.baseIslandId) {
     return {
       latestReturnStartDay: deadline,
       remainingDistanceNm: 0,
       effectiveDeadlineDay: deadline,
+      legAssessments: [],
+      basis: 'forecast',
+      rationale: [deadlineRule, 'Das Schiff liegt an der Basis — kein Rückweg offen.'],
       reasons: ['Bereits an der Basis'],
     };
   }
@@ -232,34 +254,88 @@ export function predictedPointOfReturn(
       latestReturnStartDay: null,
       remainingDistanceNm: null,
       effectiveDeadlineDay: deadline,
+      legAssessments: [],
+      basis: 'forecast',
+      rationale: [
+        deadlineRule,
+        `Von ${currentIslandId} führt keine hinterlegte Kette zur Basis — weder direkt auf der ` +
+          `Rückfallkette, noch über einen kuratierten Verbinder, noch rückwärts über die Anreise.`,
+      ],
       reasons: ['Keine Rückfallkette ab dieser Position hinterlegt'],
     };
   }
   const remainingDistanceNm = legs.reduce((s, l) => s + l.distanceNm, 0);
 
   let latest: number | null = null;
-  let sawHorizon = false;
+  let restsOnAssumption = false;
   for (let d = deadline; d >= snapshot.trip.currentDay; d--) {
     const f = packLegsFeasible(legs, d, deadline, snapshot);
     if (f === 'feasible') {
       latest = d;
       break;
     }
-    if (f === 'horizon') {
+    if (f === 'annahme') {
       latest = d;
-      sawHorizon = true;
+      restsOnAssumption = true;
       break;
     }
   }
   if (latest === null) {
     reasons.push('Rückkehr bis zum Stichtag mit aktuellem Forecast nicht mehr darstellbar');
-  } else if (sawHorizon) {
-    reasons.push('Späteste Umkehr liegt teils jenseits des Forecast-Horizonts (Vorbehalt)');
+  } else if (restsOnAssumption) {
+    reasons.push('Späteste Umkehr beruht teils auf der Persistenz-Annahme (Vorbehalt)');
   }
+
+  // Assess the chain one leg per day from the turnaround day (or from today,
+  // if no turnaround day survives) — these are the legs that beat north and
+  // therefore govern the whole plan's wind risk. Days may run past the
+  // deadline here on purpose: the point is the leg's wind exposure, not
+  // another feasibility check (that already happened above).
+  const planDay = latest ?? snapshot.trip.currentDay;
+  const legAssessments = legs.map((l, i) => assessLeg(l, planDay + i, snapshot));
+  const hardest = [...legAssessments]
+    .filter((l) => l.ampel !== 'unbewertet')
+    .sort((a, b) => {
+      const ra = a.headroom.windKn ?? Infinity;
+      const rb = b.headroom.windKn ?? Infinity;
+      return ra - rb;
+    })[0];
+
+  const rationale = [
+    deadlineRule,
+    `Rückweg über ${legs.length} ${legs.length === 1 ? 'Etappe' : 'Etappen'} der Rückfallkette, ` +
+      `${Math.round(remainingDistanceNm)} sm: ` +
+      legs.map((l) => l.id.replace('--', ' → ')).join(', ') + '.',
+    latest !== null
+      ? `Gesucht wurde der SPÄTESTE Starttag, von dem aus die Kette bis Tag ${deadline} durchläuft ` +
+        `(eine Etappe pro Tag, zwei kurze auf einem Tag erlaubt, Wartetage erlaubt, keine rote Etappe) ` +
+        `— das ist Tag ${latest}.`
+      : `Von keinem Tag ab heute (Tag ${snapshot.trip.currentDay}) läuft die Kette bis Tag ${deadline} ` +
+        `durch, ohne eine rote Etappe zu erzwingen.`,
+  ];
+  if (hardest) {
+    rationale.push(
+      hardest.headroom.windKn !== null
+        ? `Kritischste Rückweg-Etappe: ${hardest.legId.replace('--', ' → ')} ` +
+          `(gerechnet für Tag ${hardest.day}) — ${hardest.ampel}, ` +
+          `${hardest.headroom.windKn.toFixed(1).replace('.', ',')} kn Reserve bis zur Aufkreuz-Grenze.`
+        : `Kritischste Rückweg-Etappe: ${hardest.legId.replace('--', ' → ')} ` +
+          `(gerechnet für Tag ${hardest.day}) — ${hardest.ampel}, kein Aufkreuzen nötig.`,
+    );
+  }
+  rationale.push(
+    restsOnAssumption
+      ? 'Mindestens eine Etappe dieses Rückwegs liegt jenseits des Forecast-Horizonts und wurde mit der Persistenz-Annahme gerechnet.'
+      : 'Alle Etappen des Rückwegs liegen im echten Forecast.',
+  );
+
   return {
     latestReturnStartDay: latest,
     remainingDistanceNm,
     effectiveDeadlineDay: deadline,
+    legAssessments,
+    basis: restsOnAssumption ? 'annahme' : 'forecast',
+    rationale,
     reasons,
   };
 }

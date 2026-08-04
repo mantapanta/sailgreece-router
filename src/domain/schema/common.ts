@@ -16,6 +16,14 @@ export const AMPEL_SEVERITY: Record<Ampel, number> = {
   rot: 3,
 };
 
+/** German wording of an ampel for rationale texts (never show the raw enum). */
+export const AMPEL_WORT: Record<Ampel, string> = {
+  gruen: 'grün',
+  gelb: 'gelb',
+  rot: 'rot',
+  unbewertet: 'unbewertet',
+};
+
 export function worstAmpel(values: Ampel[]): Ampel {
   if (values.length === 0) return 'unbewertet';
   return values.reduce((worst, v) =>

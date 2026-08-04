@@ -262,11 +262,15 @@ hr.hairline,
 
 .route-state {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   gap: 0.3rem 1rem;
   align-items: baseline;
   padding: 0.55rem 0;
   border-bottom: 1px solid var(--hairline);
+}
+
+.route-state .reasoning {
+  grid-column: 1 / -1;
 }
 
 .state-chip {
@@ -280,7 +284,12 @@ hr.hairline,
 }
 
 .state-offen { background: #e5efe2; color: var(--gruen); border-color: #bcd3bf; }
-.state-offen-horizont { background: #eef; color: var(--navy-soft); }
+.state-offen-annahme {
+  background: #e9eef4;
+  color: var(--navy-soft);
+  border-color: #c2cfdc;
+  border-style: dashed;
+}
 .state-schliesst { background: #f7ecd7; color: #8a6414; border-color: #e4cf9f; }
 .state-zu { background: #f3dedd; color: var(--rot); border-color: #ddb3b1; }
 
@@ -446,24 +455,101 @@ hr.hairline,
   border-color: var(--navy);
 }
 
+/* Wind arrows: strength via length + colour, NO knot label (the number lives
+   in the tooltip). Only drawn along the itinerary — see MapView. */
+.wind-arrow-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  cursor: help;
+}
+
 .wind-arrow {
-  font-size: 1.05rem;
-  color: var(--navy);
-  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+  /* Slight white glow keeps the arrow readable on the hybrid satellite map. */
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95));
+  overflow: visible;
+}
+
+.wind-legend {
+  padding-bottom: 0.7rem;
+  margin-bottom: 0.7rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.wind-legend-scale {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.9rem;
+  margin: 0.35rem 0 0.4rem;
+}
+
+.wind-legend-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1;
-  pointer-events: none;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  color: var(--navy-soft);
 }
 
-.wind-arrow .kn {
-  font-size: 0.6rem;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 0 0.2rem;
-  border-radius: 2px;
-  transform: none;
+/* ---- assumption marker & reasoning ---------------------------------------- */
+
+.badge-annahme {
+  border-style: dashed;
+  background: #e9eef4;
+  color: var(--navy-soft);
+  cursor: help;
+}
+
+.hint-annahme {
+  border-left: 3px solid var(--navy-soft);
+}
+
+.plan-reasoning .plan-summary {
+  font-size: 1.02rem;
+  line-height: 1.5;
+  margin: 0.2rem 0 0.8rem;
+  padding-left: 0.7rem;
+  border-left: 3px solid var(--navy-soft);
+}
+
+.plan-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.2rem 1.6rem;
+}
+
+.plan-sections > .reasoning {
+  margin-top: 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.reasoning {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.reasoning > summary {
+  cursor: pointer;
+  color: var(--navy-soft);
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0;
+}
+
+.reasoning > summary:hover {
+  color: var(--navy);
+}
+
+.reasoning ol {
+  margin: 0.4rem 0 0.2rem;
+  padding-left: 1.3rem;
+  color: var(--navy-soft);
+  line-height: 1.5;
+}
+
+.reasoning li {
+  margin-bottom: 0.3rem;
 }
 
 /* ---- place detail ---------------------------------------------------------- */

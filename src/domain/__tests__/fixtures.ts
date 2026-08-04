@@ -36,7 +36,34 @@ export function constantForecast(
     waveM: Array(hours).fill(waveM),
     waveDirDeg: Array(hours).fill(waveDirDeg),
     wavePeriodS: Array(hours).fill(waveM === null ? null : 4),
+    windAssumed: Array(hours).fill(false),
+    waveAssumed: Array(hours).fill(false),
   };
+}
+
+/**
+ * Cut the axis AND every forecast series of a snapshot to `hours` — simulates
+ * a model horizon shorter than the trip. Typed per series (a generic
+ * key-loop cannot express number-vs-boolean arrays).
+ */
+export function truncateForecast(
+  snapshot: PlanningSnapshot,
+  hours: number,
+): void {
+  snapshot.times = snapshot.times.slice(0, hours);
+  for (const key of Object.keys(snapshot.forecast)) {
+    const fc = snapshot.forecast[key]!;
+    snapshot.forecast[key] = {
+      windKn: fc.windKn.slice(0, hours),
+      windDirDeg: fc.windDirDeg.slice(0, hours),
+      gustKn: fc.gustKn.slice(0, hours),
+      waveM: fc.waveM.slice(0, hours),
+      waveDirDeg: fc.waveDirDeg.slice(0, hours),
+      wavePeriodS: fc.wavePeriodS.slice(0, hours),
+      windAssumed: fc.windAssumed.slice(0, hours),
+      waveAssumed: fc.waveAssumed.slice(0, hours),
+    };
+  }
 }
 
 export function makePlace(overrides: Partial<Place> & { id: string }): Place {

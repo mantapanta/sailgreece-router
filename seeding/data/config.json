@@ -30,6 +30,6 @@
     "baseIslandId": "athen",
     "basePlaceId": "athen-alimos",
     "forecastModel": "ecmwf_ifs025",
-    "forecastDays": 10
+    "forecastDays": 16
   }
 }

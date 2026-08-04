@@ -15,12 +15,89 @@ import type {
   PlanningSnapshot,
 } from '../../domain/schema/snapshot.ts';
 import type { Route } from '../../domain/schema/route.ts';
+import { legWaypointKey } from '../../domain/scoring.ts';
 import { hourIndexAt } from '../../domain/time.ts';
 import { AMPEL_CSS_COLOR, AmpelBadge } from '../components/AmpelBadge.tsx';
 import { Polyline } from '../components/Polyline.tsx';
 import { formatHours, formatKn, compass } from '../format.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
+
+/**
+ * Wind arrow (FR3): direction by rotation, strength by LENGTH and COLOUR.
+ * No knot label on the map — the arrow carries the strength, the exact value
+ * lives in the tooltip. Two encodings of the same number next to each other
+ * only make the briefing picture noisy.
+ * The arrow points where the wind BLOWS TO (direction + 180°, AD-6).
+ */
+const WIND_SCALE: { maxKn: number; color: string }[] = [
+  { maxKn: 8, color: '#7fa8c9' },
+  { maxKn: 15, color: '#4c6b8a' },
+  { maxKn: 21, color: '#c08a2b' },
+  { maxKn: 27, color: '#c2571f' },
+  { maxKn: Infinity, color: '#a3231d' },
+];
+
+function WindArrow({ knots, fromDeg }: { knots: number; fromDeg: number }) {
+  const color = WIND_SCALE.find((s) => knots <= s.maxKn)!.color;
+  // 16 px at calm, ~46 px at 35 kn — long enough to read, short enough not to
+  // cover the neighbouring waypoint.
+  const len = 16 + Math.min(knots, 35) * 0.85;
+  return (
+    <svg
+      className="wind-arrow"
+      width="18"
+      height={len}
+      viewBox={`0 0 18 ${len}`}
+      style={{ transform: `rotate(${(fromDeg + 180) % 360}deg)` }}
+      aria-hidden="true"
+    >
+      <line x1="9" y1={len} x2="9" y2="8" stroke={color} strokeWidth="2.6" strokeLinecap="round" />
+      <polygon points="9,0 3.5,10 14.5,10" fill={color} />
+    </svg>
+  );
+}
+
+export interface WindPoint {
+  /** Normative forecast key (AD-3): place id or leg:<id>:<n>. */
+  key: string;
+  position: { lat: number; lng: number };
+}
+
+/**
+ * The points the itinerary actually passes: start/destination places of its
+ * legs plus their waypoints. Arrows are shown ONLY here — wind at a bay the
+ * boat will not visit is noise, not information.
+ */
+export function itineraryWindPoints(
+  route: Route | null,
+  snapshot: PlanningSnapshot,
+): WindPoint[] {
+  if (!route) return [];
+  const out: WindPoint[] = [];
+  const seen = new Set<string>();
+  const add = (key: string, position: { lat: number; lng: number }) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ key, position });
+  };
+  const addPlace = (placeId: string) => {
+    const p = snapshot.library.places.find((pl) => pl.id === placeId);
+    // Small northward offset so the arrow does not sit on top of the ampel pin.
+    if (p) add(p.id, { lat: p.coordinates.lat + 0.045, lng: p.coordinates.lon });
+  };
+  for (const leg of route.legs) {
+    addPlace(leg.fromPlaceId);
+    addPlace(leg.toPlaceId);
+    leg.waypoints.forEach((w, n) => {
+      add(leg.waypointKeys?.[n] ?? legWaypointKey(leg.id, n), {
+        lat: w.lat,
+        lng: w.lon,
+      });
+    });
+  }
+  return out;
+}
 
 function routePath(
   route: Route,
@@ -96,6 +173,7 @@ export function MapView({
   const trackedAssessment = trackedRoute
     ? assessment.routeOptions.find((o) => o.routeId === trackedRoute.id)
     : null;
+  const windPoints = itineraryWindPoints(trackedRoute, snapshot);
 
   const itinerary = (
     <div className="map-itinerary">
@@ -114,6 +192,22 @@ export function MapView({
             {r.name}
           </label>
         ))}
+      </div>
+
+      <div className="wind-legend">
+        <span className="versal">Wind jetzt · entlang des Itinerars</span>
+        <div className="wind-legend-scale">
+          {[5, 12, 18, 24, 30].map((v) => (
+            <span key={v} className="wind-legend-item">
+              <WindArrow knots={v} fromDeg={180} />
+              <span>{v} kn</span>
+            </span>
+          ))}
+        </div>
+        <div className="beschreibung">
+          Länge und Farbe zeigen die Stärke, die Pfeilspitze die Richtung, in die
+          es weht. Exakte Werte im Tooltip des Pfeils.
+        </div>
       </div>
 
       {trackedRoute && (
@@ -146,6 +240,11 @@ export function MapView({
                   <span className="badge">{leg.distanceNm} sm</span>
                   {la && <span className="badge">{formatHours(la.totalHours)}</span>}
                   {la && <AmpelBadge ampel={la.ampel} />}
+                  {la?.basis === 'annahme' && (
+                    <span className="badge badge-annahme" title={la.rationale.at(-1)}>
+                      Annahme
+                    </span>
+                  )}
                 </div>
                 {leg.windWarnings.map((w) => (
                   <div className="beschreibung" key={w}>
@@ -226,32 +325,23 @@ export function MapView({
               );
             })}
 
-            {nowIdx !== null && snapshot.library.places.map((place) => {
-              const fc = snapshot.forecast[place.id];
-              const kn = fc?.windKn[nowIdx] ?? null;
-              const dir = fc?.windDirDeg[nowIdx] ?? null;
-              if (kn === null || dir === null) return null;
-              return (
-                <AdvancedMarker
-                  key={`wind-${place.id}`}
-                  position={{
-                    lat: place.coordinates.lat + 0.045,
-                    lng: place.coordinates.lon,
-                  }}
-                  zIndex={5}
-                >
-                  <div
-                    className="wind-arrow"
-                    title={`Wind aus ${compass(dir)} (${Math.round(dir)}°), ${formatKn(kn)}`}
-                  >
-                    <span style={{ transform: `rotate(${(dir + 180) % 360}deg)` }}>
-                      ↑
-                    </span>
-                    <span className="kn">{Math.round(kn)}</span>
-                  </div>
-                </AdvancedMarker>
-              );
-            })}
+            {nowIdx !== null &&
+              windPoints.map((wp) => {
+                const fc = snapshot.forecast[wp.key];
+                const kn = fc?.windKn[nowIdx] ?? null;
+                const dir = fc?.windDirDeg[nowIdx] ?? null;
+                if (kn === null || dir === null) return null;
+                return (
+                  <AdvancedMarker key={`wind-${wp.key}`} position={wp.position} zIndex={5}>
+                    <div
+                      className="wind-arrow-wrap"
+                      title={`Wind aus ${compass(dir)} (${Math.round(dir)}°), ${formatKn(kn)}`}
+                    >
+                      <WindArrow knots={kn} fromDeg={dir} />
+                    </div>
+                  </AdvancedMarker>
+                );
+              })}
           </Map>
         </APIProvider>
       </div>

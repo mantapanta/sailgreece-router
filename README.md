@@ -7,10 +7,50 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
 - **Tagesansicht:** „Was machen wir heute?" — Tagesoptionen mit Etappen-Score,
   bester Platz je Ziel-Insel mit Nacht-Ampel, Zustand des Mittelfristplans
   (offen / schließt am Tag X / geschlossen), Predicted Point of Return,
-  Entscheidungspunkte.
+  Entscheidungspunkte. Jede Bewertung trägt ein aufklappbares **„Warum diese
+  Bewertung?"** mit der vollständigen Herleitung.
 - **Karte:** Besprechungsbild mit Ampel-Markern, gestrichelten Routen-Optionen,
-  Windpfeilen, Itinerar↔Karte-Hover (Google Maps, Hybrid-Ansicht).
-- **Platz-Detail:** Foto, Qualitäten, kuratiertes Schutzprofil, Nacht-Ampel.
+  Windpfeilen **entlang des Itinerars**, Itinerar↔Karte-Hover (Google Maps,
+  Hybrid-Ansicht).
+- **Platz-Detail:** Foto, Qualitäten, kuratierte sichere Liegeplätze mit ihren
+  geschützten Richtungen, Nacht-Ampel.
+
+## Zwei Grundsätze, die das Verhalten prägen
+
+**Es wird immer geroutet.** Dass die Modelle den zweiten Törnabschnitt nicht
+abdecken, führt nicht dazu, dass die App schweigt. Fehlende Stunden werden mit
+dem **typischen Tagesgang** der vorliegenden Forecast-Tage fortgeschrieben
+(`src/domain/persistence.ts`) — Mittel je Stunde-des-Tages, Windrichtung
+vektoriell und geschwindigkeitsgewichtet, damit das nachmittägliche Auffrischen
+des Meltemi erhalten bleibt. Jede so gefüllte Stunde ist als Annahme markiert;
+jede Bewertung sagt, wie viele ihrer Stunden echt sind. Der Plan ist damit
+korrigierbar statt leer — kippt er beim nächsten Modelllauf, sieht man das.
+
+**Jede Zahl ist rückverfolgbar.** Etappen, Routen-Zustände und der Point of
+Return führen ein `rationale`: Zeitfenster, Generalkurs, Windbereich,
+Geschwindigkeitsmodell, Budget-Vergleich, die *strengste Stelle* (Punkt + Stunde
++ Windwert), welche Regel die Ampel gesetzt hat, und die Datenbasis.
+
+Darüber liegt das **Gesamtbild** (`src/domain/overview.ts`, in der Tagesansicht
+unter „Wie kommt dieser Plan zustande?"): ein Satz Lage plus sieben Blöcke —
+Ausgangslage, Möglichkeitsraum, *was den Raum begrenzt*, nächster Druckpunkt,
+Wetterbild der nächsten Tage, Rückweg, Datenbasis.
+
+Zwei Dinge daran sind bewusst so gebaut:
+
+- **Wind oder Kalender wird unterschieden, nicht geraten.** Eine rote Etappe
+  kann an der 25-kn-Aufkreuz-Regel *oder* am Tagesbudget scheitern — beides
+  führt zu völlig verschiedenen Reaktionen (warten vs. Plan kürzen). Die
+  Unterscheidung läuft über `LegAssessment.headroom`, nicht über die Ampelfarbe.
+- **Die Rückweg-Etappen sind mitgerechnet.** Im Revier laufen die Hinetappen
+  raumschots und der Rückweg kreuzt gegen den Meltemi. Ein Gesamtbild, das nur
+  die Hinetappen sieht, würde das Windrisiko systematisch verschweigen — darum
+  tragen `RouteOptionAssessment.returnLegAssessments` und `PprResult.legAssessments`
+  die Rückweg-Bewertungen sichtbar mit.
+
+Die *engste Stelle im Plan* vergleicht Reserven **relativ zu ihrer Grenze**
+(4 von 25 kn = 16 % ist enger als 2,4 von 8 h = 30 %) — absolute Zahlen
+verschiedener Einheiten gegeneinander zu stellen wäre willkürlich.
 
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
 @vis.gl/react-google-maps 1.x · Firebase (Firestore + Hosting) · Vitest 4.
@@ -154,6 +194,20 @@ Forecast-Modell …) liegen im Firestore-Dokument `config/parameters`
 Redeploy. Das Forecast-Modell (Default `ecmwf_ifs025`) lässt sich dort
 z. B. auf `icon_eu` umstellen.
 
+`forecastDays` steht auf **16** (dem Maximum): echte Modelldaten sind immer
+besser als die Fortschreibung, und die APIs liefern für nicht abgedeckte
+Stunden einfach `null`. Gemessen am 4. August 2026:
+
+| Serie | echter Horizont |
+|---|---|
+| Wind (`ecmwf_ifs025`) | ~15 Tage |
+| Wellen (Marine-API) | ~9 Tage |
+
+Der **Wellen-Horizont ist der kürzere** und bestimmt darum meist, ab welchem
+Törntag die Nacht-Ampeln auf der Annahme beruhen. Beide Horizonte stehen im
+Annahme-Hinweis der Tagesansicht, damit „ab Tag 5 Annahme" neben „Wind bis
+zum 19." nicht wie ein Widerspruch aussieht.
+
 Inkonsistente Kombinationen (z. B. `nightEndHourAthens >= nightStartHourAthens`
 oder `targetDayHours > maxSailHours + maxMotorHours`) werden vom Zod-Schema
 abgelehnt — ein fehlerhaft editiertes Config-Dokument fällt sichtbar auf die
@@ -179,10 +233,15 @@ erreicht sein (Vorabend Tag 11, minus 1 Puffertag).
 ```text
 src/
   domain/          # purer Core: schema/ (Zod), time, polar, scoring,
-                   # ampel, options, ppr, assess — kein React/Firebase/fetch,
-                   # Zeit/Törntag/Position werden injiziert (AD-2)
+                   # ampel, options, ppr, persistence, overview, assess — kein
+                   # React/Firebase/fetch, Zeit/Törntag/Position injiziert (AD-2)
+    persistence.ts # Fortschreibung jenseits des Forecast-Horizonts
+                   # (typischer Tagesgang), erster Schritt in assessPlanning
+    overview.ts    # Gesamtbild-Reasoning über die fertigen Teile,
+                   # letzter Schritt in assessPlanning
     __tests__/     # Vitest-Fixturen (Referenzfälle Sektorsemantik, 25-kn-Regel,
-                   # Budgets, Polar-Interpolation+Offset, Athens→UTC)
+                   # Budgets, Polar-Interpolation+Offset, Athens→UTC,
+                   # Persistenz-Annahme + Reasoning-Inhalte)
   adapters/        # openMeteo (Snapshot-Builder), firestore (read-only,
                    # toleranter Parse, local-Modus), geolocation
   ui/              # drei Views + Komponenten, Vanilla CSS (Creme/Navy)

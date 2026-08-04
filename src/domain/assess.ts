@@ -13,6 +13,8 @@ import type {
 import type { Ampel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
+import { derivePlanRationale } from './overview.ts';
+import { applyPersistenceAssumption } from './persistence.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { distanceNm } from './geo.ts';
 
@@ -61,7 +63,12 @@ export function deriveCurrentIslandId(snapshot: PlanningSnapshot): string | null
   return deriveCurrentIsland(snapshot).islandId;
 }
 
-export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
+export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
+  // FIRST step, before anything is judged: extend the hour axis over the whole
+  // trip and fill the gaps with the persistence assumption. A missing forecast
+  // for the second week must not mean "no route" — it means "route under a
+  // stated assumption", flagged per hour and reported per verdict.
+  const { snapshot, info: persistence } = applyPersistenceAssumption(rawSnapshot);
   const { library, trip, params } = snapshot;
   const { islandId: currentIslandId, note: positionNote } =
     deriveCurrentIsland(snapshot);
@@ -88,6 +95,7 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
         maxWindKn: null,
         windDirDeg: null,
         maxWaveM: null,
+        basis: 'forecast',
         reasons: [`Platz-Dokument ungültig: ${invalid.error}`],
       };
     }
@@ -126,6 +134,25 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
     nightAmpeln,
   );
 
+  // First trip day resting on the assumption — taken from the verdicts
+  // themselves (exact) rather than re-derived from the horizon timestamp.
+  const assumedDays: number[] = [];
+  for (const opt of routeOptions) {
+    for (const la of opt.legAssessments) {
+      if (la.basis === 'annahme') assumedDays.push(la.day);
+    }
+  }
+  for (const opt of dayOptions) {
+    if (opt.leg?.basis === 'annahme') assumedDays.push(opt.leg.day);
+  }
+  for (const byNight of Object.values(nightAmpeln)) {
+    for (const a of Object.values(byNight)) {
+      if (a.basis === 'annahme') assumedDays.push(a.nightDay);
+    }
+  }
+
+  const assumedFromDay = assumedDays.length > 0 ? Math.min(...assumedDays) : null;
+
   return {
     fetchedAtIso: snapshot.fetchedAtIso,
     modelRunIso: snapshot.modelRunIso,
@@ -136,7 +163,24 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
     routeOptions,
     ppr,
     decisionPoints,
+    // Derived LAST: the overall reasoning reads the finished parts (AD-2).
+    planRationale: derivePlanRationale({
+      snapshot,
+      currentIslandId,
+      positionNote,
+      routeOptions,
+      ppr,
+      decisionPoints,
+      dayOptions,
+      forecastHorizonIso: persistence.horizonIso,
+      waveHorizonIso: persistence.waveHorizonIso,
+      assumedFromDay,
+    }),
     currentIslandId,
     positionNote,
+    forecastHorizonIso: persistence.horizonIso,
+    waveHorizonIso: persistence.waveHorizonIso,
+    assumedFromDay,
+    assumptionNote: persistence.note,
   };
 }

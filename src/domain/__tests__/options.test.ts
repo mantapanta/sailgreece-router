@@ -8,6 +8,7 @@ import {
   makePlace,
   makeSnapshot,
   makeTimes,
+  truncateForecast,
 } from './fixtures.ts';
 import { TEST_POLAR } from './fixtures.ts';
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
@@ -107,40 +108,28 @@ describe('options — FR18 open / closes / closed', () => {
     expect(result.closesOnDay).toBe(9);
   });
 
-  it('feasible now, closing-day scan hits the horizon: offen-horizont with visible caveat', () => {
+  it('feasible now, closing-day scan hits unconfirmed days: offen-annahme with visible caveat', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    snapshot.times = snapshot.times.slice(0, 4 * 24); // horizon: 4 days only
-    for (const key of Object.keys(snapshot.forecast)) {
-      const fc = snapshot.forecast[key]!;
-      for (const k of Object.keys(fc) as (keyof typeof fc)[]) {
-        fc[k] = fc[k].slice(0, 4 * 24);
-      }
-    }
+    truncateForecast(snapshot, 4 * 24); // horizon: 4 days only
     const route = snapshot.library.routes[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
-    // Today's rest plan is fully computable within the horizon, but the
-    // closing day may lie just beyond it — that is NOT an unqualified
-    // 'offen' (I/O-Matrix: horizon cases need a visible caveat).
-    expect(result.state).toBe('offen-horizont');
+    // Today's rest plan is fully computable, but the closing day lies beyond
+    // the covered days — that is NOT an unqualified 'offen' (I/O-Matrix:
+    // unconfirmed cases need a visible caveat).
+    expect(result.state).toBe('offen-annahme');
     expect(result.closesOnDay).toBeNull();
     expect(result.reasons.join(' ')).toContain('Schließtag');
   });
 
-  it("today's rest plan itself crosses the horizon: offen-horizont (first-class state)", () => {
+  it("today's rest plan itself rests on unconfirmed days: offen-annahme (first-class state)", () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    snapshot.times = snapshot.times.slice(0, 30); // horizon: 30 h only
-    for (const key of Object.keys(snapshot.forecast)) {
-      const fc = snapshot.forecast[key]!;
-      for (const k of Object.keys(fc) as (keyof typeof fc)[]) {
-        fc[k] = fc[k].slice(0, 30);
-      }
-    }
+    truncateForecast(snapshot, 30); // horizon: 30 h only
     const route = snapshot.library.routes[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     // Outbound today fits the axis, the return leg does not: the whole rest
-    // plan is only assessable up to the horizon.
-    expect(result.state).toBe('offen-horizont');
-    expect(result.reasons.join(' ')).toContain('Horizont');
+    // plan is only assessable under the assumption.
+    expect(result.state).toBe('offen-annahme');
+    expect(result.reasons.join(' ')).toContain('Persistenz-Annahme');
   });
 
   it('permanent 28 kn northerly makes the northbound return impossible: option zu', () => {

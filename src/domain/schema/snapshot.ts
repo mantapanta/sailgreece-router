@@ -7,9 +7,20 @@ import type { Params } from './params.ts';
 
 /**
  * AD-3 — engine contract: one snapshot in, one assessment out.
- * The snapshot hour axis is normatively UTC; hours beyond the model horizon
- * (marine < weather!) are `null` and assessed as 'unbewertet'.
+ * The snapshot hour axis is normatively UTC. Hours the model does not cover
+ * (marine horizon < weather horizon!) arrive as `null` from the adapter and
+ * are filled by the persistence assumption (domain/persistence.ts) before the
+ * engine runs — the corresponding hours are flagged `windAssumed`/`waveAssumed`
+ * so every verdict can say whether it rests on forecast or on assumption.
+ * Hours that stay null (no data basis at all) remain 'unbewertet'.
  */
+
+/**
+ * Basis of a verdict: real forecast hours only, or partly the persistence
+ * assumption beyond the forecast horizon. Never silently mixed — 'annahme'
+ * means AT LEAST one contributing hour is assumed.
+ */
+export type DataBasis = 'forecast' | 'annahme';
 
 /** Hourly forecast series for one location. Missing hours are null. */
 export interface PointForecast {
@@ -19,6 +30,10 @@ export interface PointForecast {
   waveM: (number | null)[];
   waveDirDeg: (number | null)[];
   wavePeriodS: (number | null)[];
+  /** Per hour: wind values stem from the persistence assumption, not the model. */
+  windAssumed: boolean[];
+  /** Per hour: wave values stem from the persistence assumption, not the model. */
+  waveAssumed: boolean[];
 }
 
 /** Position with source precedence (AD-11): 'manual' wins until released. */
@@ -79,7 +94,24 @@ export interface PlaceNightAssessment {
   maxWindKn: number | null;
   windDirDeg: number | null;
   maxWaveM: number | null;
+  basis: DataBasis;
   reasons: string[];
+}
+
+/**
+ * How much room the leg has left before it degrades — the sensitivity of the
+ * verdict. This is what turns "green" into "green, but only just": it names
+ * what would have to change for the plan to break.
+ */
+export interface LegHeadroom {
+  /**
+   * Knots of wind left before the FR16 upwind rule bites, measured at the
+   * worst beating point/hour. null = the leg never beats, so the rule is not
+   * the binding constraint. Negative = already exceeded.
+   */
+  windKn: number | null;
+  /** Hours left before the hard day maximum (sail + motor) is exceeded. */
+  hours: number | null;
 }
 
 export interface LegAssessment {
@@ -93,10 +125,20 @@ export interface LegAssessment {
   avgTwsKn: number | null;
   avgTwaDeg: number | null;
   upwind: boolean;
+  headroom: LegHeadroom;
+  basis: DataBasis;
+  /**
+   * Derivation of THIS verdict in plain sentences (FR22 — the skipper must be
+   * able to follow the assumptions, not just the outcome): window, course,
+   * wind band, speed model, budget comparison, the governing rule and point,
+   * and the data basis. Complements `reasons`, which only names what pulled
+   * the ampel down.
+   */
+  rationale: string[];
   reasons: string[];
 }
 
-export type OptionState = 'offen' | 'offen-horizont' | 'schliesst' | 'zu';
+export type OptionState = 'offen' | 'offen-annahme' | 'schliesst' | 'zu';
 
 export interface RouteOptionAssessment {
   routeId: string;
@@ -106,6 +148,16 @@ export interface RouteOptionAssessment {
   /** Ampel of the weakest remaining leg when sailed on the earliest plan (FR17). */
   ampel: Ampel;
   legAssessments: LegAssessment[];
+  /**
+   * The return chain from this option's FINAL island, assessed from the day
+   * after the earliest arrival. FR18 judges outbound and return together, so
+   * the return legs must be visible too — an option is usually not closed by
+   * its outbound legs but by the beat home that follows them.
+   */
+  returnLegAssessments: LegAssessment[];
+  basis: DataBasis;
+  /** Why this option carries this state — which rest plan was searched. */
+  rationale: string[];
   reasons: string[];
 }
 
@@ -127,12 +179,42 @@ export interface PprResult {
   remainingDistanceNm: number | null;
   /** Trip day by which Alimos must be reached (incl. buffer). */
   effectiveDeadlineDay: number;
+  /**
+   * The return chain's legs, assessed one per day from the latest turnaround
+   * day. Exposed because these are the legs that actually bite in this cruising
+   * area — they beat north against the Meltemi, while the outbound legs run
+   * downwind. Without them the overall reasoning would only ever see the
+   * harmless half of the trip.
+   */
+  legAssessments: LegAssessment[];
+  basis: DataBasis;
+  /** How the turnaround day was derived (which chain, which constraint bites). */
+  rationale: string[];
   reasons: string[];
 }
 
 export interface DecisionPoint {
   day: number;
   text: string;
+}
+
+/** One titled block of the overall plan reasoning. */
+export interface PlanRationaleSection {
+  title: string;
+  lines: string[];
+}
+
+/**
+ * Reasoning for the plan AS A WHOLE — one level above the per-leg and
+ * per-option rationales. It answers "why does the plan look like this today":
+ * starting situation, what the option space still allows, which constraint
+ * actually binds it, where the next decision pressure sits, the weather picture
+ * behind it, how sensitive the whole thing is, and on what data it rests.
+ */
+export interface PlanRationale {
+  /** One sentence: the situation in a nutshell. */
+  summary: string;
+  sections: PlanRationaleSection[];
 }
 
 export interface Assessment {
@@ -151,6 +233,8 @@ export interface Assessment {
   routeOptions: RouteOptionAssessment[];
   ppr: PprResult;
   decisionPoints: DecisionPoint[];
+  /** Reasoning for the whole plan (FR22) — see PlanRationale. */
+  planRationale: PlanRationale;
   /** Island the boat is currently at (derived from position). */
   currentIslandId: string | null;
   /**
@@ -158,4 +242,23 @@ export interface Assessment {
    * the snap radius) — or null when the derivation is unremarkable.
    */
   positionNote: string | null;
+  /**
+   * Last hour of the axis with real WIND data (ISO-UTC). Hours after it are
+   * the persistence assumption. null = no forecast hour at all.
+   */
+  forecastHorizonIso: string | null;
+  /**
+   * Last hour with real WAVE data — regularly EARLIER than the wind horizon
+   * (marine models run shorter). Shown separately so "assumption from day X"
+   * is traceable to the series that actually ran out.
+   */
+  waveHorizonIso: string | null;
+  /**
+   * First trip day whose assessment rests wholly or partly on the assumption
+   * (null = the whole trip is covered by real forecast). Drives the visible
+   * "ab Tag X Annahme" caveat.
+   */
+  assumedFromDay: number | null;
+  /** Human-readable description of the assumption actually applied. */
+  assumptionNote: string | null;
 }

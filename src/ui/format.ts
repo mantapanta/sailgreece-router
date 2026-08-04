@@ -55,9 +55,5 @@ export function formatDeg(v: number | null): string {
   return `${Math.round(v)}°`;
 }
 
-const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-
-export function compass(deg: number | null): string {
-  if (deg === null) return '–';
-  return DIRS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]!;
-}
+/** Re-export: compass naming lives in the core, since rationale texts use it too. */
+export { compassPoint as compass } from '../domain/geo.ts';

@@ -10,6 +10,7 @@
 
 import type { Route, Leg } from './schema/route.ts';
 import type {
+  DataBasis,
   PlanningSnapshot,
   RouteOptionAssessment,
   LegAssessment,
@@ -17,11 +18,12 @@ import type {
   PprResult,
   DayOption,
 } from './schema/snapshot.ts';
-import { worstAmpel, type Ampel } from './schema/common.ts';
+import { AMPEL_WORT, worstAmpel, type Ampel } from './schema/common.ts';
 import { assessLeg } from './scoring.ts';
 import {
   effectiveDeadlineDay,
   packLegsFeasible,
+  remainingReturnLegs,
   returnFeasibleStarting,
   routeIslandSequence,
   type Feasibility,
@@ -72,9 +74,9 @@ export function restPlanFeasible(
     const back = returnFeasibleStarting(lastIsland, arrivalDay + 1, snapshot);
     if (back === 'infeasible') continue;
     const combined: Feasibility =
-      outbound === 'horizon' || back === 'horizon' ? 'horizon' : 'feasible';
+      outbound === 'annahme' || back === 'annahme' ? 'annahme' : 'feasible';
     if (combined === 'feasible') return 'feasible';
-    best = 'horizon';
+    best = 'annahme';
   }
   return best;
 }
@@ -105,6 +107,9 @@ export function assessRouteOption(
       closesOnDay: null,
       ampel: 'unbewertet',
       legAssessments: [],
+      returnLegAssessments: [],
+      basis: 'forecast',
+      rationale: ['Ohne Position lässt sich kein Restplan bilden.'],
       reasons: ['Keine Position gesetzt'],
     };
   }
@@ -118,6 +123,64 @@ export function assessRouteOption(
     legAssessments.length > 0
       ? worstAmpel(legAssessments.map((l) => l.ampel))
       : 'unbewertet';
+  // The beat home from the option's final island — FR18 judges it together
+  // with the outbound legs, so it belongs in the visible output as well.
+  const finalIsland =
+    legs.length > 0 ? legs[legs.length - 1]!.toIslandId : currentIslandId;
+  const earliestArrivalDay = today + Math.max(0, legs.length - 1);
+  const returnLegs =
+    finalIsland === snapshot.params.baseIslandId
+      ? []
+      : (remainingReturnLegs(finalIsland, snapshot) ?? []);
+  const returnLegAssessments = returnLegs.map((l, i) =>
+    assessLeg(l, earliestArrivalDay + 1 + i, snapshot),
+  );
+
+  const basis: DataBasis = [...legAssessments, ...returnLegAssessments].some(
+    (l) => l.basis === 'annahme',
+  )
+    ? 'annahme'
+    : 'forecast';
+
+  // Common head of the rationale: what was actually searched (FR18 definition).
+  const rationale: string[] = [
+    legs.length === 0
+      ? `Von hier aus liegt keine Etappe dieser Route mehr vor — nur noch der Rückweg zählt.`
+      : `Restplan ab hier: ${legs.length} ${legs.length === 1 ? 'Etappe' : 'Etappen'} — ` +
+        legs.map((l) => l.id.replace('--', ' → ')).join(', ') + '.',
+    `Geprüft wird beides zusammen (FR18): jede Etappe innerhalb der Familien-Schwellen ` +
+      `(kein Aufkreuzen über ${snapshot.params.maxUpwindTwsKn} kn, Tagesbudget) UND Ankunft an der Basis ` +
+      `bis Tag ${deadline}. Wartetage sind erlaubt, zwei kurze Etappen dürfen auf einen Tag fallen.`,
+  ];
+  const weakest = legAssessments.find((l) => l.ampel === ampel);
+  if (weakest) {
+    rationale.push(
+      `Angezeigte Ampel = schwächste Etappe bei frühestmöglicher Fahrt: ` +
+        `${weakest.legId.replace('--', ' → ')} an Tag ${weakest.day} ist ${AMPEL_WORT[ampel]}` +
+        `${weakest.reasons.length > 0 ? ` (${weakest.reasons[0]})` : ''}.`,
+    );
+  }
+  if (returnLegAssessments.length > 0) {
+    // The return is what usually closes an option — name its worst leg, not
+    // just the fact that a return exists.
+    const worstBack = [...returnLegAssessments].sort(
+      (a, b) => (a.headroom.windKn ?? Infinity) - (b.headroom.windKn ?? Infinity),
+    )[0]!;
+    rationale.push(
+      `Rückweg ab ${finalIsland}: ${returnLegAssessments.length} ` +
+        `${returnLegAssessments.length === 1 ? 'Etappe' : 'Etappen'}, frühester Start Tag ` +
+        `${earliestArrivalDay + 1}. Kritischste davon ${worstBack.legId.replace('--', ' → ')} ` +
+        `(${AMPEL_WORT[worstBack.ampel]}` +
+        `${worstBack.headroom.windKn !== null ? `, ${worstBack.headroom.windKn.toFixed(1).replace('.', ',')} kn Reserve bis zur Aufkreuz-Grenze` : ', kein Aufkreuzen nötig'}).`,
+    );
+  }
+  const withBasis = (extra: string[]): string[] => [
+    ...rationale,
+    ...extra,
+    basis === 'annahme'
+      ? 'Teile dieses Restplans liegen jenseits des Forecast-Horizonts und wurden mit der Persistenz-Annahme gerechnet — der Zustand kann mit jedem neuen Modelllauf kippen.'
+      : 'Alle Etappen des Restplans liegen im echten Forecast.',
+  ];
 
   const now = restPlanFeasible(route, currentIslandId, today, snapshot);
   if (now === 'infeasible') {
@@ -128,34 +191,46 @@ export function assessRouteOption(
       closesOnDay: null,
       ampel,
       legAssessments,
+      returnLegAssessments,
+      basis,
+      rationale: withBasis([
+        `Ergebnis: Ab heute (Tag ${today}) gibt es keine Kombination aus Fahr- und Wartetagen mehr, ` +
+          `die diese Route zulässig fährt UND bis Tag ${deadline} zurück an der Basis ist.`,
+      ]),
       reasons,
     };
   }
-  if (now === 'horizon') {
-    reasons.push('Machbarkeit reicht über den Forecast-Horizont hinaus — offen mit Vorbehalt');
+  if (now === 'annahme') {
+    reasons.push('Restplan beruht teils auf der Persistenz-Annahme — offen mit Vorbehalt');
     return {
       routeId: route.id,
-      state: 'offen-horizont',
+      state: 'offen-annahme',
       closesOnDay: null,
       ampel,
       legAssessments,
+      returnLegAssessments,
+      basis: 'annahme',
+      rationale: withBasis([
+        `Ergebnis: Ein durchgehender Restplan ab heute existiert — er stützt sich aber auf Tage ` +
+          `jenseits des Forecast-Horizonts. Darum „offen (Annahme)" statt „offen".`,
+      ]),
       reasons,
     };
   }
 
   // Open today: does it close? Latest start day D with a feasible rest plan.
   let closesOnDay: number | null = null;
-  let closingScanHitHorizon = false;
+  let closingScanHitAssumption = false;
   for (let d = today + 1; d <= deadline; d++) {
     const f = restPlanFeasible(route, currentIslandId, d, snapshot);
     if (f === 'infeasible') {
       closesOnDay = d - 1;
       break;
     }
-    if (f === 'horizon') {
-      // Beyond the horizon we cannot claim a closing day — that is a VISIBLE
+    if (f === 'annahme') {
+      // On assumed days we cannot CLAIM a closing day — that is a VISIBLE
       // caveat (I/O-Matrix), not an unqualified 'offen'.
-      closingScanHitHorizon = true;
+      closingScanHitAssumption = true;
       break;
     }
   }
@@ -167,17 +242,29 @@ export function assessRouteOption(
       closesOnDay,
       ampel,
       legAssessments,
+      returnLegAssessments,
+      basis,
+      rationale: withBasis([
+        `Ergebnis: Der Start lässt sich bis Tag ${closesOnDay} aufschieben. Ab Tag ${closesOnDay + 1} ` +
+          `reicht die Restzeit bis Tag ${deadline} nicht mehr — deshalb „schließt am Tag ${closesOnDay}".`,
+      ]),
       reasons,
     };
   }
-  if (closingScanHitHorizon) {
-    reasons.push('Schließtag jenseits des Forecast-Horizonts nicht bestimmbar (Vorbehalt)');
+  if (closingScanHitAssumption) {
+    reasons.push('Schließtag nur unter der Persistenz-Annahme bestimmbar (Vorbehalt)');
     return {
       routeId: route.id,
-      state: 'offen-horizont',
+      state: 'offen-annahme',
       closesOnDay: null,
       ampel,
       legAssessments,
+      returnLegAssessments,
+      basis: 'annahme',
+      rationale: withBasis([
+        `Ergebnis: Heute offen. Ob und wann die Option schließt, liegt jenseits des ` +
+          `Forecast-Horizonts — deshalb kein Schließtag, sondern „offen (Annahme)".`,
+      ]),
       reasons,
     };
   }
@@ -187,6 +274,12 @@ export function assessRouteOption(
     closesOnDay: null,
     ampel,
     legAssessments,
+    returnLegAssessments,
+    basis,
+    rationale: withBasis([
+      `Ergebnis: Offen — bis zum Stichtag Tag ${deadline} gibt es an jedem Starttag einen ` +
+        `zulässigen Restplan. Kein Entscheidungsdruck aus dieser Option.`,
+    ]),
     reasons,
   };
 }

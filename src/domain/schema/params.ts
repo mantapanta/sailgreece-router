@@ -92,7 +92,14 @@ const ParamsObjectSchema = z.object({
   // --- forecast (FR11) --------------------------------------------------------
   /** Open-Meteo model id; default ECMWF. Model choice is a config parameter. */
   forecastModel: z.string().default('ecmwf_ifs025'),
-  forecastDays: z.number().int().min(1).max(16).default(10),
+  /**
+   * Requested forecast days. Ask for the MAXIMUM: real model data always beats
+   * the persistence assumption, and the APIs simply return null for hours they
+   * do not cover (measured 2026-08-04: ECMWF wind ~15 days, marine waves
+   * ~9 days). Those nulls are filled by domain/persistence.ts and flagged, so
+   * a generous request costs nothing but yields days of real wind.
+   */
+  forecastDays: z.number().int().min(1).max(16).default(16),
 });
 
 /**

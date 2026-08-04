@@ -30,6 +30,20 @@ export function normDeg(d: number): number {
   return ((d % 360) + 360) % 360;
 }
 
+const COMPASS_POINTS = [
+  'N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO',
+  'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
+];
+
+/**
+ * 16-point compass name of a direction. Lives here (not in the UI) because
+ * rationale texts in the core name wind directions the seamanlike way.
+ */
+export function compassPoint(deg: number | null): string {
+  if (deg === null) return '–';
+  return COMPASS_POINTS[Math.round(normDeg(deg) / 22.5) % 16]!;
+}
+
 /** Smallest angular difference between two directions, 0-180. */
 export function angleDiffDeg(a: number, b: number): number {
   const d = Math.abs(normDeg(a) - normDeg(b)) % 360;

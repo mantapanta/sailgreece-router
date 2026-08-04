@@ -129,6 +129,34 @@ export function hourIndices(window: TimeWindow, times: string[]): number[] {
   return indices;
 }
 
+/**
+ * Athens wall-clock hour label ("14:00") for a UTC instant — for rationale
+ * texts, which must speak the skipper's local time, not UTC.
+ */
+export function athensHourLabel(utcMs: number): string {
+  const wallMs = utcMs + athensOffsetMinutes(utcMs) * 60000;
+  return `${String(new Date(wallMs).getUTCHours()).padStart(2, '0')}:00`;
+}
+
+/**
+ * Short Athens timestamp ("19.08., 05:00") for rationale texts. The core emits
+ * German prose anyway (reasons, rationale) — leaving raw ISO strings in it
+ * would push formatting into the view for these strings alone.
+ */
+export function athensStamp(iso: string | null): string {
+  if (!iso) return 'unbekannt';
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return 'unbekannt';
+  const wall = new Date(ms + athensOffsetMinutes(ms) * 60000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  // Minute precision, not hour: this also stamps the RETRIEVAL time, where
+  // rounding to the hour would silently misreport how fresh the data is.
+  return (
+    `${pad(wall.getUTCDate())}.${pad(wall.getUTCMonth() + 1)}., ` +
+    `${pad(wall.getUTCHours())}:${pad(wall.getUTCMinutes())}`
+  );
+}
+
 /** Index of the hour containing the given instant, or null if off-axis. */
 export function hourIndexAt(utcMs: number, times: string[]): number | null {
   for (let i = 0; i < times.length; i++) {
