@@ -88,6 +88,7 @@ function twoIslandSnapshot(opts: {
       position: { source: 'manual', lat: base.coordinates.lat, lon: base.coordinates.lon, placeId: base.id },
       plan: null,
       departureHourOverride: null,
+      stopHoursByDay: {},
     },
   });
   if (opts.tripLengthDays) {
@@ -225,6 +226,7 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
         position: { source: 'manual', lat: sued.coordinates.lat, lon: sued.coordinates.lon, placeId: sued.id },
         plan: null,
         departureHourOverride: null,
+      stopHoursByDay: {},
       },
     });
     // One leg per day would need days 10+11 (> deadline). packLegsFeasible

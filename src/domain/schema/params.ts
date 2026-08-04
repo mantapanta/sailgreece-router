@@ -43,6 +43,17 @@ const ParamsObjectSchema = z.object({
   /** Light wind: 10-12 h passages (incl. night legs) allowed at <= this TWS. */
   lightWindMaxTwsKn: z.number().positive().default(6),
   lightWindMaxHours: z.number().positive().default(12),
+  /**
+   * Liegezeit an einem Zwischenstopp innerhalb eines Tages (Baden, Essen,
+   * Landgang). Standard 3 h, pro Tag überschreibbar (TripFrame).
+   *
+   * Sie verschiebt die Abfahrt der FOLGE-Etappe und damit deren Forecast-
+   * Fenster — genau der Punkt: nach drei Stunden Mittagspause fällt der
+   * zweite Schlag in den aufgebauten Nachmittags-Meltemi, nicht in den
+   * ruhigen Vormittag. Sie zählt NICHT ins Fahrt-Budget (FR16), denn das
+   * begrenzt Stunden unter Segeln und Motor, keine Pausen.
+   */
+  stopHoursDefault: z.number().min(0).max(12).default(3),
 
   // --- place ampel (FR8) ----------------------------------------------------
   /** Unprotected ("Luv") direction: yellow up to this wind, red above. */

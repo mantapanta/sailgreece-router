@@ -102,6 +102,7 @@ export function makeSnapshot(
       position: null,
       plan: null,
       departureHourOverride: null,
+      stopHoursByDay: {},
     },
     ...overrides,
   };

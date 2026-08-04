@@ -104,6 +104,7 @@ function realSnapshot(
       position: { source: 'manual', lat: a.coordinates.lat, lon: a.coordinates.lon, placeId: a.id },
       plan: opts.plan ?? null,
       departureHourOverride: null,
+      stopHoursByDay: {},
     },
   });
   snap.params = {

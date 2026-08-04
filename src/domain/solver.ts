@@ -39,7 +39,7 @@ import {
   planDay,
   stagesOf,
 } from './schema/plan.ts';
-import { assessLeg } from './scoring.ts';
+import { assessLeg, stopHoursForDay } from './scoring.ts';
 import {
   packLegs,
   remainingReturnLegs,
@@ -246,6 +246,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
   // (1) every stage inside the reliable horizon holds the FR16 thresholds.
   for (const stage of stagesOf(plan)) {
     let offset = 0;
+    const stopHours = stopHoursForDay(snapshot, stage.day);
     for (const legId of stage.legIds) {
       const leg = legs.get(legId);
       if (!leg) {
@@ -262,7 +263,8 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       const a = assessLeg(leg, stage.day, snapshot, {
         departureOffsetHours: offset || undefined,
       });
-      offset += a.totalHours ?? 0;
+      // Liegezeit des Zwischenstopps schiebt die Folge-Etappe (AD-3).
+      offset += (a.totalHours ?? 0) + stopHours;
       if (a.ampel === 'unbewertet') {
         horizonDependent = true;
         continue;
@@ -382,6 +384,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
     if (arrivingStage && arrivingStage.day === frame.deadlineDay) {
       let arrival: number | null = null;
       let offset = 0;
+      const arrivalStopHours = stopHoursForDay(snapshot, arrivingStage.day);
       for (const legId of arrivingStage.legIds) {
         const leg = legs.get(legId);
         if (!leg) {
@@ -397,7 +400,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
           horizonDependent = true;
           break;
         }
-        offset += a.totalHours ?? 0;
+        offset += (a.totalHours ?? 0) + arrivalStopHours;
         arrival = a.arrivalHourAthens;
       }
       if (arrival !== null && arrival > params.returnDeadlineHourAthens) {

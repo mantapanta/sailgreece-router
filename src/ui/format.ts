@@ -40,6 +40,31 @@ export function formatStamp(iso: string | null): string {
   return `${stampFmt.format(new Date(iso))} (Athen)`;
 }
 
+const timeFmt = new Intl.DateTimeFormat('de-DE', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Athens',
+  // 'h23' wie in domain/time.ts: bloßes hour12:false liefert auf manchen
+  // ICU-Builds um Mitternacht "24:00".
+  hourCycle: 'h23',
+});
+
+/**
+ * Uhrzeit in Ortszeit Athen. Sommer-/Winterzeit kommt aus der Zeitzone
+ * 'Europe/Athens' selbst — kein festes +03:00, das ausserhalb der Sommerzeit
+ * falsch wäre (AD-9).
+ *
+ * Die Stunden-Achse des Snapshots ist normativ UTC; umgerechnet wird
+ * ausschliesslich hier in der Anzeige. Der Fallback-Wert der Simulation
+ * ('+7h', siehe domain/scoring.ts) ist keine ISO-Zeit und wird unverändert
+ * durchgereicht, statt eine Uhrzeit zu erfinden.
+ */
+export function formatAthensTime(iso: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return iso;
+  return timeFmt.format(new Date(ms));
+}
+
 export function formatHours(h: number | null): string {
   if (h === null) return '–';
   return `${h.toFixed(1).replace('.', ',')} h`;

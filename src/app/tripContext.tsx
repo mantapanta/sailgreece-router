@@ -43,6 +43,12 @@ export interface TripState {
    */
   planUnreadable: boolean;
   departureHourOverride: number | null;
+  /**
+   * Liegezeit an den Zwischenstopps je Törntag. Fehlt ein Tag, gilt
+   * `params.stopHoursDefault`. Persistiert, weil es eine Planungsentscheidung
+   * ist und keine Ansichtssache.
+   */
+  stopHoursByDay: Record<number, number>;
 }
 
 export type TripAction =
@@ -62,6 +68,8 @@ export type TripAction =
   /** The skipper acknowledged an unreadable plan; a fresh one may be adopted. */
   | { type: 'DISCARD_UNREADABLE' }
   | { type: 'SET_DEPARTURE_HOUR'; hour: number | null }
+  /** Liegezeit für EINEN Tag setzen; null = zurück auf den Default. */
+  | { type: 'SET_STOP_HOURS'; day: number; hours: number | null }
   | { type: 'RESET' };
 
 const INITIAL: TripState = {
@@ -70,6 +78,7 @@ const INITIAL: TripState = {
   plan: null,
   planUnreadable: false,
   departureHourOverride: null,
+  stopHoursByDay: {},
 };
 
 /** Release every skipper pin — the plan stays, only its ownership resets. */
@@ -128,6 +137,14 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
       return { ...state, planUnreadable: false, plan: null };
     case 'SET_DEPARTURE_HOUR':
       return { ...state, departureHourOverride: action.hour };
+    case 'SET_STOP_HOURS': {
+      const next = { ...state.stopHoursByDay };
+      // null loescht den Eintrag statt 0 zu speichern: "kein Override" und
+      // "null Stunden Liegezeit" sind verschiedene Aussagen.
+      if (action.hours === null) delete next[action.day];
+      else next[action.day] = action.hours;
+      return { ...state, stopHoursByDay: next };
+    }
     case 'RESET':
       return INITIAL;
     default:
@@ -153,6 +170,9 @@ const TripStateSchema = z.object({
   position: TripPositionSchema.nullable(),
   plan: PlanSchema.nullable(),
   departureHourOverride: z.number().int().min(0).max(23).nullable(),
+  // Aus aelterem Storage fehlt das Feld — Default statt Reset des ganzen
+  // Zustands, sonst kostet ein Schema-Zuwachs die Position des Skippers.
+  stopHoursByDay: z.record(z.coerce.number().int(), z.number().min(0).max(12)).default({}),
 });
 
 function loadPersisted(): TripState {

@@ -102,6 +102,7 @@ function amorgosWorld(): PlanningSnapshot {
       },
       plan: null,
       departureHourOverride: null,
+      stopHoursByDay: {},
     },
   });
 }

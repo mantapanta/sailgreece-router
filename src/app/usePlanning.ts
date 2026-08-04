@@ -85,9 +85,18 @@ export function usePlanningEngine() {
         position: trip.position,
         plan: trip.plan,
         departureHourOverride: trip.departureHourOverride,
+        stopHoursByDay: trip.stopHoursByDay,
       },
     };
-  }, [bundle, forecastQuery.data, currentDay, trip.position, trip.plan, trip.departureHourOverride]);
+  }, [
+    bundle,
+    forecastQuery.data,
+    currentDay,
+    trip.position,
+    trip.plan,
+    trip.departureHourOverride,
+    trip.stopHoursByDay,
+  ]);
 
   const assessment: Assessment | null = useMemo(
     () => (snapshot ? assessPlanning(snapshot) : null),
@@ -149,6 +158,19 @@ export function usePlanningEngine() {
     [dispatch],
   );
 
+  /**
+   * Liegezeit eines Tages setzen; null geht auf `params.stopHoursDefault`
+   * zurück. Der Plan bleibt unangetastet (AD-12) — nur seine Bewertung
+   * verschiebt sich, weil die Folge-Etappe später abfährt.
+   */
+  const setStopHours = useCallback(
+    (day: number, hours: number | null) => {
+      if (hours !== null && (!Number.isFinite(hours) || hours < 0 || hours > 12)) return;
+      dispatch({ type: 'SET_STOP_HOURS', day, hours });
+    },
+    [dispatch],
+  );
+
   return {
     libraryQuery,
     forecastQuery,
@@ -160,6 +182,7 @@ export function usePlanningEngine() {
     editStage,
     checkIn,
     releasePin,
+    setStopHours,
   };
 }
 

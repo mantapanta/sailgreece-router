@@ -19,7 +19,7 @@ import { worstAmpel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
 import { predictedPointOfReturn } from './ppr.ts';
-import { assessLeg } from './scoring.ts';
+import { assessLeg, stopHoursForDay } from './scoring.ts';
 import {
   completePlan,
   deriveAlternatives,
@@ -96,10 +96,12 @@ function assessPlan(
       const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
       const suggestion = bestPlaceByIsland[islandId]?.[entry.day] ?? null;
       const placeId = chosen ?? suggestion;
+      const stopHoursPerStop = stopHoursForDay(snapshot, entry.day);
       const legAssessments =
         entry.kind === 'stage'
           ? (() => {
               let offset = 0;
+              const stopHours = stopHoursPerStop;
               return entry.legIds.map((legId) => {
                 const leg = legs.get(legId);
                 if (!leg) {
@@ -117,12 +119,17 @@ function assessPlan(
                     nightLeg: null,
                     arrivalHourAthens: null,
                     breakdown: [],
+                    pointPassages: [],
                   };
                 }
                 const a = assessLeg(leg, entry.day, snapshot, {
                   departureOffsetHours: offset || undefined,
                 });
-                offset += a.totalHours ?? 0;
+                // Nach jeder Etappe die Liegezeit des Zwischenstopps: die
+                // Folge-Etappe startet nach der Pause, nicht direkt bei
+                // Ankunft. Nach der LETZTEN Etappe ist der Offset unbenutzt,
+                // deshalb hier ohne Sonderfall.
+                offset += (a.totalHours ?? 0) + stopHours;
                 return a;
               });
             })()
@@ -143,6 +150,9 @@ function assessPlan(
             : worstAmpel(legAssessments.map((l) => l.ampel)),
         legs: legAssessments,
         pinned: entry.source === 'skipper',
+        stopHoursPerStop,
+        stopHoursTotal:
+          Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
       };
     });
 

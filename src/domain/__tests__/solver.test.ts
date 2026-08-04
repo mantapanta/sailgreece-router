@@ -111,6 +111,7 @@ function roundTripSnapshot(
       },
       plan: null,
       departureHourOverride: null,
+      stopHoursByDay: {},
     },
   });
   // Mirrors the PRD structure: days = stages + exactly one harbour day.

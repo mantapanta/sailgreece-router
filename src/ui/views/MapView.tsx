@@ -16,15 +16,12 @@
 
 import { useMemo, useState } from 'react';
 import { APIProvider, AdvancedMarker, Map } from '@vis.gl/react-google-maps';
-import type {
-  Assessment,
-  PlanningSnapshot,
-  StageAssessment,
-} from '../../domain/schema/snapshot.ts';
-import type { Leg } from '../../domain/schema/route.ts';
+import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
 import { AMPEL_CSS_COLOR, AmpelBadge } from '../components/AmpelBadge.tsx';
 import { Polyline } from '../components/Polyline.tsx';
+import { WindBarb } from '../components/WindBarb.tsx';
+import { buildLegsById, stagePath } from '../mapPath.ts';
 import { formatHours, formatKn, compass } from '../format.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
@@ -39,27 +36,30 @@ const REST_LINE_COLOR: Record<Assessment['restTripAmpel'], string> = {
 
 const SAILED_LINE_COLOR = '#3f7d4f';
 
-/** Geographic path of the legs of one stage, start place to destination. */
-function stagePath(
-  stage: StageAssessment,
-  legsById: Record<string, Leg>,
-  snapshot: PlanningSnapshot,
-): google.maps.LatLngLiteral[] {
-  const placeCoord = (placeId: string) => {
-    const p = snapshot.library.places.find((pl) => pl.id === placeId);
-    return p ? { lat: p.coordinates.lat, lng: p.coordinates.lon } : null;
+/**
+ * Abstand, um den eine Windfieder gegen die Windrichtung vom Platz weggesetzt
+ * wird (in Breitengrad, ca. 3,5 sm). Die Fieder sitzt damit LUVSEITIG des
+ * Hafens: sie zeigt weiter nach Luv, der Platz und die Route darunter bleiben
+ * frei. Ohne Versatz decken 97 Fiedern genau die Marker ab, die man lesen will.
+ */
+const WIND_OFFSET_DEG = 0.06;
+
+/**
+ * Versatz nach Luv. Der Längengrad muss mit cos(Breite) korrigiert werden,
+ * sonst wäre der Versatz auf 37° N in Ost-West-Richtung rund 20 % zu kurz und
+ * die Fiedern stünden schief zur Windrichtung.
+ */
+function upwindOffset(
+  lat: number,
+  lon: number,
+  windFromDeg: number,
+): google.maps.LatLngLiteral {
+  const rad = (windFromDeg * Math.PI) / 180;
+  const latRad = (lat * Math.PI) / 180;
+  return {
+    lat: lat + WIND_OFFSET_DEG * Math.cos(rad),
+    lng: lon + (WIND_OFFSET_DEG * Math.sin(rad)) / Math.max(Math.cos(latRad), 0.2),
   };
-  const path: google.maps.LatLngLiteral[] = [];
-  stage.legs.forEach((la, i) => {
-    const leg = legsById[la.legId];
-    if (!leg) return;
-    const from = placeCoord(leg.fromPlaceId);
-    if (i === 0 && from) path.push(from);
-    for (const w of leg.waypoints) path.push({ lat: w.lat, lng: w.lon });
-    const to = placeCoord(leg.toPlaceId);
-    if (to) path.push(to);
-  });
-  return path;
 }
 
 export function MapView({
@@ -76,13 +76,17 @@ export function MapView({
     (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID';
   const day = snapshot.trip.currentDay;
   const [hoverDay, setHoverDay] = useState<number | null>(null);
+  /**
+   * FR10-Lesbarkeit: 97 Windfiedern über den Kykladen verdecken die Route.
+   * Transienter View-State, bewusst NICHT im TripContext — das Ein-/Ausblenden
+   * ist eine Blickentscheidung, keine Törnentscheidung.
+   */
+  const [showWind, setShowWind] = useState(true);
 
-  // Record instead of a JS Map: the identifier `Map` is taken by @vis.gl here.
-  const legsById = useMemo(() => {
-    const byId: Record<string, Leg> = {};
-    for (const leg of snapshot.library.legs) byId[leg.id] ??= leg;
-    return byId;
-  }, [snapshot.library.legs]);
+  const legsById = useMemo(
+    () => buildLegsById(snapshot.library.legs),
+    [snapshot.library.legs],
+  );
 
   const main = assessment.mainRoute;
   const sailingStages = useMemo(
@@ -120,6 +124,31 @@ export function MapView({
           </span>
           <AmpelBadge ampel={assessment.restTripAmpel} />
         </div>
+        <label className="wind-toggle">
+          <input
+            type="checkbox"
+            checked={showWind}
+            onChange={(e) => setShowWind(e.target.checked)}
+          />
+          Windfiedern
+        </label>
+        {showWind && (
+          <div className="wind-legende">
+            <span>
+              <WindBarb dirDeg={0} knots={5} size={30} /> 5 kn
+            </span>
+            <span>
+              <WindBarb dirDeg={0} knots={10} size={30} /> 10 kn
+            </span>
+            <span>
+              <WindBarb dirDeg={0} knots={25} size={30} /> 25 kn
+            </span>
+            <span>
+              <WindBarb dirDeg={0} knots={50} size={30} /> 50 kn
+            </span>
+            <span className="beschreibung">Schaft zeigt, woher der Wind kommt.</span>
+          </div>
+        )}
       </div>
 
       {!main && (
@@ -274,7 +303,11 @@ export function MapView({
               );
             })}
 
-            {nowIdx !== null &&
+            {/* FR3 — Windfiedern in der Notation der Wetterkarte. Anders als der
+                frühere Pfeil zeigt der Schaft dorthin, WOHER der Wind kommt
+                (AD-6), nicht wohin er weht. */}
+            {showWind &&
+              nowIdx !== null &&
               snapshot.library.places.map((place) => {
                 const fc = snapshot.forecast[place.id];
                 const kn = fc?.windKn[nowIdx] ?? null;
@@ -283,19 +316,18 @@ export function MapView({
                 return (
                   <AdvancedMarker
                     key={`wind-${place.id}`}
-                    position={{
-                      lat: place.coordinates.lat + 0.045,
-                      lng: place.coordinates.lon,
-                    }}
+                    position={upwindOffset(
+                      place.coordinates.lat,
+                      place.coordinates.lon,
+                      dir,
+                    )}
                     zIndex={5}
                   >
                     <div
-                      className="wind-arrow"
+                      className="wind-barb"
                       title={`Wind aus ${compass(dir)} (${Math.round(dir)}°), ${formatKn(kn)}`}
                     >
-                      <span style={{ transform: `rotate(${(dir + 180) % 360}deg)` }}>
-                        ↑
-                      </span>
+                      <WindBarb dirDeg={dir} knots={kn} size={40} />
                       <span className="kn">{Math.round(kn)}</span>
                     </div>
                   </AdvancedMarker>

@@ -568,11 +568,9 @@ hr.hairline,
   border-color: var(--navy);
 }
 
-.wind-arrow {
-  font-size: 1.9rem;
-  font-weight: 700;
-  color: var(--navy);
-  text-shadow: 0 0 4px #fff, 0 0 4px #fff, 0 0 6px #fff;
+/* Windfiedern: die SVG traegt einen weissen Halo, damit der Schaft auch ueber
+   dunklem Satellitenbild lesbar bleibt. */
+.wind-barb {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -580,14 +578,112 @@ hr.hairline,
   pointer-events: none;
 }
 
-.wind-arrow .kn {
-  font-size: 0.85rem;
+.wind-barb svg {
+  filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 3px #fff);
+}
+
+.wind-barb .kn {
+  font-size: 0.8rem;
   font-weight: 700;
+  color: var(--navy);
   background: rgba(255, 255, 255, 0.92);
-  padding: 0.05rem 0.3rem;
+  padding: 0.02rem 0.28rem;
   border-radius: 3px;
   border: 1px solid var(--navy);
-  transform: none;
+  margin-top: -0.35rem;
+}
+
+.wind-toggle {
+  border-top: 1px solid var(--hairline);
+  margin-top: 0.35rem;
+  padding-top: 0.45rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.wind-legende {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.wind-legende > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.wind-legende .beschreibung {
+  flex-basis: 100%;
+  font-size: 0.68rem;
+  font-style: italic;
+  margin: 0;
+}
+
+/* ---- Tageskarte im Rechnungs-Panel (FR30) --------------------------------- */
+
+.stage-map {
+  margin: 0.8rem 0 1rem;
+}
+
+.stage-map-canvas {
+  width: 100%;
+  height: min(46vh, 340px);
+  border: 1px solid var(--hairline);
+}
+
+.stage-map-legende {
+  margin: 0.45rem 0 0;
+  font-size: 0.75rem;
+}
+
+.stage-map-platz {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+  background: rgba(255, 253, 247, 0.94);
+  border: 1px solid var(--navy);
+  border-radius: 2px;
+  padding: 0.08rem 0.35rem 0.08rem 0.1rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Punktnummer im Platz-Label — dieselbe Zahl wie in der Spalte "Punkt". */
+.stage-map-nr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--creme);
+  font-size: 0.6rem;
+}
+
+.stage-map-wegpunkt {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--creme-card);
+  border: 2px solid var(--navy);
+  color: var(--navy);
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 /* ---- place detail ---------------------------------------------------------- */

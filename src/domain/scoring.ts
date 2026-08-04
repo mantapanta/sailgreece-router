@@ -16,6 +16,7 @@ import type {
   LegAssessment,
   LegHourBreakdown,
   PointForecast,
+  PointPassage,
 } from './schema/snapshot.ts';
 import { worstAmpel, type Ampel } from './schema/common.ts';
 import type { Coordinates } from './schema/common.ts';
@@ -84,6 +85,17 @@ interface LegPoint {
 /** Normative forecast key for the nth waypoint of a leg (AD-3). */
 export function legWaypointKey(legId: string, n: number): string {
   return `leg:${legId}:${n}`;
+}
+
+/**
+ * Liegezeit an einem Zwischenstopp des Tages — die EINE Quelle dieses Wertes.
+ *
+ * Vier Stellen verketten die Etappen eines Tages (assess, solver ×2, ppr); sie
+ * müssen alle dieselbe Liegezeit einsetzen, sonst bewertet der Solver einen
+ * anderen Tag als die Anzeige.
+ */
+export function stopHoursForDay(snapshot: PlanningSnapshot, day: number): number {
+  return snapshot.trip.stopHoursByDay[day] ?? snapshot.params.stopHoursDefault;
 }
 
 function legPoints(leg: Leg, snapshot: PlanningSnapshot): LegPoint[] | null {
@@ -187,6 +199,7 @@ export function assessLeg(
     nightLeg: null,
     arrivalHourAthens: null,
     breakdown: [],
+    pointPassages: [],
   });
   if (!points) return unbewertet('Start- oder Zielplatz fehlt in der Bibliothek');
 
@@ -242,6 +255,21 @@ export function assessLeg(
   const verdicts: Ampel[] = [];
   const reasons = new Set<string>();
   const breakdown: LegHourBreakdown[] = [];
+  // Kilometrierung der Punkte: cumNm[i] = Distanz ab Etappenstart bis Punkt i.
+  const cumNm: number[] = [0];
+  for (const s of segments) cumNm.push(cumNm[cumNm.length - 1]! + s.nm);
+  const passages: PointPassage[] = [
+    // Der Startpunkt wird nicht angefahren, sondern verlassen — seine Zeit ist
+    // die Abfahrtszeit, sein Abschnitt existiert nicht.
+    {
+      pointKey: points[0]!.key,
+      distanceNm: 0,
+      etaIso: new Date(departureMs).toISOString(),
+      segment: null,
+    },
+  ];
+  /** Nächster noch nicht passierter Punkt (0 ist der Start). */
+  let nextPointIdx = 1;
   let traveled = 0;
   let sailHours = 0;
   let motorHours = 0;
@@ -334,6 +362,8 @@ export function assessLeg(
 
     const remaining = total - traveled;
     const hourFraction = Math.min(1, remaining / speed);
+    const travelBefore = traveled;
+    const elapsedBefore = sailHours + motorHours;
     traveled += speed * hourFraction;
     if (motoring) motorHours += hourFraction;
     else sailHours += hourFraction;
@@ -350,11 +380,53 @@ export function assessLeg(
       distanceNm: speed * hourFraction,
       worstCase: usedWorstCase,
     });
+
+    // FR30 — Durchfahrten: jeder Punkt, dessen Kilometrierung in DIESER Stunde
+    // überfahren wurde, bekommt seine Zeit. Die Zeit wird innerhalb der Stunde
+    // linear interpoliert (konstanter Speed über die Stunde ist genau die
+    // Annahme, mit der auch `traveled` fortgeschrieben wird — keine zweite,
+    // abweichende Modellannahme).
+    while (
+      nextPointIdx < points.length &&
+      cumNm[nextPointIdx]! <= traveled + 1e-9
+    ) {
+      const dist = cumNm[nextPointIdx]!;
+      const hoursIntoStep = speed > 0 ? (dist - travelBefore) / speed : 0;
+      passages.push({
+        pointKey: points[nextPointIdx]!.key,
+        distanceNm: dist,
+        etaIso: new Date(
+          departureMs + (elapsedBefore + hoursIntoStep) * 3600_000,
+        ).toISOString(),
+        segment: {
+          courseDeg: segments[nextPointIdx - 1]?.course ?? seg.course,
+          distanceNm: segments[nextPointIdx - 1]?.nm ?? 0,
+          twsKn: progressWind.twsKn,
+          twaDeg: twa,
+          speedKn: speed,
+          motoring,
+          worstCase: usedWorstCase,
+        },
+      });
+      nextPointIdx += 1;
+    }
   }
 
   if (traveled < total) {
     verdicts.push('rot');
     reasons.add('Etappe in 24 h nicht zu schaffen');
+  }
+
+  // Nicht erreichte Punkte kommen MIT in die Liste, aber ohne Zeit: eine Etappe,
+  // die im Fenster nicht fertig wird, darf keine Durchfahrtszeiten behaupten —
+  // und die Punkte stillschweigend weglassen würde die Karte verstümmeln.
+  for (; nextPointIdx < points.length; nextPointIdx++) {
+    passages.push({
+      pointKey: points[nextPointIdx]!.key,
+      distanceNm: cumNm[nextPointIdx]!,
+      etaIso: null,
+      segment: null,
+    });
   }
 
   // FR16 night leg (AD-9 window bounds): the passage starts before the night
@@ -387,5 +459,6 @@ export function assessLeg(
     nightLeg,
     arrivalHourAthens: arrivalAthens,
     breakdown,
+    pointPassages: passages,
   };
 }

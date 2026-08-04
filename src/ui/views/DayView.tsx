@@ -10,17 +10,30 @@
  * values, not even the stage number — that comes from domain/schema/plan.ts).
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
   PlanAssessment,
   PlanningSnapshot,
   StageAssessment,
   LegHourBreakdown,
+  PointPassage,
 } from '../../domain/schema/snapshot.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
+import { StageMap } from '../components/StageMap.tsx';
+import {
+  buildLegsById,
+  pointNumberByForecastKey,
+  stagePoints,
+} from '../mapPath.ts';
 import { usePlanning } from '../../app/planningContext.tsx';
-import { formatHours, formatKn, formatTripDayDate } from '../format.ts';
+import {
+  formatAthensTime,
+  formatHours,
+  formatKn,
+  formatTripDayDate,
+} from '../format.ts';
 
 function islandName(snapshot: PlanningSnapshot, islandId: string): string {
   return snapshot.library.islands.find((i) => i.id === islandId)?.name ?? islandId;
@@ -31,42 +44,119 @@ function placeName(snapshot: PlanningSnapshot, placeId: string | null): string {
   return snapshot.library.places.find((p) => p.id === placeId)?.name ?? placeId;
 }
 
-/** FR30 — how this duration came about, hour by hour. */
-function Breakdown({ hours }: { hours: LegHourBreakdown[] }) {
-  if (hours.length === 0) {
+/**
+ * "Kea (Vourkari)" — eine Insel ist kein Ziel, ein Liegeplatz ist eins.
+ *
+ * Trägt der Inselname selbst schon eine Klammer ("Athen (Basis)"), wird sie
+ * beim Anhängen des Platzes weggelassen: "Athen (Basis) (Marina Alimos)" wäre
+ * doppelt geklammert, und der Zusatz ist ohnehin redundant, sobald der
+ * konkrete Liegeplatz dasteht.
+ */
+function islandWithPlace(
+  snapshot: PlanningSnapshot,
+  islandId: string,
+  placeId: string | null,
+): string {
+  const island = islandName(snapshot, islandId);
+  if (!placeId) return island;
+  return `${island.replace(/\s*\([^)]*\)\s*$/, '')} (${placeName(snapshot, placeId)})`;
+}
+
+/**
+ * Etappenname von Liegeplatz zu Liegeplatz: "Kea (Vourkari) → Kythnos (Kolona)".
+ *
+ * Der Startplatz kommt aus der ERSTEN Etappe des Tages, das Ziel ist der
+ * tatsächlich gewählte Nachtplatz (`stage.placeId`) — nicht der nominelle
+ * Zielplatz der letzten Etappe. Sonst würde die Überschrift einen anderen
+ * Hafen nennen als die Platz-Zeile darunter.
+ */
+function stageTitle(snapshot: PlanningSnapshot, stage: StageAssessment): string {
+  const to = islandWithPlace(snapshot, stage.toIslandId, stage.placeId);
+  const firstLegId = stage.legs[0]?.legId;
+  const firstLeg = firstLegId
+    ? snapshot.library.legs.find((l) => l.id === firstLegId)
+    : undefined;
+  if (!firstLeg) return to;
+  return `${islandWithPlace(snapshot, firstLeg.fromIslandId, firstLeg.fromPlaceId)} → ${to}`;
+}
+
+/** Zwischenstopps eines Mehr-Etappen-Tages, ebenfalls mit Liegeplatz. */
+function stageVia(snapshot: PlanningSnapshot, stage: StageAssessment): string[] {
+  return stage.legs.slice(0, -1).map((la) => {
+    const leg = snapshot.library.legs.find((l) => l.id === la.legId);
+    return leg
+      ? islandWithPlace(snapshot, leg.toIslandId, leg.toPlaceId)
+      : la.legId.replace('--', ' → ');
+  });
+}
+
+/**
+ * FR30 — how this duration came about, hour by hour.
+ *
+ * `pointNumbers` bildet den Forecast-Key jeder Stunde auf die Punktnummer der
+ * Tageskarte ab. Fehlt ein Key in der Karte (abgeleitete Etappe mit fremden
+ * Keys), bleibt die Zelle leer statt eine falsche Nummer zu behaupten.
+ */
+function Breakdown({
+  hours,
+  passages,
+  pointNumbers,
+}: {
+  hours: LegHourBreakdown[];
+  passages: PointPassage[];
+  pointNumbers: Record<string, number>;
+}) {
+  if (passages.length === 0) {
     return <p className="beschreibung">Keine Berechnung verfügbar (unbewertet).</p>;
   }
   const sailed = hours.filter((h) => !h.motoring).length;
   const motored = hours.length - sailed;
   return (
     <div className="breakdown">
-      <p className="beschreibung">
-        {hours.length} simulierte Stunden · {sailed} unter Segeln, {motored} unter
-        Motor
-        {hours.some((h) => h.worstCase) && ' · Fernbereich gegen Meltemi-Worst-Case'}
-      </p>
+      {hours.length > 0 && (
+        <p className="beschreibung">
+          {hours.length} simulierte Stunden · {sailed} unter Segeln, {motored} unter
+          Motor
+          {hours.some((h) => h.worstCase) && ' · Fernbereich gegen Meltemi-Worst-Case'}
+        </p>
+      )}
       <table className="breakdown-table">
         <thead>
           <tr>
-            <th>Zeit (UTC)</th>
+            <th>Punkt</th>
+            <th>Zeit (Athen)</th>
+            <th>Distanz ab Start</th>
+            <th>Abschnitt</th>
             <th>Kurs</th>
             <th>Wind</th>
             <th>TWA</th>
             <th>Speed</th>
-            <th>Distanz</th>
           </tr>
         </thead>
         <tbody>
-          {hours.map((h, i) => (
-            <tr key={`${h.timeIso}-${i}`} className={h.worstCase ? 'worst-case' : ''}>
-              <td>{h.timeIso.slice(11, 16)}</td>
-              <td>{Math.round(h.courseDeg)}°</td>
-              <td>{formatKn(h.twsKn)}</td>
-              <td>{Math.round(h.twaDeg)}°</td>
-              <td>
-                {h.speedKn.toFixed(1)} kn{h.motoring ? ' (Motor)' : ''}
-              </td>
-              <td>{h.distanceNm.toFixed(1)} sm</td>
+          {passages.map((p) => (
+            <tr
+              key={p.pointKey}
+              className={p.segment?.worstCase ? 'worst-case' : ''}
+            >
+              <td>{pointNumbers[p.pointKey] ?? '–'}</td>
+              <td>{p.etaIso ? formatAthensTime(p.etaIso) : '–'}</td>
+              <td>{p.distanceNm.toFixed(1)} sm</td>
+              {p.segment ? (
+                <>
+                  <td>{p.segment.distanceNm.toFixed(1)} sm</td>
+                  <td>{Math.round(p.segment.courseDeg)}°</td>
+                  <td>{formatKn(p.segment.twsKn)}</td>
+                  <td>{Math.round(p.segment.twaDeg)}°</td>
+                  <td>
+                    {p.segment.speedKn.toFixed(1)} kn
+                    {p.segment.motoring ? ' (Motor)' : ''}
+                  </td>
+                </>
+              ) : (
+                // Startpunkt: es gibt keinen Abschnitt, der zu ihm führt.
+                <td colSpan={5}>Abfahrt</td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -85,7 +175,7 @@ function StageEditor({
   snapshot: PlanningSnapshot;
   onClose: () => void;
 }) {
-  const { editStage, releasePin } = usePlanning();
+  const { editStage, releasePin, setStopHours } = usePlanning();
   const [error, setError] = useState<string | null>(null);
   const placesOnIsland = snapshot.library.places.filter(
     (p) => p.islandId === stage.toIslandId,
@@ -137,6 +227,37 @@ function StageEditor({
           </select>
         </label>
       )}
+      {stage.legs.length > 1 && (
+        <label>
+          Liegezeit je Zwischenstopp (h)
+          <input
+            type="number"
+            min={0}
+            max={12}
+            step={0.5}
+            value={stage.stopHoursPerStop}
+            onChange={(e) => {
+              const v = e.target.value;
+              setStopHours(stage.day, v === '' ? null : Number(v));
+            }}
+          />
+          <button
+            type="button"
+            className="secondary"
+            title={`Zurück auf den Standardwert (${snapshot.params.stopHoursDefault} h)`}
+            onClick={() => setStopHours(stage.day, null)}
+          >
+            Standard
+          </button>
+        </label>
+      )}
+      {stage.legs.length > 1 && (
+        <p className="beschreibung">
+          Die Pause verschiebt die Abfahrt der Folge-Etappe — nach drei Stunden
+          Mittag fällt der zweite Schlag in den aufgebauten Nachmittags-Meltemi.
+          Sie zählt nicht ins Fahrt-Budget.
+        </p>
+      )}
       <div className="editor-actions">
         {stage.pinned && (
           <button
@@ -164,15 +285,24 @@ function StageCard({
   snapshot,
   isToday,
   onOpenPlace,
+  mapId,
 }: {
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
   isToday: boolean;
   onOpenPlace: (placeId: string) => void;
+  /** Null when no Maps key is configured — the panel then stays text-only. */
+  mapId: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const { params } = snapshot;
+  // EINE Punktliste für Karte und Rechnung — daraus die Nummern für beide.
+  const points = useMemo(
+    () => stagePoints(stage, buildLegsById(snapshot.library.legs), snapshot),
+    [stage, snapshot],
+  );
+  const pointNumbers = useMemo(() => pointNumberByForecastKey(points), [points]);
   const totalHours = stage.legs.reduce((s, l) => s + (l.totalHours ?? 0), 0);
   const distance = stage.legs.reduce((s, l) => {
     const leg = snapshot.library.legs.find((x) => x.id === l.legId);
@@ -195,15 +325,28 @@ function StageCard({
 
       <div className="headline">
         {stage.kind === 'harbour'
-          ? `Bleiben: ${islandName(snapshot, stage.toIslandId)}`
-          : islandName(snapshot, stage.toIslandId)}
+          ? `Bleiben: ${islandWithPlace(snapshot, stage.toIslandId, stage.placeId)}`
+          : stageTitle(snapshot, stage)}
         {stage.pinned && <span className="pin-chip" title="Vom Skipper festgelegt">📌 festgelegt</span>}
       </div>
+      {stage.kind === 'stage' && stageVia(snapshot, stage).length > 0 && (
+        <div className="beschreibung">über {stageVia(snapshot, stage).join(' · ')}</div>
+      )}
 
       {stage.kind === 'stage' && (
         <div className="badges">
           {distance > 0 && <span className="badge">{Math.round(distance)} sm</span>}
-          <span className="badge">{formatHours(totalHours || null)}</span>
+          <span className="badge" title="Stunden unter Segeln und Motor">
+            {formatHours(totalHours || null)} Fahrt
+          </span>
+          {stage.stopHoursTotal > 0 && (
+            <span
+              className="badge"
+              title="Geplante Liegezeit an den Zwischenstopps — verschiebt die Abfahrt der Folge-Etappe"
+            >
+              {formatHours(stage.stopHoursTotal)} Liegezeit
+            </span>
+          )}
           {stage.legs.length > 1 && (
             <span className="badge">{stage.legs.length} Schläge an einem Tag</span>
           )}
@@ -251,15 +394,37 @@ function StageCard({
       {editing && (
         <StageEditor stage={stage} snapshot={snapshot} onClose={() => setEditing(false)} />
       )}
-      {expanded &&
-        stage.legs.map((l) => (
-          <div key={l.legId}>
-            <div className="beschreibung">
-              <strong>{l.legId.replace('--', ' → ')}</strong>
+      {expanded && (
+        <>
+          {/* FR30 — WHERE before WHEN: the zoomed day trip with its waypoints,
+              then the hour-by-hour calculation those waypoints feed. */}
+          {mapId ? (
+            <StageMap
+              points={points}
+              ampel={stage.ampel}
+              mapId={mapId}
+              onOpenPlace={onOpenPlace}
+            />
+          ) : (
+            <p className="beschreibung">
+              Tageskarte nicht verfügbar — kein <code>VITE_GOOGLE_MAPS_API_KEY</code>{' '}
+              gesetzt. Die Rechnung unten ist davon unberührt.
+            </p>
+          )}
+          {stage.legs.map((l) => (
+            <div key={l.legId}>
+              <div className="beschreibung">
+                <strong>{l.legId.replace('--', ' → ')}</strong>
+              </div>
+              <Breakdown
+                hours={l.breakdown}
+                passages={l.pointPassages}
+                pointNumbers={pointNumbers}
+              />
             </div>
-            <Breakdown hours={l.breakdown} />
-          </div>
-        ))}
+          ))}
+        </>
+      )}
     </article>
   );
 }
@@ -317,7 +482,14 @@ export function DayView({
   const restStages = main?.stages.filter((s) => s.day > day) ?? [];
   const pastStages = main?.stages.filter((s) => s.day < day) ?? [];
 
-  return (
+  // Exactly ONE APIProvider for the whole view: several expanded stage cards
+  // then share a single Maps script load instead of each mounting its own.
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+  const mapId = apiKey
+    ? (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID'
+    : null;
+
+  const content = (
     <div>
       <span className="versal">
         Tag {day} · {formatTripDayDate(params.tripStartDate, day)}
@@ -381,6 +553,7 @@ export function DayView({
             snapshot={snapshot}
             isToday
             onOpenPlace={onOpenPlace}
+            mapId={mapId}
           />
         </section>
       )}
@@ -397,6 +570,7 @@ export function DayView({
                 snapshot={snapshot}
                 isToday={false}
                 onOpenPlace={onOpenPlace}
+                mapId={mapId}
               />
             ))}
           </div>
@@ -511,4 +685,9 @@ export function DayView({
       </section>
     </div>
   );
+
+  // No key: render the view unchanged. The day cards then explain the missing
+  // map in place, exactly as the map view does — never a crash (NFR).
+  if (!apiKey) return content;
+  return <APIProvider apiKey={apiKey}>{content}</APIProvider>;
 }

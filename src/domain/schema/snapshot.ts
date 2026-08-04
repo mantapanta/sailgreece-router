@@ -43,6 +43,15 @@ export interface TripFrame {
   plan: Plan | null;
   /** Athens local departure hour override for today (FR15). */
   departureHourOverride: number | null;
+  /**
+   * Liegezeit an den Zwischenstopps, pro Törntag überschrieben. Fehlt ein Tag,
+   * gilt `params.stopHoursDefault`.
+   *
+   * Anders als `departureHourOverride` gilt das NICHT nur für heute: eine
+   * geplante Badepause an Tag 5 ist eine Planungsentscheidung für Tag 5 und
+   * muss dessen Bewertung auch dann tragen, wenn heute Tag 1 ist.
+   */
+  stopHoursByDay: Record<number, number>;
 }
 
 export interface Library {
@@ -114,6 +123,50 @@ export interface LegHourBreakdown {
   worstCase: boolean;
 }
 
+/**
+ * FR30 — Durchfahrt eines Etappenpunktes (Startplatz, Wegpunkt, Zielplatz).
+ *
+ * Das ist die Zeile, aus der die Rechnung besteht: jeder Punkt genau EINMAL,
+ * mit Distanz ab Etappenstart und Durchfahrtszeit. Eine stündliche Zeile kann
+ * das nicht leisten — in einer Stunde wird mal kein Punkt passiert und mal
+ * zwei, je nach Speed; genau deshalb fehlten in der alten Tabelle Punkte und
+ * andere standen doppelt.
+ *
+ * Die Wind-/Speed-Werte sind die der Stunde, IN DER der Punkt passiert wurde —
+ * keine gemittelte Näherung, sondern der Zustand am Durchfahrtszeitpunkt.
+ *
+ * Erzeugt ausschliesslich von assessLeg (AD-3); Views rechnen nichts nach,
+ * insbesondere keine Distanzen aus Koordinaten (AD-2).
+ */
+export interface PointPassage {
+  /** Forecast key des Punktes — matcht die Punktnummer der Tageskarte. */
+  pointKey: string;
+  /** Distanz ab Start DIESER Etappe in sm. */
+  distanceNm: number;
+  /**
+   * Durchfahrtszeit (ISO-UTC) oder null, wenn die Etappe den Punkt im
+   * Simulationsfenster nicht erreicht — dann wird keine Zeit erfunden.
+   */
+  etaIso: string | null;
+  /**
+   * Abschnitt, der ZU diesem Punkt führt. Null beim Startpunkt, der nicht
+   * angefahren, sondern verlassen wird.
+   */
+  segment: {
+    /** Rechtweisender Kurs des Abschnitts. */
+    courseDeg: number;
+    /** Länge NUR dieses Abschnitts in sm. */
+    distanceNm: number;
+    /** Wind und Fahrt der Stunde, in der der Punkt passiert wurde. */
+    twsKn: number;
+    twaDeg: number;
+    speedKn: number;
+    motoring: boolean;
+    /** Diese Stunde rechnete gegen den Meltemi-Worst-Case (AD-13). */
+    worstCase: boolean;
+  } | null;
+}
+
 export interface LegAssessment {
   legId: string;
   day: number;
@@ -135,8 +188,17 @@ export interface LegAssessment {
   nightLeg: boolean | null;
   /** Arrival time in Athens hours from midnight of the departure day (display). */
   arrivalHourAthens: number | null;
-  /** FR30 calculation trail; empty when the leg could not be simulated. */
+  /**
+   * FR30 calculation trail, hour by hour; empty when the leg could not be
+   * simulated. Trägt die Summenzeile ("5 simulierte Stunden, 4 unter Segeln");
+   * die angezeigte Tabelle ist `pointPassages`.
+   */
   breakdown: LegHourBreakdown[];
+  /**
+   * FR30 — die angezeigte Rechnung: jeder Etappenpunkt einmal, mit Distanz und
+   * Durchfahrtszeit. Leer, wenn die Etappe nicht simuliert werden konnte.
+   */
+  pointPassages: PointPassage[];
 }
 
 export type OptionState = 'offen' | 'offen-horizont' | 'schliesst' | 'zu';
@@ -194,6 +256,17 @@ export interface StageAssessment {
   legs: LegAssessment[];
   /** True when the skipper pinned this day. */
   pinned: boolean;
+  /**
+   * Liegezeit je Zwischenstopp dieses Tages (Stunden) — der wirksame Wert,
+   * Override oder Default. Auch an Tagen ohne Zwischenstopp gesetzt, damit die
+   * Ansicht ihn zum Bearbeiten anbieten kann.
+   */
+  stopHoursPerStop: number;
+  /**
+   * Summe der Liegezeit dieses Tages: (Anzahl Etappen − 1) × stopHoursPerStop.
+   * Null Etappen oder ein Hafentag ergeben 0.
+   */
+  stopHoursTotal: number;
 }
 
 /**
