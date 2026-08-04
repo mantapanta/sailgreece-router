@@ -112,7 +112,7 @@ export function MapView({
   const itinerary = (
     <div className="map-itinerary">
       <div className="route-toggles">
-        <span className="versal">Round-Trip (FR2)</span>
+        <span className="versal">Round-Trip</span>
         <div className="legend">
           <span>
             <span className="legend-line solid" style={{ background: SAILED_LINE_COLOR }} />
