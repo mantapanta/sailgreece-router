@@ -1,0 +1,167 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 138/139 — Seitenangaben unverifiziert; CruisersWiki Spetses). Neu aufgenommen. Alle Sektoren sind quellintern konsistent. Dapia ist laut Quelle für Yachten tagsüber meist gesperrt — vor Freigabe entscheiden, ob der Platz in der Bibliothek bleibt.",
+  "island": {
+    "id": "spetses",
+    "name": "Spetses",
+    "coordinates": { "lat": 37.26, "lon": 23.14 },
+    "description": "Kiefern, Kutschen und Holzwerften — die eleganteste Insel des Argolischen Golfs.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich über 4 Verbindungen ab Piräus (Katamaran/Hydrofoil 2 h bis 2 h 30), Quelle NetFerry Spetses (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "spetses-baltiza",
+      "islandId": "spetses",
+      "name": "Baltiza (Alter Hafen)",
+      "type": "hafen",
+      "coordinates": { "lat": 37.2618, "lon": 23.165 },
+      "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 280, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 280, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 138, CruisersWiki Spetses): Öffnung nach NW, Sektor 340–280, maxKn 32 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Der alte Hafen mit den traditionellen Holzwerften — abends die beste Adresse der Insel.",
+      "warnings": [
+        "Sehr enge Hafeneinfahrt",
+        "Gefahr unklarer Anker durch dicht liegende Yachten; viele alte Ketten am Grund",
+        "Privatbojen lokaler Eigner nicht nutzen",
+        "Leichte Unruhe bei Nordwestwind"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 138 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Spetses (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 4.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Weicher Schlamm hält gut, aber viele alte Ketten am Grund.",
+        "seagrassNote": "In der Hafeneinfahrt Seegras vorhanden.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Minimarkt, 2 Minuten am Becken",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an den Pierabschnitten",
+        "priceIndicationEur": "ca. 15–25 EUR/Nacht (2024, Hafenbehörde)",
+        "portAuthorityFees": "Limenarchio Spetses",
+        "maxLoaM": 20,
+        "swellExposureNote": "Gut geschützt bei Meltemi, leichte Unruhe bei NW-Wind.",
+        "ferryTrafficNote": "Wassertaxis fahren mit hoher Geschwindigkeit am Eingang vorbei.",
+        "dinghyLanding": null,
+        "restrictions": "Privatbojen lokaler Eigner nicht nutzen",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Spetses (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "spetses-zogeria",
+      "islandId": "spetses",
+      "name": "Zogeria",
+      "type": "bucht",
+      "coordinates": { "lat": 37.2783, "lon": 23.1017 },
+      "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 300, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 300, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 139, CruisersWiki Spetses): Öffnung nach N, Sektor 60–300, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Kiefernbucht an der Nordwestküste mit klarem Wasser und einer Taverne am Strand.",
+      "warnings": [
+        "Unterwasserfelsen an der Nordostseite beachten",
+        "Nach Norden offen — bei kräftigem Meltemi kein Nachtplatz"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 139 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Spetses (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Ausgezeichneter Halt auf den weiten Sandflächen.",
+        "seagrassNote": "Dunkle Seegrasbereiche im klaren Wasser gut sichtbar.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Taverne, 2 Minuten am Strand",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Taverne",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Laut Quelle gute Abdeckung gegen Wellen aus NE bis E.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Einfaches Anlanden am flachen Sandstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Spetses (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "spetses-dapia",
+      "islandId": "spetses",
+      "name": "Dapia (Neuer Hafen)",
+      "type": "hafen",
+      "coordinates": { "lat": 37.2682, "lon": 23.1563 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 90, "toDeg": 310, "maxKn": 18 }],
+        "waveSectors": [{ "fromDeg": 90, "toDeg": 310, "maxM": 0.6 }],
+        "sourceNote": "Deep-Research Lauf 1 (CruisersWiki Spetses, Abruf 2026-08): Öffnung nach N bis NE, Sektor 90–310, maxKn 18 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle, daher nur mittlere Konfidenz."
+      },
+      "description": "Der Fähranleger vor dem Poseidonion — zum Aussteigen, nicht zum Übernachten.",
+      "warnings": [
+        "NICHT ALS NACHTPLATZ GEEIGNET: laut Quelle ist das Anlegen für Yachten tagsüber meist verboten, Platz für höchstens 5 Boote",
+        "Voll exponiert gegenüber Meltemi, starker Schwell durch Fähr- und Hydrofoil-Verkehr",
+        "Haltegrund schlecht (harter Fels mit Sandanteil)",
+        "Vor der Freigabe prüfen, ob dieser Platz überhaupt in der Bibliothek bleiben soll"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 1: CruisersWiki Spetses (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "laengsseits",
+        "depthAtBerthM": { "min": 3.0, "max": 6.0 },
+        "anchorHoldingGround": "fels",
+        "holdingQuality": "schlecht",
+        "holdingNote": "Harter Grund aus Fels mit Sandanteil.",
+        "seagrassNote": null,
+        "capacityYachts": 5,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 1 Minute Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter im Ort",
+        "priceIndicationEur": "Nur kurzes Festmachen genehmigt",
+        "portAuthorityFees": "Limenarchio Spetses",
+        "maxLoaM": 15,
+        "swellExposureNote": "Voll exponiert gegenüber Meltemi.",
+        "ferryTrafficNote": "Sehr hoher Fähr- und Hydrofoil-Verkehr.",
+        "dinghyLanding": "Kurzes Anlanden am Treppenanleger erlaubt",
+        "restrictions": "Anlegen für Yachten tagsüber meist verboten",
+        "vhfChannel": "12",
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Spetses (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

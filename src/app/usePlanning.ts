@@ -9,12 +9,14 @@
  * `usePlanning()` so the full option/PPR search never runs twice per render.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadLibraryBundle } from '../adapters/firestore.ts';
 import { collectLocations, fetchForecastBundle } from '../adapters/openMeteo.ts';
 import { assessPlanning } from '../domain/assess.ts';
+import { completePlan, type Pin } from '../domain/solver.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
+import type { Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
 
 export const STALE_TIME_MS = 3600_000; // ~1 h (FR13)
@@ -30,7 +32,7 @@ function libraryLocationsHash(keys: string[]): string {
 }
 
 export function usePlanningEngine() {
-  const { state: trip } = useTrip();
+  const { state: trip, dispatch } = useTrip();
 
   const libraryQuery = useQuery({
     queryKey: ['library'],
@@ -81,15 +83,92 @@ export function usePlanningEngine() {
       trip: {
         currentDay,
         position: trip.position,
-        trackedRouteId: trip.trackedRouteId,
+        plan: trip.plan,
         departureHourOverride: trip.departureHourOverride,
+        stopHoursByDay: trip.stopHoursByDay,
       },
     };
-  }, [bundle, forecastQuery.data, currentDay, trip.position, trip.trackedRouteId, trip.departureHourOverride]);
+  }, [
+    bundle,
+    forecastQuery.data,
+    currentDay,
+    trip.position,
+    trip.plan,
+    trip.departureHourOverride,
+    trip.stopHoursByDay,
+  ]);
 
   const assessment: Assessment | null = useMemo(
     () => (snapshot ? assessPlanning(snapshot) : null),
     [snapshot],
+  );
+
+  // The ONE plan-changing reaction to an assessment (AD-12): on first start
+  // there must be a main route. Guarded in the reducer too, so an unreadable
+  // stored plan is never silently replaced.
+  useEffect(() => {
+    if (!trip.plan && !trip.planUnreadable && assessment?.proposal) {
+      dispatch({ type: 'ADOPT_INITIAL', plan: assessment.proposal.plan });
+    }
+  }, [trip.plan, trip.planUnreadable, assessment?.proposal, dispatch]);
+
+  /** Current skipper pins, read off the persisted plan. */
+  const pins: Pin[] = useMemo(
+    () =>
+      (trip.plan?.days ?? [])
+        .filter((d) => d.source === 'skipper')
+        .map((d) => ({
+          day: d.day,
+          toIslandId: d.kind === 'stage' ? d.toIslandId : null,
+          toPlaceId: d.kind === 'stage' ? d.toPlaceId : d.placeId,
+        })),
+    [trip.plan],
+  );
+
+  /**
+   * FR28 — the skipper sets a day's target; the rest of the trip is recomputed
+   * SYNCHRONOUSLY here and dispatched as one finished plan, so pin and
+   * completion always come from the same snapshot (AD-12, one mutation path).
+   * Returns false when no round trip can honour the pin at all (a data limit,
+   * not a rating: no leg leads there).
+   */
+  const editStage = useCallback(
+    (day: number, toIslandId: string | null, toPlaceId?: string): boolean => {
+      if (!snapshot || !assessment?.currentIslandId) return false;
+      const nextPins: Pin[] = [
+        ...pins.filter((p) => p.day !== day),
+        { day, toIslandId, toPlaceId },
+      ];
+      const solved = completePlan(snapshot, assessment.currentIslandId, nextPins);
+      if (!solved) return false;
+      dispatch({ type: 'EDIT_STAGE', plan: solved.plan });
+      return true;
+    },
+    [snapshot, assessment?.currentIslandId, pins, dispatch],
+  );
+
+  /** FR29 — adopt a proposal or alternative as the new main route. */
+  const checkIn = useCallback(
+    (plan: Plan) => dispatch({ type: 'CHECK_IN', plan }),
+    [dispatch],
+  );
+
+  const releasePin = useCallback(
+    (day: number) => dispatch({ type: 'RELEASE_PIN', day }),
+    [dispatch],
+  );
+
+  /**
+   * Liegezeit eines Tages setzen; null geht auf `params.stopHoursDefault`
+   * zurück. Der Plan bleibt unangetastet (AD-12) — nur seine Bewertung
+   * verschiebt sich, weil die Folge-Etappe später abfährt.
+   */
+  const setStopHours = useCallback(
+    (day: number, hours: number | null) => {
+      if (hours !== null && (!Number.isFinite(hours) || hours < 0 || hours > 12)) return;
+      dispatch({ type: 'SET_STOP_HOURS', day, hours });
+    },
+    [dispatch],
   );
 
   return {
@@ -99,6 +178,11 @@ export function usePlanningEngine() {
     snapshot,
     assessment,
     currentDay,
+    pins,
+    editStage,
+    checkIn,
+    releasePin,
+    setStopHours,
   };
 }
 

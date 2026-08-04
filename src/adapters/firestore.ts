@@ -13,20 +13,25 @@ import { z } from 'zod';
 import {
   IslandSchema,
   PlaceSchema,
-  RouteSchema,
+  LegSchema,
+  VariantSchema,
   ParamsSchema,
   PolarSchema,
   DEFAULT_PARAMS,
   IslandStagingFileSchema,
-  RoutesStagingFileSchema,
+  LegsStagingFileSchema,
+  VariantsStagingFileSchema,
   ConfigStagingFileSchema,
   PolarStagingFileSchema,
+  polarFromFirestore,
 } from '../domain/schema/index.ts';
+import { getFirestoreDb, isFirebaseConfigured } from './firebase.ts';
 import type {
   Island,
   Place,
   InvalidPlace,
-  Route,
+  Leg,
+  Variant,
   Params,
   Polar,
   Library,
@@ -115,21 +120,40 @@ async function loadFromLocal(): Promise<LibraryBundle> {
   }
   const { places, invalidPlaces } = parsePlaces(rawPlaces);
 
-  let routes: Route[] = [];
+  // Legs and variants are separate files since the leg/variant split (AD-4):
+  // legs exist once, variants reference them by id.
+  let legs: Leg[] = [];
   try {
-    const mod = (await import('../../seeding/data/routes.json')) as { default: unknown };
-    const file = RoutesStagingFileSchema.safeParse(mod.default);
+    const mod = (await import('../../seeding/data/legs.json')) as { default: unknown };
+    const file = LegsStagingFileSchema.safeParse(mod.default);
     if (file.success) {
-      routes = file.data.routes;
+      legs = file.data.legs;
     } else {
-      console.error('routes.json ungültig:', file.error.issues);
-      const loose = mod.default as { routes?: unknown[] };
-      routes = (loose?.routes ?? [])
-        .map((r) => parseTolerant(RouteSchema, r, 'Route'))
-        .filter((r): r is Route => r !== null);
+      console.error('legs.json ungültig:', file.error.issues);
+      const loose = mod.default as { legs?: unknown[] };
+      legs = (loose?.legs ?? [])
+        .map((l) => parseTolerant(LegSchema, l, 'Etappe'))
+        .filter((l): l is Leg => l !== null);
     }
   } catch (e) {
-    console.error('routes.json fehlt oder nicht ladbar:', e);
+    console.error('legs.json fehlt oder nicht ladbar:', e);
+  }
+
+  let variants: Variant[] = [];
+  try {
+    const mod = (await import('../../seeding/data/variants.json')) as { default: unknown };
+    const file = VariantsStagingFileSchema.safeParse(mod.default);
+    if (file.success) {
+      variants = file.data.variants;
+    } else {
+      console.error('variants.json ungültig:', file.error.issues);
+      const loose = mod.default as { variants?: unknown[] };
+      variants = (loose?.variants ?? [])
+        .map((v) => parseTolerant(VariantSchema, v, 'Variante'))
+        .filter((v): v is Variant => v !== null);
+    }
+  } catch (e) {
+    console.error('variants.json fehlt oder nicht ladbar:', e);
   }
 
   let params: Params = DEFAULT_PARAMS;
@@ -152,7 +176,7 @@ async function loadFromLocal(): Promise<LibraryBundle> {
     console.warn('polar.json fehlt — Fallback-Pauschalen aktiv');
   }
 
-  return { library: { islands, places, invalidPlaces, routes }, params, polar };
+  return { library: { islands, places, invalidPlaces, legs, variants }, params, polar };
 }
 
 // ---------------------------------------------------------------------------
@@ -160,30 +184,23 @@ async function loadFromLocal(): Promise<LibraryBundle> {
 // ---------------------------------------------------------------------------
 
 async function loadFromFirestore(): Promise<LibraryBundle> {
-  const { initializeApp, getApps } = await import('firebase/app');
-  const { getFirestore, collection, getDocs, doc, getDoc } = await import(
-    'firebase/firestore'
-  );
-
-  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-  if (!projectId) {
+  if (!isFirebaseConfigured()) {
     throw new DataSourceError(
-      'VITE_FIREBASE_PROJECT_ID fehlt — Firestore-Datenquelle nicht konfiguriert (siehe README).',
+      'Firebase-Konfiguration unvollständig — Firestore-Datenquelle nicht nutzbar (siehe .env.example).',
     );
   }
-  const app =
-    getApps()[0] ??
-    initializeApp({
-      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-      projectId,
-      appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    });
-  const db = getFirestore(app);
+  // One shared FirebaseApp for auth and data: the reads below carry the signed-in
+  // user's ID token, which the rules require (AD-5: read for signed-in, never write).
+  const db = await getFirestoreDb();
+  const { collection, getDocs, doc, getDoc } = await import('firebase/firestore');
 
-  const [islandsSnap, placesSnap, routesSnap, paramsSnap, polarSnap] =
+  const [islandsSnap, placesSnap, legsSnap, variantsSnap, paramsSnap, polarSnap] =
     await Promise.all([
       getDocs(collection(db, 'islands')),
       getDocs(collection(db, 'places')),
+      // Legs are their own top-level collection since the leg/variant split
+      // (AD-4/AD-5); variants reference them by id.
+      getDocs(collection(db, 'legs')),
       getDocs(collection(db, 'routes')),
       getDoc(doc(db, 'config', 'parameters')),
       getDoc(doc(db, 'config', 'polar')),
@@ -197,9 +214,13 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     placesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
   );
 
-  const routes = routesSnap.docs
-    .map((d) => parseTolerant(RouteSchema, { id: d.id, ...d.data() }, 'Route'))
-    .filter((r): r is Route => r !== null);
+  const legs = legsSnap.docs
+    .map((d) => parseTolerant(LegSchema, { id: d.id, ...d.data() }, 'Etappe'))
+    .filter((l): l is Leg => l !== null);
+
+  const variants = variantsSnap.docs
+    .map((d) => parseTolerant(VariantSchema, { id: d.id, ...d.data() }, 'Variante'))
+    .filter((v): v is Variant => v !== null);
 
   let params: Params = DEFAULT_PARAMS;
   if (paramsSnap.exists()) {
@@ -209,8 +230,9 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
 
   let polar: Polar | null = null;
   if (polarSnap.exists()) {
-    polar = parseTolerant(PolarSchema, polarSnap.data(), 'Polar');
+    // The matrix is stored row-wise because Firestore forbids nested arrays.
+    polar = parseTolerant(PolarSchema, polarFromFirestore(polarSnap.data()), 'Polar');
   }
 
-  return { library: { islands, places, invalidPlaces, routes }, params, polar };
+  return { library: { islands, places, invalidPlaces, legs, variants }, params, polar };
 }

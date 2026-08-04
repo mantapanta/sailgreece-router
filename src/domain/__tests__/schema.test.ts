@@ -62,11 +62,31 @@ describe('params schema — cross-field validation (AD-8: config editable withou
     expect(ParamsSchema.safeParse({ gelbReserveKn: 25, maxUpwindTwsKn: 25 }).success).toBe(false);
   });
 
-  it('rejects a deadline before trip day 1 (disembarkDay - 1 - bufferDays < 1)', () => {
-    expect(ParamsSchema.safeParse({ disembarkDay: 2, bufferDays: 1 }).success).toBe(false);
+  it('rejects a return deadline before the trip starts', () => {
+    expect(
+      ParamsSchema.safeParse({
+        tripStartDate: '2026-08-08',
+        returnDeadlineDate: '2026-08-07',
+      }).success,
+    ).toBe(false);
   });
 
-  it('rejects disembarkDay beyond tripLengthDays', () => {
-    expect(ParamsSchema.safeParse({ disembarkDay: 13, tripLengthDays: 12 }).success).toBe(false);
+  it('rejects a pickup date outside the trip window (FR31 is a hard condition)', () => {
+    expect(
+      ParamsSchema.safeParse({
+        tripStartDate: '2026-08-08',
+        returnDeadlineDate: '2026-08-19',
+        pickupDate: '2026-08-25',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a worst case that is not worse than the upwind threshold', () => {
+    expect(
+      ParamsSchema.safeParse({
+        maxUpwindTwsKn: 30,
+        meltemiWorstCase: { twsKn: 30, fromDeg: 0, toDeg: 45, waveM: 2 },
+      }).success,
+    ).toBe(false);
   });
 });

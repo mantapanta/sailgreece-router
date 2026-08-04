@@ -1,0 +1,120 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 256/258 — Seitenangaben unverifiziert; Navily 2024). Neu aufgenommen. Bei antiparos-town widerspricht der Schutzsektor dem eigenen Meltemi-Urteil der Quelle; Grenzen dort konservativ gekappt.",
+  "island": {
+    "id": "antiparos",
+    "name": "Antiparos",
+    "coordinates": { "lat": 37.0, "lon": 25.05 },
+    "description": "Flaches Eiland westlich von Paros — geschützte Sundbuchten, autofreier Hauptort.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: Pendelfähre alle 30 Min von Paros (Pounda/Parikia), 10 Min Fahrzeit; ab Piräus mit einem Umstieg auf Paros am selben Tag erreichbar (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "antiparos-town",
+      "islandId": "antiparos",
+      "name": "Antiparos-Stadt",
+      "type": "hafen",
+      "coordinates": { "lat": 37.04, "lon": 25.08 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 200, "toDeg": 20, "maxKn": 15 }],
+        "waveSectors": [{ "fromDeg": 200, "toDeg": 20, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 2: Öffnung nach NNE, Sektor 200–20, maxKn 25, Welle 0.5 m. SELBSTWIDERSPRUCH: der Sektor behauptet Nordschutz, das Urteil derselben Quelle lautet 'Meltemi-sicher: nein', und der Hafen liegt im nach Norden offenen Antiparos-Kanal. Windgrenze deshalb auf 15 kn und Welle auf 0.4 m gekappt, damit der Platz bei Meltemi nicht als brauchbar gilt."
+      },
+      "description": "Kanalhafen gegenüber Pounda — flach, strömungsanfällig, mit lebendigem Ortskern.",
+      "warnings": [
+        "Nordschutz UNGEPRÜFT und quellenintern widersprüchlich — bei Meltemi nicht als Nachtplatz einplanen",
+        "Sehr flache Rinnen und Strömung im Antiparos-Kanal, Tiefgang über 2,0 m erfordert höchste Vorsicht",
+        "Grössenlimit laut Quelle nur 15 m — für dieses Schiff zu knapp, vorab klären",
+        "Ständiger Pendelfährverkehr nach Pounda",
+        "Meltemi-sicher: nein"
+      ],
+      "confidence": "niedrig",
+      "sources": [
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 256 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: Navily 2024 (Crowd-Quelle)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 1.8, "max": 2.8 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Rinnenweise guter Sand, stellenweise Felsplatten.",
+        "seagrassNote": "Dichte Posidonia-Bestände im Kanal.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermärkte, Bäcker und Tavernen im Hauptort (2 Min)",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 10 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Zuständig ist die Hafenbehörde Parikia",
+        "maxLoaM": 15,
+        "swellExposureNote": "Der Kanal erzeugt bei starkem N-Wind unangenehmes Kabbelwasser.",
+        "ferryTrafficNote": "Ständiger Pendelfährverkehr nach Pounda (Paros).",
+        "dinghyLanding": "Am kleinen Fischersteg",
+        "restrictions": "Tiefgang über 2,0 m in der Fahrrinne kritisch",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl. (Seitenangabe unverifiziert)"
+        ]
+      }
+    },
+    {
+      "id": "antiparos-agios-georgios",
+      "islandId": "antiparos",
+      "name": "Agios Georgios",
+      "type": "bucht",
+      "coordinates": { "lat": 36.968, "lon": 25.028 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 270, "toDeg": 90, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 270, "toDeg": 90, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 258): Öffnung nach S, Sektor 270–90 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Geschützte Südbucht am Despotiko-Sund mit zwei Fischtavernen am Ufer.",
+      "warnings": [
+        "Starke Meltemi-Fallböen vom Antiparos-Kamm",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 258 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 2.5, "max": 6.5 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Guter Halt im Sand.",
+        "seagrassNote": "Seegras am Sundrand.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Zwei Fischtavernen am Ufer",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Flaches, kabbelfreies Wasser bei Meltemi.",
+        "ferryTrafficNote": "Kein Großfährverkehr.",
+        "dinghyLanding": "Am Anlegesteg der Tavernen",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    }
+  ]
+}

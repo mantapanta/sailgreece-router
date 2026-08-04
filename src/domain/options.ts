@@ -8,7 +8,7 @@
  * caveat. Feasibility uses the SAME leg duration function as scoring/ppr.
  */
 
-import type { Route, Leg } from './schema/route.ts';
+import type { Leg, Variant } from './schema/route.ts';
 import type {
   PlanningSnapshot,
   RouteOptionAssessment,
@@ -26,16 +26,17 @@ import {
   routeIslandSequence,
   type Feasibility,
 } from './ppr.ts';
+import { legsOfVariant } from './legs.ts';
 
-/** Legs of a route still ahead of the given island (null = not on route). */
+/** Legs of a variant still ahead of the given island (null = not on it). */
 export function remainingRouteLegs(
-  route: Route,
+  legs: Leg[],
   currentIslandId: string,
 ): Leg[] | null {
-  const seq = routeIslandSequence(route);
+  const seq = routeIslandSequence(legs);
   const idx = seq.indexOf(currentIslandId);
   if (idx < 0) return null;
-  return route.legs.slice(idx);
+  return legs.slice(idx);
 }
 
 /**
@@ -44,12 +45,12 @@ export function remainingRouteLegs(
  * with the return constraint (FR18 definition, both conditions).
  */
 export function restPlanFeasible(
-  route: Route,
+  variantLegs: Leg[],
   currentIslandId: string,
   startDay: number,
   snapshot: PlanningSnapshot,
 ): Feasibility {
-  const legs = remainingRouteLegs(route, currentIslandId);
+  const legs = remainingRouteLegs(variantLegs, currentIslandId);
   if (legs === null) return 'infeasible';
   const deadline = effectiveDeadlineDay(snapshot);
   if (legs.length === 0) {
@@ -90,17 +91,18 @@ function packLegsFeasibleByDeadline(
 
 /** FR18: offen / offen-horizont / schliesst am Tag X / zu — per route option. */
 export function assessRouteOption(
-  route: Route,
+  variant: Variant,
   currentIslandId: string | null,
   snapshot: PlanningSnapshot,
 ): RouteOptionAssessment {
+  const vLegs = legsOfVariant(variant, snapshot.library);
   const today = snapshot.trip.currentDay;
   const deadline = effectiveDeadlineDay(snapshot);
   const reasons: string[] = [];
 
   if (!currentIslandId) {
     return {
-      routeId: route.id,
+      routeId: variant.id,
       state: 'zu',
       closesOnDay: null,
       ampel: 'unbewertet',
@@ -110,7 +112,7 @@ export function assessRouteOption(
   }
 
   // Display assessment: remaining legs on the earliest plan (one per day).
-  const legs = remainingRouteLegs(route, currentIslandId) ?? [];
+  const legs = remainingRouteLegs(vLegs, currentIslandId) ?? [];
   const legAssessments: LegAssessment[] = legs.map((leg, i) =>
     assessLeg(leg, today + i, snapshot),
   );
@@ -119,11 +121,11 @@ export function assessRouteOption(
       ? worstAmpel(legAssessments.map((l) => l.ampel))
       : 'unbewertet';
 
-  const now = restPlanFeasible(route, currentIslandId, today, snapshot);
+  const now = restPlanFeasible(vLegs, currentIslandId, today, snapshot);
   if (now === 'infeasible') {
     reasons.push('Kein zulässiger Restplan mit aktuellem Forecast (FR18)');
     return {
-      routeId: route.id,
+      routeId: variant.id,
       state: 'zu',
       closesOnDay: null,
       ampel,
@@ -134,7 +136,7 @@ export function assessRouteOption(
   if (now === 'horizon') {
     reasons.push('Machbarkeit reicht über den Forecast-Horizont hinaus — offen mit Vorbehalt');
     return {
-      routeId: route.id,
+      routeId: variant.id,
       state: 'offen-horizont',
       closesOnDay: null,
       ampel,
@@ -147,7 +149,7 @@ export function assessRouteOption(
   let closesOnDay: number | null = null;
   let closingScanHitHorizon = false;
   for (let d = today + 1; d <= deadline; d++) {
-    const f = restPlanFeasible(route, currentIslandId, d, snapshot);
+    const f = restPlanFeasible(vLegs, currentIslandId, d, snapshot);
     if (f === 'infeasible') {
       closesOnDay = d - 1;
       break;
@@ -162,7 +164,7 @@ export function assessRouteOption(
   if (closesOnDay !== null && closesOnDay <= deadline) {
     reasons.push(`Ab Tag ${closesOnDay + 1} existiert kein zulässiger Restplan mehr`);
     return {
-      routeId: route.id,
+      routeId: variant.id,
       state: 'schliesst',
       closesOnDay,
       ampel,
@@ -173,7 +175,7 @@ export function assessRouteOption(
   if (closingScanHitHorizon) {
     reasons.push('Schließtag jenseits des Forecast-Horizonts nicht bestimmbar (Vorbehalt)');
     return {
-      routeId: route.id,
+      routeId: variant.id,
       state: 'offen-horizont',
       closesOnDay: null,
       ampel,
@@ -182,7 +184,7 @@ export function assessRouteOption(
     };
   }
   return {
-    routeId: route.id,
+    routeId: variant.id,
     state: 'offen',
     closesOnDay: null,
     ampel,
@@ -212,11 +214,11 @@ export function deriveDayOptions(
   // first route would silently claim to serve the second one too.
   const seenLegs = new Set<string>();
 
-  const routesSorted = [...snapshot.library.routes].sort(
+  const routesSorted = [...snapshot.library.variants].sort(
     (a, b) => a.escalationRank - b.escalationRank,
   );
   for (const route of routesSorted) {
-    const legs = remainingRouteLegs(route, currentIslandId);
+    const legs = remainingRouteLegs(legsOfVariant(route, snapshot.library), currentIslandId);
     const next = legs?.[0];
     if (!next) continue;
     if (seenLegs.has(next.id)) {
@@ -262,7 +264,7 @@ export function deriveDayOptions(
 export function deriveDecisionPoints(
   routeOptions: RouteOptionAssessment[],
   ppr: PprResult,
-  routes: Route[],
+  routes: { id: string; name: string }[],
 ): DecisionPoint[] {
   const points: DecisionPoint[] = [];
   for (const opt of routeOptions) {

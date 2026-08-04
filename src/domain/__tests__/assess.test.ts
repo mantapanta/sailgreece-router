@@ -21,7 +21,8 @@ function libSnapshot(overrides: Parameters<typeof makeSnapshot>[0] = {}) {
       ],
       places: [base, kea],
       invalidPlaces: [],
-      routes: [],
+      legs: [],
+      variants: [],
     },
     ...overrides,
   });

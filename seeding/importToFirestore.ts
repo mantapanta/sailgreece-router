@@ -20,18 +20,20 @@ import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   IslandStagingFileSchema,
-  RoutesStagingFileSchema,
+  LegsStagingFileSchema,
+  VariantsStagingFileSchema,
   ConfigStagingFileSchema,
   PolarStagingFileSchema,
 } from '../src/domain/schema/seeding.ts';
 import type {
   IslandStagingFile,
-  RoutesStagingFile,
+  LegsStagingFile,
+  VariantsStagingFile,
   ConfigStagingFile,
   PolarStagingFile,
 } from '../src/domain/schema/seeding.ts';
-import type { Leg } from '../src/domain/schema/route.ts';
 import { RETURN_CHAIN_ROUTE_ID } from '../src/domain/schema/route.ts';
+import { polarToFirestore } from '../src/domain/schema/polar.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const DATA = join(here, 'data');
@@ -72,18 +74,6 @@ function skipNotice(what: string, file: string): void {
     `ÜBERSPRUNGEN: ${what} (${file}) ist nicht freigegeben (approved: false) — ` +
       `wird in diesem Lauf NICHT importiert. Freigabe: FR24-Review prüfen (npm run seed:review), dann 'approved: true' setzen.`,
   );
-}
-
-/** Legs must be identical wherever the same leg id appears (forecast keys!). */
-function legFingerprint(leg: Leg): string {
-  return JSON.stringify({
-    from: leg.fromIslandId,
-    to: leg.toIslandId,
-    fromPlace: leg.fromPlaceId,
-    toPlace: leg.toPlaceId,
-    nm: leg.distanceNm,
-    waypoints: leg.waypoints,
-  });
 }
 
 async function main() {
@@ -129,15 +119,28 @@ async function main() {
     approvedIslands.push({ file, data });
   }
 
-  const routesFile = loadStrict<RoutesStagingFile>(
-    RoutesStagingFileSchema,
-    join(DATA, 'routes.json'),
-    'Routen-Staging',
+  // Legs and variants are separate staging files since the leg/variant split
+  // (AD-4). Both share one approved gate: importing variants without their legs
+  // would leave dangling references in Firestore.
+  const legsFile = loadStrict<LegsStagingFile>(
+    LegsStagingFileSchema,
+    join(DATA, 'legs.json'),
+    'Etappen-Staging',
   );
-  let routes: RoutesStagingFile | null = routesFile;
-  if (!routesFile.approved) {
-    skipNotice('Routen-Staging', 'routes.json');
-    routes = null;
+  const variantsFile = loadStrict<VariantsStagingFile>(
+    VariantsStagingFileSchema,
+    join(DATA, 'variants.json'),
+    'Varianten-Staging',
+  );
+  let legs: LegsStagingFile | null = legsFile;
+  let variants: VariantsStagingFile | null = variantsFile;
+  if (!legsFile.approved || !variantsFile.approved) {
+    skipNotice(
+      'Etappen-/Varianten-Staging (beide müssen freigegeben sein)',
+      'legs.json + variants.json',
+    );
+    legs = null;
+    variants = null;
   }
 
   const config = loadStrict<ConfigStagingFile>(
@@ -168,7 +171,7 @@ async function main() {
     polar = null;
   }
 
-  if (approvedIslands.length === 0 && !routes && !polar) {
+  if (approvedIslands.length === 0 && !legs && !polar) {
     fail(
       'Keine einzige Staging-Datei ist freigegeben (approved: true) — es gibt nichts zu importieren.',
     );
@@ -178,55 +181,70 @@ async function main() {
   const placeIds = new Set(approvedIslands.flatMap((i) => i.data.places.map((p) => p.id)));
   const islandIds = new Set(approvedIslands.map((i) => i.data.island.id));
 
-  if (routes) {
-    const legById = new Map<string, { routeId: string; fp: string }>();
-    for (const route of routes.routes) {
-      for (const leg of route.legs) {
-        // Leg id must encode its direction: forecast keys derive from it.
-        if (leg.id !== `${leg.fromIslandId}--${leg.toIslandId}`) {
-          fail(
-            `Route ${route.id}, Etappe ${leg.id}: Id muss '${leg.fromIslandId}--${leg.toIslandId}' sein (from--to).`,
-          );
-        }
-        if (leg.waypointKeys !== undefined) {
-          fail(
-            `Route ${route.id}, Etappe ${leg.id}: 'waypointKeys' ist NICHT kuratierbar (wird nur von abgeleiteten Etappen im Core gesetzt).`,
-          );
-        }
-        // Same leg id in several routes must be the SAME leg: forecast keys
-        // (leg:<id>:<n>) are deduplicated across routes — differing waypoints
-        // would silently get the coordinates of the first occurrence.
-        const fp = legFingerprint(leg);
-        const prev = legById.get(leg.id);
-        if (prev && prev.fp !== fp) {
-          fail(
-            `Etappe '${leg.id}' ist in Route ${prev.routeId} und ${route.id} UNTERSCHIEDLICH definiert (Wegpunkte/Plätze/Distanz) — Forecast-Keys würden kollidieren.`,
-          );
-        }
-        if (!prev) legById.set(leg.id, { routeId: route.id, fp });
+  if (legs && variants) {
+    const legIds = new Set<string>();
+    for (const leg of legs.legs) {
+      // Leg id must encode its direction: forecast keys derive from it.
+      if (leg.id !== `${leg.fromIslandId}--${leg.toIslandId}`) {
+        fail(
+          `Etappe ${leg.id}: Id muss '${leg.fromIslandId}--${leg.toIslandId}' sein (from--to).`,
+        );
+      }
+      if (leg.waypointKeys !== undefined) {
+        fail(
+          `Etappe ${leg.id}: 'waypointKeys' ist NICHT kuratierbar (wird nur von abgeleiteten Etappen im Core gesetzt).`,
+        );
+      }
+      // Deduplication is now structural — but a duplicate ID inside legs.json
+      // would still let one definition silently win.
+      if (legIds.has(leg.id)) {
+        fail(`Etappe '${leg.id}' ist in legs.json doppelt definiert.`);
+      }
+      legIds.add(leg.id);
 
-        if (!placeIds.has(leg.fromPlaceId) || !placeIds.has(leg.toPlaceId)) {
-          const hint =
-            skippedIslandIds.has(leg.fromIslandId) || skippedIslandIds.has(leg.toIslandId)
-              ? ' (Insel-Datei ist nicht freigegeben — erst freigeben oder Routen-Import zurückstellen)'
-              : '';
-          fail(
-            `Route ${route.id}, Etappe ${leg.id}: referenzierter Platz fehlt in den freigegebenen Insel-Staging-Dateien${hint}.`,
-          );
+      if (!placeIds.has(leg.fromPlaceId) || !placeIds.has(leg.toPlaceId)) {
+        const hint =
+          skippedIslandIds.has(leg.fromIslandId) || skippedIslandIds.has(leg.toIslandId)
+            ? ' (Insel-Datei ist nicht freigegeben — erst freigeben oder Etappen-Import zurückstellen)'
+            : '';
+        fail(
+          `Etappe ${leg.id}: referenzierter Platz fehlt in den freigegebenen Insel-Staging-Dateien${hint}.`,
+        );
+      }
+      if (!islandIds.has(leg.fromIslandId) || !islandIds.has(leg.toIslandId)) {
+        fail(`Etappe ${leg.id}: referenzierte Insel fehlt (oder ist nicht freigegeben).`);
+      }
+    }
+
+    // Referential integrity variants -> legs. This is the check the split
+    // makes necessary: a variant naming a leg that does not exist would only
+    // surface at runtime as a silently shortened route.
+    for (const variant of variants.variants) {
+      for (const legId of variant.legIds) {
+        if (!legIds.has(legId)) {
+          fail(`Variante ${variant.id} referenziert unbekannte Etappe '${legId}'.`);
         }
-        if (!islandIds.has(leg.fromIslandId) || !islandIds.has(leg.toIslandId)) {
-          fail(`Route ${route.id}, Etappe ${leg.id}: referenzierte Insel fehlt (oder ist nicht freigegeben).`);
+      }
+      // A variant must be a connected chain, or the island sequence is wrong.
+      const vLegs = variant.legIds.map((id) => legs!.legs.find((l) => l.id === id)!);
+      for (let i = 1; i < vLegs.length; i++) {
+        if (vLegs[i]!.fromIslandId !== vLegs[i - 1]!.toIslandId) {
+          fail(
+            `Variante ${variant.id}: Etappe '${vLegs[i]!.id}' beginnt auf ` +
+              `${vLegs[i]!.fromIslandId}, die vorige endet auf ${vLegs[i - 1]!.toIslandId} — Kette unterbrochen.`,
+          );
         }
       }
     }
-    // The PPR depends on the fallback chain: importing routes without it
+
+    // The PPR depends on the fallback chain: importing variants without it
     // would only surface at runtime as 'Keine Rückfallkette'.
-    const hasChain = routes.routes.some(
-      (r) => r.id === RETURN_CHAIN_ROUTE_ID || r.isReturnChain,
+    const hasChain = variants.variants.some(
+      (v) => v.id === RETURN_CHAIN_ROUTE_ID || v.isReturnChain,
     );
     if (!hasChain) {
       fail(
-        `Routen-Staging enthält keine Rückfallkette (Route '${RETURN_CHAIN_ROUTE_ID}' bzw. isReturnChain: true) — der PPR (FR19) wäre funktionslos.`,
+        `Varianten-Staging enthält keine Rückfallkette (Variante '${RETURN_CHAIN_ROUTE_ID}' bzw. isReturnChain: true) — der PPR (FR19) wäre funktionslos.`,
       );
     }
   }
@@ -248,7 +266,7 @@ async function main() {
   const placeCount = approvedIslands.reduce((s, i) => s + i.data.places.length, 0);
   console.log(
     `Validierung OK: ${approvedIslands.length}/${islandFiles.length} Inseln freigegeben (${placeCount} Plätze), ` +
-      `Routen: ${routes ? routes.routes.length : 'übersprungen'}, Polare: ${polar ? `${polar.polar.twaDeg.length}×${polar.polar.twsKn.length}` : 'übersprungen'}, Config freigegeben.`,
+      `Etappen: ${legs ? legs.legs.length : 'übersprungen'}, Varianten: ${variants ? variants.variants.length : 'übersprungen'}, Polare: ${polar ? `${polar.polar.twaDeg.length}×${polar.polar.twsKn.length}` : 'übersprungen'}, Config freigegeben.`,
   );
   if (DRY_RUN) {
     console.log('--dry: keine Schreibvorgänge.');
@@ -276,15 +294,27 @@ async function main() {
       writes.push({ collection: 'places', docId: placeDocId, data: placeRest });
     }
   }
-  if (routes) {
-    for (const route of routes.routes) {
-      const { id: routeDocId, ...routeRest } = route;
-      writes.push({ collection: 'routes', docId: routeDocId, data: routeRest });
+  if (legs) {
+    for (const leg of legs.legs) {
+      const { id: legDocId, ...legRest } = leg;
+      writes.push({ collection: 'legs', docId: legDocId, data: legRest });
+    }
+  }
+  if (variants) {
+    for (const variant of variants.variants) {
+      const { id: variantDocId, ...variantRest } = variant;
+      writes.push({ collection: 'routes', docId: variantDocId, data: variantRest });
     }
   }
   writes.push({ collection: 'config', docId: 'parameters', data: config.parameters });
   if (polar) {
-    writes.push({ collection: 'config', docId: 'polar', data: polar.polar });
+    // Firestore rejects arrays inside arrays — the polar matrix is stored as
+    // `speedRows` and folded back by the adapter (see schema/polar.ts).
+    writes.push({
+      collection: 'config',
+      docId: 'polar',
+      data: polarToFirestore(polar.polar) as unknown as Record<string, unknown>,
+    });
   }
 
   for (let i = 0; i < writes.length; i += BATCH_CHUNK_SIZE) {
@@ -304,7 +334,8 @@ async function main() {
   const stagedIds: Record<string, Set<string>> = {
     islands: new Set(seenIslandIds.keys()),
     places: new Set(seenPlaceIds.keys()),
-    routes: new Set(routesFile.routes.map((r) => r.id)),
+    legs: new Set(legsFile.legs.map((l) => l.id)),
+    routes: new Set(variantsFile.variants.map((v) => v.id)),
   };
   for (const [coll, ids] of Object.entries(stagedIds)) {
     const remoteDocs = await db.collection(coll).listDocuments();
@@ -318,7 +349,7 @@ async function main() {
 
   console.log(
     `Import abgeschlossen: islands=${approvedIslands.length}, places=${placeCount}, ` +
-      `routes=${routes ? routes.routes.length : 0}, config/parameters${polar ? ', config/polar' : ''}.`,
+      `legs=${legs ? legs.legs.length : 0}, routes=${variants ? variants.variants.length : 0}, config/parameters${polar ? ', config/polar' : ''}.`,
   );
   console.log(
     'Hinweis (AD-5): Feldkorrekturen über die Firebase-Konsole müssen ins Staging-JSON zurückgetragen werden, sonst überschreibt der nächste Import sie.',

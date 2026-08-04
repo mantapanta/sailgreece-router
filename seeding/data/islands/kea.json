@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Zielkatalog, Vourkari 37°40'N 24°19.5'E 'sehr gut geschützt'); Schutzsektoren aus Beschreibung abgeleitet — vor Freigabe gegen Heikell/CruisersWiki prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Zielkatalog, Vourkari 37°40'N 24°19.5'E 'sehr gut geschützt') + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details, Warnhinweise). Sektorgeometrie und Koordinaten aus dem Bestand beibehalten, Stärkegrenzen auf den jeweils kleineren Wert beider Quellen gesetzt. OFFENER KONFLIKT zur Öffnungsrichtung beider Plätze — vor Freigabe gegen Heikell prüfen (siehe seeding/research/lauf-2-pruefprotokoll.md).",
   "island": {
     "id": "kea",
     "name": "Kea",
     "coordinates": { "lat": 37.62, "lon": 24.33 },
-    "description": "Erste Kykladeninsel hinter dem Kea-Kanal — grüner und stiller als ihre Nachbarn."
+    "description": "Erste Kykladeninsel hinter dem Kea-Kanal — grüner und stiller als ihre Nachbarn.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 4–6 Verbindungen ab Lavrio, ca. 1 h Fahrzeit, Quelle Ferryhopper / NetFerry (Abruf 2026-08). Achtung: Abfahrtshafen ist Lavrio, nicht Piräus — Landtransfer einplanen."
+    }
   },
   "places": [
     {
@@ -17,10 +21,52 @@
       "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 2 },
       "shelter": {
         "windSectors": [{ "fromDeg": 250, "toDeg": 190, "maxKn": 35 }],
-        "waveSectors": [{ "fromDeg": 250, "toDeg": 190, "maxM": 1.2 }],
-        "sourceNote": "Quelle 2: 'sehr gut geschützt'; Bucht öffnet nach SW"
+        "waveSectors": [{ "fromDeg": 250, "toDeg": 190, "maxM": 0.5 }],
+        "sourceNote": "Quelle 2: 'sehr gut geschützt', Bucht öffnet nach SW. KONFLIKT: Lauf 2 (Heikell 14. Aufl. S. 225 / CruisersWiki Kea) gibt die Öffnung nach WNW an, Sektor 330–240, maxKn 35, Welle 0.5 m. Geometrie des Bestands beibehalten, Wellengrenze auf den kleineren Wert 0.5 m gesenkt."
       },
-      "description": "Tavernen direkt an der Pier, tief in der Bucht von Agios Nikolaos — der klassische erste Stopp."
+      "description": "Tavernen direkt an der Pier, tief in der Bucht von Agios Nikolaos — der klassische erste Stopp.",
+      "warnings": [
+        "Starke Fallböen bei Meltemi aus NE",
+        "Wochenend-Andrang von Eignerbooten aus Athen",
+        "Meltemi-sicher: ja (bei guter Ankerarbeit und ausreichend Kette)",
+        "Öffnungsrichtung der Bucht in den Quellen widersprüchlich (SW vs. WNW) — bei West- bis Nordwestlagen nicht auf den Sektor verlassen"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2 (Zielkatalog)",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 225 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: CruisersWiki Kea"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 4.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Dicker Schlamm hält exzellent; wegen der Fallböen reichlich Kette stecken.",
+        "seagrassNote": "Im Zentrum der Bucht stellenweise Posidonia, am Kai gut eingefahrener Schlammgrund.",
+        "capacityYachts": 40,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt und Bäckerei in 2 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 12–18 EUR/Nacht (Gemeindehafen, Stand 2024)",
+        "portAuthorityFees": "Hafenbehörde kassiert unregelmäßig am Kai",
+        "maxLoaM": 25,
+        "swellExposureNote": "Guter Schutz gegen Nord- und Ostschwell; nur schwerer NW-Sturm bringt Schwell.",
+        "ferryTrafficNote": "Kein Fährverkehr in Vourkari, Fähren laufen im benachbarten Korissia ein.",
+        "dinghyLanding": "Am Nordkai oder dem kleinen Holzsteg problemlos möglich",
+        "restrictions": "Ansteuerungsrinne für Fischereifahrzeuge freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 225 (Seitenangabe unverifiziert)",
+          "Deep-Research Lauf 2: CruisersWiki Kea"
+        ]
+      }
     },
     {
       "id": "kea-korissia",
@@ -31,10 +77,49 @@
       "qualities": { "schoenheit": 3, "restaurant": 3, "badestrand": 3 },
       "shelter": {
         "windSectors": [{ "fromDeg": 70, "toDeg": 290, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 70, "toDeg": 290, "maxM": 1.0 }],
-        "sourceNote": "Quelle 1: Rückfallhafen-Kette; Hafenbucht öffnet nach N/NW — Schwell bei Nordlagen"
+        "waveSectors": [{ "fromDeg": 70, "toDeg": 290, "maxM": 0.8 }],
+        "sourceNote": "Quelle 1: Rückfallhafen-Kette; Hafenbucht öffnet nach N/NW — Schwell bei Nordlagen. KONFLIKT: Lauf 2 gibt Sektor 350–230 an und behauptet damit Nordschutz, urteilt im gleichen Datensatz aber 'Meltemi-sicher: bedingt' wegen Fährschwell. Bestandsgeometrie beibehalten (deckt sich mit der Schwellwarnung), Wellengrenze auf 0.8 m gesenkt."
       },
-      "description": "Fähranleger und Rückfallhafen — solide, wenn Vourkari voll ist."
+      "description": "Fähranleger und Rückfallhafen — solide, wenn Vourkari voll ist.",
+      "warnings": [
+        "Erheblicher Fährschwell bei An- und Ablegemanövern der Schnellfähren",
+        "Meltemi-sicher: bedingt (Schwell im Fährbecken)",
+        "Liegeplätze nahe dem Fähranleger meiden"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1 (Rückfallhafen-Kette)",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 226 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 5.0 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Zuverlässiger Haltegrund im Hafenbecken.",
+        "seagrassNote": "Außerhalb des Hafenbeckens Seegraswiesen.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Großer Supermarkt direkt an der Hafenfront (1 Min)",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 10–15 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Hafenbehörde Korissia vor Ort",
+        "maxLoaM": 30,
+        "swellExposureNote": "Fährschwell lässt die Schiffe stark schwojen und belastet die Ruckdämpfer.",
+        "ferryTrafficNote": "Hohe Fährfrequenz aus Lavrio.",
+        "dinghyLanding": "Am Südende der Kaimauer möglich",
+        "restrictions": "Fährbereich strikt freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 226 (Seitenangabe unverifiziert)"
+        ]
+      }
     }
   ]
 }

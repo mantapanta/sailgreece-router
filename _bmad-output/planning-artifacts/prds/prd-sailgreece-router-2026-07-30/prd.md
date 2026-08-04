@@ -2,29 +2,39 @@
 title: "PRD: sailgreece-router"
 status: final
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-02
 ---
 
 # PRD: sailgreece-router
 
-**Törnplanungs-Web-App für den 12-Tage-Kykladen-Familientörn ab 8. August 2026.**
-Die App übersetzt Windvorhersagen täglich in bewertete Routen-Optionen —
+**Törnplanungs-Web-App für den Kykladen-Familientörn 8.–19. August 2026 — 11 Etappen
+ab und bis Marina Alimos.** Die App plant täglich den vollständigen Round-Trip neu —
 sie ersetzt das Kopfrechnen des Skippers, nicht sein seemännisches Urteil.
+
+*Revision 2026-08-02: Feldtest-Feedback eingearbeitet — Round-Trip-Planungslogik,
+Rückkehrfenster-Strategie, Etappen-Editing, Gäste-Pickup, Karten-Overlay,
+UI-Bereinigung (Quelle: Feedback-PDF „App sailgreece-router refinment", 2026-08-02).*
 
 ## 1. Problem & Kontext
 
-Am 8. August 2026 startet ein 12-Tage-Törn mit einem 50-Fuß-Katamaran ab Marina Alimos
-(Athen) in die Kykladen — mitten in der Meltemi-Hochsaison (regelmäßig 6–8 Bft aus N–NE).
+Am 8. August 2026 (Samstagnachmittag) startet ein Törn mit einem 50-Fuß-Katamaran ab
+Marina Alimos (Athen) in die Kykladen, Rückkehr am Mittwochnachmittag, 19. August —
+12 Törntage, 11 Etappen plus ein frei platzierbarer Puffer-/Hafentag, mitten in der
+Meltemi-Hochsaison (regelmäßig 6–8 Bft aus N–NE).
 Ziel des Törns sind **schöne Plätze**: schöne Häfen und vor allem schöne Buchten — mit
 gutem Restaurant, Badestrand und nachts wind- und wellengeschütztem Ankerplatz. So weit
 wie möglich nach Süden (maximal Amorgos oder Santorin), ohne den Kindern den Törn durch
 brutales Aufkreuzen bei über 30 Knoten zu verderben.
-Kritisch ist der Rückweg gegen den Meltemi — Faustregel des Reviers: zwei Drittel der Zeit
-für den Rückweg.
+Kritisch ist der Rückweg gegen den Meltemi: Bei starkem Nordwind ist der Rückweg mit
+einem Katamaran gegen 35 kn nicht erkreuzbar — der Weg nach Norden kann tagelang
+verbaut sein. Faustregel des Reviers: **zwei Drittel der Zeit für den Rückweg**
+einplanen, bzw. die Hälfte der Strecke muss im ersten Drittel der Zeit geschafft sein.
+Eine Törnplanung im Saronischen Golf ist keine Option — geplant wird ausschließlich
+der Kykladen-Round-Trip.
 
 Das Wissen dafür ist verfügbar — Revierliteratur, Best-Practice-Routen,
 Windvorhersagen. Einen fertigen Törnplan, den man nur abfahren könnte, gibt
-es aber nicht, und die App setzt auch keinen voraus: Der Mittelfristplan muss jeden Tag
+es aber nicht, und die App setzt auch keinen voraus: Der Round-Trip muss jeden Tag
 neu aus den noch offenen Optionen abgeleitet werden. Genau diese Arbeit —
 **die tägliche Übersetzung von Vorhersage in Entscheidung — passiert heute komplett im
 Kopf des Skippers**: Distanzen × Geschwindigkeit × Windwinkel × Restzeit, morgens und
@@ -42,7 +52,8 @@ Point of Return für Charter-Rückgabetermine bietet niemand.
 ## 2. Ziele & Erfolgskriterien
 
 **Produktziel:** Skipper und Crew sehen jeden Morgen und Abend auf einen Blick, welche
-Tagesziele schön, nachts geschützt und mit einem tragfähigen Mittelfristplan vereinbar
+Tagesziele schön, nachts geschützt und mit einem tragfähigen Round-Trip (sichere
+Rückkehr nach Alimos) vereinbar
 sind — und welche Routen-Optionen sich öffnen oder schließen.
 
 Erfolgskriterien:
@@ -72,25 +83,45 @@ Browser), mit Internetverbindung, die Karte als Besprechungsbild im Gespräch mi
 Crew.
 
 - **UM-1 Morgenentscheidung (täglich, ~10 min):** Philipp öffnet die App im Hafen/vor
-  Anker — allein oder mit der Crew als Besprechungsbild. Die aktuelle Position kommt
-  per GPS/Standortabfrage (FR27), manuell übersteuerbar. Die App zeigt: heutige
-  Tagesoptionen mit Ziel-Ampel und Etappen-Score, den Zustand des Mittelfristplans
-  (welche Optionen noch offen sind) und den Point of Return — daraus entsteht die
-  gemeinsame Entscheidung für das Heute.
+  Anker — allein oder mit der Crew als Besprechungsbild. Position (GPS, einmalig beim
+  App-Start, FR27) und Törntag (aus dem Datum, FR32) kennt die App selbst. Sie zeigt:
+  den aktuell berechneten Round-Trip mit der heutigen Etappe, Ziel-Ampeln der Häfen
+  auf aktueller und Ziel-Insel, den Zustand des Rückkehrfensters und den Point of
+  Return — daraus entsteht die gemeinsame Entscheidung für das Heute; bei Bedarf
+  editiert Philipp die Etappe oder checkt eine Alternativ-Route ein.
 - **UM-2 Abendcheck (täglich, ~5 min):** Nach dem neuen Forecast-Lauf prüft Philipp, ob
-  das Morgen noch auf einem gültigen Mittelfristplan liegt — bestätigt die App den Kurs,
-  ist der Abend frei; kippt eine Option, sieht er es hier zuerst.
+  der Round-Trip noch trägt — bestätigt die App den Kurs, ist der Abend frei; kippt
+  das Rückkehrfenster oder eine Etappe, sieht er es hier zuerst (Rest-Trip färbt
+  gelb/rot, FR2).
 
-## 4. Kernkonzept: Planung auf drei Ebenen
+## 4. Kernkonzept: Der Round-Trip ist die Planungseinheit
 
-Der Kernsatz des Produkts: **Das Heute muss auf einem sinnvollen Mittelfristplan liegen.**
+Der Kernsatz des Produkts: **Die App plant immer den vollständigen Round-Trip** —
+Abfahrt Alimos Samstagnachmittag 8.8., Rückkehr Alimos Mittwochnachmittag 19.8.:
+12 Törntage, 11 nummerierte Etappen plus **ein Puffer-/Hafentag am 15.8.** — dem
+Gäste-Zustiegstag (FR31); die App kann ihn bei Bedarf umplanen, wenn das
+Rückkehrfenster es erzwingt. Nie
+Segmente, nie Teilpläne: Jeder Vorschlag und jede Bewertung bezieht sich auf den
+ganzen Rest-Trip bis zurück nach Alimos.
 
-1. **Langfristig** — das Zielbild („Wir verfolgen den Santorin-Plan, weil der Wind sich
-   in 3–4 Tagen passend entwickeln könnte").
-2. **Mittelfristig** — die 3–5-Tage-Route: welche der noch offenen Routen-Optionen
-   aktuell verfolgt wird. Der Mittelfristplan ist nicht fest verdrahtet, sondern entsteht
-   täglich neu aus dem **Möglichkeitsraum** der Best-Practice-Routen.
-3. **Täglich** — die Morgen-/Abendentscheidung: „Was machen wir heute?"
+1. **Round-Trip-Plan (Hauptroute)** — die aktuell verfolgte Etappenfolge über alle
+   Resttage, zusammengesetzt aus dem Möglichkeitsraum der Best-Practice-Routen (FR9),
+   täglich neu berechnet aus Position, Törntag und Forecast (FR18).
+2. **Rückkehrfenster-Strategie** — wie weit es nach Süden geht (maximal Santorin
+   und/oder Amorgos; Wunschbild: Santorin am 15.8., Amorgos am 14.8.), entscheidet
+   **ausschließlich das Wetterfenster für die Nord-Rückkehr** gegen den Meltemi:
+   - Zeigt der Forecast an Tag 1 ein Nordfenster (z. B. Tag 5–8), plant die App
+     dessen Nutzung fest ein — am Ende des Fensters muss ein Hafen erreicht sein,
+     von dem aus Alimos in den Resttagen **auch bei vollem Meltemi** erreichbar ist.
+   - Zeigt der Forecast **kein** Fenster, wird konservativ geplant: so, dass die
+     Rückkehr auch bei durchgehendem Meltemi über alle Resttage gelingt. Öffnet sich
+     später doch ein Fenster, rechnet die App ab dann die verbleibenden
+     Süd-Optionen neu.
+   - Das Fenster wird täglich neu bewertet — es wird besser, schlechter oder
+     verschiebt sich; der Round-Trip folgt.
+3. **Tagesentscheidung** — die Morgen-/Abendroutine: „Was machen wir heute?" Die
+   heutige Etappe der Hauptroute, editierbar (FR28) und gegen Alternativ-Routen
+   vergleichbar (FR29).
 
 **Tagesziele sind Inseln — Plätze werden dort gewählt.** So denkt der Segler, und so
 routet die App: Man entscheidet „Wir fahren heute nach Sifnos", und dort stellt sich
@@ -98,34 +129,55 @@ die zweite Frage — welche Buchten und Häfen hat die Insel, und welcher davon 
 Nacht der beste (Schutzampel, Qualitäten)? Die geschützte Traumbucht bleibt das
 Sehnsuchtsziel, gefunden wird sie zweistufig: **erst Insel (Routing), dann Platz
 (Ampel).** Abgewogen werden ausschließlich Entfernungen, Wind und Welle (Richtung und
-Stärke), Segeldauer pro Etappe sowie Mittelfrist- und Tagesplan. Der Skipper
+Stärke), Segeldauer pro Etappe sowie Round-Trip und Tagesplan. Der Skipper
 entscheidet, die App rechnet und vergleicht.
 
 **Begriffe** (durchgängig so verwendet): **Tagesziel** = Insel; dort wird der beste
 Platz gewählt · **Platz** = Bucht, Ankerplatz oder Hafen mit Qualitäten und
-Schutzprofil · **Etappe** = Schlag von Insel zu Insel (konkret: von Platz zu Platz) ·
-**Routen-Option** = kuratierte Etappenfolge aus der Routenbibliothek ·
-**Möglichkeitsraum** (synonym: Optionsraum) = Menge aller Routen-Optionen ·
-**Mittelfristplan** = die aktuell verfolgte Routen-Option über 3–5 Tage ·
-**Point of Return** (synonym: Umkehrpunkt) = letzter Törntag/Ort, an dem noch
-umgekehrt werden kann, um die Basis rechtzeitig zu erreichen · **Ampel** = deterministische Rot/Gelb/Grün-Bewertung;
-je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
+Schutzprofil · **Etappe** = Schlag von Insel zu Insel (konkret: von Platz zu Platz),
+im Round-Trip nummeriert 1–11 · **Round-Trip** = vollständige Etappenfolge Alimos →
+Süden → Alimos über alle Resttage · **Hauptroute** = der aktuell verfolgte
+(eingecheckte) Round-Trip · **Alternativ-Route** = auswählbarer alternativer
+Round-Trip; per Check-in wird sie zur neuen Hauptroute (FR29) ·
+**Routen-Option** = kuratierte Best-Practice-Etappenfolge aus der Routenbibliothek,
+Baustein des Round-Trips · **Möglichkeitsraum** (synonym: Optionsraum) = Menge aller
+Routen-Optionen · **Rückkehrfenster** = Zeitraum mit Wind, der die Nord-Rückkehr
+innerhalb der Schwellen (FR16) erlaubt · **Point of Return** (synonym: Umkehrpunkt)
+= letzter Törntag/Ort, an dem noch umgekehrt werden kann, um die Basis rechtzeitig
+zu erreichen · **Ampel** = deterministische Rot/Gelb/Grün-Bewertung; je Platz
+(„Ziel-Ampel", FR8), je Etappe/Option (FR17) und je Rest-Trip (FR2).
 
 ## 5. Funktionale Anforderungen
 
 ### F1 — Karte & Besprechungsbild
 
-- **FR1:** Google-Maps-Karte des Reviers (Saronischer Golf, Westkykladen bis
-  Amorgos/Santorin) mit allen Plätzen der Bibliothek als Marker in ihrer aktuellen
-  Ampelfarbe. Satellit/Hybrid-Ansicht verfügbar (Buchten-Optik).
-- **FR2:** 2–3 Routen-Optionen gleichzeitig als verschiedenfarbige gestrichelte Linien,
-  die zeigen, wie der Weg jeweils weitergeht.
+- **FR1:** Google-Maps-Karte des Reviers (Kykladen-Korridor bis Amorgos/Santorin) mit
+  den Plätzen der Bibliothek als Marker. **Ampel-Marker erscheinen nur für die
+  aktuelle Insel/Position und die Ziel-Insel der heutigen Etappe** — nicht für den
+  ganzen Trip (Karten-Entlastung: relevant ist, welchen Hafen ich heute anlaufe,
+  nicht was in fünf Tagen ist). Satellit/Hybrid-Ansicht verfügbar (Buchten-Optik).
+- **FR2:** **Round-Trip-Overlay:** Die Hauptroute liegt vollständig auf der Karte —
+  die bereits zurückgelegte Strecke als **durchgezogene grüne Linie**, der geplante
+  Rest-Trip als **gestrichelte Linie**; jede der 11 Etappen trägt ihre Etappen-Nummer
+  am Tagesziel (Ziel-Insel Tag 1 = „1", Endhafen Alimos = „11"). Die
+  **Rest-Trip-Ampel** der gestrichelten Linie ist deterministisch definiert:
+  **Grün** = die Hauptroute ist gültig (FR18). **Gelb** = die Hauptroute verletzt
+  in aktueller Form die Kriterien oder hängt von unbewertetem Forecast-Horizont ab,
+  aber mindestens ein gültiger alternativer Round-Trip existiert (FR29). **Rot** =
+  es existiert kein gültiger Round-Trip mehr (das FR18-Verhalten „am wenigsten
+  verletzender Vorschlag" greift). Auslöser sind immer Neuberechnungen —
+  Forecast-Verschlechterung, manuelle Etappen-Änderung (FR28) oder der bisherige
+  Trip-Verlauf.
 - **FR3:** Windpfeil-Overlay (Richtung und Stärke je Wegpunkt/Platz) aus dem
   Basis-Wettermodell (FR11).
 - **FR4:** Itinerar ↔ Karte synchron: Hover/Auswahl eines Tages oder einer Etappe hebt
   das Gegenstück auf der Karte hervor (Design-Referenz: Y.CO-Itinerary, siehe NFR1).
 - **FR5:** Platz-Detailansicht: Foto, Qualitäten (Schönheit, Restaurant, Badestrand),
-  Schutzprofil und die daraus berechnete Ampel für die kommende Nacht.
+  Schutzprofil und die daraus berechnete Ampel für die kommende Nacht. **Jeder Hafen
+  in den Etappen-Cards ist per Mouseover/Klick mit allen verfügbaren Meta-Informationen
+  aus Recherche und Routing hinterlegt** (geschützt für welche Windrichtungen,
+  Ankerplätze, Einkaufs- und Tankmöglichkeiten etc.). Die Ampel gehört immer zum
+  **konkreten Platz/Hafen**, nie zur Insel als Ganzes.
 
 ### F2 — Platzbibliothek
 
@@ -147,12 +199,16 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 - **FR9:** Kuratierte Best-Practice-Routen als Möglichkeitsraum: Etappenfolgen **von
   Insel zu Insel** mit Distanzen (sm) — je Insel verweist die Bibliothek auf ihre
-  kuratierten Plätze (FR6); keine frei erfundenen Routen. Deckt
-  mindestens ab: die Süd-Route bis Naxos mit Verlängerungsoptionen Amorgos/Santorin,
-  eine gedeckelte Variante bis Paros/Antiparos, die Rückfallhäfen-Kette westwärts und
-  die Saronische Schwachwind-Alternative. Diese Varianten sind als **Eskalationsstufen**
-  zueinander geordnet: Verschärft sich der Forecast, bietet die App die
-  nächstkonservativere Stufe als natürliche Alternative an.
+  kuratierten Plätze (FR6); keine frei erfundenen Routen. Das Routing verläuft
+  **entlang der vordefinierten Rundrouten-Varianten** (Westkykladen-Runde über
+  Kea–Kythnos–Serifos–Sifnos–Milos–Paros–Syros und Ostkykladen-Runde über
+  Syros–Tinos–Mykonos–Paros–Ios–Santorin–Folegandros–Milos; vollständige
+  Etappenlisten mit Distanzen: siehe `addendum.md`), mit Verlängerungsoptionen
+  Amorgos/Santorin, gedeckelten Varianten (z. B. bis Paros/Antiparos) und der
+  Rückfallhäfen-Kette westwärts als Eskalationsstufen: Verschärft sich der Forecast,
+  bietet die App die nächstkonservativere Stufe als natürliche Alternative an.
+  **Der Saronische Golf ist keine Routen-Option** — gestrichen (Feldtest-Entscheidung
+  2026-08-02); geplant wird ausschließlich der Kykladen-Round-Trip.
 - **FR10:** Etappen tragen statische Warn-Attribute — unabhängig vom Modellwert — für
   bekannte Düsen-/Beschleunigungszonen (Kea-Kanal, Kafireas, Andros/Tinos-Sektor,
   Paros–Antiparos, Paros–Naxos, Mykonos–Paros): reine Wind-Planungsinformation, weil
@@ -183,13 +239,16 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   Windy) — nie der heutige Wind. Bewertet wird: Windwinkel zum Kurs, Windstärke, Dauer aus dem
   hinterlegten **Polardiagramm** (FR26 — Geschwindigkeit als Funktion von wahrem
   Windwinkel und Windstärke); Motorfahrt mit ~8 kn als eigener Parameter.
-- **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **kein
-  Aufkreuzen gegenan bei >25 kn wahrem Wind.** Tagesbudget: **Ziel maximal ~6 Stunden
-  unterwegs** (5 h Segeln + 1 h Motor oder 6 h reines Segeln), **hartes Maximum
-  6 h Segeln + 2 h Motor.** **Bei Leichtwind sind 10–12-Stunden-Schläge zulässig; bei
-  ~4–6 kn Wind auch Nachtetappen mit der ganzen Familie an Bord** (glattes Wasser —
-  ob Segeln oder Motoren ist dann egal, alle können schlafen) — maximal ~2× pro Törn,
-  wenn sie strategisch helfen.
+- **FR16:** Familien-Schwellen sind explizit und im Scoring verdrahtet: **keine
+  Schläge höher als 65° gegen den wahren Wind bei über 25 kn** (die harte
+  Rückkehr-Bedingung — was darüber liegt, gilt als nicht erkreuzbar). Tagesbudget:
+  **Ziel maximal ~6 Stunden unterwegs** (5 h Segeln + 1 h Motor oder 6 h reines
+  Segeln), **grundsätzlich nicht länger als 6–7 h pro Tag** (keine Gewaltmärsche),
+  hartes Maximum 6 h Segeln + 2 h Motor. **Nachtetappen** nur, wenn strategisch
+  zwingend — für die Nord-Rückkehr wegen Meltemi oder um Santorin/Amorgos zu
+  erreichen —, **nur bei Wind unter 10 kn**, nur in der zweiten Woche und **maximal
+  2× in 11 Tagen** (glattes Wasser, ob Segeln oder Motoren ist dann egal, die
+  Familie schläft).
 - **FR17:** Ampel je Etappe plus aggregierte Bewertung je Routen-Option = die Ampel der
   schwächsten Etappe (schwächstes Glied sichtbar). Ampelbänder: **Grün** = Ziel-Budget
   eingehalten (FR16), **Gelb** = zwischen Ziel und hartem Maximum oder Grenzwert
@@ -204,47 +263,101 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
   Planungsgeschwindigkeiten (6,0 kn Segel / 7,5 kn Maschine / 6,5 kn gegenan) bleiben
   nur als Fallback, solange keine Polare geladen ist.
   *(ID nachgereicht — Nummerierung bleibt stabil.)*
+- **FR30 — Etappen-Transparenz:** Jede Etappen-Card weist nachvollziehbar aus, wie
+  ihre Segelzeit zustande kommt: Ist die Distanz die direkte Strecke oder führt sie
+  über Wegpunkte? Welche Segmente mit welchem Wind (Stärke/Richtung), welchem
+  Windwinkel zum Kurs und welcher Bootsgeschwindigkeit aus der Polare? Reine
+  Segelzeit vs. Gesamtzeit (inkl. Motoranteil) getrennt sichtbar. Eine Zeitangabe
+  wie „3,1 h für 17 sm" muss aus der Card heraus erklärbar sein — sonst vertraut
+  der Skipper der Rechnung nicht. *(Neu aus Feldtest 2026-08-02.)*
 
-### F6 — Mittelfrist-Optionsraum & Predicted Point of Return
+### F6 — Round-Trip-Planung, Rückkehrfenster & Predicted Point of Return
 
-- **FR18:** Aus aktueller Position, Törntag und Forecast leitet die App täglich ab,
-  welche Routen-Optionen des Möglichkeitsraums noch offen sind — angezeigt als
-  **offen / schließt am Tag X / geschlossen**, bevor sie sich schließen.
-  Definition: Eine Option ist **offen**, wenn sich mit dem aktuellen Forecast ein
-  Restplan konstruieren lässt, der (1) jede Etappe innerhalb der Familien-Schwellen
-  (FR16, Dauer aus Polare + Offset) hält und (2) die Rückkehr nach Alimos am Vorabend
-  der Ausschiffung inklusive Puffertag erreicht (FR19). **Schließt am Tag X** = ab
-  Tag X+1 existiert kein solcher Restplan mehr; **geschlossen** = es existiert keiner.
-  Kippt der Mittelfristplan, leitet die App daraus konsistent das neue Heute ab
-  (FR21). Alle Bewertungen sind **Momentaufnahmen des aktuellen Forecast-Laufs**:
-  Da sich die Prognose für Tag N+3 mit jedem Modelllauf ändert, werden Scores,
-  Optionszustände und Point of Return bei jedem Abruf (FR13) vollständig neu
-  berechnet — was gestern „offen" war, kann heute „geschlossen" sein, und genau
-  dafür gibt es die Morgen-/Abendroutine (UM-1/UM-2).
-- **FR19:** **Predicted Point of Return:** fortlaufende Berechnung des spätesten
-  Umkehrpunkts für die stressfreie Rückkehr nach Alimos (~103 sm ab Naxos, Rückkehr am
-  Vorabend der Ausschiffung, mit Puffertag) — Restdistanz über die Rückfallhäfen-Kette
-  vs. Resttage × Tagesbudget; Etappendauern wie im Etappen-Scoring aus der Polare
-  (FR15/FR26).
+- **FR18 — Täglicher Round-Trip:** Aus aktueller Position, Törntag (FR32) und
+  Forecast berechnet die App täglich den **vollständigen Rest-Trip bis Alimos** als
+  Hauptroute — 11 Etappen minus die bereits gefahrenen, entlang der
+  Rundrouten-Varianten (FR9). Gültig ist ein Round-Trip nur, wenn (1) jede Etappe
+  innerhalb der Familien-Schwellen (FR16, Dauer aus Polare + Offset) liegt,
+  (2) die Rückkehr nach Alimos die Deadline hält — **Mittwochnachmittag 19.8.**
+  `[ANNAHME: 18:00, vertraglich bestätigen]`, dieselbe Konstante wie in der
+  Point-of-Return-Rechnung (FR19) — und (3) am 15.8. ein für die Gäste
+  fähre-erreichbarer Pickup-Hafen erreicht ist (FR31, harte Bedingung). Der
+  Möglichkeitsraum bleibt darunter sichtbar: Routen-Optionen werden weiter als
+  **offen / schließt am Tag X / geschlossen** ausgewiesen, bevor sie sich schließen.
+  **Etappen jenseits des Forecast-Horizonts** gelten als *unbewertet* — sie machen
+  einen Round-Trip weder gültig noch ungültig; betroffene Optionen werden als
+  „offen (Horizont)" mit Vorbehalt ausgewiesen, und für den Rückkehr-Check gilt
+  ersatzweise das Meltemi-Worst-Case-Szenario (FR19). **Existiert kein gültiger
+  Round-Trip**, schlägt die App dennoch den am wenigsten verletzenden vor, färbt
+  den Rest-Trip rot (FR2) und benennt die verletzte Bedingung; relaxiert wird
+  sichtbar und in fester Reihenfolge — erst Tagesbudget Richtung hartes Maximum,
+  dann die Nachtetappen-Option (FR16) — **niemals** die 65°/25-kn-Schwelle.
+  Alle Bewertungen sind **Momentaufnahmen des aktuellen Forecast-Laufs**: Scores,
+  Optionszustände, Rückkehrfenster und Point of Return werden bei jedem Abruf (FR13)
+  vollständig neu berechnet — was gestern „offen" war, kann heute „geschlossen"
+  sein, und genau dafür gibt es die Morgen-/Abendroutine (UM-1/UM-2).
+- **FR19 — Rückkehrfenster & Predicted Point of Return:** Die App erkennt im
+  Forecast-Horizont **Wetterfenster für die Nord-Rückkehr** (Zeiträume, in denen die
+  Rückkehr-Etappen innerhalb der FR16-Schwellen liegen) und plant deren Nutzung fest
+  in den Round-Trip ein: Am Ende des Fensters muss ein Hafen erreicht sein, von dem
+  aus Alimos in den verbleibenden Tagen **auch bei durchgehendem Meltemi** erreichbar
+  ist. Zeigt der Forecast kein Fenster, plant die App konservativ (Rückkehr auch bei
+  vollem Meltemi über alle Resttage gesichert) und rechnet Süd-Optionen neu, sobald
+  sich eines öffnet. **„Durchgehender/voller Meltemi" ist dabei ein definiertes,
+  konfigurierbares Worst-Case-Szenario** — kein vager Begriff: `[ANNAHME: Wind
+  konstant 30 kn aus N–NE (0–45°) mit zugehöriger Welle; beim Bauen kalibrieren]`.
+  Es greift überall dort, wo der Forecast-Horizont endet (FR18). Dazu fortlaufend
+  der **Predicted Point of Return**: der späteste Umkehrpunkt für die stressfreie
+  Rückkehr nach Alimos — gegen dieselbe Deadline wie FR18 (19.8. nachmittags),
+  wobei der Puffer-/Hafentag (§4) die Reserve bildet; Restdistanz über die
+  Rückfallhäfen-Kette vs. Resttage × Tagesbudget; Etappendauern wie im
+  Etappen-Scoring aus der Polare (FR15/FR26).
 - **FR20:** Aus Optionsraum und Point of Return leitet die App **Entscheidungspunkte**
   ab und macht sie sichtbar: an welchem Tag welche Frage entschieden sein muss, bevor
   die zugehörige Option verfällt (z. B. „Verlängerung nach Amorgos nur bei
   Doppel-Fenster für Hin- und Rückweg") — dynamisch berechnet, keine fest verdrahteten
   Kalender-Gates.
-- **FR27:** Die App bestimmt die **aktuelle Position per GPS/Standortabfrage**
-  (Browser-Geolocation, integriert mit der Google-Maps-Karte) — Teil des Produkts,
-  keine reine Handeingabe. Manuelles Übersteuern (Platz aus der Bibliothek wählen)
-  bleibt als Fallback möglich, z. B. wenn der Browser den Standort nicht freigibt.
-  *(ID nachgereicht — Nummerierung bleibt stabil.)*
+- **FR27:** Die App bestimmt die **aktuelle Position per GPS/Standortabfrage
+  einmalig beim App-Start** (Browser-Geolocation, integriert mit der
+  Google-Maps-Karte) — automatisch, **ohne eigenen Button**. Manuelles Übersteuern
+  (Platz aus der Bibliothek wählen) bleibt als Fallback möglich, z. B. wenn der
+  Browser den Standort nicht freigibt.
+- **FR32 — Törntag-Automatik:** Die App kennt Start- (8.8.) und Endtag (19.8.) des
+  Törns und leitet den aktuellen Törntag **selbst aus dem Datum ab** — keine
+  manuelle Törntag-Eingabe, kein Auswahlelement. *(Neu aus Feldtest 2026-08-02.)*
 
-### F7 — Tagesentscheidung
+### F7 — Tagesentscheidung & Round-Trip-Editing
 
-- **FR21:** Morgen-/Abendansicht „Was machen wir heute?": die 2–3 Tagesoptionen
-  (**Ziel-Inseln**, je mit ihrem besten Platz und dessen Ziel-Ampel für die Nacht),
-  Etappen-Score, Dauer und der Auswirkung auf den Mittelfristplan — nebeneinander
-  vergleichbar.
-- **FR22:** Die App empfiehlt nicht automatisch und blendet nichts aus: Optionen bleiben
-  sichtbar, der Skipper entscheidet.
+- **FR21:** Morgen-/Abendansicht „Was machen wir heute?": die heutige Etappe der
+  Hauptroute (**Ziel-Insel** mit ihren Häfen/Buchten und deren Ziel-Ampeln für die
+  Nacht), Etappen-Score, Dauer (transparent nach FR30) und die Auswirkung auf den
+  Rest-Trip. Es gibt **keine Header-Auswahlbox für Routen-Optionen** — es gibt die
+  eine Hauptroute, editierbar über die Etappen-Cards (FR28) oder die
+  Alternativ-Routen (FR29).
+- **FR22:** Die App **schlägt den Round-Trip aktiv vor** (Feldtest-Entscheidung
+  2026-08-02, ersetzt „empfiehlt nicht automatisch"), blendet aber nichts aus und
+  entscheidet nichts: Der Skipper kann jeden Vorschlag ändern; die App rechnet,
+  vergleicht und zeigt die Konsequenzen.
+- **FR28 — Etappen-Editing:** Der Skipper kann **jede vorgeschlagene Etappe
+  editieren** — für den jeweiligen Tag eine andere Insel oder einen anderen
+  Hafen/Platz auf dieser Insel als Tagesziel festlegen. Nach jeder Änderung wird der
+  **gesamte restliche Round-Trip neu berechnet** (inkl. Rückkehrfenster, Point of
+  Return und Rest-Trip-Ampel FR2). *(Neu aus Feldtest 2026-08-02.)*
+- **FR29 — Alternativ-Routen:** Ergänzend zur Hauptroute zeigt die App auf
+  Anforderung eine **kleine, sinnvolle Zahl alternativer Round-Trips** (aus dem
+  Möglichkeitsraum FR9). Eine Alternative wird erst angezeigt und dann vom Skipper
+  explizit **eingecheckt** — damit wird sie zur neuen Hauptroute. *(Neu aus
+  Feldtest 2026-08-02.)*
+- **FR31 — Gäste-Pickup 15.8.:** Am Mittag des 15.8. landen zwei Gäste am
+  Flughafen Santorin. **Harte Bedingung** jedes gültigen Round-Trips (FR18(3)):
+  Am 15.8. — dem Puffer-/Hafentag (§4) — liegt das Schiff in einem Hafen, den die
+  Gäste per Fähre ab Santorin erreichen können. **Weiche Präferenz** darüber:
+  Pickup direkt auf Santorin — nur, wenn danach ein kriterienkonformer Rücktrip
+  (FR16/FR19) bleibt; das ist nur bei optimalen Windbedingungen möglich, da es
+  der 2/3-Rückweg-Faustregel widerspricht. Sonst gilt **jede fähre-erreichbare
+  Insel als Pickup-Fallback** (z. B. Paros — Zustieg am Abend des 15.8. —, Naxos,
+  Ios); die App schlägt den besten Pickup-Punkt vor. *(Neu aus Feldtest
+  2026-08-02.)*
 
 ### F8 — Daten-Seeding & Kuration
 
@@ -304,8 +417,12 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 - Stimmungs-/Crew-Zustand als Eingabegröße
 - Offline-Fähigkeit; native Mobile-Apps (mobil läuft die Web-App im Browser, NFR2)
 - Revierübergreifende Platz-Datenbank (MVP kuratiert nur den Törn-Korridor)
-- Editier-Oberfläche für die Bibliotheken (Daten kommen über die Seeding-Pipeline;
-  Korrekturen im Feld via direkter DB-Änderung)
+- Editier-Oberfläche für die **Bibliotheken** (Daten kommen über die
+  Seeding-Pipeline; Korrekturen im Feld via direkter DB-Änderung) — nicht zu
+  verwechseln mit dem **Etappen-Editing des Round-Trips** (FR28), das ausdrücklich
+  im Scope ist
+- Törnplanung im Saronischen Golf (Feldtest-Entscheidung 2026-08-02: keine Option,
+  auch nicht als Schwachwind-Fallback)
 - Wind-Fetch-Heuristik als automatisches Schutz-Schätzverfahren (nur als späterer
   Fallback für unkuratierte Plätze vorgemerkt)
 - Multi-Modell-Vergleich in der App — Windy Compare bleibt dafür das Werkzeug
@@ -321,8 +438,9 @@ je Platz („Ziel-Ampel", FR8) und je Etappe/Option (FR17).
 
 | Termin | Meilenstein |
 |---|---|
-| 7. Aug | Feature-komplett: Bibliotheken final reviewt und importiert; Karte + Tagesansicht fertig; Polar-Transkript gegen Original verifiziert |
-| 8. Aug | Törnstart — erste reale Morgenentscheidung am Samstagmorgen, danach täglicher Einsatz |
+| 2. Aug | Feldtest-Feedback eingearbeitet (dieses PRD-Update): Round-Trip-Logik, Rückkehrfenster, Etappen-Editing, Gäste-Pickup, Karten-Overlay, UI-Bereinigung |
+| 7. Aug | Feature-komplett: Round-Trip-Umbau umgesetzt; Bibliotheken final reviewt und importiert; Karte + Tagesansicht fertig; Polar-Transkript gegen Original verifiziert |
+| 8. Aug | Törnstart — erste reale Morgenentscheidung am Samstagnachmittag (Abfahrt), danach täglicher Einsatz |
 
 **Priorität bei Zeitnot** `[ANNAHME]` aus dem Brief: Etappen-Scoring und Point of Return
 vor Karten-Politur; Design-Anspruch (NFR1) wird zuerst bei der Tagesansicht eingelöst,
@@ -343,13 +461,19 @@ zuletzt bei Nebenansichten.
 - **Google-Maps-Billing:** Preis-/Konditionsangaben der Recherche stammen teils aus
   Sekundärquellen — vor dem Billing-Setup einmal auf der offiziellen Pricing-Seite
   verifizieren (Free-Tier 10.000 Loads/Monat erwartet).
-- **Rückkehrzeit vertraglich bestätigen:** Rückgabe am Vorabend der Ausschiffung
-  (Annahme 18:00, Alimos) — mit dem Vercharterer fixieren; der Wert geht als Konstante
-  in die Point-of-Return-Rechnung (FR19) ein.
+- **Rückkehrzeit vertraglich bestätigen:** Rückkehr Alimos am Mittwoch, 19.8.
+  nachmittags (Annahme 18:00) — mit dem Vercharterer fixieren; der Wert ist die
+  gemeinsame Deadline-Konstante von Round-Trip-Gültigkeit (FR18) und
+  Point-of-Return-Rechnung (FR19).
+- **Fährverbindungen für Gäste-Pickup (FR31):** Welche Inseln sind am 15.8. per
+  Fähre ab Santorin erreichbar (Abfahrtszeiten, Dauer)? Daten für die
+  Pickup-Fallback-Bewertung bei der Kuration mitrecherchieren.
 - **Annahmen-Index** (alle inline als `[ANNAHME]` markiert): E1 tägliche Nutzung als
   Erfolgskriterium · FR6 Fotoquellen lizenzsauber bei Kuration · FR8 Übernachtungsfenster
   18:00–09:00 · FR15 Standard-Abfahrt 09:00 · FR17 Wind-Reserve der Ampelbänder beim
-  Bauen kalibrieren · §8 Priorität bei Zeitnot: Scoring vor Karten-Politur.
+  Bauen kalibrieren · FR18 Rückkehr-Deadline 19.8. 18:00 (vertraglich bestätigen) ·
+  FR19 Meltemi-Worst-Case-Szenario 30 kn N–NE (beim Bauen kalibrieren) ·
+  §8 Priorität bei Zeitnot: Scoring vor Karten-Politur.
 - **Vlychada/Santorin:** Entschieden — Santorin bleibt als eigener Schlag in der
   Routenbibliothek (alles mit dem Boot, kein Fähren-Ausflug). Offen bleibt die
   Liegeplatz-Frage: Vlychada ist die einzige gut geschützte Liegestelle Thiras, für den

@@ -1,0 +1,112 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. ohne Seitenangabe; CruisersWiki Schinoussa). Neu aufgenommen. Beide Sektoren sind quellintern konsistent, unverändert übernommen. Nach Deliverable E ist die Insel für einen Gästewechsel NICHT geeignet.",
+  "island": {
+    "id": "schinoussa",
+    "name": "Schinoussa",
+    "coordinates": { "lat": 36.87, "lon": 25.52 },
+    "description": "Sanft hügelige Insel der Kleinen Kykladen — mit einem der sichersten Naturhäfen der Gegend.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 3: nicht täglich direkt ab Piräus (3–6× pro Woche), Quelle Ferryhopper (Abruf 2026-02)"
+    }
+  },
+  "places": [
+    {
+      "id": "schinoussa-mersini",
+      "islandId": "schinoussa",
+      "name": "Mersini",
+      "type": "hafen",
+      "coordinates": { "lat": 36.8714, "lon": 25.5119 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 180, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 180, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach SW, Sektor 220–180, maxKn 35 — ein 320 Grad breiter Schutzsektor, offen bleibt nur S bis SW. Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Fast landumschlossener Naturhafen — laut Quelle einer der sichersten Plätze der Kleinen Kykladen.",
+      "warnings": [
+        "Windböen drehen in die Bucht ein, der Grund hält aber zuverlässig",
+        "Fähre legt am Südkai an, Ausweichbereich freihalten",
+        "Supermarkt nur in der Chora (15 Min Fußweg)",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "schlamm-sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Hervorragender Schlammgrund.",
+        "seagrassNote": "Geringer Bewuchs.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Tavernen am Hafen, Supermarkt in der Chora (15 Min)",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "8–15 EUR/Nacht (2025)",
+        "portAuthorityFees": "keine regelmäßige Erhebung",
+        "maxLoaM": 20,
+        "swellExposureNote": "Laut Quelle vollständig abgeschirmt gegen Schwell aus N und NE.",
+        "ferryTrafficNote": "Fähre legt am Südkai an.",
+        "dinghyLanding": null,
+        "restrictions": "Fährbereich freihalten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "schinoussa-livadi",
+      "islandId": "schinoussa",
+      "name": "Livadi (Schinoussa)",
+      "type": "bucht",
+      "coordinates": { "lat": 36.8617, "lon": 25.5186 },
+      "qualities": { "schoenheit": 4, "restaurant": 2, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 240, "toDeg": 120, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 240, "toDeg": 120, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Schinoussa): Öffnung nach S bis SE, Sektor 240–120, maxKn 35 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle."
+      },
+      "description": "Südliche Sandbucht — die Alternative zu Mersini, wenn dort kein Platz mehr ist.",
+      "warnings": [
+        "Offen nach Süden",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Schinoussa"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 7.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Sand.",
+        "seagrassNote": null,
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Taverne am Strand (3 Min)",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 25,
+        "swellExposureNote": "Laut Quelle flaches Wasser bei Meltemi.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Sandstrand zur Anlandung",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Schinoussa"]
+      }
+    }
+  ]
+}

@@ -48,16 +48,14 @@ export function collectLocations(library: Library): LocationEntry[] {
     coordinates: p.coordinates,
   }));
   const seen = new Set(entries.map((e) => e.key));
-  for (const route of library.routes) {
-    for (const leg of route.legs) {
-      leg.waypoints.forEach((w, n) => {
-        const key = legWaypointKey(leg.id, n);
-        if (!seen.has(key)) {
-          seen.add(key);
-          entries.push({ key, coordinates: w });
-        }
-      });
-    }
+  for (const leg of library.legs) {
+    leg.waypoints.forEach((w, n) => {
+      const key = legWaypointKey(leg.id, n);
+      if (!seen.has(key)) {
+        seen.add(key);
+        entries.push({ key, coordinates: w });
+      }
+    });
   }
   return entries;
 }
@@ -159,12 +157,14 @@ export async function fetchForecastBundle(
   const lats = locations.map((l) => l.coordinates.lat.toFixed(4)).join(',');
   const lons = locations.map((l) => l.coordinates.lon.toFixed(4)).join(',');
 
-  // NOTE: wind_gusts_10m (gustKn) und wave_period (wavePeriodS) werden mit
-  // abgerufen und durch alle Schichten gereicht, fließen aber BEWUSST nicht
-  // ins Scoring/die Ampeln ein — Produktentscheidung, siehe deferred-work.
+  // Böen werden NICHT abgerufen (Produktentscheidung 2026-08-03): Planungsgröße
+  // ist der Mittelwind, und ein Datenpunkt, der in keine Bewertung einfließt,
+  // ist toter Ballast (NFR0). wave_period bleibt: Wellenhöhe plus Periode
+  // beschreiben den Schwell-Charakter einer Bucht und sind für die Platz-Ampel
+  // fachlich anschlussfähig.
   const forecastUrl =
     `${FORECAST_URL}?latitude=${lats}&longitude=${lons}` +
-    `&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m` +
+    `&hourly=wind_speed_10m,wind_direction_10m` +
     `&wind_speed_unit=kn&timezone=UTC&timeformat=iso8601` +
     `&forecast_days=${params.forecastDays}&models=${encodeURIComponent(params.forecastModel)}`;
   const marineUrl =
@@ -225,7 +225,6 @@ export async function fetchForecastBundle(
     };
     const windKn = windSeries('wind_speed_10m');
     const windDirDeg = windSeries('wind_direction_10m');
-    const gustKn = windSeries('wind_gusts_10m');
 
     // Marine responses may use a different (shorter) axis: map by timestamp,
     // per location (not via location 0's axis).
@@ -251,7 +250,7 @@ export async function fetchForecastBundle(
         }
       });
     }
-    forecast[loc.key] = { windKn, windDirDeg, gustKn, waveM, waveDirDeg, wavePeriodS };
+    forecast[loc.key] = { windKn, windDirDeg, waveM, waveDirDeg, wavePeriodS };
   });
 
   return {

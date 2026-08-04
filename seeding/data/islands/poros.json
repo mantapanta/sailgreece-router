@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative) + Deep-Research Lauf 1 vom 2026-08-03 (drei neue Buchten, Liegeplatz-Details). Lauf 1 bestätigte Koordinate und Rundumschutz von Poros-Stadt; Stärkegrenzen dort auf den jeweils kleineren Wert beider Quellen gesetzt.",
   "island": {
     "id": "poros",
     "name": "Poros",
     "coordinates": { "lat": 37.5, "lon": 23.45 },
-    "description": "Der Kanal zwischen Insel und Peloponnes — geschützt wie ein Binnensee."
+    "description": "Der Kanal zwischen Insel und Peloponnes — geschützt wie ein Binnensee.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich über 6 Verbindungen ab Piräus (Hydrofoil 1 h, Fähre 2 h 15), Quelle Ferryhopper Poros (Abruf 2026-08)"
+    }
   },
   "places": [
     {
@@ -17,10 +21,196 @@
       "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 3 },
       "shelter": {
         "windSectors": [{ "fromDeg": 0, "toDeg": 360, "maxKn": 35 }],
-        "waveSectors": [{ "fromDeg": 0, "toDeg": 360, "maxM": 0.6 }],
-        "sourceNote": "Quelle 2: Zielkatalog; Kanallage — praktisch allseitiger Schutz"
+        "waveSectors": [{ "fromDeg": 0, "toDeg": 360, "maxM": 0.3 }],
+        "sourceNote": "Quelle 2: Zielkatalog; Kanallage — praktisch allseitiger Schutz. Lauf 1 (Heikell 14. Aufl. S. 122, CruisersWiki Poros) bestätigt den Rundumschutz unabhängig, gibt 38 kn und 0.3 m. Windgrenze beim kleineren Wert 35 kn belassen, Wellengrenze auf 0.3 m gesenkt."
       },
-      "description": "Längsseits an der Stadtpromenade, Segler-Klassiker des Saronischen Golfs."
+      "description": "Längsseits an der Stadtpromenade, Segler-Klassiker des Saronischen Golfs.",
+      "warnings": [
+        "Starke Strömung im Kanal, laut Quelle bis 2,5 kn",
+        "Starker Schwell durch schnell fahrende Fähren, die direkt im schmalen Kanal drehen",
+        "Untiefen auf der Galatas-Seite meiden"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 122 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Feiner Schlamm, hält nach tiefem Eingraben hervorragend.",
+        "seagrassNote": "Keine wesentlichen Seegrasprobleme im Hauptkanal.",
+        "capacityYachts": 100,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 1 Minute an der Waterfront",
+        "showersToilets": true,
+        "wasteDisposal": "Entsorgungspunkte entlang der Pier",
+        "priceIndicationEur": "ca. 10–18 EUR/Nacht (2024, Hafendienst Poros)",
+        "portAuthorityFees": "Limenarchio Poros",
+        "maxLoaM": 30,
+        "swellExposureNote": "Keine Windwellen, aber Schwell durch den Fährverkehr.",
+        "ferryTrafficNote": "Hohe Fährfrequenz; Fähren drehen direkt im schmalen Kanal.",
+        "dinghyLanding": null,
+        "restrictions": "Untiefen auf der Galatas-Seite strikt meiden",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "poros-vathy-russian-bay",
+      "islandId": "poros",
+      "name": "Vathy / Russian Bay",
+      "type": "bucht",
+      "coordinates": { "lat": 37.4862, "lon": 23.432 },
+      "qualities": { "schoenheit": 5, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 230, "toDeg": 150, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 230, "toDeg": 150, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 125, CruisersWiki Poros): Öffnung nach S bis SW, Sektor 230–150, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Kiefernbucht mit den Ruinen der alten russischen Marinebasis — ruhiger Nachtplatz bei Meltemi.",
+      "warnings": [
+        "Fallwinde von den umliegenden Hügeln bei sehr starkem Nordwind",
+        "Meltemi-sicher: ja",
+        "Dichte Seegrasteppiche — freie Sandflecken wählen"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 125 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Verlässlicher Halt in den Sandfeldern.",
+        "seagrassNote": "Dichte Seegrasteppiche; freie Sandflecken zum Ankern wählen.",
+        "capacityYachts": 35,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt, 20 Minuten Gehzeit",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Straße hinter dem Strand",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Laut Quelle abgeschirmt gegen Meltemi-Seegang, auch über 30 kn.",
+        "ferryTrafficNote": "Kein direkter Fährverkehr.",
+        "dinghyLanding": "Anlanden am Sandstrand oder Holzsteg der Taverne",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "poros-monastery-bay",
+      "islandId": "poros",
+      "name": "Monastery Bay",
+      "type": "bucht",
+      "coordinates": { "lat": 37.485, "lon": 23.478 },
+      "qualities": { "schoenheit": 5, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 120, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 120, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 126, CruisersWiki Poros): Öffnung nach S bis SW, Sektor 220–120, maxKn 32 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Bucht unterhalb des Klosters Zoodochos Pigi — klares Wasser, Schutz vor Nord.",
+      "warnings": [
+        "Offen für Dünung aus dem Südsektor",
+        "Dichte Seegrasteppiche in der ganzen Bucht — Ankerplatz genau ansteuern"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 126 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 9.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Sandflecken erfordern genaues Zielen beim Fallenlassen.",
+        "seagrassNote": "Dichte Seegrasteppiche in der gesamten Bucht.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Taverne am Strand, 2 Minuten",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Strandzugang",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Laut Quelle guter Schutz vor Meltemi über 25 kn.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlanden am Kiesstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "poros-neorio",
+      "islandId": "poros",
+      "name": "Neorio",
+      "type": "bucht",
+      "coordinates": { "lat": 37.492, "lon": 23.4395 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 200, "toDeg": 80, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 200, "toDeg": 80, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (CruisersWiki Poros, Abruf 2026-08): Öffnung nach O bis SE, Sektor 200–80, maxKn 32 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle, daher nur mittlere Konfidenz."
+      },
+      "description": "Bewaldete Bucht kurz vor der Hafeneinfahrt — Badestopp und ruhige Alternative zur Stadtpier.",
+      "warnings": [
+        "Schwell von vorbeifahrenden Yachten und Wassertaxis",
+        "Wasserskizonen im Sommer beachten"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 2.5, "max": 6.0 },
+        "anchorHoldingGround": "schlamm-sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Zuverlässiger Halt im Schlamm-Sand-Gemisch.",
+        "seagrassNote": "Vereinzelt Seegras im tieferen Bereich.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt, 3 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Küstenstraße",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Laut Quelle gut geschützt gegen Nordwinde.",
+        "ferryTrafficNote": "Reger Verkehr kleiner Wassertaxis nach Poros-Stadt.",
+        "dinghyLanding": "Anlanden an kleinen Tavernenstegen",
+        "restrictions": "Wasserskizonen im Sommer",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Poros (Abruf 2026-08)"]
+      }
     }
   ]
 }

@@ -1,0 +1,116 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Polyaigos; Jim Baerselman, Cruising the South Aegean; Heikell Greek Waters Pilot). Neu aufgenommen. Sektoren und Öffnungsrichtungen der Quelle sind konsistent, unverändert übernommen.",
+  "island": {
+    "id": "polyaigos",
+    "name": "Polyaigos",
+    "coordinates": { "lat": 36.7667, "lon": 24.6333 },
+    "description": "Unbewohnte Ziegeninsel östlich von Kimolos — Naturschutzgebiet, glasklares Wasser.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 2: unbewohnt, keine reguläre Fähranbindung für Passagiere (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "polyaigos-manolis",
+      "islandId": "polyaigos",
+      "name": "Manolis-Bucht",
+      "type": "bucht",
+      "coordinates": { "lat": 36.7668, "lon": 24.611 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 280, "toDeg": 100, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 280, "toDeg": 100, "maxM": 0.2 }],
+        "sourceNote": "Deep-Research Lauf 2 (CruisersWiki Polyaigos, Baerselman): Öffnung nach S, Sektor 280–100, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Flacher Sandgrund im Sund zwischen Polyaigos und Manolisi — Ankern in Türkis, ohne alles.",
+      "warnings": [
+        "Völlig unbewohnt, keinerlei Infrastruktur",
+        "Natura-2000-Schutzgebiet — Müll vollständig mitnehmen",
+        "Ankerbereich flach (2–3 m), Tiefgang beachten",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: CruisersWiki Polyaigos",
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 2.0, "max": 4.5 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Feiner Sandboden auf 2–3 m Wassertiefe.",
+        "seagrassNote": "Weitgehend reiner Sandgrund.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Keine",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Laut Quelle gut geschützt gegen Meltemi-Schwell.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Am kleinen Sandstrand",
+        "restrictions": "Natura 2000 — Müll strikt mitnehmen",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Polyaigos"]
+      }
+    },
+    {
+      "id": "polyaigos-mersini",
+      "islandId": "polyaigos",
+      "name": "Mersini-Bucht",
+      "type": "bucht",
+      "coordinates": { "lat": 36.7583, "lon": 24.6283 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 200, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 200, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 2 (CruisersWiki Polyaigos, Heikell): Öffnung nach W, Sektor 340–200, maxKn 32 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Zweite Naturbucht der Insel — tiefer, mit Sandgrund und Fallwind aus den Tälern.",
+      "warnings": [
+        "Fallböen aus den Tälern der Insel",
+        "Keine Infrastruktur, Natura-2000-Schutzgebiet",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 2: CruisersWiki Polyaigos"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 8.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Guter Halt im Sand.",
+        "seagrassNote": "Posidonia an den Rändern der Bucht.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Keine",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 40,
+        "swellExposureNote": "Laut Quelle schwellfrei bei Meltemi aus N bis NE.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Am Strand möglich",
+        "restrictions": "Naturschutz beachten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Polyaigos"]
+      }
+    }
+  ]
+}

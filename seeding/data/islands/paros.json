@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: 'Parikia bei Meltemi gut geschützt', Naoussa, Piso Livadi; Parikia ~27 Fähranläufe/Tag im Juli); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: 'Parikia bei Meltemi gut geschützt', Naoussa, Piso Livadi; Parikia ~27 Fähranläufe/Tag im Juli) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details, Ansteuerungswarnungen). Koordinaten und Sektorgeometrie aus dem Bestand beibehalten (Lauf 2 setzte Piso Livadi 1,6 sm nördlich, also bei Molos statt Piso Livadi), Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt. OFFENER KONFLIKT bei Naoussa — siehe seeding/research/lauf-2-pruefprotokoll.md.",
   "island": {
     "id": "paros",
     "name": "Paros",
     "coordinates": { "lat": 37.08, "lon": 25.15 },
-    "description": "Der südlichste feste Punkt des Plan B — lebendig, mit Optionen in alle Richtungen."
+    "description": "Der südlichste feste Punkt des Plan B — lebendig, mit Optionen in alle Richtungen.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: mehrfach täglich Highspeed- und Katamaranverbindungen ab Piräus und Rafina, 2,5–4 h, Quelle Ferryhopper Athens Routes (Abruf 2026-08)"
+    }
   },
   "places": [
     {
@@ -17,11 +21,50 @@
       "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 3 },
       "shelter": {
         "windSectors": [{ "fromDeg": 355, "toDeg": 250, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 355, "toDeg": 250, "maxM": 1.0 }],
-        "sourceNote": "Quelle 2: 'expliziter Meltemi-Schutzhafen'; Bucht öffnet nach W; Fährschwell beachten"
+        "waveSectors": [{ "fromDeg": 355, "toDeg": 250, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: 'expliziter Meltemi-Schutzhafen'; Bucht öffnet nach W; Fährschwell beachten. Lauf 2 gibt Öffnung nach WNW, Sektor 340–220, gleiche Windgrenze 30 kn, Welle 0.8 m — bestätigt den Bestand weitgehend. Wellengrenze auf 0.8 m gesenkt."
       },
-      "warnings": ["Starker Fährverkehr (~27 Anläufe/Tag im Juli) — Schwell und Rangieren am Anleger"],
-      "description": "Der Meltemi-Schutzhafen der Route — Hauptort mit allem, was die Crew braucht."
+      "warnings": [
+        "Starker Fährverkehr (~27 Anläufe/Tag im Juli) — Schwell und Rangieren am Anleger",
+        "Klippen und Untiefen in der Bucht-Zufahrt (Lauf 2 nennt ein 'Super-Manois-Riff' — Bezeichnung unverifiziert, Ansteuerung nach Karte fahren)",
+        "Bei starkem Meltemi läuft Nordwestschwell um das Kap in die Bucht",
+        "Meltemi-sicher: bedingt"
+      ],
+      "description": "Der Meltemi-Schutzhafen der Route — Hauptort mit allem, was die Crew braucht.",
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 250 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Gute Haltekraft auf Sand und Schlamm.",
+        "seagrassNote": "Posidonia-Zonen außerhalb des Ankerfeldes.",
+        "capacityYachts": 40,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Vollständige Infrastruktur, Supermärkte, Bäckereien (1–3 Min)",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 15–22 EUR/Nacht (Gemeindehafen, 2024)",
+        "portAuthorityFees": "Hafenbehörde Paros, Einklarieren erforderlich",
+        "maxLoaM": 30,
+        "swellExposureNote": "Kräftiger Nordwestschwell läuft bei starkem Meltemi um das Kap in die Bucht.",
+        "ferryTrafficNote": "Extrem hoher Fährverkehr Tag und Nacht.",
+        "dinghyLanding": "Am Hafenkai oder Beibootsteg im Süden",
+        "restrictions": "Fährroute meiden, Fahrwasser beachten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 250 (Seitenangabe unverifiziert)"
+        ]
+      }
     },
     {
       "id": "paros-naoussa",
@@ -32,10 +75,50 @@
       "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 60, "toDeg": 320, "maxKn": 22 }],
-        "waveSectors": [{ "fromDeg": 60, "toDeg": 320, "maxM": 0.8 }],
-        "sourceNote": "Quelle 2: Zielkatalog; große Bucht öffnet nach N — bei Meltemi exponiert"
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 320, "maxM": 0.3 }],
+        "sourceNote": "Quelle 2: Zielkatalog; große Bucht öffnet nach N — bei Meltemi exponiert. KONFLIKT: Lauf 2 gibt den nahezu invertierten Sektor 270–60 mit 35 kn an und begründet das mit dem geschützten INNENBECKEN hinter der Wellenbrechermole, urteilt für die Ansteuerung aber 'Meltemi-sicher: bedingt'. Bestandsgeometrie beibehalten (bewertet die exponierte Ansteuerung, nicht das Innenbecken), Wellengrenze auf 0.3 m gesenkt."
       },
-      "description": "Das schönste Hafenstädtchen der Insel — aber die Bucht schaut genau in den Meltemi."
+      "description": "Das schönste Hafenstädtchen der Insel — aber die Bucht schaut genau in den Meltemi.",
+      "warnings": [
+        "Ansteuerung erfordert genaue Navigation wegen vorgelagerter Riffe — bei Meltemi und Welle heikel",
+        "Innenbecken laut Lauf 2 bei Meltemi ruhig; der Sektor bewertet bewusst die Ansteuerung, nicht den Liegeplatz",
+        "Geringe Wassertiefe im Altstadt-Fischerbecken, Yachten liegen am Ostkai",
+        "Meltemi-sicher: bedingt"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 253 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "murings",
+        "depthAtBerthM": { "min": 2.2, "max": 3.5 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Mooringleinen im neueren Yachthafenbecken.",
+        "seagrassNote": "Im Innenbecken nicht relevant.",
+        "capacityYachts": 30,
+        "reservationPossible": true,
+        "reservationChannel": "Telefon Hafenvogt Naoussa (Nummer aus Lauf 2 unverifiziert — vor Verlass darauf gegenprüfen)",
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Zahlreiche Geschäfte und Tavernen in Gehdistanz",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 20–30 EUR/Nacht (Gemeinde/Marina, 2024)",
+        "portAuthorityFees": "Liegegeld vor Ort von der Marina-Verwaltung",
+        "maxLoaM": 20,
+        "swellExposureNote": "Guter Schutz im Innenbecken hinter der Wellenbrechermole.",
+        "ferryTrafficNote": "Keine Großfähren im Fischerhafen.",
+        "dinghyLanding": "Direkt am Kai möglich",
+        "restrictions": "Sehr geringe Wassertiefe im Altstadt-Fischerbecken; Yachten nutzen den Ostkai",
+        "vhfChannel": "12",
+        "confidence": "mittel",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 253 (Seitenangabe unverifiziert)"
+        ]
+      }
     },
     {
       "id": "paros-piso-livadi",
@@ -46,10 +129,50 @@
       "qualities": { "schoenheit": 3, "restaurant": 3, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 160, "toDeg": 70, "maxKn": 28 }],
-        "waveSectors": [{ "fromDeg": 160, "toDeg": 70, "maxM": 0.8 }],
-        "sourceNote": "Quelle 2: Zielkatalog; kleiner Hafen an der Ostküste, öffnet nach SE"
+        "waveSectors": [{ "fromDeg": 160, "toDeg": 70, "maxM": 0.5 }],
+        "sourceNote": "Quelle 2: Zielkatalog; kleiner Hafen an der Ostküste, öffnet nach SE. Lauf 2 bestätigt Öffnung nach S bis SE und Windgrenze 28 kn, gibt Sektor 270–120 und Welle 0.5 m. Bestandsgeometrie beibehalten, Wellengrenze auf 0.5 m gesenkt."
       },
-      "description": "Kleiner Osthafen — praktischer Absprung Richtung Naxos."
+      "description": "Kleiner Osthafen — praktischer Absprung Richtung Naxos.",
+      "warnings": [
+        "Platzangebot für Gastyachten stark limitiert (ca. 12 Boote)",
+        "Grössenlimit laut Lauf 2 nur 16 m — für dieses Schiff knapp, vorab klären",
+        "Geringe Wassertiefen im Innenbereich, Echolot beobachten",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 255 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 3.2 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Zuverlässiges Halten im Hafenbecken.",
+        "seagrassNote": "Vereinzelt Kraut außerhalb der Molen.",
+        "capacityYachts": 12,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt und Tavernen am Hafen",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 10–14 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Gemeinde kassiert unregelmäßig",
+        "maxLoaM": 16,
+        "swellExposureNote": "Guter Schutz vor Meltemi, Schwell bei Süd- und Südostwind.",
+        "ferryTrafficNote": "Nur Ausflugsboote nach Naxos/Koufonisia.",
+        "dinghyLanding": "Am Molenkopf möglich",
+        "restrictions": "Geringe Wassertiefen im Innenbereich — Echolot beobachten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 255 (Seitenangabe unverifiziert)"
+        ]
+      }
     }
   ]
 }

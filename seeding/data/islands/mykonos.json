@@ -1,0 +1,163 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. ohne Seitenangabe; CruisersWiki Mykonos). Neu aufgenommen. Alle drei Sektoren sind quellintern konsistent. Aus den gelieferten Texten wurden Zitationsartefakte der Recherche entfernt.",
+  "island": {
+    "id": "mykonos",
+    "name": "Mykonos",
+    "coordinates": { "lat": 37.45, "lon": 25.35 },
+    "description": "Exponierte Nordostinsel mit ausgebauter Marina — und geschützten Buchten an der Südseite.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 3: täglich sehr hohe Frequenz ab Piräus und Rafina (Fast Ferries, SeaJets), Quelle NetFerry Mykonos (Abruf 2026-02)"
+    }
+  },
+  "places": [
+    {
+      "id": "mykonos-ornos",
+      "islandId": "mykonos",
+      "name": "Ornos",
+      "type": "bucht",
+      "coordinates": { "lat": 37.4161, "lon": 25.3211 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 240, "toDeg": 120, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 240, "toDeg": 120, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Mykonos): Öffnung nach S, Sektor 240–120, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Tief eingeschnittene Südbucht mit allem in Gehweite — der Meltemi-Schutzraum der Insel.",
+      "warnings": [
+        "Sehr hohe Yachtdichte im Juli und August",
+        "Badezonen-Bojen beachten",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Mykonos"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Sandgrund.",
+        "seagrassNote": "Geringer Bewuchs.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Supermärkte und Tavernen direkt am Strand (2 Min)",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Laut Quelle glattes Wasser auch bei stärksten Nordwinden.",
+        "ferryTrafficNote": "Kein Großfährverkehr.",
+        "dinghyLanding": "Anlandung am Strand oder an Tavernenstegen",
+        "restrictions": "Badezonen-Bojen beachten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Mykonos"]
+      }
+    },
+    {
+      "id": "mykonos-tourlos",
+      "islandId": "mykonos",
+      "name": "Tourlos (Neue Marina)",
+      "type": "marina",
+      "coordinates": { "lat": 37.4647, "lon": 25.3261 },
+      "qualities": { "schoenheit": 2, "restaurant": 3, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 260, "toDeg": 140, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 260, "toDeg": 140, "maxM": 0.8 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl., CruisersWiki Mykonos): Öffnung nach S bis SW, Sektor 260–140, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Der Yachthafen nördlich der Altstadt — Muringleinen und Landstrom, dafür Fährschwell.",
+      "warnings": [
+        "Großfähren erzeugen beträchtlichen Schwell an den Pontons",
+        "Bei starkem Meltemi drückt der Wind seitlich auf die Liegeplätze",
+        "Fahrrinne der Großfähren strikt meiden",
+        "Versorgung nur eingeschränkt zu Fuß (Supermarkt 15 Min)"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)",
+        "Deep-Research Lauf 3: CruisersWiki Mykonos"
+      ],
+      "berthingDetails": {
+        "mooringType": "murings",
+        "depthAtBerthM": { "min": 2.5, "max": 5.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Geschützter Schlammgrund im inneren Becken; Muringleinen vorhanden.",
+        "seagrassNote": null,
+        "capacityYachts": 60,
+        "reservationPossible": true,
+        "reservationChannel": "Marina-Büro telefonisch oder über VHF Kanal 12",
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Minimarkt am Hafen (5 Min), Supermarkt 15 Min",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "35–55 EUR/Nacht (2025, Marina)",
+        "portAuthorityFees": "In der Marinagebühr enthalten",
+        "maxLoaM": 30,
+        "swellExposureNote": "Schnellfähren verursachen unregelmäßige Wellen im Becken.",
+        "ferryTrafficNote": "Direkt angrenzendes Fährterminal mit hoher Frequenz.",
+        "dinghyLanding": null,
+        "restrictions": "Fahrrinne der Großfähren strikt meiden",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "mykonos-kalafatis",
+      "islandId": "mykonos",
+      "name": "Kalafatis",
+      "type": "bucht",
+      "coordinates": { "lat": 37.4378, "lon": 25.4206 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 230, "toDeg": 100, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 230, "toDeg": 100, "maxM": 0.6 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach S bis SE, Sektor 230–100, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Weite Ankerbucht im Südosten — Ausweichplatz, wenn Ornos voll ist.",
+      "warnings": [
+        "Böen fallen über die flache Landenge ein",
+        "Seegrasfelder im mittleren Buchtbereich"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 9.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Sand mit Seegrasstellen.",
+        "seagrassNote": "Seegrasfelder im mittleren Bereich.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Tavernen in 5 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 25,
+        "swellExposureNote": "Laut Quelle flaches Wasser bei Nordwind.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlandung am Sandstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    }
+  ]
+}

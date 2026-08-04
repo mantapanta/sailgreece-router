@@ -7,13 +7,27 @@
 
 import type {
   Assessment,
+  PlanAssessment,
   PlanningSnapshot,
   PlaceNightAssessment,
+  StageAssessment,
 } from './schema/snapshot.ts';
 import type { Ampel } from './schema/common.ts';
+import type { Plan } from './schema/plan.ts';
+import { stageNumber, stagesOf } from './schema/plan.ts';
+import { worstAmpel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
 import { predictedPointOfReturn } from './ppr.ts';
+import { assessLeg, stopHoursForDay } from './scoring.ts';
+import {
+  completePlan,
+  deriveAlternatives,
+  existsValidPlan,
+  legLibrary,
+  validatePlan,
+  type SolveResult,
+} from './solver.ts';
 import { distanceNm } from './geo.ts';
 
 /**
@@ -60,6 +74,109 @@ export function deriveCurrentIsland(snapshot: PlanningSnapshot): {
 export function deriveCurrentIslandId(snapshot: PlanningSnapshot): string | null {
   return deriveCurrentIsland(snapshot).islandId;
 }
+
+/**
+ * Assess one plan day by day: leg ampeln, the FR2 leg number and the berth —
+ * skipper-chosen berths are shown as-is, solver stages get the current
+ * `bestPlace` suggestion, declared as such (AD-12).
+ */
+function assessPlan(
+  plan: Plan,
+  snapshot: PlanningSnapshot,
+  bestPlaceByIsland: Record<string, Record<number, string | null>>,
+  nightAmpeln: Record<string, Record<number, PlaceNightAssessment>>,
+  meta: { variantId: string; turnIslandId: string; relaxedTo: string },
+): PlanAssessment {
+  const legs = legLibrary(snapshot);
+  const stages: StageAssessment[] = plan.days
+    .slice()
+    .sort((a, b) => a.day - b.day)
+    .map((entry) => {
+      const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+      const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
+      const suggestion = bestPlaceByIsland[islandId]?.[entry.day] ?? null;
+      const placeId = chosen ?? suggestion;
+      const stopHoursPerStop = stopHoursForDay(snapshot, entry.day);
+      const legAssessments =
+        entry.kind === 'stage'
+          ? (() => {
+              let offset = 0;
+              const stopHours = stopHoursPerStop;
+              return entry.legIds.map((legId) => {
+                const leg = legs.get(legId);
+                if (!leg) {
+                  return {
+                    legId,
+                    day: entry.day,
+                    ampel: 'unbewertet' as Ampel,
+                    sailHours: null,
+                    motorHours: null,
+                    totalHours: null,
+                    avgTwsKn: null,
+                    avgTwaDeg: null,
+                    upwind: false,
+                    reasons: [`Etappe ${legId} nicht in der Bibliothek`],
+                    nightLeg: null,
+                    arrivalHourAthens: null,
+                    breakdown: [],
+                    pointPassages: [],
+                  };
+                }
+                const a = assessLeg(leg, entry.day, snapshot, {
+                  departureOffsetHours: offset || undefined,
+                });
+                // Nach jeder Etappe die Liegezeit des Zwischenstopps: die
+                // Folge-Etappe startet nach der Pause, nicht direkt bei
+                // Ankunft. Nach der LETZTEN Etappe ist der Offset unbenutzt,
+                // deshalb hier ohne Sonderfall.
+                offset += (a.totalHours ?? 0) + stopHours;
+                return a;
+              });
+            })()
+          : [];
+      return {
+        day: entry.day,
+        stageNumber: stageNumber(plan, entry.day),
+        kind: entry.kind,
+        toIslandId: islandId,
+        placeId,
+        placeIsSuggestion: chosen === undefined || chosen === null,
+        placeAmpel: placeId
+          ? (nightAmpeln[placeId]?.[entry.day]?.ampel ?? 'unbewertet')
+          : 'unbewertet',
+        ampel:
+          entry.kind === 'harbour'
+            ? (placeId ? (nightAmpeln[placeId]?.[entry.day]?.ampel ?? 'unbewertet') : 'unbewertet')
+            : worstAmpel(legAssessments.map((l) => l.ampel)),
+        legs: legAssessments,
+        pinned: entry.source === 'skipper',
+        stopHoursPerStop,
+        stopHoursTotal:
+          Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
+      };
+    });
+
+  return {
+    plan,
+    validity: validatePlan(plan, snapshot),
+    stages,
+    variantId: meta.variantId,
+    turnIslandId: meta.turnIslandId,
+    relaxedTo: meta.relaxedTo,
+  };
+}
+
+const toPlanAssessment = (
+  r: SolveResult,
+  snapshot: PlanningSnapshot,
+  bestPlaceByIsland: Record<string, Record<number, string | null>>,
+  nightAmpeln: Record<string, Record<number, PlaceNightAssessment>>,
+): PlanAssessment =>
+  assessPlan(r.plan, snapshot, bestPlaceByIsland, nightAmpeln, {
+    variantId: r.variantId,
+    turnIslandId: r.turnIslandId,
+    relaxedTo: r.relaxedTo,
+  });
 
 export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
   const { library, trip, params } = snapshot;
@@ -111,20 +228,114 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
   // --- option space, PPR, decision points, day options ---------------------
   // Ordering by escalation rank is a domain criterion (AD-2): the assessment
   // delivers routeOptions ORDERED (conservative first); views only consume.
-  const routesByRank = [...library.routes].sort(
+  const routesByRank = [...library.variants].sort(
     (a, b) => a.escalationRank - b.escalationRank,
   );
   const routeOptions = routesByRank.map((route) =>
     assessRouteOption(route, currentIslandId, snapshot),
   );
   const ppr = predictedPointOfReturn(snapshot, currentIslandId);
-  const decisionPoints = deriveDecisionPoints(routeOptions, ppr, library.routes);
+  const decisionPoints = deriveDecisionPoints(routeOptions, ppr, library.variants);
   const dayOptions = deriveDayOptions(
     snapshot,
     currentIslandId,
     bestPlaceByIsland,
     nightAmpeln,
   );
+
+  // --- round trip: main route, proposal, alternatives, FR2 light -----------
+  // The persisted main route is only RE-ASSESSED here; the proposal is a
+  // separate object and never overwrites it (AD-12).
+  const pins = (trip.plan?.days ?? [])
+    .filter((d) => d.source === 'skipper')
+    .map((d) => ({
+      day: d.day,
+      toIslandId: d.kind === 'stage' ? d.toIslandId : null,
+      toPlaceId: d.kind === 'stage' ? d.toPlaceId : d.placeId,
+    }));
+
+  // Off-plan position: the boat is somewhere the plan did not expect (weather,
+  // a change of mind, a night at anchor elsewhere). Everything downstream is
+  // computed from the REAL position, so the plan is what needs correcting —
+  // but the divergence has to be visible instead of silently reinterpreted.
+  const expectedIsland = trip.plan
+    ? (() => {
+        const yesterday = trip.plan.days.find((d) => d.day === trip.currentDay - 1);
+        if (!yesterday) return null;
+        return yesterday.kind === 'stage' ? yesterday.toIslandId : yesterday.islandId;
+      })()
+    : null;
+  const offPlan =
+    currentIslandId !== null &&
+    expectedIsland !== null &&
+    currentIslandId !== expectedIsland;
+
+  const solved = currentIslandId
+    ? completePlan(snapshot, currentIslandId, pins)
+    : null;
+  const proposal = solved
+    ? toPlanAssessment(solved, snapshot, bestPlaceByIsland, nightAmpeln)
+    : null;
+
+  const mainRoute = trip.plan
+    ? assessPlan(trip.plan, snapshot, bestPlaceByIsland, nightAmpeln, {
+        variantId: solved?.variantId ?? 'hauptroute',
+        turnIslandId: solved?.turnIslandId ?? (currentIslandId ?? ''),
+        relaxedTo: 'none',
+      })
+    : null;
+
+  // FR2 existence predicate: pins deliberately NOT binding, because the way
+  // to cash a yellow in is the check-in — and that releases pins (AD-13).
+  const witness = currentIslandId ? existsValidPlan(snapshot, currentIslandId) : null;
+  const alternatives = currentIslandId
+    ? deriveAlternatives(
+        snapshot,
+        currentIslandId,
+        witness,
+        trip.plan ?? undefined,
+      ).map((r) => toPlanAssessment(r, snapshot, bestPlaceByIsland, nightAmpeln))
+    : [];
+
+  const restTripReasons: string[] = [];
+  let restTripAmpel: Ampel;
+  if (!currentIslandId) {
+    // No position, no verdict: a missing fix is a data gap, and painting the
+    // rest trip red would cry wolf (NFR6: never green, never silently hidden).
+    restTripAmpel = 'unbewertet';
+    restTripReasons.push(
+      positionNote ?? 'Ohne Position ist der Rest-Trip nicht bewertbar',
+    );
+  } else if (!mainRoute) {
+    restTripAmpel = 'unbewertet';
+    restTripReasons.push('Noch keine Hauptroute — Vorschlag der App übernehmen');
+  } else if (
+    mainRoute.validity.valid &&
+    !mainRoute.validity.horizonDependent &&
+    stagesOf(mainRoute.plan).length > 0
+  ) {
+    // Green requires an actual round trip: a plan that only lies in port has
+    // no violations either, and reporting that as green would tell the skipper
+    // his trip is fine while the boat never leaves Alimos.
+    restTripAmpel = 'gruen';
+  } else if (witness) {
+    // Yellow: the main route is not provably valid — it violates something,
+    // hangs on the horizon or falls short structurally — but a round trip that
+    // is safe, on time and actually sails still exists in the search space.
+    restTripAmpel = 'gelb';
+    restTripReasons.push(
+      mainRoute.validity.valid
+        ? 'Hauptroute hängt an Etappen jenseits des Forecast-Horizonts'
+        : 'Hauptroute erfüllt die Kriterien nicht vollständig — ein tragfähiger Round-Trip existiert',
+    );
+    mainRoute.validity.violations.forEach((v) => restTripReasons.push(v.text));
+  } else {
+    restTripAmpel = 'rot';
+    restTripReasons.push('Kein sicherer Round-Trip mehr darstellbar');
+    (proposal ?? mainRoute).validity.violations.forEach((v) =>
+      restTripReasons.push(v.text),
+    );
+  }
 
   return {
     fetchedAtIso: snapshot.fetchedAtIso,
@@ -134,9 +345,17 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
     bestPlaceByIsland,
     dayOptions,
     routeOptions,
+    mainRoute,
+    proposal,
+    alternatives,
+    restTripAmpel,
+    restTripReasons,
     ppr,
     decisionPoints,
     currentIslandId,
-    positionNote,
+    positionNote: offPlan
+      ? `Position (${currentIslandId}) weicht vom Plan ab — erwartet war ${expectedIsland}. Der Rest-Trip ist ab der echten Position gerechnet.${positionNote ? ` ${positionNote}` : ''}`
+      : positionNote,
+    offPlan,
   };
 }

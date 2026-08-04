@@ -2,12 +2,14 @@
 
 import type { Place } from '../schema/place.ts';
 import type { Polar } from '../schema/polar.ts';
-import type { Leg, Route } from '../schema/route.ts';
+import type { Leg, Variant } from '../schema/route.ts';
 import type {
   PlanningSnapshot,
   PointForecast,
 } from '../schema/snapshot.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
+import type { Plan, PlanDay, PlanSource } from '../schema/plan.ts';
+import { PLAN_SCHEMA_VERSION } from '../schema/plan.ts';
 
 export const TRIP_START = '2026-08-08';
 
@@ -32,7 +34,6 @@ export function constantForecast(
   return {
     windKn: Array(hours).fill(windKn),
     windDirDeg: Array(hours).fill(windDirDeg),
-    gustKn: Array(hours).fill(windKn === null ? null : windKn * 1.3),
     waveM: Array(hours).fill(waveM),
     waveDirDeg: Array(hours).fill(waveDirDeg),
     wavePeriodS: Array(hours).fill(waveM === null ? null : 4),
@@ -93,16 +94,56 @@ export function makeSnapshot(
     model: 'ecmwf_ifs025',
     times,
     forecast: {},
-    library: { islands: [], places: [], invalidPlaces: [], routes: [] },
+    library: { islands: [], places: [], invalidPlaces: [], legs: [], variants: [] },
     polar: null,
     params: { ...DEFAULT_PARAMS, tripStartDate: TRIP_START },
     trip: {
       currentDay: 1,
       position: null,
-      trackedRouteId: null,
+      plan: null,
       departureHourOverride: null,
+      stopHoursByDay: {},
     },
     ...overrides,
+  };
+}
+
+/** A stage day for plan fixtures (AD-12). */
+export function makeStage(
+  day: number,
+  legIds: string[],
+  toIslandId: string,
+  source: PlanSource = 'solver',
+  toPlaceId?: string,
+): PlanDay {
+  return { kind: 'stage', day, legIds, toIslandId, source, toPlaceId };
+}
+
+/** A harbour day for plan fixtures. */
+export function makeHarbourDay(
+  day: number,
+  islandId: string,
+  source: PlanSource = 'solver',
+): PlanDay {
+  return { kind: 'harbour', day, islandId, source };
+}
+
+export function makePlan(days: PlanDay[]): Plan {
+  return { schemaVersion: PLAN_SCHEMA_VERSION, days };
+}
+
+/** A curated variant referencing legs by id (AD-4). */
+export function makeVariant(
+  id: string,
+  legs: Leg[],
+  opts: { escalationRank?: number; isReturnChain?: boolean; name?: string } = {},
+): Variant {
+  return {
+    id,
+    name: opts.name ?? id,
+    escalationRank: opts.escalationRank ?? 0,
+    isReturnChain: opts.isReturnChain ?? false,
+    legIds: legs.map((l) => l.id),
   };
 }
 
@@ -150,7 +191,8 @@ export function northSouthScenario(opts: {
       ],
       places: [north, south],
       invalidPlaces: [],
-      routes: [] as Route[],
+      legs: [],
+      variants: [],
     },
   });
   return { snapshot, leg };

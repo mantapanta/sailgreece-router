@@ -1,0 +1,166 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 92/98/102 — Seitenangaben unverifiziert; CruisersWiki Attika Coast; D-Marin Zea; Alimos Marina Guide 2024). Neu aufgenommen als Festlandküste. WICHTIG: Der Bericht lieferte Marina Alimos hier als 'attika-alimos' — dieser Platz wurde VERWORFEN, weil er als 'athen-alimos' bereits existiert und in routes.json sowie config.json (baseIslandId/basePlaceId) referenziert wird. Diese Datei enthält nur die drei zusätzlichen Festlandplätze.",
+  "island": {
+    "id": "attika",
+    "name": "Attische Küste",
+    "coordinates": { "lat": 37.8, "lon": 23.8 },
+    "description": "Festlandküste von Piräus bis Kap Sounion — Marinas, der Poseidontempel und das Sprungbrett zu den Kykladen.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Alle drei Plätze liegen am attischen Festland und sind über Land aus Athen erreichbar (Zea in Piräus, Sounion und Lavrion per Bus oder Mietwagen) — keine Fähre nötig. Von Deliverable E nicht abgedeckt, Einschätzung ergänzt am 2026-08-03."
+    }
+  },
+  "places": [
+    {
+      "id": "attika-lavrion",
+      "islandId": "attika",
+      "name": "Lavrion",
+      "type": "hafen",
+      "coordinates": { "lat": 37.7125, "lon": 24.056 },
+      "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 200, "toDeg": 140, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 200, "toDeg": 140, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 102, CruisersWiki Attika Coast): Öffnung nach S, Sektor 200–140, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Gewerbe- und Yachthafen an der Ostküste — der kurze Absprung über den Kea-Kanal.",
+      "warnings": [
+        "Seegras im Hafengrund — Anker gründlich einfahren, Kette lang stecken",
+        "Große Fähren legen am Nordkai an, Gewerbekai freihalten",
+        "Schwell bei starkem Südwind"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 102 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Attika Coast (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 5.0 },
+        "anchorHoldingGround": "schlamm-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Schlamm mit Seegras durchsetzt — Kette lang stecken, um das Seegras zu durchdringen.",
+        "seagrassNote": "Seegras im gesamten Hafengrund.",
+        "capacityYachts": 80,
+        "reservationPossible": true,
+        "reservationChannel": "Telefonisch über die Hafenbehörde Lavrion",
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Supermarkt, 3 Minuten Gehweite",
+        "showersToilets": true,
+        "wasteDisposal": "Zentrale Container am Kai",
+        "priceIndicationEur": "ca. 15–25 EUR/Nacht (2024, Hafendienst Lavrion)",
+        "portAuthorityFees": "Limenarchio Lavrion",
+        "maxLoaM": 25,
+        "swellExposureNote": "Geschützt bei Meltemi, Schwell bei starkem Südwind.",
+        "ferryTrafficNote": "Große Fähren legen am Nordkai an.",
+        "dinghyLanding": null,
+        "restrictions": "Gewerbekai für Frachter freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Attika Coast (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "attika-sounion",
+      "islandId": "attika",
+      "name": "Kap Sounion",
+      "type": "bucht",
+      "coordinates": { "lat": 37.6515, "lon": 24.0242 },
+      "qualities": { "schoenheit": 5, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 120, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 120, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 98, CruisersWiki Attika Coast): Öffnung nach S bis SW, Sektor 220–120, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Ankerplatz direkt unter dem Poseidontempel — der spektakulärste erste oder letzte Abend des Törns.",
+      "warnings": [
+        "Starke Fallböen von den Hügeln bei Meltemi — reichlich Kette stecken",
+        "Passierende Fähren nach Lavrion erzeugen leichten Schwell",
+        "Liegt direkt an der Kap-Sounion-Düse, siehe Etappen-Warnungen"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 98 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Attika Coast (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 9.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Sandgrund hält gut; Kettenlänge wegen der Fallböen reichlich bemessen.",
+        "seagrassNote": "Dunkle Seegrasflecken zwischen den Sandflächen.",
+        "capacityYachts": 40,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Taverne, 3 Minuten am Strand",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Strand",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 50,
+        "swellExposureNote": "Guter Windschutz bei Nord, aber die Fallböen treffen das Deck.",
+        "ferryTrafficNote": "Passierende Fähren auf dem Weg nach Lavrion erzeugen leichten Schwell.",
+        "dinghyLanding": "Anlandung am Strand vor den Tavernen",
+        "restrictions": "Ausgewiesene Schwimmbereiche beachten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Attika Coast (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "attika-zea",
+      "islandId": "attika",
+      "name": "Marina Zea (Piräus)",
+      "type": "marina",
+      "coordinates": { "lat": 37.9372, "lon": 23.6465 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 1 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 0, "toDeg": 360, "maxKn": 40 }],
+        "waveSectors": [{ "fromDeg": 0, "toDeg": 360, "maxM": 0.2 }],
+        "sourceNote": "Deep-Research Lauf 1 (D-Marin Zea Official Guide 2024 — Betreiberseite, also amtliche Kategorie): vollständig geschützte Marina, Rundumschutz bis 40 kn, unverändert übernommen."
+      },
+      "description": "D-Marin im Herzen von Piräus — teuer, aber allwettersicher und mit allem in Gehweite.",
+      "warnings": [
+        "Hohes Preisniveau (laut Quelle 90–140 EUR/Nacht für 12–15 m)",
+        "Vorabreservierung dringend erforderlich",
+        "Ankerverbot im Marinabecken"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 1: D-Marin Zea Official Guide 2024"],
+      "berthingDetails": {
+        "mooringType": "murings",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Muringleinen vorhanden, eigener Anker nicht nötig.",
+        "seagrassNote": null,
+        "capacityYachts": 670,
+        "reservationPossible": true,
+        "reservationChannel": "D-Marin App oder Telefon (Nummer aus Lauf 1 unverifiziert)",
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Supermarkt, 2 Minuten Gehdistanz",
+        "showersToilets": true,
+        "wasteDisposal": "Vollständige Entsorgungseinrichtungen",
+        "priceIndicationEur": "ca. 90–140 EUR/Nacht für 12–15 m (2024, D-Marin)",
+        "portAuthorityFees": "In der Marinagebühr enthalten",
+        "maxLoaM": 60,
+        "swellExposureNote": "Schutz gegen sämtliche Windrichtungen.",
+        "ferryTrafficNote": "Keine Fähren im Yachthafen.",
+        "dinghyLanding": null,
+        "restrictions": "Ankerverbot",
+        "vhfChannel": "9",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: D-Marin Zea Official Guide 2024"]
+      }
+    }
+  ]
+}

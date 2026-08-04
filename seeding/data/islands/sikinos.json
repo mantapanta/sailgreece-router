@@ -1,0 +1,69 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Sikinos; aktoploika.gr Sikinos). Neu aufgenommen. Sektor und Öffnungsrichtung der Quelle sind konsistent. Tiefe und Grössenlimit machen den Hafen für dieses Schiff GRENZWERTIG — vor Freigabe entscheiden, ob der Platz überhaupt in die Bibliothek gehört.",
+  "island": {
+    "id": "sikinos",
+    "name": "Sikinos",
+    "coordinates": { "lat": 36.6833, "lon": 25.1167 },
+    "description": "Abgelegen und unaufgeregt — eine Insel ohne Yachtbetrieb, mit einem winzigen Hafen.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 2 nennt 3–6 Verbindungen pro Woche ab Piräus (4,5–8 h) — an einem festen Pickup-Tag also NICHT garantiert. Nach der Regel 'bei Zweifel nicht erreichbar' auf false gesetzt (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "sikinos-alopronia",
+      "islandId": "sikinos",
+      "name": "Alopronia",
+      "type": "hafen",
+      "coordinates": { "lat": 36.675, "lon": 25.145 },
+      "qualities": { "schoenheit": 3, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 40, "maxKn": 20 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 40, "maxM": 1.0 }],
+        "sourceNote": "Deep-Research Lauf 2 (CruisersWiki Sikinos, aktoploika.gr): Öffnung nach E bis SE, Sektor 220–40, maxKn 20 — Sektor, Öffnungsrichtung und das Urteil 'Meltemi-sicher: nein' sind konsistent, unverändert übernommen."
+      },
+      "description": "Winziger Fährhafen (Skala) mit Sandstrand — flach, steinig, nur bei ruhigem Wetter.",
+      "warnings": [
+        "GRENZWERTIG FÜR DIESES SCHIFF: Tiefe in der Zufahrt nur 2,0–2,8 m bei 2,0 m Tiefgang, Grössenlimit laut Quelle 14 m",
+        "Haltegrund schlecht: Fels und Kies mit geringer Haltekraft",
+        "Nur etwa 6 Plätze, sehr eng",
+        "Starker Schwell läuft bei Meltemi in das flache Becken",
+        "Meltemi-sicher: nein"
+      ],
+      "confidence": "niedrig",
+      "sources": [
+        "Deep-Research Lauf 2: CruisersWiki Sikinos",
+        "Deep-Research Lauf 2: aktoploika.gr Sikinos"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 2.8 },
+        "anchorHoldingGround": "fels-kies",
+        "holdingQuality": "schlecht",
+        "holdingNote": "Felsgrund mit schlechter Haltekraft.",
+        "seagrassNote": "Dichte Krautrinnen im Hafenbecken.",
+        "capacityYachts": 6,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Kleine Taverne und Minimarkt am Strand (2 Min)",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 8 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Keine ständige Vertretung vor Ort",
+        "maxLoaM": 14,
+        "swellExposureNote": "Starker Schwell bei Meltemi im flachen Becken.",
+        "ferryTrafficNote": "Fähre legt an der kleinen Außenpier an.",
+        "dinghyLanding": "Am Sandstrand neben der Pier",
+        "restrictions": "Tiefgang unter 2,0 m erforderlich — historische Peilungen nennen 2,5 m in der Ansteuerung",
+        "vhfChannel": null,
+        "confidence": "niedrig",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Sikinos"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 134/135 — Seitenangaben unverifiziert; CruisersWiki Ermioni). Neu aufgenommen. Alle Sektoren sind quellintern konsistent. Die beiden Hafenseiten sind bewusst getrennt geführt: sie liegen 0,3 sm auseinander und schützen gegen entgegengesetzte Richtungen.",
+  "island": {
+    "id": "ermioni",
+    "name": "Ermioni",
+    "coordinates": { "lat": 37.38, "lon": 23.25 },
+    "description": "Küstenstadt auf einer bewaldeten Landzunge — zwei Hafenseiten, je eine für jede Wetterlage.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich 2–3 Hydrofoils ab Piräus (2 h 30), Quelle NetFerry Ermioni (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "ermioni-sued",
+      "islandId": "ermioni",
+      "name": "Ermioni Süd (Mandrakia)",
+      "type": "hafen",
+      "coordinates": { "lat": 37.382, "lon": 23.248 },
+      "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 120, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 120, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 135, CruisersWiki Ermioni): Öffnung nach S bis SE, Sektor 220–120, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Die Südseite der Landzunge — bei Meltemi der ruhige Platz, während die Nordseite schaukelt.",
+      "warnings": [
+        "Große Wassertiefen (15–20 m) beim freien Ankern — viel Kette nötig",
+        "Reichlich Seegras im tiefen Wasser, Anker gut einfahren",
+        "Laut Quelle abends gegen 18 Uhr kurze Brise aus Süd möglich"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 135 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Ermioni (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Sandstellen halten verlässlich.",
+        "seagrassNote": "Reichlich Seegras im tiefen Wasser — Kette gut einfahren.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 3 Minuten Gehzeit",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Uferweg",
+        "priceIndicationEur": "ca. 8–12 EUR/Nacht (2024)",
+        "portAuthorityFees": "Limenarchio Ermioni",
+        "maxLoaM": 22,
+        "swellExposureNote": "Laut Quelle hervorragender Meltemi-Schutz.",
+        "ferryTrafficNote": "Kein Fährverkehr auf der Südseite.",
+        "dinghyLanding": null,
+        "restrictions": null,
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ermioni (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "ermioni-nord",
+      "islandId": "ermioni",
+      "name": "Ermioni Nord (Limani)",
+      "type": "hafen",
+      "coordinates": { "lat": 37.3867, "lon": 23.25 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 90, "toDeg": 310, "maxKn": 20 }],
+        "waveSectors": [{ "fromDeg": 90, "toDeg": 310, "maxM": 0.6 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 134, CruisersWiki Ermioni): Öffnung nach N bis NE, Sektor 90–310, maxKn 20 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Die Stadtseite mit den Restaurants — schön, aber bei Nordwind die falsche Wahl.",
+      "warnings": [
+        "Unruhig bei Meltemi, Schwell drückt ins Hafenbecken — dann auf die Südseite wechseln",
+        "Hydrofoils legen am Kopf der Nordmole an, Anlegebereich freihalten",
+        "Haltegrund stellenweise unregelmäßig"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 134 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Ermioni (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 3.8 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "mittel",
+        "holdingNote": "Stellenweise unregelmäßiger Halt.",
+        "seagrassNote": "Seegras im äußeren Hafenbereich.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 1 Minute gegenüber dem Kai",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Mole",
+        "priceIndicationEur": "ca. 8–12 EUR/Nacht (2024)",
+        "portAuthorityFees": "Limenarchio Ermioni",
+        "maxLoaM": 20,
+        "swellExposureNote": "Meltemi erzeugt störenden Schwell; bei Starkwind die Südseite bevorzugen.",
+        "ferryTrafficNote": "Hydrofoils legen am Kopf der Nordmole an.",
+        "dinghyLanding": null,
+        "restrictions": "Anlegebereich der Hydrofoils freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ermioni (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "ermioni-kapari",
+      "islandId": "ermioni",
+      "name": "Kapari",
+      "type": "bucht",
+      "coordinates": { "lat": 37.368, "lon": 23.255 },
+      "qualities": { "schoenheit": 4, "restaurant": 1, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 200, "toDeg": 140, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 200, "toDeg": 140, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (CruisersWiki Ermioni, Abruf 2026-08): Öffnung nach S, Sektor 200–140, maxKn 32 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle, daher nur mittlere Konfidenz."
+      },
+      "description": "Grüne Bucht südlich der Stadt — Badestopp mit Ruhe, aber ohne Versorgung.",
+      "warnings": [
+        "Offen gegen Südwind",
+        "Keine Versorgung, 40 Minuten Gehzeit nach Ermioni"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 1: CruisersWiki Ermioni (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 9.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Verlässliche Sandstellen zwischen den Seegrasfeldern.",
+        "seagrassNote": "Seegrasfelder vorhanden.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Nichts, 40 Minuten Gehzeit nach Ermioni",
+        "showersToilets": false,
+        "wasteDisposal": null,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Laut Quelle guter Schutz vor Meltemi.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlanden am Strand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ermioni (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

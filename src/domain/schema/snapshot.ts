@@ -1,7 +1,8 @@
 import type { Ampel } from './common.ts';
 import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
-import type { Route } from './route.ts';
+import type { Leg, Variant } from './route.ts';
+import type { Plan, PlanValidity } from './plan.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
 
@@ -15,7 +16,6 @@ import type { Params } from './params.ts';
 export interface PointForecast {
   windKn: (number | null)[];
   windDirDeg: (number | null)[];
-  gustKn: (number | null)[];
   waveM: (number | null)[];
   waveDirDeg: (number | null)[];
   wavePeriodS: (number | null)[];
@@ -35,16 +35,36 @@ export interface TripFrame {
   /** 1-based trip day (day 1 = tripStartDate). */
   currentDay: number;
   position: TripPosition | null;
-  trackedRouteId: string | null;
+  /**
+   * The persisted main route (AD-12). Null before the first assessment, when
+   * `ADOPT_INITIAL` adopts the solver's proposal exactly once. A recomputation
+   * only ever RE-ASSESSES this plan — it never mutates it.
+   */
+  plan: Plan | null;
   /** Athens local departure hour override for today (FR15). */
   departureHourOverride: number | null;
+  /**
+   * Liegezeit an den Zwischenstopps, pro Törntag überschrieben. Fehlt ein Tag,
+   * gilt `params.stopHoursDefault`.
+   *
+   * Anders als `departureHourOverride` gilt das NICHT nur für heute: eine
+   * geplante Badepause an Tag 5 ist eine Planungsentscheidung für Tag 5 und
+   * muss dessen Bewertung auch dann tragen, wenn heute Tag 1 ist.
+   */
+  stopHoursByDay: Record<number, number>;
 }
 
 export interface Library {
   islands: Island[];
   places: Place[];
   invalidPlaces: InvalidPlace[];
-  routes: Route[];
+  /**
+   * Deduplicated leg library (AD-4): every leg exists exactly once, so a
+   * waypoint correction lands in one place instead of four.
+   */
+  legs: Leg[];
+  /** Curated round-trip variants as ordered leg-id sequences (FR9). */
+  variants: Variant[];
 }
 
 export interface PlanningSnapshot {
@@ -82,6 +102,71 @@ export interface PlaceNightAssessment {
   reasons: string[];
 }
 
+/**
+ * FR30 — one simulated hour of a leg, so the day card can EXPLAIN how
+ * "3,1 h for 17 nm" came about. Produced only by assessLeg (the single
+ * calculation path, AD-3); views render it and never recompute.
+ */
+export interface LegHourBreakdown {
+  /** UTC hour this step was simulated in. */
+  timeIso: string;
+  /** Course over the segment being sailed this hour. */
+  courseDeg: number;
+  twsKn: number;
+  twaDeg: number;
+  /** Boat speed used — from the polar (+offset) or the motor parameter. */
+  speedKn: number;
+  motoring: boolean;
+  /** Nautical miles covered in this step (may be a partial hour at the end). */
+  distanceNm: number;
+  /** True when this hour used the Meltemi worst case instead of the forecast. */
+  worstCase: boolean;
+}
+
+/**
+ * FR30 — Durchfahrt eines Etappenpunktes (Startplatz, Wegpunkt, Zielplatz).
+ *
+ * Das ist die Zeile, aus der die Rechnung besteht: jeder Punkt genau EINMAL,
+ * mit Distanz ab Etappenstart und Durchfahrtszeit. Eine stündliche Zeile kann
+ * das nicht leisten — in einer Stunde wird mal kein Punkt passiert und mal
+ * zwei, je nach Speed; genau deshalb fehlten in der alten Tabelle Punkte und
+ * andere standen doppelt.
+ *
+ * Die Wind-/Speed-Werte sind die der Stunde, IN DER der Punkt passiert wurde —
+ * keine gemittelte Näherung, sondern der Zustand am Durchfahrtszeitpunkt.
+ *
+ * Erzeugt ausschliesslich von assessLeg (AD-3); Views rechnen nichts nach,
+ * insbesondere keine Distanzen aus Koordinaten (AD-2).
+ */
+export interface PointPassage {
+  /** Forecast key des Punktes — matcht die Punktnummer der Tageskarte. */
+  pointKey: string;
+  /** Distanz ab Start DIESER Etappe in sm. */
+  distanceNm: number;
+  /**
+   * Durchfahrtszeit (ISO-UTC) oder null, wenn die Etappe den Punkt im
+   * Simulationsfenster nicht erreicht — dann wird keine Zeit erfunden.
+   */
+  etaIso: string | null;
+  /**
+   * Abschnitt, der ZU diesem Punkt führt. Null beim Startpunkt, der nicht
+   * angefahren, sondern verlassen wird.
+   */
+  segment: {
+    /** Rechtweisender Kurs des Abschnitts. */
+    courseDeg: number;
+    /** Länge NUR dieses Abschnitts in sm. */
+    distanceNm: number;
+    /** Wind und Fahrt der Stunde, in der der Punkt passiert wurde. */
+    twsKn: number;
+    twaDeg: number;
+    speedKn: number;
+    motoring: boolean;
+    /** Diese Stunde rechnete gegen den Meltemi-Worst-Case (AD-13). */
+    worstCase: boolean;
+  } | null;
+}
+
 export interface LegAssessment {
   legId: string;
   day: number;
@@ -94,6 +179,26 @@ export interface LegAssessment {
   avgTwaDeg: number | null;
   upwind: boolean;
   reasons: string[];
+  /**
+   * FR16 night leg: departure before the night window ends or arrival after it
+   * begins (AD-9 window bounds) — the passage reaches into darkness while the
+   * family sleeps. The solver counts and caps these (max 2 per trip, second
+   * week only); null when the duration is unknown.
+   */
+  nightLeg: boolean | null;
+  /** Arrival time in Athens hours from midnight of the departure day (display). */
+  arrivalHourAthens: number | null;
+  /**
+   * FR30 calculation trail, hour by hour; empty when the leg could not be
+   * simulated. Trägt die Summenzeile ("5 simulierte Stunden, 4 unter Segeln");
+   * die angezeigte Tabelle ist `pointPassages`.
+   */
+  breakdown: LegHourBreakdown[];
+  /**
+   * FR30 — die angezeigte Rechnung: jeder Etappenpunkt einmal, mit Distanz und
+   * Durchfahrtszeit. Leer, wenn die Etappe nicht simuliert werden konnte.
+   */
+  pointPassages: PointPassage[];
 }
 
 export type OptionState = 'offen' | 'offen-horizont' | 'schliesst' | 'zu';
@@ -135,6 +240,50 @@ export interface DecisionPoint {
   text: string;
 }
 
+/** One assessed day of a plan — what the day card and the map render. */
+export interface StageAssessment {
+  day: number;
+  /** FR2 leg number (1..11), null on the harbour day. */
+  stageNumber: number | null;
+  kind: 'stage' | 'harbour';
+  toIslandId: string;
+  /** Skipper-chosen berth, or the current suggestion for solver stages (AD-12). */
+  placeId: string | null;
+  placeIsSuggestion: boolean;
+  placeAmpel: Ampel;
+  /** Worst ampel across this day's legs; 'unbewertet' beyond the horizon. */
+  ampel: Ampel;
+  legs: LegAssessment[];
+  /** True when the skipper pinned this day. */
+  pinned: boolean;
+  /**
+   * Liegezeit je Zwischenstopp dieses Tages (Stunden) — der wirksame Wert,
+   * Override oder Default. Auch an Tagen ohne Zwischenstopp gesetzt, damit die
+   * Ansicht ihn zum Bearbeiten anbieten kann.
+   */
+  stopHoursPerStop: number;
+  /**
+   * Summe der Liegezeit dieses Tages: (Anzahl Etappen − 1) × stopHoursPerStop.
+   * Null Etappen oder ein Hafentag ergeben 0.
+   */
+  stopHoursTotal: number;
+}
+
+/**
+ * A complete round trip plus its verdict — the shape of the main route, the
+ * active proposal and every alternative (AD-12/AD-13).
+ */
+export interface PlanAssessment {
+  plan: Plan;
+  validity: PlanValidity;
+  stages: StageAssessment[];
+  /** Variant the outbound part follows and the turning point (display). */
+  variantId: string;
+  turnIslandId: string;
+  /** Relaxation level the solver needed ('none' = nothing relaxed). */
+  relaxedTo: string;
+}
+
 export interface Assessment {
   fetchedAtIso: string;
   modelRunIso: string | null;
@@ -149,13 +298,38 @@ export interface Assessment {
    * by domain criteria is computing (AD-2), so it happens here, not in views.
    */
   routeOptions: RouteOptionAssessment[];
+  /**
+   * The persisted main route, re-assessed against this snapshot. Null only
+   * before the first plan exists (AD-12).
+   */
+  mainRoute: PlanAssessment | null;
+  /**
+   * The solver's active suggestion (FR22 — the old "no recommendation" rule
+   * was overridden by the field test). On first start this is what
+   * `ADOPT_INITIAL` adopts; afterwards it is a suggestion beside the main
+   * route, never an automatic replacement for it.
+   */
+  proposal: PlanAssessment | null;
+  /** FR29 alternatives; the skipper checks one in to make it the main route. */
+  alternatives: PlanAssessment[];
+  /**
+   * FR2 rest-trip light, definition per AD-3:
+   *  gruen = main route valid and fully inside the reliable horizon
+   *  gelb  = main route not provably valid, but a valid round trip exists
+   *  rot   = no valid round trip exists at all
+   */
+  restTripAmpel: Ampel;
+  restTripReasons: string[];
   ppr: PprResult;
   decisionPoints: DecisionPoint[];
   /** Island the boat is currently at (derived from position). */
   currentIslandId: string | null;
   /**
    * Why currentIslandId is null although a position exists (e.g. fix beyond
-   * the snap radius) — or null when the derivation is unremarkable.
+   * the snap radius), or that the boat is off plan — null when the derivation
+   * is unremarkable.
    */
   positionNote: string | null;
+  /** True when the boat is not where the plan expected it to be. */
+  offPlan: boolean;
 }

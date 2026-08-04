@@ -1,0 +1,68 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 132 — Seitenangabe unverifiziert; CruisersWiki). Neu aufgenommen. Sektor und Öffnungsrichtung sind konsistent, die Windgrenze wurde jedoch von 38 auf 35 kn gekappt: 38 kn war der höchste Einzelwert beider Recherchen, und die gelieferte Buchtkoordinate liegt praktisch auf dem Inselmittelpunkt, was auf eine grob gesetzte Position hindeutet.",
+  "island": {
+    "id": "dokos",
+    "name": "Dokos",
+    "coordinates": { "lat": 37.33, "lon": 23.33 },
+    "description": "Unbewohnte Felseninsel zwischen Hydra und Peloponnes — eine Bucht, keine Infrastruktur.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 1: keine Fährverbindung, nur Wassertaxis ab Hydra oder Ermioni, Quelle CruisersWiki Dokos (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "dokos-skintos",
+      "islandId": "dokos",
+      "name": "Skintos",
+      "type": "bucht",
+      "coordinates": { "lat": 37.332, "lon": 23.328 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 140, "toDeg": 80, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 140, "toDeg": 80, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 132, CruisersWiki): Öffnung nach O bis SE, Sektor 140–80, maxKn 38 — Sektor und Öffnungsrichtung konsistent. Windgrenze auf 35 kn gekappt (höchster Einzelwert beider Recherchen, Position nur grob gesetzt)."
+      },
+      "description": "Große, tief eingeschnittene Naturbucht — bei Meltemi einer der sichersten Ankerplätze des Reviers.",
+      "warnings": [
+        "Position der Bucht nur grob belegt (gelieferte Koordinate liegt fast auf dem Inselmittelpunkt) — bei der Ansteuerung gegen die Seekarte prüfen",
+        "Fallwinde bei sehr starken Nordlagen — ausreichend Kette stecken",
+        "Keinerlei Infrastruktur an Land",
+        "Archäologisches Schutzgebiet (Wrackfundstelle)"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 132 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 4.0, "max": 12.0 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Verlässlicher Halt im tieferen Schlamm-Sand-Gemisch.",
+        "seagrassNote": "Vereinzelt Seegrasstellen im flachen Bereich.",
+        "capacityYachts": 60,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Nichts, keine Geschäfte an Land",
+        "showersToilets": false,
+        "wasteDisposal": null,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 50,
+        "swellExposureNote": "Laut Quelle Schutz vor Welle aus N, NE, NW und W.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlanden an Kiesstränden problemlos",
+        "restrictions": "Archäologisches Schutzgebiet",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

@@ -1,11 +1,15 @@
 {
-  "approved": false,
+  "approved": true,
   "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Basen); Koordinaten approximiert — vor Freigabe prüfen",
   "island": {
     "id": "athen",
     "name": "Athen (Basis)",
     "coordinates": { "lat": 37.91, "lon": 23.7 },
-    "description": "Start und Ziel des Törns: Marina Alimos, Charterbasis an der Athener Riviera."
+    "description": "Start und Ziel des Törns: Marina Alimos, Charterbasis an der Athener Riviera.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Marina Alimos liegt im Stadtgebiet von Athen — Gäste erreichen die Basis über Land, keine Fähre nötig. Gesetzt am 2026-08-03, weil die FR31-Prüfung mit dem Einpflegen von Lauf 2 scharf bindet und ein fehlendes Feld sonst die BASIS als nicht erreichbar gewertet hätte."
+    }
   },
   "places": [
     {
@@ -20,7 +24,44 @@
         "waveSectors": [{ "fromDeg": 0, "toDeg": 360, "maxM": 1.5 }],
         "sourceNote": "Brief-Addendum: Charterbasis, voll ausgebaute Marina — allseitiger Schutz"
       },
-      "description": "Die Charterbasis: groß, funktional, gut angebunden — Übergabe und Rückgabe."
+      "description": "Die Charterbasis: groß, funktional, gut angebunden — Übergabe und Rückgabe.",
+      "warnings": [
+        "Sehr dichte Belegung an Freitagen und Samstagen durch den Flottenwechsel",
+        "Ankerverbot im gesamten Marinabecken"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1 (Basen)",
+        "Deep-Research Lauf 1: Alimos Marina Official Guide 2024",
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 92 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "murings",
+        "depthAtBerthM": { "min": 2.5, "max": 7.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Muringleinen an allen Stegen, eigener Anker nicht nötig.",
+        "seagrassNote": null,
+        "capacityYachts": 1000,
+        "reservationPossible": true,
+        "reservationChannel": "Telefonisch oder per E-Mail beim Marinabüro (Kontakt aus Lauf 1 unverifiziert)",
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Supermarkt, 3 Minuten Gehdistanz an der Hauptstraße",
+        "showersToilets": true,
+        "wasteDisposal": "Zentrale Abfall- und Altölentsorgung",
+        "priceIndicationEur": "ca. 45–70 EUR/Nacht für 12–15 m (2024, Marina Alimos)",
+        "portAuthorityFees": "In der Marinagebühr enthalten",
+        "maxLoaM": 40,
+        "swellExposureNote": "Durch die Mole gegen alle Windrichtungen geschützt.",
+        "ferryTrafficNote": "Kein Fährverkehr innerhalb der Marina.",
+        "dinghyLanding": null,
+        "restrictions": "Ankerverbot im gesamten Marinabecken",
+        "vhfChannel": "77",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: Alimos Marina Official Guide 2024"]
+      }
     }
   ]
 }

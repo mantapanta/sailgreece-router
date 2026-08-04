@@ -1,0 +1,118 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 270/272 — Seitenangaben unverifiziert; CruisersWiki Ios). Neu aufgenommen. Sektoren und Öffnungsrichtungen der Quelle sind konsistent, unverändert übernommen.",
+  "island": {
+    "id": "ios",
+    "name": "Ios",
+    "coordinates": { "lat": 36.7167, "lon": 25.3 },
+    "description": "Tief eingeschnittener Naturhafen im Westen, weite Sandbuchten im Süden.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 3–6 Verbindungen ab Piräus und Rafina, 4–6 h, Quelle Ferryhopper Ios (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "ios-ormos",
+      "islandId": "ios",
+      "name": "Ormos Ios",
+      "type": "hafen",
+      "coordinates": { "lat": 36.7217, "lon": 25.275 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 300, "toDeg": 200, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 300, "toDeg": 200, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 270, CruisersWiki Ios): Öffnung nach SW, Sektor 300–200, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Tiefer Naturhafen mit voller Infrastruktur — einer der sichersten Plätze der Südkykladen.",
+      "warnings": [
+        "Böen drehen in der Bucht",
+        "Schnellfähren erzeugen kurzzeitig Schwell am Südkai",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 270 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: CruisersWiki Ios"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Exzellenter Haltegrund im Schlamm.",
+        "seagrassNote": "Seegras im tieferen Teil der Bucht.",
+        "capacityYachts": 35,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Zahlreiche Supermärkte, Bäckereien und Geschäfte (1 Min)",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 12–18 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Hafenbehörde Ios erfasst Schiffsdaten",
+        "maxLoaM": 30,
+        "swellExposureNote": "Guter Schutz gegen Nord- und Ostwinde, glattes Wasser.",
+        "ferryTrafficNote": "Schnellfähren erzeugen kurzzeitig Schwell am Südkai.",
+        "dinghyLanding": "Am kleinen Beibootsteg",
+        "restrictions": null,
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 270 (Seitenangabe unverifiziert)"
+        ]
+      }
+    },
+    {
+      "id": "ios-manganari",
+      "islandId": "ios",
+      "name": "Manganari",
+      "type": "bucht",
+      "coordinates": { "lat": 36.6617, "lon": 25.3717 },
+      "qualities": { "schoenheit": 5, "restaurant": 3, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 270, "toDeg": 90, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 270, "toDeg": 90, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 272): Öffnung nach S, Sektor 270–90, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Mehrere Sandbecken an der Südküste — der Badeplatz der Insel, viel Platz zum Ankern.",
+      "warnings": [
+        "Nach Süden offen",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 272 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Vorzügliche Haltekraft im dichten Sand.",
+        "seagrassNote": "Freie Sandfelder gut erkennbar.",
+        "capacityYachts": 40,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Zwei Strandtavernen im Sommer",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 50,
+        "swellExposureNote": "Laut Quelle schwellfrei bei Meltemi.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Direkt am Sandstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    }
+  ]
+}

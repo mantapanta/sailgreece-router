@@ -107,9 +107,88 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: meltemi },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
+  });
+
+  // The very same green case, but the curation is disputed. Regression guard:
+  // `confidence` used to be a documentation-only field, so a place the review
+  // had flagged as doubtful still went green on a favourable forecast.
+  it('confidence niedrig caps an otherwise green night at gelb', () => {
+    const bay = makePlace({
+      id: 'testinsel-strittig',
+      confidence: 'niedrig',
+      shelter: {
+        windSectors: [{ fromDeg: 250, toDeg: 110, maxKn: 40 }],
+        waveSectors: [{ fromDeg: 250, toDeg: 110, maxM: 1.5 }],
+        sourceNote: 'fixture',
+      },
+    });
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [bay.id]: meltemi },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
+    });
+    const result = placeNightAmpel(bay, 1, snapshot);
+    expect(result.ampel).toBe('gelb');
+    expect(result.reasons.join(' ')).toMatch(/Kuratierung unsicher/);
+  });
+
+  it('confidence mittel and hoch leave a green night green', () => {
+    for (const confidence of ['mittel', 'hoch'] as const) {
+      const bay = makePlace({
+        id: `testinsel-${confidence}`,
+        confidence,
+        shelter: {
+          windSectors: [{ fromDeg: 250, toDeg: 110, maxKn: 40 }],
+          waveSectors: [{ fromDeg: 250, toDeg: 110, maxM: 1.5 }],
+          sourceNote: 'fixture',
+        },
+      });
+      const snapshot = makeSnapshot({
+        times,
+        forecast: { [bay.id]: meltemi },
+        library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
+      });
+      expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
+    }
+  });
+
+  it('a missing confidence field changes nothing (most of the library has none)', () => {
+    const bay = makePlace({
+      id: 'testinsel-ohne-confidence',
+      shelter: {
+        windSectors: [{ fromDeg: 250, toDeg: 110, maxKn: 40 }],
+        waveSectors: [{ fromDeg: 250, toDeg: 110, maxM: 1.5 }],
+        sourceNote: 'fixture',
+      },
+    });
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [bay.id]: meltemi },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
+    });
+    expect(bay.confidence).toBeUndefined();
+    expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
+  });
+
+  it('confidence niedrig does not upgrade a red night to gelb', () => {
+    const bay = makePlace({
+      id: 'testinsel-strittig-nordbucht',
+      confidence: 'niedrig',
+      shelter: {
+        windSectors: [{ fromDeg: 90, toDeg: 270, maxKn: 40 }],
+        waveSectors: [{ fromDeg: 90, toDeg: 270, maxM: 1.5 }],
+        sourceNote: 'fixture',
+      },
+    });
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [bay.id]: meltemi },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
+    });
+    expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('rot');
   });
 
   it('Meltemi from N, bay open to the NORTH => rot', () => {
@@ -124,7 +203,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: meltemi },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('rot');
   });
@@ -142,7 +221,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: wind10 },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
   });
@@ -153,7 +232,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: gap },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     const result = placeNightAmpel(bay, 1, snapshot);
     expect(result.ampel).toBe('unbewertet');
@@ -165,7 +244,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: fc },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('unbewertet');
   });
@@ -188,7 +267,7 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     const snapshot = makeSnapshot({
       times,
       forecast: { [bay.id]: fc },
-      library: { islands: [], places: [bay], invalidPlaces: [], routes: [] },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('rot');
   });

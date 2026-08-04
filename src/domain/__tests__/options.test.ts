@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { assessRouteOption, deriveDayOptions, restPlanFeasible } from '../options.ts';
 import { predictedPointOfReturn } from '../ppr.ts';
-import type { Route } from '../schema/route.ts';
+
 import {
   constantForecast,
   makeLeg,
   makePlace,
   makeSnapshot,
   makeTimes,
+  TRIP_START,
+  makeVariant,
 } from './fixtures.ts';
 import { TEST_POLAR } from './fixtures.ts';
+import { dateForTripDay } from '../time.ts';
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
 
 /**
@@ -48,27 +51,27 @@ function twoIslandSnapshot(opts: {
     toPlaceId: base.id,
     distanceNm: 20,
   });
-  const routes: Route[] = [
-    {
-      id: 'sued-route',
-      name: 'Süd-Route',
-      escalationRank: 1,
-      legs: [outLeg],
-      isReturnChain: false,
-    },
-    {
-      id: 'rueckfallkette-west',
-      name: 'Rückfallkette West',
+  const legs = [outLeg, backLeg];
+  const variants = [
+    makeVariant('sued-route', [outLeg], { escalationRank: 1, name: 'Süd-Route' }),
+    makeVariant('rueckfallkette-west', [backLeg], {
       escalationRank: 0,
-      legs: [backLeg],
       isReturnChain: true,
-    },
+      name: 'Rückfallkette West',
+    }),
   ];
   const times = makeTimes(12);
   const fc = constantForecast(times.length, opts.windKn, opts.windFromDeg);
   const snapshot = makeSnapshot({
     times,
     polar: TEST_POLAR,
+    // These cases probe the CALENDAR limit (when does an option close?), so
+    // the reliable horizon must not be the binding constraint — the horizon
+    // rule itself has its own tests. Default is 7 days (AD-13).
+    params: {
+      ...makeSnapshot().params,
+      reliableHorizonDays: 14,
+    },
     forecast: { [base.id]: fc, [target.id]: fc },
     library: {
       islands: [
@@ -77,20 +80,22 @@ function twoIslandSnapshot(opts: {
       ],
       places: [base, target],
       invalidPlaces: [],
-      routes,
+      legs,
+      variants,
     },
     trip: {
       currentDay: opts.currentDay ?? 1,
       position: { source: 'manual', lat: base.coordinates.lat, lon: base.coordinates.lon, placeId: base.id },
-      trackedRouteId: null,
+      plan: null,
       departureHourOverride: null,
+      stopHoursByDay: {},
     },
   });
   if (opts.tripLengthDays) {
     snapshot.params = {
       ...snapshot.params,
       tripLengthDays: opts.tripLengthDays,
-      disembarkDay: opts.tripLengthDays,
+      returnDeadlineDate: dateForTripDay(TRIP_START, opts.tripLengthDays),
     };
   }
   return snapshot;
@@ -99,12 +104,14 @@ function twoIslandSnapshot(opts: {
 describe('options — FR18 open / closes / closed', () => {
   it('gentle broad-reach wind, full forecast axis: option closes on the last startable day (FR18)', () => {
     // Axis covers the whole trip, so the calendar limit is computable: the
-    // last day to sail out AND still return by the deadline (day 10) is day 9.
+    // last day to sail out AND still return by the PoR deadline (day 11 —
+    // arrival on the deadline date minus the buffer day, review finding H3)
+    // is day 10.
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     expect(result.state).toBe('schliesst');
-    expect(result.closesOnDay).toBe(9);
+    expect(result.closesOnDay).toBe(10);
   });
 
   it('feasible now, closing-day scan hits the horizon: offen-horizont with visible caveat', () => {
@@ -116,7 +123,7 @@ describe('options — FR18 open / closes / closed', () => {
         fc[k] = fc[k].slice(0, 4 * 24);
       }
     }
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     // Today's rest plan is fully computable within the horizon, but the
     // closing day may lie just beyond it — that is NOT an unqualified
@@ -135,7 +142,7 @@ describe('options — FR18 open / closes / closed', () => {
         fc[k] = fc[k].slice(0, 30);
       }
     }
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     // Outbound today fits the axis, the return leg does not: the whole rest
     // plan is only assessable up to the horizon.
@@ -146,14 +153,14 @@ describe('options — FR18 open / closes / closed', () => {
   it('permanent 28 kn northerly makes the northbound return impossible: option zu', () => {
     // Outbound south is fine, but the return leg north beats against 28 kn.
     const snapshot = twoIslandSnapshot({ windKn: 28, windFromDeg: 0 });
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     expect(result.state).toBe('zu');
   });
 
   it('no position => zu with reason', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    const route = snapshot.library.routes[0]!;
+    const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, null, snapshot);
     expect(result.state).toBe('zu');
     expect(result.reasons.join(' ')).toContain('Position');
@@ -193,13 +200,10 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
       toPlaceId: base.id,
       distanceNm: 12,
     });
-    const route: Route = {
-      id: 'heimweg',
-      name: 'Heimweg',
+    const homeVariant = makeVariant('heimweg', [leg1, leg2], {
       escalationRank: 1,
-      legs: [leg1, leg2],
-      isReturnChain: false,
-    };
+      name: 'Heimweg',
+    });
     const times = makeTimes(12);
     const fc = constantForecast(times.length, 12, 0);
     const snapshot = makeSnapshot({
@@ -214,19 +218,21 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
         ],
         places: [sued, mitte, base],
         invalidPlaces: [],
-        routes: [route],
+        legs: [leg1, leg2],
+        variants: [homeVariant],
       },
       trip: {
         currentDay: 10, // = effective deadline (disembark 12 - 1 - buffer 1)
         position: { source: 'manual', lat: sued.coordinates.lat, lon: sued.coordinates.lon, placeId: sued.id },
-        trackedRouteId: null,
+        plan: null,
         departureHourOverride: null,
+      stopHoursByDay: {},
       },
     });
     // One leg per day would need days 10+11 (> deadline). packLegsFeasible
     // allows two short legs on one day — the arrival-day scan must start at
     // startDay + ceil(legs/2) - 1 = day 10, not at day 11.
-    expect(restPlanFeasible(route, 'sued', 10, snapshot)).toBe('feasible');
+    expect(restPlanFeasible([leg1, leg2], 'sued', 10, snapshot)).toBe('feasible');
   });
 });
 
@@ -235,7 +241,7 @@ describe('options — deriveDayOptions dedupe over the leg id (FR21)', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
     const base = snapshot.library.places[0]!;
     const target = snapshot.library.places[1]!;
-    const sharedLeg = snapshot.library.routes[0]!.legs[0]!; // athen--zielinsel
+    const sharedLeg = snapshot.library.legs[0]!; // athen--zielinsel
     const otherLeg = makeLeg({
       id: 'athen--zielinsel-b',
       fromIslandId: 'athen',
@@ -244,10 +250,11 @@ describe('options — deriveDayOptions dedupe over the leg id (FR21)', () => {
       toPlaceId: target.id,
       distanceNm: 26, // different definition, same target island
     });
-    snapshot.library.routes = [
-      { id: 'r1', name: 'R1', escalationRank: 1, legs: [sharedLeg], isReturnChain: false },
-      { id: 'r2', name: 'R2', escalationRank: 2, legs: [sharedLeg], isReturnChain: false },
-      { id: 'r3', name: 'R3', escalationRank: 3, legs: [otherLeg], isReturnChain: false },
+    snapshot.library.legs = [sharedLeg, otherLeg];
+    snapshot.library.variants = [
+      makeVariant('r1', [sharedLeg], { escalationRank: 1, name: 'R1' }),
+      makeVariant('r2', [sharedLeg], { escalationRank: 2, name: 'R2' }),
+      makeVariant('r3', [otherLeg], { escalationRank: 3, name: 'R3' }),
     ];
     const options = deriveDayOptions(snapshot, 'athen', {}, {});
     const legOptions = options.filter((o) => o.kind === 'leg');
@@ -270,9 +277,11 @@ describe('ppr — FR19 predicted point of return', () => {
   it('away from base: latest return start day = deadline (one easy day-leg home)', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90, currentDay: 3 });
     const ppr = predictedPointOfReturn(snapshot, 'zielinsel');
-    // deadline = disembarkDay(12) - 1 - buffer(1) = 10; leg takes ~3 h.
-    expect(ppr.effectiveDeadlineDay).toBe(10);
-    expect(ppr.latestReturnStartDay).toBe(10);
+    // Deadline semantics per review finding H3 (2026-08-02): arrival is due ON
+    // the return deadline date (2026-08-19 = trip day 12), and the PoR
+    // additionally keeps the buffer/harbour day in reserve => day 11.
+    expect(ppr.effectiveDeadlineDay).toBe(11);
+    expect(ppr.latestReturnStartDay).toBe(11);
     expect(ppr.remainingDistanceNm).toBe(20);
   });
 

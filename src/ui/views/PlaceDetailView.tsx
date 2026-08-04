@@ -123,7 +123,7 @@ export function PlaceDetailView({
       </section>
 
       <section className="section">
-        <span className="versal">Schutzprofil (kuratiert)</span>
+        <span className="versal">Sicherer Liegeplatz (kuratiert)</span>
         <h2>Geschützte Sektoren</h2>
         <table className="shelter-table">
           <thead>
