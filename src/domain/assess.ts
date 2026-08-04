@@ -14,9 +14,10 @@ import type {
 } from './schema/snapshot.ts';
 import type { Ampel } from './schema/common.ts';
 import type { Plan } from './schema/plan.ts';
-import { stageNumber, stagesOf } from './schema/plan.ts';
+import { islandAtEndOfDay, stageNumber, stagesOf } from './schema/plan.ts';
 import { worstAmpel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
+import { reachableIslands } from './reach.ts';
 import { applyPersistenceAssumption } from './persistence.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
 import { predictedPointOfReturn } from './ppr.ts';
@@ -169,6 +170,10 @@ function assessPlan(
             });
           })()
         : [];
+    // Ausgangsinsel dieses Tages: wo der Plan das Schiff am Vorabend hat.
+    // Für den ersten Plantag gibt es keinen Vortag — dann die Basis.
+    const fromIslandId =
+      islandAtEndOfDay(plan, entry.day - 1) ?? snapshot.params.baseIslandId;
     return {
       day: entry.day,
       stageNumber: stageNumber(plan, entry.day),
@@ -188,6 +193,7 @@ function assessPlan(
       stopHoursPerStop,
       stopHoursTotal:
         Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
+      reachableIslandIds: reachableIslands(snapshot, fromIslandId, entry.day),
     };
   });
 

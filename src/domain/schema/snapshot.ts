@@ -359,6 +359,13 @@ export interface StageAssessment {
    * Null Etappen oder ein Hafentag ergeben 0.
    */
   stopHoursTotal: number;
+  /**
+   * Inseln, die von der VORHERIGEN Plan-Insel aus als Tagesziel in Frage
+   * kommen (domain/reach.ts): 100 sm raumschots, 50 sm gegenan. Das
+   * Ziel-Dropdown zeigt NUR diese — eine Insel drei Tagesreisen entfernt ist
+   * kein Tagesziel (Feedback 2026-08-05).
+   */
+  reachableIslandIds: string[];
 }
 
 /**

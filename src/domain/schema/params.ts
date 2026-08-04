@@ -190,6 +190,17 @@ const ParamsObjectSchema = z.object({
    */
   maxSnapNm: z.number().positive().default(30),
 
+  // --- day range (context filter for target islands) -------------------------
+  /**
+   * Furthest island offered as a DAY target when the wind is aft or on the
+   * beam: the skipper's best case of "8 h plus a night trip". Values from the
+   * skipper's brief — a pre-filter for the target dropdown, deliberately NOT
+   * derived from the polar: the leg simulation still judges the actual leg.
+   */
+  maxDayRangeNm: z.number().positive().default(100),
+  /** Same limit when the destination lies upwind (beating halves the range). */
+  maxDayRangeUpwindNm: z.number().positive().default(50),
+
   // --- display ------------------------------------------------------------------
   /** Nights ahead of the current day assessed for display (AD-8: config, not code). */
   nightLookaheadDays: z.number().int().positive().default(10),
@@ -219,6 +230,14 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
     ctx.issues.push({
       code: 'custom',
       message: 'targetDayHours darf das harte Maximum (maxSailHours + maxMotorHours) nicht überschreiten',
+      input: p,
+    });
+  }
+  if (p.maxDayRangeUpwindNm > p.maxDayRangeNm) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'maxDayRangeUpwindNm darf maxDayRangeNm nicht überschreiten (gegenan ist nie weiter als raumschots)',
       input: p,
     });
   }
