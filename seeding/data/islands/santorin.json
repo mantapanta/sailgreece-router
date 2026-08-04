@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Vlychada einzige gut geschützte Liegestelle Thiras, für 50-ft-Kat grenzwertig; Quelle 2 rät vom Anlauf per Schiff ab); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Vlychada einzige gut geschützte Liegestelle Thiras, für 50-ft-Kat grenzwertig; Quelle 2 rät vom Anlauf per Schiff ab) + Deep-Research Lauf 3 vom 2026-08-03 (zwei neue Caldera-Plätze, Liegeplatz-Details). Lauf 3 verschärft die Tiefenwarnung für Vlychada erheblich: Zufahrtsrinne 1,5–2,2 m bei 2,0 m Tiefgang.",
   "island": {
     "id": "santorin",
     "name": "Santorin",
     "coordinates": { "lat": 36.4, "lon": 25.43 },
-    "description": "Das Sehnsuchtsziel am Südende des Möglichkeitsraums — nur mit bestätigtem Liegeplatz."
+    "description": "Das Sehnsuchtsziel am Südende des Möglichkeitsraums — nur mit bestätigtem Liegeplatz.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 3: täglich mehrfach ab Piräus (Blue Star, SeaJets), Quelle Ferryhopper (Abruf 2026-02)"
+    }
   },
   "places": [
     {
@@ -17,14 +21,150 @@
       "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 300, "toDeg": 90, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 300, "toDeg": 90, "maxM": 0.8 }],
-        "sourceNote": "Quelle 1: einzige gut geschützte Liegestelle Thiras; Südküste, geschützt gegen N-Sektoren"
+        "waveSectors": [{ "fromDeg": 300, "toDeg": 90, "maxM": 0.6 }],
+        "sourceNote": "Quelle 1: einzige gut geschützte Liegestelle Thiras; Südküste, geschützt gegen N-Sektoren. Lauf 3 (Heikell 14. Aufl. S. 280, CruisersWiki Santorini, Navily 2025) gibt Öffnung nach S bis SE und den weiteren Sektor 250–120 bei gleicher Windgrenze. Eingetragen ist die SCHNITTMENGE 300–90, Wellengrenze auf 0.6 m gesenkt."
       },
       "warnings": [
+        "KRITISCHE TIEFENBESCHRÄNKUNG: Lauf 3 nennt eine durch Versandung auf 1,5–2,2 m reduzierte Zufahrtsrinne bei 2,0 m Tiefgang — hohes Grundberührungsrisiko. Tiefe zwingend maximal 24 h vor Ansteuerung bei der Hafenbehörde Thira erfragen.",
         "Für 50-ft-Kat grenzwertig: formal max. ~15 m Länge / ~2,5 m Tiefe — telefonische Vorabklärung vor dem Törn nötig",
-        "Zufahrt zeitweise versandet (Quelle 2 rät vom Anlauf Santorins per Schiff generell ab)"
+        "Bei Wind und Schwell aus Süd ist die Zufahrt laut Quelle unpassierbar",
+        "Quelle 2 rät vom Anlauf Santorins per Schiff generell ab",
+        "Fallböen bei Meltemi im Becken"
       ],
-      "description": "Die einzige realistische Liegestelle Thiras — Santorin-Option gilt nur bei bestätigtem Platz als offen."
+      "description": "Die einzige realistische Liegestelle Thiras — Santorin-Option gilt nur bei bestätigtem Platz als offen.",
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1+2",
+        "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl., S. 280 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 3: CruisersWiki Santorini",
+        "Deep-Research Lauf 3: Navily Reviews 2025 (Crowd-Quelle)"
+      ],
+      "berthingDetails": {
+        "mooringType": "murings",
+        "depthAtBerthM": { "min": 1.5, "max": 2.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Schlammgrund im inneren Becken hält gut — das Problem ist die Zufahrtstiefe, nicht der Halt.",
+        "seagrassNote": null,
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt und Tavernen in 5 Minuten Fußweg",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "25–40 EUR/Nacht (2025, Yachthafen)",
+        "portAuthorityFees": "Im Marina-Entgelt enthalten",
+        "maxLoaM": 16,
+        "swellExposureNote": "Fallböen bei Meltemi, extremer Schwell bei Winden aus südlichen Sektoren.",
+        "ferryTrafficNote": "Hohe Dichte an lokalen Ausflugs- und Charterbooten.",
+        "dinghyLanding": null,
+        "restrictions": "Aktuelle Zufahrtstiefe zwingend vor der Ansteuerung lokal erfragen",
+        "vhfChannel": "10",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.",
+          "Deep-Research Lauf 3: CruisersWiki Santorini"
+        ]
+      }
+    },
+    {
+      "id": "santorin-akrotiri",
+      "islandId": "santorin",
+      "name": "Akrotiri",
+      "type": "bucht",
+      "coordinates": { "lat": 36.3533, "lon": 25.3983 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 270, "toDeg": 150, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 270, "toDeg": 150, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach S bis SW, Sektor 270–150, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Ankerplatz an der Südseite der Caldera — die Alternative, wenn Vlychada nicht anfahrbar ist.",
+      "warnings": [
+        "Bimsstein- und Vulkansandgrund mit schwankender Haltekraft — Anker gründlich einfahren und Halt prüfen",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 4.0, "max": 10.0 },
+        "anchorHoldingGround": "sand-fels",
+        "holdingQuality": "mittel",
+        "holdingNote": "Bimsstein und Sand — Anker gründlich einfahren.",
+        "seagrassNote": "Vereinzelt Seegras.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Strandtavernen, 3 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 25,
+        "swellExposureNote": "Laut Quelle ruhiges Wasser bei nördlichen Winden.",
+        "ferryTrafficNote": "Kein direkter Fährverkehr im Ankerfeld.",
+        "dinghyLanding": "Anlandung am Kiesstrand möglich",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "santorin-amoudi",
+      "islandId": "santorin",
+      "name": "Amoudi",
+      "type": "bucht",
+      "coordinates": { "lat": 36.4608, "lon": 25.3683 },
+      "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 1 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 290, "maxKn": 20 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 290, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Santorini): Öffnung nach NW bis N, Sektor 60–290, maxKn 20 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle."
+      },
+      "description": "Der Bootsanleger unter Oia — nur an Bojen, das Caldera-Wasser ist über 30 m tief.",
+      "warnings": [
+        "Freies Ankern unmöglich: Wassertiefen über 30 m an der Steilwand — nur Mooringbojen nutzbar, nur etwa 8 Plätze",
+        "Fallböen an den Kraterwänden",
+        "Starker Schwell durch Fähr- und Ausflugsverkehr",
+        "Verfügbarkeit und Haltekraft der Bojen laut Quelle ungeklärt"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Santorini"],
+      "berthingDetails": {
+        "mooringType": "boje",
+        "depthAtBerthM": { "min": 10.0, "max": 35.0 },
+        "anchorHoldingGround": "fels",
+        "holdingQuality": "schlecht",
+        "holdingNote": "Steil abfallender Felsgrund — vom Ankern wird abgeraten, nur Bojen nutzen.",
+        "seagrassNote": null,
+        "capacityYachts": 8,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Fischtavernen direkt am Pier (2 Min)",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei, sofern eine Boje frei ist",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 20,
+        "swellExposureNote": "Starker Schwell durch Fähr- und Ausflugsverkehr.",
+        "ferryTrafficNote": "Hohe Dichte an Ausflugsbooten.",
+        "dinghyLanding": "Betonpier für Beiboote vorhanden",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Santorini"]
+      }
     }
   ]
 }

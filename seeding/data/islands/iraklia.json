@@ -1,0 +1,112 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. ohne Seitenangabe; CruisersWiki Iraklia). Neu aufgenommen. Bei Alimia widerspricht der Sektor der eigenen Beschreibung (Südwestbucht mit 'exzellentem Meltemi-Schutz', Sektor lässt aber Nord offen) — Grenzen dort gekappt. Nach Deliverable E ist die Insel für einen Gästewechsel NICHT geeignet.",
+  "island": {
+    "id": "iraklia",
+    "name": "Iraklia",
+    "coordinates": { "lat": 36.85, "lon": 25.45 },
+    "description": "Stille Insel der Kleinen Kykladen — ein Hafen, ein Wrack, sonst nichts.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 3: nicht täglich direkt ab Piräus (3–4× pro Woche, sonst Umstieg über Naxos), Quelle Ferryhopper (Abruf 2026-02)"
+    }
+  },
+  "places": [
+    {
+      "id": "iraklia-agios-georgios",
+      "islandId": "iraklia",
+      "name": "Agios Georgios",
+      "type": "hafen",
+      "coordinates": { "lat": 36.8625, "lon": 25.46 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 220, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 220, "maxM": 0.6 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach W bis NW, Sektor 340–220, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Der Inselhafen mit Kai und Sandstrand — verlässlicher Meltemi-Schutz, kaum Betrieb.",
+      "warnings": [
+        "Grössenlimit laut Quelle 16 m — für dieses Schiff knapp, vorab klären",
+        "Nur etwa 10 Plätze; Anlegebereich der Express Skopelitis freihalten",
+        "Mäßiger Schwell bei starkem Nordwestwind",
+        "Kein Landstrom"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 4.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Sandgrund.",
+        "seagrassNote": "Seegras im mittleren Buchtbereich.",
+        "capacityYachts": 10,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt in 3 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "5–10 EUR/Nacht (2025)",
+        "portAuthorityFees": "keine regelmäßige Erhebung",
+        "maxLoaM": 16,
+        "swellExposureNote": "Mäßiger Schwell bei starkem Nordwestwind.",
+        "ferryTrafficNote": "Anläufe der lokalen Inselfähre beachten.",
+        "dinghyLanding": null,
+        "restrictions": "Fähranleger freihalten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "iraklia-alimia",
+      "islandId": "iraklia",
+      "name": "Alimia",
+      "type": "bucht",
+      "coordinates": { "lat": 36.8375, "lon": 25.4392 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 310, "maxKn": 15 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 310, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Iraklia): Sektor 60–310 mit maxKn 35, Öffnung nach N bis NE. SELBSTWIDERSPRUCH: Der Platz wird als SÜDWESTbucht mit 'exzellentem Meltemi-Schutz' beschrieben und die Schwellnotiz nennt glattes Wasser bei Meltemi — der Sektor lässt Nord jedoch offen. Windgrenze auf 15 kn und Welle auf 0.3 m gekappt, bis die Öffnungsrichtung geprüft ist."
+      },
+      "description": "Südwestbucht mit dem Wrack eines Wasserflugzeugs auf dem Grund — Sand, klares Wasser, nichts an Land.",
+      "warnings": [
+        "SEKTOR VERMUTLICH INVERTIERT: Beschreibung (Südwestbucht, exzellenter Meltemi-Schutz) und Sektor (Nord offen) widersprechen sich. Grenzen konservativ gekappt — wenn sich der Meltemi-Schutz bestätigt, ist dies ein sehr wertvoller Platz und der Sektor gehört korrigiert",
+        "Keine Versorgungsinfrastruktur an Land"
+      ],
+      "confidence": "niedrig",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Iraklia"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 9.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Feiner Sand mit sehr hoher Haltekraft.",
+        "seagrassNote": "Flache Sandzonen gut sichtbar.",
+        "capacityYachts": 12,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Nichts erreichbar",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 25,
+        "swellExposureNote": "Quelle nennt glattes Wasser bei Meltemi — steht im Widerspruch zum angegebenen Sektor und ist ungeprüft.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlandung am Fels- oder Kieselstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "niedrig",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Iraklia"]
+      }
+    }
+  ]
+}

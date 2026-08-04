@@ -1,0 +1,68 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Cyclades; Heikell Greek Waters Pilot 14. Aufl. S. 248 — Seitenangabe unverifiziert). Neu aufgenommen. Sektor und Öffnungsrichtung sind konsistent, der BUCHTNAME 'Ormos Miskanti' ließ sich jedoch nicht gegen eine zweite Quelle bestätigen — vor Freigabe verifizieren.",
+  "island": {
+    "id": "delos-rinia",
+    "name": "Delos / Rinia",
+    "coordinates": { "lat": 37.4, "lon": 25.2333 },
+    "description": "Antikes Heiligtum und unbewohnte Nachbarinsel — Ankern nur auf Rinia erlaubt.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 2: keine reguläre Passagierfähranbindung für einen Gästewechsel, Delos ist reine Ausgrabungsstätte ohne Yachthafen (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "delos-rinia-miskanti",
+      "islandId": "delos-rinia",
+      "name": "Ormos Miskanti (Rinia)",
+      "type": "bucht",
+      "coordinates": { "lat": 37.4117, "lon": 25.2283 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 330, "toDeg": 210, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 330, "toDeg": 210, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 248, CruisersWiki Cyclades): Öffnung nach W, Sektor 330–210, maxKn 35 — Sektor und Öffnungsrichtung konsistent. Buchtbezeichnung und exakte Position sind nur durch eine Quelle belegt."
+      },
+      "description": "Doppelbucht auf der unbewohnten Insel Rinia — Sandgrund im Windschatten von Delos.",
+      "warnings": [
+        "Übernachten für Yachten auf Delos selbst ist verboten — Ankern nur auf Rinia",
+        "Buchtname und Position nur einfach belegt — Position bei der Ansteuerung gegen die Seekarte prüfen",
+        "Tagsüber Ausflugsboote auf dem Weg nach Delos",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Deep-Research Lauf 2: CruisersWiki Cyclades",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 248 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 7.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Reiner Sandboden mit exzellenter Haltekraft.",
+        "seagrassNote": "Sandfelder dominieren.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Keine",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 45,
+        "swellExposureNote": "Laut Quelle flaches Wasser und glatte See bei Meltemi.",
+        "ferryTrafficNote": "Ausflugsboote fahren tagsüber nach Delos.",
+        "dinghyLanding": "Am Sandstrand von Rinia",
+        "restrictions": "Übernachtungsverbot auf Delos strikt einhalten",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Cyclades"]
+      }
+    }
+  ]
+}

@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative) + Deep-Research Lauf 1 vom 2026-08-03 (drei neue Buchten, Liegeplatz-Details). Sektor von Hydra-Hafen als Schnittmenge beider Quellen; Lauf 1 bestätigt die Windgrenze von 20 kn unabhängig und ergänzt den schlechten Haltegrund im Becken.",
   "island": {
     "id": "hydra",
     "name": "Hydra",
     "coordinates": { "lat": 37.35, "lon": 23.47 },
-    "description": "Autofrei, steinern, mondän — der schönste Hafen des Golfs, aber eng und voll."
+    "description": "Autofrei, steinern, mondän — der schönste Hafen des Golfs, aber eng und voll.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich über 8 Verbindungen ab Piräus (Highspeed/Hydrofoil 1 h 10), keine Fahrzeuge auf der Insel, Quelle Ferryhopper Hydra (Abruf 2026-08)"
+    }
   },
   "places": [
     {
@@ -16,12 +20,199 @@
       "coordinates": { "lat": 37.3494, "lon": 23.4661 },
       "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 1 },
       "shelter": {
-        "windSectors": [{ "fromDeg": 60, "toDeg": 330, "maxKn": 20 }],
-        "waveSectors": [{ "fromDeg": 60, "toDeg": 330, "maxM": 0.5 }],
-        "sourceNote": "Quelle 2: Zielkatalog; enges Hafenbecken öffnet nach N — Schwell und Gedränge"
+        "windSectors": [{ "fromDeg": 60, "toDeg": 310, "maxKn": 20 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 310, "maxM": 0.4 }],
+        "sourceNote": "Quelle 2: Zielkatalog; enges Hafenbecken öffnet nach N — Schwell und Gedränge. Lauf 1 (Heikell 14. Aufl. S. 128, CruisersWiki Hydra) gibt Öffnung nach N bis NW, Sektor 30–310, gleiche Windgrenze 20 kn. Eingetragen ist die SCHNITTMENGE 60–310, Wellengrenze auf 0.4 m gesenkt."
       },
-      "warnings": ["Sehr enges Hafenbecken, im August früh voll — Schwell bei Nordlagen"],
-      "description": "Amphitheater aus Stein um ein winziges Becken — ankommen heißt hier früh ankommen."
+      "warnings": [
+        "Sehr enges Hafenbecken, im August früh voll — Yachten liegen oft im Dreierpäckchen mit gekreuzten Ankern",
+        "Extreme Gefahr von Ankersalat; Hafengrund mit alten Ketten und Unrat übersät",
+        "Starke Fallböen und Hafenschwell bei Nordwind über 20 kn",
+        "Kein Landstrom; Betankungs- und Motorenverbot an Teilen des Kais"
+      ],
+      "description": "Amphitheater aus Stein um ein winziges Becken — ankommen heißt hier früh ankommen.",
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 128 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "schlamm-fels",
+        "holdingQuality": "schlecht",
+        "holdingNote": "Der Grund ist mit zahllosen alten Ketten und Unrat übersät — der Anker hakt eher, als dass er hält.",
+        "seagrassNote": "Kein Seegras, aber erheblicher Unrat am Hafengrund.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 1 Minute Gehdistanz in den Gassen",
+        "showersToilets": false,
+        "wasteDisposal": "Zentrale Abfallstation am Nordkai",
+        "priceIndicationEur": "ca. 8–15 EUR/Nacht (2024, Hafenbehörde Hydra)",
+        "portAuthorityFees": "Limenarchio Hydra",
+        "maxLoaM": 20,
+        "swellExposureNote": "Schwell dringt bei Wind aus N bis NW direkt in das enge Becken ein.",
+        "ferryTrafficNote": "Sehr dichter Verkehr von Katamaranen und Wassertaxis.",
+        "dinghyLanding": null,
+        "restrictions": "Motoren- und Betankungsverbot an Teilen des Kais",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "hydra-ayios-nikolaos",
+      "islandId": "hydra",
+      "name": "Ayios Nikolaos",
+      "type": "bucht",
+      "coordinates": { "lat": 37.309, "lon": 23.411 },
+      "qualities": { "schoenheit": 5, "restaurant": 1, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 290, "toDeg": 210, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 290, "toDeg": 210, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 131, CruisersWiki Hydra): Öffnung nach W bis SW, Sektor 290–210, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Tief eingeschnittene Bucht am Südwestende — der beste Meltemi-Schlupfwinkel der Insel.",
+      "warnings": [
+        "Abgelegen, keinerlei Versorgung an Land (90 Minuten Gehzeit)",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 131 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 9.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Exzellenter Halt in hellem Sand.",
+        "seagrassNote": "Geringer Seegrasbewuchs im inneren Buchtteil.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Nichts, 90 Minuten Gehzeit",
+        "showersToilets": false,
+        "wasteDisposal": null,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Laut Quelle vollständiger Schutz gegen Meltemi über 25 kn und Nordschwell.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Sandstrand zum Anlanden",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "hydra-mandraki",
+      "islandId": "hydra",
+      "name": "Mandraki",
+      "type": "bucht",
+      "coordinates": { "lat": 37.356, "lon": 23.481 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 80, "toDeg": 310, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 80, "toDeg": 310, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 130): Öffnung nach N bis NE, Sektor 80–310, maxKn 25 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Der ehemalige Kriegshafen östlich der Stadt — Sandstrand, Hotelanlage, Ausweichplatz wenn der Hafen voll ist.",
+      "warnings": [
+        "Bei starkem Meltemi läuft unbequemer Schwell in die Bucht, ab etwa 20 kn Nordwind steigt er rasch",
+        "Badezonen beachten"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 130 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Guter Halt in Sandmulden.",
+        "seagrassNote": "Seegrasfelder vorhanden; freie Sandflecken suchen.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Resort-Restaurant, 2 Minuten",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Zufahrtsstraße",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Schwell steigt bei Nordwind über 20 kn rasch an.",
+        "ferryTrafficNote": "Wassertaxis verkehren regelmäßig nach Hydra-Stadt.",
+        "dinghyLanding": "Anlanden am kleinen Hotelsteg möglich",
+        "restrictions": "Badezonen beachten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "hydra-molos",
+      "islandId": "hydra",
+      "name": "Molos",
+      "type": "bucht",
+      "coordinates": { "lat": 37.339, "lon": 23.425 },
+      "qualities": { "schoenheit": 4, "restaurant": 1, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 310, "maxKn": 22 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 310, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (CruisersWiki Hydra, Abruf 2026-08): Öffnung nach N bis NW, Sektor 60–310, maxKn 22 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle, daher nur mittlere Konfidenz."
+      },
+      "description": "Naturbelassene Bucht an der Nordwestküste — still, aber ohne jede Versorgung.",
+      "warnings": [
+        "Exponiert gegenüber Nordwinden; Meltemi erzeugt Fallböen von den dahinterliegenden Höhen",
+        "Stellenweise harter Grund unter dünner Sandsohle — Anker sorgfältig prüfen",
+        "Keine Versorgung, 60 Minuten Gehzeit nach Hydra-Stadt",
+        "Privatgrundstücke an der Küste beachten"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 4.0, "max": 10.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Stellenweise harter Grund unter dünner Sandsohle.",
+        "seagrassNote": "Ausgedehnte Seegrasflächen.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Nichts, 60 Minuten Gehzeit nach Hydra-Stadt",
+        "showersToilets": false,
+        "wasteDisposal": null,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Exponiert gegenüber Nordwinden.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Kiesstrand zur Anlandung geeignet",
+        "restrictions": "Privatgrundstücke an der Küste",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)"]
+      }
     }
   ]
 }

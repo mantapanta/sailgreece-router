@@ -1,0 +1,175 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 262/265/266 — Seitenangaben unverifiziert; CruisersWiki Milos; Jim Baerselman, Cruising the South Aegean). Neu aufgenommen. Sektoren und Öffnungsrichtungen der Quelle sind konsistent, unverändert übernommen.",
+  "island": {
+    "id": "milos",
+    "name": "Milos",
+    "coordinates": { "lat": 36.7333, "lon": 24.4167 },
+    "description": "Vulkaninsel mit einem der größten Naturhäfen der Ägäis und bizarren Felsküsten.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 2–4 Verbindungen ab Piräus (Highspeed 3,5 h, konventionell 7 h), Quelle Ferryroute Milos (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "milos-adamas",
+      "islandId": "milos",
+      "name": "Adamas",
+      "type": "hafen",
+      "coordinates": { "lat": 36.725, "lon": 24.45 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 240, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 240, "maxM": 0.6 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 262, CruisersWiki Milos, Baerselman): Öffnung nach NW, Sektor 340–240, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Haupthafen tief in der vulkanischen Caldera — der sicherste Platz der südlichen Westkette.",
+      "warnings": [
+        "Untiefen und Felsen an der östlichen Hafeneinfahrt und bei Kap Bombarda",
+        "Sehr starke Meltemi-Böen über die Caldera, am Kai selbst geschützt",
+        "Regelmäßiger Fährverkehr — ausreichend Abstand zur Kaimauer halten",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: CruisersWiki Milos",
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 262 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 5.0 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Zäher Schlamm im Hafenbecken mit hervorragender Haltekraft.",
+        "seagrassNote": "Seegras im Zentrum des Golfs, am Yachtkai sauberer Schlamm.",
+        "capacityYachts": 35,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Zahlreiche Supermärkte, Bäckereien und Fachgeschäfte an der Promenade",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 12–18 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Hafenbehörde Milos, VHF 12 (Telefonnummer aus Lauf 2 unverifiziert)",
+        "maxLoaM": 30,
+        "swellExposureNote": "Meltemi weht über die Caldera und erzeugt leichte Kabbelwellen; die Pier ist gut geschützt.",
+        "ferryTrafficNote": "Regelmäßiger Fährverkehr, Fährwellen erfordern Abstand zur Kaimauer.",
+        "dinghyLanding": "Am Yachtkai oder Anlegesteg im Süden",
+        "restrictions": "Zufahrt zu Tank- und Fährpieren freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: CruisersWiki Milos",
+          "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+        ]
+      }
+    },
+    {
+      "id": "milos-pollonia",
+      "islandId": "milos",
+      "name": "Pollonia",
+      "type": "hafen",
+      "coordinates": { "lat": 36.7633, "lon": 24.5267 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 90, "toDeg": 300, "maxKn": 15 }],
+        "waveSectors": [{ "fromDeg": 90, "toDeg": 300, "maxM": 1.2 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 265): Öffnung nach N bis NE, Sektor 90–300, maxKn 15 — konsistent mit dem Urteil 'Meltemi-sicher: nein', unverändert übernommen."
+      },
+      "description": "Fischerhafen im Nordosten — schön, aber bei Meltemi auflandig und dann unbrauchbar.",
+      "warnings": [
+        "Völlig ungeschützt gegen Nord- und Nordostwind, bei Meltemi gefährlicher Legerwall",
+        "Haltegrund schlecht: dünne Sandschicht über Felsplatten",
+        "Bei aufziehendem Meltemi sofort verlassen",
+        "Meltemi-sicher: nein"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 265 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 2.0, "max": 4.0 },
+        "anchorHoldingGround": "sand-fels",
+        "holdingQuality": "schlecht",
+        "holdingNote": "Dünne Sandschicht über Felsplatten, Anker greift schlecht.",
+        "seagrassNote": "Seegras und Felsbrocken erschweren das Einfahren des Ankers.",
+        "capacityYachts": 10,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Kleine Minimärkte und Fischtavernen im Ort",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 15,
+        "swellExposureNote": "Sehr hohes Schwellrisiko bei Meltemi-Lagen.",
+        "ferryTrafficNote": "Kleine Pendelfähre nach Kimolos am Außenkai.",
+        "dinghyLanding": "Am kleinen Fischerkai möglich",
+        "restrictions": "Bei Meltemi sofort verlassen",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "milos-kleftiko",
+      "islandId": "milos",
+      "name": "Kleftiko",
+      "type": "bucht",
+      "coordinates": { "lat": 36.6633, "lon": 24.3317 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 270, "toDeg": 90, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 270, "toDeg": 90, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 266, Baerselman): Öffnung nach S, Sektor 270–90, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Weiße Felsnadeln über türkisem Wasser — der spektakulärste Ankerplatz der Südküste.",
+      "warnings": [
+        "Unterwasserfelsen und Kalksteinnadeln erfordern Umsicht beim Ankern",
+        "Tagsüber viele Ausflugsboote aus Adamas",
+        "Nachttauglichkeit von der Quelle NICHT bewertet — als Badestopp behandeln, bis geprüft",
+        "Meltemi-sicher: ja (Tagesaufenthalt)"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean",
+        "Deep-Research Lauf 2: CruisersWiki Milos"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 4.0, "max": 10.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Reine Sandtaschen zwischen den Felsformationen halten ausgezeichnet.",
+        "seagrassNote": "Sandboden durch das klare Wasser gut sichtbar.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Keine Infrastruktur",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 40,
+        "swellExposureNote": "Laut Quelle ruhig bei nördlichen Meltemi-Winden.",
+        "ferryTrafficNote": "Tagsüber viele Ausflugsboote aus Adamas.",
+        "dinghyLanding": "Felsenhöhlen per Beiboot erreichbar, kein Strand",
+        "restrictions": "Kein Abfall über Bord",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"]
+      }
+    }
+  ]
+}

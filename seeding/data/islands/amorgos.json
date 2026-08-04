@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: 'Katapola guter Meltemi-Schutz'); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: 'Katapola guter Meltemi-Schutz') + Deep-Research Lauf 3 vom 2026-08-03 (zwei neue Plätze, Liegeplatz-Details). BEMERKENSWERT: Lauf 3 liefert für Katapola exakt denselben Sektor (320–240) und dieselbe Windgrenze wie der Bestand, unabhängig hergeleitet — die stärkste Bestätigung eines Sektors in allen drei Läufen. Wellengrenze auf den kleineren Wert gesenkt.",
   "island": {
     "id": "amorgos",
     "name": "Amorgos",
     "coordinates": { "lat": 36.83, "lon": 25.89 },
-    "description": "Die östlichste Option — steil, wild, mit dem Kloster in der Felswand."
+    "description": "Die östlichste Option — steil, wild, mit dem Kloster in der Felswand.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 3: täglich ab Piräus nach Katapola und Aegiali (Blue Star Ferries), Quelle NetFerry Amorgos (Abruf 2026-02)"
+    }
   },
   "places": [
     {
@@ -17,10 +21,147 @@
       "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 3 },
       "shelter": {
         "windSectors": [{ "fromDeg": 320, "toDeg": 240, "maxKn": 35 }],
-        "waveSectors": [{ "fromDeg": 320, "toDeg": 240, "maxM": 1.2 }],
-        "sourceNote": "Quelle 1: 'Katapola guter Meltemi-Schutz'; tiefe Bucht öffnet nach W"
+        "waveSectors": [{ "fromDeg": 320, "toDeg": 240, "maxM": 0.8 }],
+        "sourceNote": "Quelle 1: 'Katapola guter Meltemi-Schutz'; tiefe Bucht öffnet nach W. Lauf 3 (Heikell 14. Aufl., CruisersWiki Amorgos) leitet unabhängig denselben Sektor 320–240 und dieselbe Windgrenze 35 kn her — zwei Quellen deckungsgleich. Wellengrenze auf den kleineren Wert 0.8 m gesenkt."
       },
-      "description": "Tiefe, gut geschützte Bucht — Basis für das Kloster Hozoviotissa."
+      "description": "Tiefe, gut geschützte Bucht — Basis für das Kloster Hozoviotissa.",
+      "warnings": [
+        "Fallwinde von den steil aufragenden Bergrücken bei starkem Meltemi — wiederkehrende Lee-Böen im Becken",
+        "Anlegebereich der Fähren freihalten",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1",
+        "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)",
+        "Deep-Research Lauf 3: CruisersWiki Amorgos"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 5.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Dichte Schlamm- und Sandsohle mit sehr hoher Haltekraft.",
+        "seagrassNote": "Seegras im äußeren Ankerfeld.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Supermärkte direkt an der Hafenpromenade (2 Min)",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "12–20 EUR/Nacht (2025, Hafengeld)",
+        "portAuthorityFees": "Gemeinde-Liegegeld",
+        "maxLoaM": 25,
+        "swellExposureNote": "Glattes Wasser im Becken, aber wiederkehrende Lee-Böen von den Bergrücken.",
+        "ferryTrafficNote": "Regelmäßige Anläufe von Großfähren am zentralen Pier.",
+        "dinghyLanding": null,
+        "restrictions": "Anlegebereich der Fährschiffe freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "amorgos-kalotaritissa",
+      "islandId": "amorgos",
+      "name": "Kalotaritissa",
+      "type": "bucht",
+      "coordinates": { "lat": 36.7972, "lon": 25.7461 },
+      "qualities": { "schoenheit": 5, "restaurant": 2, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 90, "toDeg": 360, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 90, "toDeg": 360, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Amorgos, Navily 2025): Öffnung nach NE, Sektor 90–0, maxKn 30 — Sektor und Öffnungsrichtung konsistent. toDeg als 360 statt 0 notiert, weil 0 hier das Sektorende meint (Schutz von O über S und W bis N)."
+      },
+      "description": "Südwestbucht im Windschatten der Insel Gramvousa — abgeschirmt, mit einer Strandtaverne.",
+      "warnings": [
+        "Enger Durchfahrtskanal zwischen Riffen bei der Ansteuerung",
+        "Sektor lässt den Bereich N bis O offen — bei Meltemi aus NNE genau prüfen",
+        "Grössenlimit laut Quelle 20 m"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 3: CruisersWiki Amorgos",
+        "Deep-Research Lauf 3: Navily 2025 (Crowd-Quelle)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 7.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Hervorragender Halt in Sandmulden.",
+        "seagrassNote": "Freie Sandflächen gut sichtbar.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Saisonale Strandtaverne, 3 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 20,
+        "swellExposureNote": "Laut Quelle guter Schutz vor der offenen Ägäis-Dünung durch die vorgelagerte Insel Gramvousa.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlandung am Strand oder an der kleinen Holzpier",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Amorgos"]
+      }
+    },
+    {
+      "id": "amorgos-aegiali",
+      "islandId": "amorgos",
+      "name": "Aegiali",
+      "type": "hafen",
+      "coordinates": { "lat": 36.9031, "lon": 25.9772 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 1, "toDeg": 260, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 1, "toDeg": 260, "maxM": 1.0 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Amorgos): Öffnung nach NW bis W, Sektor 0–260, maxKn 25 — Sektor und Öffnungsrichtung konsistent. fromDeg auf 1 gesetzt, weil 0–260 im Schema nicht von einem Vollkreis unterscheidbar wäre; die Abweichung von einem Grad ist ohne Bedeutung."
+      },
+      "description": "Der Nordhafen mit dem langen Sandstrand — bei Meltemi läuft Nordwestdünung ein.",
+      "warnings": [
+        "Spürbarer Schwell am Kai bei anhaltenden Nordwestwinden — laut Quelle ab Bft 7 nicht abschließend geklärt",
+        "Haltegrund stellenweise felsig, dichter Seegrasbewuchs",
+        "Meltemi-sicher: bedingt"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Amorgos"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 4.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Stellenweise felsiger Untergrund; genaues Zielen auf Sandflecken nötig.",
+        "seagrassNote": "Dichter Bewuchs.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt in 3 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "10–15 EUR/Nacht (2025)",
+        "portAuthorityFees": "Erhebung durch Gemeindepersonal",
+        "maxLoaM": 18,
+        "swellExposureNote": "Nordwestschwell läuft direkt ins Becken ein; Ausmaß bei Bft 7 und mehr laut Quelle ungeklärt.",
+        "ferryTrafficNote": "Regelmäßige Anläufe der Express Skopelitis.",
+        "dinghyLanding": null,
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Amorgos"]
+      }
     }
   ]
 }

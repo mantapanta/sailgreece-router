@@ -1,0 +1,66 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Folegandros; Heikell Greek Waters Pilot 14. Aufl.). Neu aufgenommen. Sektor und Öffnungsrichtung der Quelle sind konsistent, unverändert übernommen — der Platz ist bewusst als NICHT meltemi-sicher geführt.",
+  "island": {
+    "id": "folegandros",
+    "name": "Folegandros",
+    "coordinates": { "lat": 36.6167, "lon": 24.9167 },
+    "description": "Steile Felseninsel mit einer Chora über der Klippe — und nur einem, exponierten Hafen.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 1–2 Schnellfähren (SeaJets / Fast Ferries) ab Piräus, 4–6 h, Quelle FerriesinGreece Folegandros (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "folegandros-karavostasi",
+      "islandId": "folegandros",
+      "name": "Karavostasi",
+      "type": "hafen",
+      "coordinates": { "lat": 36.6133, "lon": 24.9517 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 200, "toDeg": 30, "maxKn": 20 }],
+        "waveSectors": [{ "fromDeg": 200, "toDeg": 30, "maxM": 1.2 }],
+        "sourceNote": "Deep-Research Lauf 2 (CruisersWiki Folegandros, Heikell 14. Aufl.): Öffnung nach E bis NE, Sektor 200–30, maxKn 20 — Sektor, Öffnungsrichtung und das Urteil 'Meltemi-sicher: nein' sind konsistent, unverändert übernommen."
+      },
+      "description": "Der einzige Hafen der Insel — bei Meltemi steht der Schwell direkt ins Becken.",
+      "warnings": [
+        "Haltegrund schlecht: Felsplatten und dünner Sand, Anker bricht bei Böen über 25 kn leicht aus",
+        "Gefährliche Riffe bei der Ansteuerung, Nachtansteuerung nicht empfohlen",
+        "Nur etwa 8 Plätze, Grössenlimit laut Quelle 18 m",
+        "Bei Meltemi über 25 kn Hafen meiden",
+        "Meltemi-sicher: nein"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 2: CruisersWiki Folegandros"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.0 },
+        "anchorHoldingGround": "sand-fels",
+        "holdingQuality": "schlecht",
+        "holdingNote": "Felsplatten und dünner Sand, der Anker rutscht leicht durch.",
+        "seagrassNote": "Seegras- und Felszonen wechseln sich ab.",
+        "capacityYachts": 8,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimärkte und Tavernen am Hafen (2 Min)",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 10–14 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Hafenamt vor Ort",
+        "maxLoaM": 18,
+        "swellExposureNote": "Meltemi-Schwell steht direkt in das Hafenbecken.",
+        "ferryTrafficNote": "Fähren legen an der Mole an und erzeugen starken Schwell.",
+        "dinghyLanding": "Am Anlegesteg möglich",
+        "restrictions": "Bei Meltemi über 25 kn meiden",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Folegandros"]
+      }
+    }
+  ]
+}

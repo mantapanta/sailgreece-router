@@ -1,0 +1,119 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 121/122 — Seitenangaben unverifiziert; CruisersWiki). Neu aufgenommen. Beide Sektoren sind quellintern konsistent, unverändert übernommen.",
+  "island": {
+    "id": "methana",
+    "name": "Methana",
+    "coordinates": { "lat": 37.58, "lon": 23.38 },
+    "description": "Vulkanische Halbinsel mit Schwefelquellen — zwei stille Häfen im Schatten des Bergs.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich 1–2 Verbindungen ab Piräus (Fähre 2 h), Quelle Ferryhopper Methana (Abruf 2026-08). Nur wenige Abfahrten — Zeitpuffer für den Gästewechsel einplanen."
+    }
+  },
+  "places": [
+    {
+      "id": "methana-vathy",
+      "islandId": "methana",
+      "name": "Vathy (Methana)",
+      "type": "hafen",
+      "coordinates": { "lat": 37.578, "lon": 23.336 },
+      "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 330, "toDeg": 210, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 330, "toDeg": 210, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 122): Öffnung nach W bis SW, Sektor 330–210, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Winziger Fischerhafen an der Westküste — ein Meltemi-Versteck mit zwei Tavernen.",
+      "warnings": [
+        "Sehr enges Hafenbecken, nur etwa 12 Plätze",
+        "Grössenlimit laut Quelle 16 m — für dieses Schiff knapp, vorab klären",
+        "Wassertiefen an der Mole ab 2,0 m — bei 2,0 m Tiefgang genau prüfen",
+        "Fischerboote haben Vorrang an der inneren Pier"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 122 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 3.5 },
+        "anchorHoldingGround": "schlamm-sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Hervorragende Haltekraft im dichten Schlamm.",
+        "seagrassNote": "Kein Seegras im kleinen Hafenbecken.",
+        "capacityYachts": 12,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt, 3 Minuten Gehzeit",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Kai",
+        "priceIndicationEur": "ca. 5–10 EUR/Nacht (2024)",
+        "portAuthorityFees": "Gemeinde",
+        "maxLoaM": 16,
+        "swellExposureNote": "Laut Quelle vollständig geschützt vor Meltemi über 30 kn.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": null,
+        "restrictions": "Fischerboote haben Vorrang an der inneren Pier",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "methana-hafen",
+      "islandId": "methana",
+      "name": "Methana",
+      "type": "hafen",
+      "coordinates": { "lat": 37.579, "lon": 23.391 },
+      "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 180, "toDeg": 60, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 180, "toDeg": 60, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 121): Öffnung nach O bis SE, Sektor 180–60, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Der Kurort-Hafen — Schwefelgeruch an der Mole, dafür ruhig und einfach anzulegen.",
+      "warnings": [
+        "Schwefelhaltiges Wasser kann den Rumpf verfärben",
+        "Schwell bei seltenem Ostwind",
+        "Fähren legen an der äußeren Mole an"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 121 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 4.5 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Dicker Schlamm mit festem Halt.",
+        "seagrassNote": "Wenig Seegras im Hafeninneren.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 2 Minuten an der Promenade",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Hafenplatz",
+        "priceIndicationEur": "ca. 6–12 EUR/Nacht (2024)",
+        "portAuthorityFees": "Limenarchio Methana",
+        "maxLoaM": 22,
+        "swellExposureNote": "Laut Quelle gut geschützt vor Meltemi, Schwell bei seltenem Ostwind.",
+        "ferryTrafficNote": "Fähren legen an der äußeren Mole an.",
+        "dinghyLanding": null,
+        "restrictions": null,
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

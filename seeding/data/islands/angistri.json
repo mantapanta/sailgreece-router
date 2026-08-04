@@ -1,0 +1,116 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 118 — Seitenangabe unverifiziert; CruisersWiki). Neu aufgenommen. Beide Sektoren sind quellintern konsistent. Skala ist mit 14 m Grössenlimit und 1,8 m Kaitiefe für dieses Schiff grenzwertig.",
+  "island": {
+    "id": "angistri",
+    "name": "Angistri",
+    "coordinates": { "lat": 37.7, "lon": 23.35 },
+    "description": "Kiefernbewachsene Nachbarinsel von Ägina — klares Wasser, kleine Häfen, wenig Betrieb.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich über 5 Verbindungen ab Piräus (Flying Dolphin 55 Min, Fähre 1 h 35), Quelle Ferryhopper Angistri (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "angistri-skala",
+      "islandId": "angistri",
+      "name": "Skala",
+      "type": "hafen",
+      "coordinates": { "lat": 37.7083, "lon": 23.3605 },
+      "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 90, "toDeg": 310, "maxKn": 22 }],
+        "waveSectors": [{ "fromDeg": 90, "toDeg": 310, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 118): Öffnung nach N bis NE, Sektor 90–310, maxKn 22 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Kleine Hafensiedlung an der Nordostküste mit flachem Sandstrand direkt daneben.",
+      "warnings": [
+        "GRENZWERTIG FÜR DIESES SCHIFF: Kaitiefe ab 1,8 m bei 2,0 m Tiefgang, Grössenlimit laut Quelle 14 m",
+        "Nur etwa 12 Plätze; Fähranleger unbedingt freihalten",
+        "Bei starkem Meltemi läuft Schwell in die Einfahrt",
+        "Kein Landstrom"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 118 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 1.8, "max": 3.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Sandgrund hält nach dem Eingraben gut.",
+        "seagrassNote": "Seegras außerhalb des Hafenbeckens.",
+        "capacityYachts": 12,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt, 2 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Kai",
+        "priceIndicationEur": "ca. 6–10 EUR/Nacht (2024)",
+        "portAuthorityFees": "Gemeinde",
+        "maxLoaM": 14,
+        "swellExposureNote": "Bei starkem Meltemi läuft Schwell in die Einfahrt.",
+        "ferryTrafficNote": "Fähren legen am Kopf der Mole an.",
+        "dinghyLanding": null,
+        "restrictions": "Fähranleger freihalten; Tiefgang um 2,0 m kritisch",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "angistri-alonia",
+      "islandId": "angistri",
+      "name": "Alonia (Megalochori)",
+      "type": "bucht",
+      "coordinates": { "lat": 37.698, "lon": 23.342 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 310, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 310, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (CruisersWiki Angistri, Abruf 2026-08): Öffnung nach N bis NW, Sektor 60–310, maxKn 25 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle; der Bericht führt den Platz selbst im Unsicherheitsregister."
+      },
+      "description": "Ankerplatz vor Megalochori mit Blick auf die Peloponnes — klares Wasser, viel Seegras.",
+      "warnings": [
+        "Offen gegen Winde aus dem Nordquadranten",
+        "Große Seegrasteppiche — freie Sandstellen suchen; laut Quelle saisonal veränderlich",
+        "Wassertiefen im Bojenbereich laut Bericht nicht abschließend geklärt"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 1: CruisersWiki Angistri (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 7.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Gute Sandstellen müssen gesucht werden; Lage der Sandmulden laut Quelle saisonal veränderlich.",
+        "seagrassNote": "Große Seegrasteppiche.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 5 Minuten Gehzeit",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Uferstraße",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Schwell bei auffrischendem Nordwind.",
+        "ferryTrafficNote": "Hydrofoils legen am nahen Kai an.",
+        "dinghyLanding": "Anlandung am Kiesstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Angistri (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

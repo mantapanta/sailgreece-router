@@ -1,0 +1,66 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 119 — Seitenangabe unverifiziert; CruisersWiki). Neu aufgenommen. Sektor und Öffnungsrichtung sind konsistent, unverändert übernommen.",
+  "island": {
+    "id": "korfos",
+    "name": "Korfos",
+    "coordinates": { "lat": 37.76, "lon": 23.12 },
+    "description": "Fischerdorf in einem fjordartigen Einschnitt der Peloponnes — Tavernenstege statt Hafenamt.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 1: keine Fähranbindung, Anreise nur per Auto oder Bus ab Athen, Quelle Greek Travel Pages (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "korfos-hafen",
+      "islandId": "korfos",
+      "name": "Korfos",
+      "type": "hafen",
+      "coordinates": { "lat": 37.763, "lon": 23.125 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 180, "toDeg": 110, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 180, "toDeg": 110, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 119, CruisersWiki): Öffnung nach SE, Sektor 180–110, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Nahezu landumschlossen — glattes Wasser, Festmachen an den Stegen der Tavernen.",
+      "warnings": [
+        "Sehr starke Fallböen bei extremem Meltemi aus Nordost möglich",
+        "Liegeplatz an Tavernenstegen setzt üblicherweise die Einkehr voraus"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 119 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 5.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Sehr zäher Schlamm mit ausgezeichnetem Halt.",
+        "seagrassNote": "Keine nennenswerten Seegrasbehinderungen.",
+        "capacityYachts": 35,
+        "reservationPossible": true,
+        "reservationChannel": "Telefonisch direkt bei den Tavernen mit Stegen",
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt, 1 Minute an den Stegen",
+        "showersToilets": true,
+        "wasteDisposal": "Behälter an den Gastronomiebetrieben",
+        "priceIndicationEur": "Laut Quelle oft kostenfrei bei Einkehr in der Taverne (2024)",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 25,
+        "swellExposureNote": "Laut Quelle glattes Wasser selbst bei starkem Meltemi draußen.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "An allen Stegen möglich",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

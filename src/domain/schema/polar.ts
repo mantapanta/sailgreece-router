@@ -36,3 +36,43 @@ export const PolarSchema = z
     message: 'twsKn muss streng aufsteigend sein (keine Duplikate)',
   });
 export type Polar = z.infer<typeof PolarSchema>;
+
+/**
+ * Firestore forbids an array whose ELEMENTS are arrays ("Nested arrays are not
+ * allowed"), so the twaDeg x twsKn matrix cannot be stored as `speeds` directly.
+ * It is written as `speedRows`, an array of one-field maps, and folded back on
+ * read.
+ *
+ * Rows are kept in an ARRAY, not in a map keyed by index: a map with the keys
+ * "0".."12" comes back in lexicographic order ("10" before "2"), which would
+ * silently transpose the polar and yield wrong boat speeds for every leg.
+ */
+export interface FirestorePolar {
+  twaDeg: number[];
+  twsKn: number[];
+  speedRows: { v: number[] }[];
+  sourceNote: string;
+}
+
+export function polarToFirestore(polar: Polar): FirestorePolar {
+  const { speeds, ...rest } = polar;
+  return { ...rest, speedRows: speeds.map((row) => ({ v: row })) };
+}
+
+/**
+ * Accepts both shapes: the `speedRows` form written by the importer and a plain
+ * `speeds` matrix (a document created by hand). The result is only shaped, never
+ * validated — the caller still parses it with PolarSchema.
+ */
+export function polarFromFirestore(data: unknown): unknown {
+  if (data === null || typeof data !== 'object') return data;
+  const rec = data as Record<string, unknown>;
+  if (!Array.isArray(rec.speedRows)) return data;
+  const { speedRows, ...rest } = rec;
+  return {
+    ...rest,
+    speeds: speedRows.map((row) =>
+      row !== null && typeof row === 'object' ? (row as { v: unknown }).v : row,
+    ),
+  };
+}

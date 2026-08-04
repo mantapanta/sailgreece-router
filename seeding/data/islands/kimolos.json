@@ -1,0 +1,112 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Kimolos, Abruf 2026-08; Heikell Greek Waters Pilot). Neu aufgenommen. Sektoren und Öffnungsrichtungen der Quelle sind konsistent, unverändert übernommen.",
+  "island": {
+    "id": "kimolos",
+    "name": "Kimolos",
+    "coordinates": { "lat": 36.7833, "lon": 24.5667 },
+    "description": "Stille Kreideinsel nordöstlich von Milos — ein Fischerhafen, kaum Yachten.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich direkt ab Piräus oder mehrmals täglich per Lokalboot ab Milos (Pollonia), Quelle Aktoploika Kimolos (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "kimolos-psathi",
+      "islandId": "kimolos",
+      "name": "Psathi",
+      "type": "hafen",
+      "coordinates": { "lat": 36.785, "lon": 24.58 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 260, "toDeg": 120, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 260, "toDeg": 120, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 2 (CruisersWiki Kimolos, Abruf 2026-08): Öffnung nach S bis SE, Sektor 260–120, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Kleiner Inselhafen mit Kaiplätzen — ruhig, solange nichts aus Süd oder Südost steht.",
+      "warnings": [
+        "Nur etwa 10 Plätze an der Kaimauer, Grössenlimit laut Quelle 18 m",
+        "Starke Meltemi-Fallböen über die Klippen — das Rigg arbeitet",
+        "Fähranleger freihalten, Fähren haben Vorrang",
+        "Meltemi-sicher: bedingt"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 2: CruisersWiki Kimolos (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 3.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Sand- und Schlammgrund im Hafenbecken.",
+        "seagrassNote": "Seegras außerhalb der Ansteuerungsrinne.",
+        "capacityYachts": 10,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Kleine Cafés und Minimarkt am Anleger",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 8–12 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Geringe Liegegebühren",
+        "maxLoaM": 18,
+        "swellExposureNote": "Guter Schutz gegen Nord-Meltemi, aber heftige Böen.",
+        "ferryTrafficNote": "Fähren legen an der Mole an, Vorrang gewähren.",
+        "dinghyLanding": "Am kleinen Fischersteg",
+        "restrictions": "Fähranleger freihalten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Kimolos"]
+      }
+    },
+    {
+      "id": "kimolos-aliki",
+      "islandId": "kimolos",
+      "name": "Aliki",
+      "type": "bucht",
+      "coordinates": { "lat": 36.7767, "lon": 24.56 },
+      "qualities": { "schoenheit": 4, "restaurant": 2, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 270, "toDeg": 90, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 270, "toDeg": 90, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 2 (CruisersWiki Kimolos): Öffnung nach S, Sektor 270–90, maxKn 32 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Flache Südbucht mit weitem Sandstrand — ruhiger Nachtplatz bei nördlichen Winden.",
+      "warnings": [
+        "Vorgelagerte Riffe bei der Ansteuerung von Agios Andreas beachten",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 2: CruisersWiki Kimolos (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 2.5, "max": 6.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Flach ansteigender, fester Sandgrund.",
+        "seagrassNote": "Klare Sandzonen gut sichtbar.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Eine Taverne in Strandnähe",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Ruhige Wasseroberfläche bei N-Wind.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Direkt am flachen Sandstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Kimolos"]
+      }
+    }
+  ]
+}

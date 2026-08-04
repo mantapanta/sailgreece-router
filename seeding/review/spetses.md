@@ -1,0 +1,57 @@
+# Review: Spetses (`spetses`)
+
+Status: **FREIGEGEBEN** (`approved: true`)
+
+Quelle der Datei: Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 138/139 — Seitenangaben unverifiziert; CruisersWiki Spetses). Neu aufgenommen. Alle Sektoren sind quellintern konsistent. Dapia ist laut Quelle für Yachten tagsüber meist gesperrt — vor Freigabe entscheiden, ob der Platz in der Bibliothek bleibt.
+
+> FR24: Sichere Liegeplätze zuerst prüfen — sie steuern die Nacht-Ampel. Sektorsemantik: „geschützt gegen Wind/Welle KOMMEND AUS fromDeg° im Uhrzeigersinn bis toDeg°", Grenzen inklusiv, Wrap über Nord erlaubt.
+
+## Plätze (3)
+
+### Baltiza (Alter Hafen) (`spetses-baltiza`, hafen)
+
+**Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
+
+| Art | Sektor |
+|---|---|
+| Wind | geschützt aus 340°–280° (Wrap über Nord), bis 32 kn |
+| Welle | geschützt aus 340°–280° (Wrap über Nord), bis 0.4 m |
+
+Quelle: Deep-Research Lauf 1 (Heikell 14. Aufl. S. 138, CruisersWiki Spetses): Öffnung nach NW, Sektor 340–280, maxKn 32 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen.
+
+Koordinaten: 37.2618, 23.1650 · Qualitäten: Schönheit 5/5, Restaurant 5/5, Badestrand 2/5
+
+Warnungen: ⚠ Sehr enge Hafeneinfahrt · ⚠ Gefahr unklarer Anker durch dicht liegende Yachten; viele alte Ketten am Grund · ⚠ Privatbojen lokaler Eigner nicht nutzen · ⚠ Leichte Unruhe bei Nordwestwind
+
+### Zogeria (`spetses-zogeria`, bucht)
+
+**Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
+
+| Art | Sektor |
+|---|---|
+| Wind | geschützt aus 60°–300°, bis 30 kn |
+| Welle | geschützt aus 60°–300°, bis 0.4 m |
+
+Quelle: Deep-Research Lauf 1 (Heikell 14. Aufl. S. 139, CruisersWiki Spetses): Öffnung nach N, Sektor 60–300, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen.
+
+Koordinaten: 37.2783, 23.1017 · Qualitäten: Schönheit 5/5, Restaurant 4/5, Badestrand 5/5
+
+Warnungen: ⚠ Unterwasserfelsen an der Nordostseite beachten · ⚠ Nach Norden offen — bei kräftigem Meltemi kein Nachtplatz
+
+### Dapia (Neuer Hafen) (`spetses-dapia`, hafen)
+
+**Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
+
+| Art | Sektor |
+|---|---|
+| Wind | geschützt aus 90°–310°, bis 18 kn |
+| Welle | geschützt aus 90°–310°, bis 0.6 m |
+
+Quelle: Deep-Research Lauf 1 (CruisersWiki Spetses, Abruf 2026-08): Öffnung nach N bis NE, Sektor 90–310, maxKn 18 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle, daher nur mittlere Konfidenz.
+
+Koordinaten: 37.2682, 23.1563 · Qualitäten: Schönheit 4/5, Restaurant 5/5, Badestrand 2/5
+
+Warnungen: ⚠ NICHT ALS NACHTPLATZ GEEIGNET: laut Quelle ist das Anlegen für Yachten tagsüber meist verboten, Platz für höchstens 5 Boote · ⚠ Voll exponiert gegenüber Meltemi, starker Schwell durch Fähr- und Hydrofoil-Verkehr · ⚠ Haltegrund schlecht (harter Fels mit Sandanteil) · ⚠ Vor der Freigabe prüfen, ob dieser Platz überhaupt in der Bibliothek bleiben soll
+
+---
+Freigabe: in `seeding/data/islands/spetses.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

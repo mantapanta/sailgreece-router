@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Livadi); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Livadi) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details, Fallwind-Warnung). Koordinate und Sektorgeometrie aus dem Bestand beibehalten (Lauf 2 setzte den Punkt 1,1 sm südöstlich, also außerhalb der Bucht), Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt.",
   "island": {
     "id": "serifos",
     "name": "Serifos",
     "coordinates": { "lat": 37.15, "lon": 24.5 },
-    "description": "Die Chora thront wie eine weiße Krone über der weiten Bucht von Livadi."
+    "description": "Die Chora thront wie eine weiße Krone über der weiten Bucht von Livadi.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 2–3 Schnell- und Konventionsfähren ab Piräus, 2,5–4 h, Quelle Aktoploika Serifos (Abruf 2026-08)"
+    }
   },
   "places": [
     {
@@ -16,11 +20,53 @@
       "coordinates": { "lat": 37.1458, "lon": 24.5217 },
       "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
       "shelter": {
-        "windSectors": [{ "fromDeg": 190, "toDeg": 90, "maxKn": 35 }],
-        "waveSectors": [{ "fromDeg": 190, "toDeg": 90, "maxM": 1.2 }],
-        "sourceNote": "Quelle 1: Rückfallhafen-Kette; große Bucht öffnet nach SE — sehr guter Meltemi-Schutz"
+        "windSectors": [{ "fromDeg": 190, "toDeg": 90, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 190, "toDeg": 90, "maxM": 0.5 }],
+        "sourceNote": "Quelle 1: Rückfallhafen-Kette; große Bucht öffnet nach SE — sehr guter Meltemi-Schutz. Lauf 2 bestätigt die Öffnung nach SE, gibt aber den engeren Sektor 270–120 an (kein Süd-/Südwestschutz) und maxKn 30. Bestandsgeometrie beibehalten, Windgrenze auf 30 kn und Wellengrenze auf 0.5 m gesenkt."
       },
-      "description": "Weite, gut geschützte Bucht unter der Chora — Ankern auf Sand, Tavernen am Ufer."
+      "description": "Weite, gut geschützte Bucht unter der Chora — Ankern auf Sand, Tavernen am Ufer.",
+      "warnings": [
+        "Extrem starke Fallböen von den Steilhängen der Chora bei Meltemi",
+        "Reichlich Kette stecken oder zweiten Anker vorsehen",
+        "Meltemi-sicher: bedingt — Schutz vor Wellen ist gut, die Fallböen sind das Problem",
+        "Fährkai nördlich der Yachtpier, Fährwellen spürbar"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1+2",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 238 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "mittel",
+        "holdingNote": "Der Grund hält gut, aber die heftigen Fallböen stellen das Geschirr auf eine harte Probe.",
+        "seagrassNote": "Seegrasfelder im mittleren Buchtbereich.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Supermärkte, Bäckereien und Nautikzubehör in 2–5 Minuten",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 10–16 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Hafenamt Serifos erhebt Liegegeld vor Ort",
+        "maxLoaM": 25,
+        "swellExposureNote": "Durch die Mole gut vor Wellenschlag geschützt; Hauptproblem sind die Fallwinde.",
+        "ferryTrafficNote": "Fährkai nördlich der Yachtpier; Fährwellen spürbar.",
+        "dinghyLanding": "Am kleinen Fischersteg im Nordosten der Bucht",
+        "restrictions": null,
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 238 (Seitenangabe unverifiziert)",
+          "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+        ]
+      }
     }
   ]
 }

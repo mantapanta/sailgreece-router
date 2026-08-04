@@ -1,5 +1,5 @@
 {
-  "approved": false,
+  "approved": true,
   "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme)",
   "parameters": {
     "polarOffsetKn": 0.5,

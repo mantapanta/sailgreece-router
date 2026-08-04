@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Kamares; Buchten Fikiada, Vathy geschützt, Faros); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Kamares; Buchten Fikiada, Vathy geschützt, Faros) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details). Koordinaten und Sektorgeometrie aus dem Bestand beibehalten, Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt. Kamares deckt sich in beiden Quellen vollständig.",
   "island": {
     "id": "sifnos",
     "name": "Sifnos",
     "coordinates": { "lat": 36.97, "lon": 24.7 },
-    "description": "Töpferdörfer, Klöster und die vielleicht beste Küche der Kykladen."
+    "description": "Töpferdörfer, Klöster und die vielleicht beste Küche der Kykladen.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 3–5 Verbindungen (SeaJets / Aegean Speed Lines) ab Piräus, 3–5 h, Quelle Greek Sails Ferry Guide (Abruf 2026-08)"
+    }
   },
   "places": [
     {
@@ -18,9 +22,51 @@
       "shelter": {
         "windSectors": [{ "fromDeg": 330, "toDeg": 230, "maxKn": 30 }],
         "waveSectors": [{ "fromDeg": 330, "toDeg": 230, "maxM": 1.0 }],
-        "sourceNote": "Quelle 1: Rückfallhafen-Kette; Fjordbucht öffnet nach W"
+        "sourceNote": "Quelle 1: Rückfallhafen-Kette; Fjordbucht öffnet nach W. Lauf 2 (Heikell 14. Aufl. S. 241, CruisersWiki Sifnos) bestätigt Sektor, Grenzen und Öffnung nach W bis WSW unabhängig — beide Quellen deckungsgleich."
       },
-      "description": "Der Fährhafen in einer tiefen Bucht — Sandstrand direkt neben dem Anleger."
+      "description": "Der Fährhafen in einer tiefen Bucht — Sandstrand direkt neben dem Anleger.",
+      "warnings": [
+        "Unangenehmer Grundschwell im Hafenbecken bei starkem Meltemi, reflektiert an der Kaimauer",
+        "Fallböen aus den Bergen",
+        "Meltemi-sicher: bedingt",
+        "Ruckdämpfer und lange Festmacher einplanen"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1+2",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 241 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: CruisersWiki Sifnos"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Sandgrund.",
+        "seagrassNote": "Vereinzelt Seegras im tieferen Wasser.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermärkte und Bäckereien direkt an der Waterfront (2 Min)",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 10–15 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Hafenbehörde prüft Papiere",
+        "maxLoaM": 22,
+        "swellExposureNote": "Grundschwell reflektiert an der Kaimauer; Ruckdämpfer zwingend.",
+        "ferryTrafficNote": "Fähren legen gegenüber an; erhebliche Schwellbildung bei Ankunft.",
+        "dinghyLanding": "Am kleinen Holzsteg nahe dem Sandstrand",
+        "restrictions": "Fährplatz freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: CruisersWiki Sifnos",
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl."
+        ]
+      }
     },
     {
       "id": "sifnos-vathy",
@@ -31,10 +77,51 @@
       "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 300, "toDeg": 250, "maxKn": 35 }],
-        "waveSectors": [{ "fromDeg": 300, "toDeg": 250, "maxM": 0.8 }],
-        "sourceNote": "Quelle 2: 'Vathy geschützt' — fast geschlossene Bucht, schmale Öffnung nach W"
+        "waveSectors": [{ "fromDeg": 300, "toDeg": 250, "maxM": 0.3 }],
+        "sourceNote": "Quelle 2: 'Vathy geschützt' — fast geschlossene Bucht, schmale Öffnung nach W. Lauf 2 gibt die Öffnung nach SW und Sektor 300–200 an, gleiche Windgrenze 35 kn, aber nur 0.3 m Welle. Bestandsgeometrie beibehalten, Wellengrenze auf 0.3 m gesenkt."
       },
-      "description": "Fast ein See: die geschützteste Traumbucht der Insel, Kloster am Strand."
+      "description": "Fast ein See: die geschützteste Traumbucht der Insel, Kloster am Strand.",
+      "warnings": [
+        "Sehr starke Fallböen über die Kämme bei N/NE-Wind — das Schiff schwojt kurz heftig",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 243 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean",
+        "Deep-Research Lauf 2: CruisersWiki Sifnos"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 2.5, "max": 6.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Sandboden bietet vorzügliche Haltekraft.",
+        "seagrassNote": "Gut sichtbare Sandflecken zwischen kleineren Krautzonen.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Kleine Minimärkte und Tavernen direkt am Strand",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 40,
+        "swellExposureNote": "Spiegelglattes Wasser bei Meltemi; nur die Böen bewegen das Schiff.",
+        "ferryTrafficNote": "Kein Fährverkehr in der Bucht",
+        "dinghyLanding": "Direkt am Strand oder am kleinen Kai bei der Kirche",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean",
+          "Deep-Research Lauf 2: CruisersWiki Sifnos"
+        ]
+      }
     },
     {
       "id": "sifnos-faros",
@@ -45,10 +132,49 @@
       "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 210, "toDeg": 110, "maxKn": 25 }],
-        "waveSectors": [{ "fromDeg": 210, "toDeg": 110, "maxM": 0.8 }],
-        "sourceNote": "Quelle 2: Zielkatalog; Bucht öffnet nach S/SE"
+        "waveSectors": [{ "fromDeg": 210, "toDeg": 110, "maxM": 0.4 }],
+        "sourceNote": "Quelle 2: Zielkatalog; Bucht öffnet nach S/SE. Lauf 2 gibt die Öffnung nach S und den weiteren Sektor 270–90 mit 30 kn an. Bestandsgeometrie beibehalten (sie schließt SE-Lagen aus, was zu Quelle 2 passt), Wellengrenze auf 0.4 m gesenkt."
       },
-      "description": "Kleines Fischerdorf mit drei Stränden — ruhig, solange nichts aus Süd steht."
+      "description": "Kleines Fischerdorf mit drei Stränden — ruhig, solange nichts aus Süd steht.",
+      "warnings": [
+        "Bei Südwind völlig offen",
+        "Meltemi-sicher: ja",
+        "Badezonen im Sommer mit Bojen markiert"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 244 (Seitenangabe unverifiziert)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 7.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "In den sandigen Rinnen hervorragende Haltekraft.",
+        "seagrassNote": "Seegrasfelder vorhanden; freie Sandstellen gezielt ansteuern.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Kleine Tavernen und Minimarkt am Fischerhafen",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Sehr ruhiges Wasser bei Nordwinden.",
+        "ferryTrafficNote": "Kein Fährverkehr",
+        "dinghyLanding": "Am kleinen Fischersteg im Ort",
+        "restrictions": "Badezonen im Sommer mit Bojen markiert",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 244 (Seitenangabe unverifiziert)"
+        ]
+      }
     }
   ]
 }

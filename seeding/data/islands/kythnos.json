@@ -1,26 +1,119 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Kolona/Fikiada 37°24.7'N 24°23'E, Merichas, Loutra); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Kolona/Fikiada 37°24.7'N 24°23'E, Merichas, Loutra) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details; Kolona und Fikiada als getrennte Plätze). Sektorgeometrie und Koordinaten aus dem Bestand beibehalten, Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt. SCHWERER KONFLIKT bei Loutra (Nordschutz) — vor Freigabe zwingend gegen Heikell prüfen, siehe seeding/research/lauf-2-pruefprotokoll.md.",
   "island": {
     "id": "kythnos",
     "name": "Kythnos",
     "coordinates": { "lat": 37.4, "lon": 24.42 },
-    "description": "Karg und echt — mit der Doppelbucht Kolona als erstem Postkartenmoment des Törns."
+    "description": "Karg und echt — mit der Doppelbucht Kolona als erstem Postkartenmoment des Törns.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 2–4 Verbindungen ab Piräus und Lavrio, 1,5–3 h, Quelle NetFerry Kythnos (Abruf 2026-08)"
+    }
   },
   "places": [
     {
       "id": "kythnos-kolona",
       "islandId": "kythnos",
-      "name": "Kolona / Fikiada",
+      "name": "Kolona",
       "type": "bucht",
       "coordinates": { "lat": 37.4117, "lon": 24.3833 },
       "qualities": { "schoenheit": 5, "restaurant": 2, "badestrand": 5 },
       "shelter": {
-        "windSectors": [{ "fromDeg": 90, "toDeg": 300, "maxKn": 25 }],
+        "windSectors": [{ "fromDeg": 90, "toDeg": 300, "maxKn": 22 }],
         "waveSectors": [{ "fromDeg": 90, "toDeg": 300, "maxM": 0.8 }],
-        "sourceNote": "Quelle 2: Doppelbucht, Sandbank — nach N offen, bei starkem Meltemi Schwell um die Landzunge"
+        "sourceNote": "Quelle 2: Doppelbucht, Sandbank — nach N offen, bei starkem Meltemi Schwell um die Landzunge. KONFLIKT: Lauf 2 gibt für die Nordbucht Sektor 30–160 an (also Ostschutz statt Westschutz), maxKn 22. Bestandsgeometrie beibehalten, Windgrenze auf den kleineren Wert 22 kn gesenkt."
       },
-      "description": "Die Sandbank zwischen zwei Buchten — türkises Wasser, Ankern vor der Kulisse."
+      "description": "Die Sandbank zwischen zwei Buchten — türkises Wasser, Ankern vor der Kulisse.",
+      "warnings": [
+        "Bei Meltemi über 25 kn pfeift der Wind über die flache Sandbank",
+        "Meltemi-sicher: nein",
+        "Schwojraum einplanen, Böen drehen über der Landzunge"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 2: Sightsee Sailing Guide 2024 (Crowd-Quelle)",
+        "Deep-Research Lauf 2: CruisersWiki Kythnos"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Reiner Sandboden mit exzellenter Haltekraft.",
+        "seagrassNote": "Keine störenden Seegrasfelder im Hauptankerbereich.",
+        "capacityYachts": 35,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Eine Taverne am Hang oberhalb der Sandbank",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 45,
+        "swellExposureNote": "Dünung läuft bei kräftigem Meltemi in die Nordbucht ein.",
+        "ferryTrafficNote": "Kein Fährverkehr",
+        "dinghyLanding": "Anlanden direkt am Sandstrand problemlos",
+        "restrictions": "Ankergeschirr sorgfältig setzen, Schwojraum bei drehenden Böen nötig",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: Sightsee Sailing Guide 2024 (Crowd-Quelle)"]
+      }
+    },
+    {
+      "id": "kythnos-fikiada",
+      "islandId": "kythnos",
+      "name": "Fikiada",
+      "type": "bucht",
+      "coordinates": { "lat": 37.41, "lon": 24.375 },
+      "qualities": { "schoenheit": 4, "restaurant": 1, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 100, "toDeg": 260, "maxKn": 16 }],
+        "waveSectors": [{ "fromDeg": 100, "toDeg": 260, "maxM": 0.8 }],
+        "sourceNote": "Deep-Research Lauf 2 (Sightsee Sailing Guide 2024, CruisersWiki Kythnos): Sektor 100–260, maxKn 20, Welle 1.0 m. SELBSTWIDERSPRUCH in der Quelle — der Shelter-Block nennt die Öffnung nach N, der Warnhinweis nach NW; Fikiada liegt als SÜDbucht der Landzunge, was eine Öffnung nach S/SW nahelegt. Grenzen daher konservativ auf 16 kn und 0.8 m gekappt, bis die Öffnungsrichtung geprüft ist."
+      },
+      "description": "Die ruhigere Südbucht der Landzunge von Kolona — Sand, Klarwasser, keine Infrastruktur.",
+      "warnings": [
+        "Öffnungsrichtung UNGEPRÜFT — Quelle widerspricht sich (N vs. NW); bei Süd- bis Südwestlagen nicht auf den Schutzsektor verlassen",
+        "Meltemi-sicher: nein (laut Quelle)",
+        "Freie Sandflecken zwischen Seegras gezielt ansteuern"
+      ],
+      "confidence": "niedrig",
+      "sources": [
+        "Deep-Research Lauf 2: Sightsee Sailing Guide 2024 (Crowd-Quelle)",
+        "Deep-Research Lauf 2: CruisersWiki Kythnos"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 7.5 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Stellenweise Seegrasfelder; freie Sandflecken suchen.",
+        "seagrassNote": "Seegras verhindert stellenweise das Eingraben des Ankers.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Keine Geschäfte fußläufig",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 40,
+        "swellExposureNote": "Wellen stehen bei Wind aus N/NW in die Bucht (Angabe der Quelle, ungeprüft).",
+        "ferryTrafficNote": "Kein Fährverkehr",
+        "dinghyLanding": "Am Strand möglich",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "niedrig",
+        "sources": ["Deep-Research Lauf 2: Sightsee Sailing Guide 2024 (Crowd-Quelle)"]
+      }
     },
     {
       "id": "kythnos-merichas",
@@ -31,10 +124,51 @@
       "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 2 },
       "shelter": {
         "windSectors": [{ "fromDeg": 340, "toDeg": 240, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 340, "toDeg": 240, "maxM": 1.0 }],
-        "sourceNote": "Quelle 1: Rückfallhafen; Bucht öffnet nach W — bei Meltemi brauchbar"
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 240, "maxM": 0.6 }],
+        "sourceNote": "Quelle 1: Rückfallhafen; Bucht öffnet nach W — bei Meltemi brauchbar. Lauf 2 bestätigt die Öffnung (WNW) mit Sektor 340–220 und maxKn 35; Bestandsgeometrie beibehalten, Windgrenze bei 30 kn und Wellengrenze beim kleineren Wert 0.6 m belassen."
       },
-      "description": "Der Fährhafen der Insel — Tavernen am Wasser, unaufgeregt."
+      "description": "Der Fährhafen der Insel — Tavernen am Wasser, unaufgeregt.",
+      "warnings": [
+        "Fährschwell — ausreichend Abstand vom Heck zur Kaimauer halten",
+        "Böen drehen im Hafenbecken",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1 (Rückfallhafen-Kette)",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 231 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Anker greift nach wenigen Metern fest.",
+        "seagrassNote": "Geringes Seegras im Ansteuerungsbereich.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Mehrere Minimärkte und Bäckereien an der Hafenpromenade",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 10–14 EUR/Nacht (Gemeindehafen, 2024)",
+        "portAuthorityFees": "Hafenbehörde erfasst Papiere unregelmäßig",
+        "maxLoaM": 25,
+        "swellExposureNote": "Bei sehr starkem W-Wind läuft Schwell ein; bei Meltemi aus N/NE glattes Wasser.",
+        "ferryTrafficNote": "Fähren erzeugen beim Wenden im Becken kurzzeitig heftigen Schwell.",
+        "dinghyLanding": "Nicht erforderlich, Kaiplätze vorhanden",
+        "restrictions": "Fährzone freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 231 (Seitenangabe unverifiziert)",
+          "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+        ]
+      }
     },
     {
       "id": "kythnos-loutra",
@@ -45,10 +179,50 @@
       "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 2 },
       "shelter": {
         "windSectors": [{ "fromDeg": 60, "toDeg": 330, "maxKn": 25 }],
-        "waveSectors": [{ "fromDeg": 60, "toDeg": 330, "maxM": 0.8 }],
-        "sourceNote": "Quelle 1: Alternative zu Merichas; Bucht öffnet nach NE — bei starkem Meltemi Schwell im Vorhafen"
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 330, "maxM": 0.4 }],
+        "sourceNote": "Quelle 1: Alternative zu Merichas; Bucht öffnet nach NE — bei starkem Meltemi Schwell im Vorhafen. SCHWERER KONFLIKT: Lauf 2 gibt Sektor 270–120 mit maxKn 35 an und urteilt 'Meltemi-sicher: ja', behauptet also Nordschutz für eine nach NE offene Bucht. Bestandsgeometrie beibehalten, Wellengrenze auf den kleineren Wert 0.4 m gesenkt. Nicht freigeben, ohne diesen Widerspruch gegen Heikell aufzulösen."
       },
-      "description": "Heiße Quellen am Strand und eine kleine Marina — besonderer Abendplatz bei ruhiger Lage."
+      "description": "Heiße Quellen am Strand und eine kleine Marina — besonderer Abendplatz bei ruhiger Lage.",
+      "warnings": [
+        "Nordschutz in den Quellen widersprüchlich — bei Meltemi über 20 kn nicht als sicherer Nachtplatz einplanen",
+        "Hafenbecken klein, in der Hochsaison ab Mittag voll",
+        "Lauf 2 stuft den Platz als 'hafen' ein, der Bestand als 'marina' — Ausbauzustand ungeprüft"
+      ],
+      "confidence": "niedrig",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1",
+        "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 233 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 2: Sightsee Sailing Guide 2024 (Crowd-Quelle)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 3.8 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Hervorragende Haltekraft im inneren Molenbereich.",
+        "seagrassNote": "Seegras nur in der äußeren Bucht.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt 3 Minuten Fußweg vom Hafen",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 12–16 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Geringe Kommunalgebühren",
+        "maxLoaM": 20,
+        "swellExposureNote": "Quelle behauptet vollständigen Schutz hinter der Hauptmole — steht im Widerspruch zur Schwellwarnung des Bestands und ist ungeprüft.",
+        "ferryTrafficNote": "Kein Linienfährverkehr im Yachthafen",
+        "dinghyLanding": "Am kleinen Anlegesteg im Nordwinkel",
+        "restrictions": null,
+        "vhfChannel": "12",
+        "confidence": "niedrig",
+        "sources": [
+          "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 233 (Seitenangabe unverifiziert)"
+        ]
+      }
     }
   ]
 }

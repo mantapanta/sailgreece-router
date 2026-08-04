@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Saronische Schwachwind-Alternative) + Deep-Research Lauf 1 vom 2026-08-03 (vier neue Plätze, Liegeplatz-Details). Lauf 1 bestätigte die Koordinate von Ägina-Stadt auf 0,02 sm; Sektor dort als Schnittmenge beider Quellen. Alle neuen Sektoren sind quellintern konsistent (Sektor, Öffnungsrichtung und Meltemi-Urteil passen zusammen).",
   "island": {
     "id": "aegina",
     "name": "Ägina",
     "coordinates": { "lat": 37.75, "lon": 23.43 },
-    "description": "Pistazien, Antikes und kurze Wege — der sanfte Auftakt der Saronischen Alternative."
+    "description": "Pistazien, Antikes und kurze Wege — der sanfte Auftakt der Saronischen Alternative.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich über 15 Verbindungen ab Piräus (Fähre 40 Min, Hydrofoil 35 Min), Quelle Ferryhopper Ägina (Abruf 2026-08)"
+    }
   },
   "places": [
     {
@@ -16,11 +20,248 @@
       "coordinates": { "lat": 37.7469, "lon": 23.4264 },
       "qualities": { "schoenheit": 3, "restaurant": 4, "badestrand": 2 },
       "shelter": {
-        "windSectors": [{ "fromDeg": 350, "toDeg": 250, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 350, "toDeg": 250, "maxM": 0.8 }],
-        "sourceNote": "Quelle 2: Saronischer Golf 4-6 Bft, deutlich milder; Hafen öffnet nach W"
+        "windSectors": [{ "fromDeg": 350, "toDeg": 220, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 350, "toDeg": 220, "maxM": 0.8 }],
+        "sourceNote": "Quelle 2: Saronischer Golf 4-6 Bft, deutlich milder; Hafen öffnet nach W. Lauf 1 (Heikell 14. Aufl. S. 112, CruisersWiki Ägina) gibt Öffnung nach W bis SW und Sektor 310–220 bei gleichen Grenzen. Eingetragen ist die SCHNITTMENGE 350–220 beider Sektoren, also die konservative Variante."
       },
-      "description": "Lebendiger Inselhauptort eine Handbreit vor Athen — Fährschwell gehört dazu."
+      "description": "Lebendiger Inselhauptort eine Handbreit vor Athen — Fährschwell gehört dazu.",
+      "warnings": [
+        "Erheblicher Schwell durch ein- und auslaufende Schnellfähren, im 20-Minuten-Takt in der Hauptsaison",
+        "Bei starkem Wind aus S bis SW unruhig",
+        "Ankerverbot im ausgewiesenen Fährfahrwasser"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 2",
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 112 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 5.5 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Dicker Schlamm, hält nach tiefem Einfahren hervorragend.",
+        "seagrassNote": "Im Außenbereich vereinzelt Seegrasfelder.",
+        "capacityYachts": 45,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 2 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Pier",
+        "priceIndicationEur": "ca. 8–14 EUR/Nacht (2024, Limenarchio Ägina)",
+        "portAuthorityFees": "Gebührenpflicht Hafenbehörde Ägina",
+        "maxLoaM": 20,
+        "swellExposureNote": "Fährwellen laufen direkt ins Hafenbecken — lange Landfestmacher nutzen.",
+        "ferryTrafficNote": "Sehr hoher Fährverkehr, in der Hauptsaison etwa im 20-Minuten-Takt.",
+        "dinghyLanding": null,
+        "restrictions": "Ankerverbot im ausgewiesenen Fährfahrwasser",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "aegina-klima",
+      "islandId": "aegina",
+      "name": "Klima",
+      "type": "bucht",
+      "coordinates": { "lat": 37.678, "lon": 23.461 },
+      "qualities": { "schoenheit": 5, "restaurant": 2, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 120, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 120, "maxM": 0.3 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 115, CruisersWiki Ägina): Öffnung nach S bis SE, Sektor 220–120, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Tief eingeschnittene Bucht an der Südspitze — der beste Meltemi-Schutz der Insel.",
+      "warnings": [
+        "Kein Schutz, wenn der Wind auf Süd bis Südost dreht",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 115 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 9.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Helle Sandflecken bieten exzellenten Halt.",
+        "seagrassNote": "Dunkle Seegrasbereiche sichtbar — Anker auf Sand fallen lassen.",
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Strandbar in der Hauptsaison, 2 Minuten",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Zufahrtsstraße",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Laut Quelle vollständig geschützt gegen Nordwindwellen bei Meltemi über 25 kn.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlanden am Kies- und Sandstrand problemlos",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "aegina-perdika",
+      "islandId": "aegina",
+      "name": "Perdika",
+      "type": "hafen",
+      "coordinates": { "lat": 37.6912, "lon": 23.4528 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 320, "toDeg": 240, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 320, "toDeg": 240, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 114, CruisersWiki Perdika): Öffnung nach W, Sektor 320–240, maxKn 32 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Fischerdorf an der Südwestspitze — die Fischtavernen oberhalb der Mole sind der Grund herzukommen.",
+      "warnings": [
+        "Sehr geringe Wassertiefen an der inneren Mole (ab 1,8 m) — bei 2,0 m Tiefgang kritisch",
+        "Grössenlimit laut Quelle 15 m — für dieses Schiff zu knapp, vorab klären",
+        "Vollständig offen gegen starken Westwind, dann steiler Schwell",
+        "Steinballast am Molenfuß beachten"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 114 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 1.8, "max": 3.2 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Sandflecken zwischen Steinblöcken gezielt ansteuern.",
+        "seagrassNote": "Dichter Seegrasbewuchs außerhalb des gebaggerten Bereichs.",
+        "capacityYachts": 18,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt, 3 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter an der Hafenzufahrt",
+        "priceIndicationEur": "ca. 6–12 EUR/Nacht (2024, Gemeinde Ägina)",
+        "portAuthorityFees": "Liegegeld Gemeinde",
+        "maxLoaM": 15,
+        "swellExposureNote": "Bei Westwind baut sich steiler Schwell auf.",
+        "ferryTrafficNote": "Nur kleine Passagierboote zur Insel Moni.",
+        "dinghyLanding": null,
+        "restrictions": "Steinballast am Molenfuß",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "aegina-agia-marina",
+      "islandId": "aegina",
+      "name": "Agia Marina",
+      "type": "bucht",
+      "coordinates": { "lat": 37.745, "lon": 23.5324 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 200, "toDeg": 60, "maxKn": 28 }],
+        "waveSectors": [{ "fromDeg": 200, "toDeg": 60, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 115): Öffnung nach O bis SE, Sektor 200–60, maxKn 28 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Weite Bucht an der Ostküste unterhalb des Aphaia-Tempels — Badestopp bei Westlagen.",
+      "warnings": [
+        "Ungeschützt bei östlichen Windrichtungen",
+        "Große Seegrasfelder im mittleren Buchtbereich"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 115 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.5, "max": 8.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Feste Sandflecken greifen zuverlässig.",
+        "seagrassNote": "Große Seegrasfelder im mittleren Bereich der Bucht.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 4 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Anlegesteg",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 35,
+        "swellExposureNote": "Laut Quelle gut geschützt gegen Meltemi aus N bis NW.",
+        "ferryTrafficNote": "Gelegentlicher Ausflugsbootverkehr am Holzsteg.",
+        "dinghyLanding": "Anlandung am kleinen Ausflugsbootsteg möglich",
+        "restrictions": "Schwimmzonen beachten",
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "aegina-marathonas",
+      "islandId": "aegina",
+      "name": "Marathonas",
+      "type": "bucht",
+      "coordinates": { "lat": 37.7245, "lon": 23.4452 },
+      "qualities": { "schoenheit": 3, "restaurant": 3, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 330, "toDeg": 200, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 330, "toDeg": 200, "maxM": 0.6 }],
+        "sourceNote": "Deep-Research Lauf 1 (CruisersWiki Ägina, Abruf 2026-08): Öffnung nach W bis SW, Sektor 330–200, maxKn 30 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle, daher nur mittlere Konfidenz."
+      },
+      "description": "Weite Bucht südlich der Hauptstadt mit Sandstrand und Strandtavernen.",
+      "warnings": [
+        "Offen nach Westen, kein Schutz bei auffrischendem Westwind",
+        "Badezonen im Sommer mit Bojen markiert"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 7.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Reiner Sandgrund mit exzellenter Haltekraft.",
+        "seagrassNote": "Vereinzelte Seegrasfelder in Tiefen über 6 m.",
+        "capacityYachts": 25,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Minimarkt, 5 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Strand",
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 40,
+        "swellExposureNote": "Ruhig bei Meltemi; Schwell durch Fährverkehr im Saronischen Golf.",
+        "ferryTrafficNote": "Kein direkter Fährverkehr in der Bucht.",
+        "dinghyLanding": "Einfaches Anlanden direkt am Sandstrand",
+        "restrictions": "Badezonen im Sommer mit Bojen markiert",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Ägina (Abruf 2026-08)"]
+      }
     }
   ]
 }

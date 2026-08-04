@@ -1,0 +1,113 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (CruisersWiki Thirasia). Neu aufgenommen. Beide Sektoren sind quellintern konsistent; die Quelle führt jedoch beide Plätze selbst im Unsicherheitsregister (Pierzustand, Bojenverfügbarkeit), daher durchgehend mittlere Konfidenz.",
+  "island": {
+    "id": "thirasia",
+    "name": "Thirasia",
+    "coordinates": { "lat": 36.43, "lon": 25.34 },
+    "description": "Die stille Nachbarinsel Santorins am Westrand der Caldera — steil, kaum besucht.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 3: keine tägliche Hauptverbindung ab Piräus, nur Lokalboot ab Santorin, Quelle Ferryhopper (Abruf 2026-02)"
+    }
+  },
+  "places": [
+    {
+      "id": "thirasia-riva",
+      "islandId": "thirasia",
+      "name": "Riva",
+      "type": "hafen",
+      "coordinates": { "lat": 36.4561, "lon": 25.3431 },
+      "qualities": { "schoenheit": 3, "restaurant": 3, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 310, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 310, "maxM": 0.6 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Thirasia): Öffnung nach N bis NE, Sektor 60–310, maxKn 25 — konsistent mit der Warnung, dass Nordostschwell direkt auf den Kai läuft. Einzige Quelle ist eine Crowd-Quelle."
+      },
+      "description": "Der Nordpier der Insel — nur bei ruhigem Wetter oder Südwind eine Option.",
+      "warnings": [
+        "Exponiert gegenüber Nordostschwell — bei Meltemi meiden",
+        "Nur etwa 8 Plätze, Grössenlimit laut Quelle 16 m",
+        "Zustand der Pierstrukturen und exakte Tiefen für 2,0 m Tiefgang laut Quelle schwankend — aktuelle Nutzerberichte prüfen",
+        "Kein Landstrom, kein Wasser"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Thirasia"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 3.5 },
+        "anchorHoldingGround": "sand-fels",
+        "holdingQuality": "mittel",
+        "holdingNote": "Felsiger Grund mit Sandauflagen.",
+        "seagrassNote": "Spärlicher Bewuchs.",
+        "capacityYachts": 8,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Taverne am Pier in 2 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei, unbewirtschaftet (2025)",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 16,
+        "swellExposureNote": "Schwell läuft bei Nordostwind direkt auf den Kai.",
+        "ferryTrafficNote": "Lokale Passagierfähre von Oia legt regelmäßig an.",
+        "dinghyLanding": null,
+        "restrictions": "Fährbereich freihalten",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Thirasia"]
+      }
+    },
+    {
+      "id": "thirasia-kormoranos",
+      "islandId": "thirasia",
+      "name": "Kormoranos",
+      "type": "bucht",
+      "coordinates": { "lat": 36.4319, "lon": 25.3383 },
+      "qualities": { "schoenheit": 4, "restaurant": 2, "badestrand": 1 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 330, "toDeg": 210, "maxKn": 25 }],
+        "waveSectors": [{ "fromDeg": 330, "toDeg": 210, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Thirasia): Öffnung nach W bis NW, Sektor 330–210, maxKn 25 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle."
+      },
+      "description": "Bojenfeld unter der Steilwand der Caldera — Ankern ist hier keine Option.",
+      "warnings": [
+        "Freies Ankern unmöglich: Wassertiefen 8–25 m auf Felsgrund, nur Bojen nutzbar (etwa 6 Plätze)",
+        "Verfügbarkeit und Haltekraft der Bojen laut Quelle ungeklärt — vorab bei lokalen Ausflugsbootbetreibern erfragen",
+        "Spürbare Dünung und Schwell von Ausflugsbooten"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Thirasia"],
+      "berthingDetails": {
+        "mooringType": "boje",
+        "depthAtBerthM": { "min": 8.0, "max": 25.0 },
+        "anchorHoldingGround": "fels",
+        "holdingQuality": "schlecht",
+        "holdingNote": "Felsgrund — nur Bojen nutzen.",
+        "seagrassNote": null,
+        "capacityYachts": 6,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Taverne am kleinen Anleger (2 Min)",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 20,
+        "swellExposureNote": "Spürbare Dünung und Schwell von Ausflugsbooten.",
+        "ferryTrafficNote": "Verkehr kleinerer Ausflugsboote.",
+        "dinghyLanding": "Betonpier zur Anlandung",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Thirasia"]
+      }
+    }
+  ]
+}

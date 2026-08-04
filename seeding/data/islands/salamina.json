@@ -1,0 +1,115 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 108 — Seitenangabe unverifiziert; CruisersWiki). Neu aufgenommen. Beide Sektoren sind quellintern konsistent; der Bericht führt beide Plätze selbst im Unsicherheitsregister, daher durchgehend mittlere Konfidenz.",
+  "island": {
+    "id": "salamina",
+    "name": "Salamina",
+    "coordinates": { "lat": 37.92, "lon": 23.5 },
+    "description": "Athennahe Insel mit antiker Geschichte und industriellem Umfeld — funktional, nicht malerisch.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 1: täglich im 15-Minuten-Takt ab Perama/Piräus (20 Min), Quelle Aktoploika Salamina (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "salamina-palichori",
+      "islandId": "salamina",
+      "name": "Palichori (Salamis-Stadt)",
+      "type": "hafen",
+      "coordinates": { "lat": 37.962, "lon": 23.498 },
+      "qualities": { "schoenheit": 2, "restaurant": 4, "badestrand": 1 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 220, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 220, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 108, CruisersWiki): Öffnung nach W, Sektor 340–220, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Städtischer Hafen im Golf von Salamis — ein funktionaler Stopp abseits der Yachtrouten.",
+      "warnings": [
+        "Industrielle Kulisse in der Umgebung",
+        "Sperrgebiete der griechischen Marine im Osten beachten",
+        "Kein Landstrom; Gebühren und Anschlüsse laut Quelle kommunal veränderlich"
+      ],
+      "confidence": "mittel",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 108 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 4.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Zäher Schlamm mit hervorragendem Halt.",
+        "seagrassNote": null,
+        "capacityYachts": 20,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 2 Minuten Gehdistanz",
+        "showersToilets": false,
+        "wasteDisposal": "Behälter am Kai",
+        "priceIndicationEur": "ca. 5–10 EUR/Nacht (2024) — laut Quelle kommunal veränderlich, vor Ort prüfen",
+        "portAuthorityFees": "Limenarchio Salamina",
+        "maxLoaM": 20,
+        "swellExposureNote": "Geschützt im tiefen Golf.",
+        "ferryTrafficNote": "Lokaler Fährverkehr im Norden.",
+        "dinghyLanding": null,
+        "restrictions": "Sperrgebiete der griechischen Marine im Osten",
+        "vhfChannel": "12",
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)"]
+      }
+    },
+    {
+      "id": "salamina-peristeri",
+      "islandId": "salamina",
+      "name": "Peristeri",
+      "type": "bucht",
+      "coordinates": { "lat": 37.891, "lon": 23.462 },
+      "qualities": { "schoenheit": 3, "restaurant": 2, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 140, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 140, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (CruisersWiki Salamis, Abruf 2026-08): Öffnung nach S bis SW, Sektor 220–140, maxKn 32 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle, und der Bericht nennt das Schwellverhalten bei dichtem Frachtverkehr als ungeklärt."
+      },
+      "description": "Ankerbucht an der Südküste — Meltemi-Schutz in Sichtweite von Athen.",
+      "warnings": [
+        "Kein Schutz bei Südwinden",
+        "Schwellverhalten bei dichtem Frachtverkehr in den Zufahrten von Elefsina laut Quelle ungeklärt",
+        "Keine Versorgung, 30 Minuten Gehzeit zur nächsten Taverne"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 1: CruisersWiki Salamis (Abruf 2026-08)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Dichter Grund.",
+        "seagrassNote": "Stellenweise Seegras.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Nichts, 30 Minuten Gehzeit zur nächsten Taverne",
+        "showersToilets": false,
+        "wasteDisposal": null,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Laut Quelle guter Meltemi-Schutz; Schwell durch Frachtverkehr ungeklärt.",
+        "ferryTrafficNote": "Kein direkter Fährverkehr.",
+        "dinghyLanding": "Kiesstrand zum Anlanden",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Salamis (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

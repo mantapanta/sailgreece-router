@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TripProvider, useTrip } from './tripContext.tsx';
+import { AuthProvider, useAuth } from './authContext.tsx';
 import { STALE_TIME_MS } from './usePlanning.ts';
 import { PlanningProvider, usePlanning } from './planningContext.tsx';
 import { getCurrentGpsPosition } from '../adapters/geolocation.ts';
 import { DayView } from '../ui/views/DayView.tsx';
 import { MapView } from '../ui/views/MapView.tsx';
 import { PlaceDetailView } from '../ui/views/PlaceDetailView.tsx';
+import { SignInView } from '../ui/views/SignInView.tsx';
 import { formatStamp, formatTripRange } from '../ui/format.ts';
 import '../ui/styles.css';
 
@@ -125,6 +127,23 @@ function ControlsBar() {
   );
 }
 
+/** Signed-in account plus the way out, in the header (FR: session is visible). */
+function AccountChip() {
+  const { user, signOut } = useAuth();
+  if (!user) return null;
+  return (
+    <div className="account-chip">
+      {user.photoUrl && <img src={user.photoUrl} alt="" width={24} height={24} />}
+      <span title={user.email ?? undefined}>
+        {user.displayName ?? user.email ?? 'Angemeldet'}
+      </span>
+      <button type="button" onClick={() => void signOut()}>
+        Abmelden
+      </button>
+    </div>
+  );
+}
+
 function Shell() {
   const [view, setView] = useState<View>({ kind: 'tag' });
   const planning = usePlanning();
@@ -168,6 +187,7 @@ function Shell() {
             Karte
           </button>
         </nav>
+        <AccountChip />
       </header>
 
       {/* Mandatory permanent notices: NFR3 + data state (FR13). */}
@@ -239,7 +259,7 @@ function Shell() {
           (CC BY 4.0)
         </span>
         <span>
-          Schutzprofile quellenbasiert kuratiert (Heikell, CruisersWiki u. a.) —
+          Sichere Liegeplätze quellenbasiert kuratiert (Heikell, CruisersWiki u. a.) —
           unkuratierte Plätze erscheinen nie grün.
         </span>
       </footer>
@@ -247,14 +267,45 @@ function Shell() {
   );
 }
 
+/**
+ * The gate. Planning providers mount only for a signed-in session — otherwise
+ * the library query would fire against Firestore without an ID token and be
+ * rejected by the rules.
+ */
+function AuthGate() {
+  const { user, checking } = useAuth();
+
+  if (checking) {
+    return (
+      <div className="auth-gate">
+        <div className="auth-card">
+          <div className="auth-brand">
+            sailgreece-router
+            <small>Kykladen · Törnplanung</small>
+          </div>
+          <p className="auth-lead">Anmeldung wird geprüft …</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <SignInView />;
+
+  return (
+    <TripProvider>
+      <PlanningProvider>
+        <Shell />
+      </PlanningProvider>
+    </TripProvider>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TripProvider>
-        <PlanningProvider>
-          <Shell />
-        </PlanningProvider>
-      </TripProvider>
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

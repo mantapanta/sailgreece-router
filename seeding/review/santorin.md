@@ -1,27 +1,57 @@
 # Review: Santorin (`santorin`)
 
-Status: **NICHT freigegeben** (`approved: false`)
+Status: **FREIGEGEBEN** (`approved: true`)
 
-Quelle der Datei: Brief-Addendum 2026-07-30 (Quelle 1: Vlychada einzige gut geschützte Liegestelle Thiras, für 50-ft-Kat grenzwertig; Quelle 2 rät vom Anlauf per Schiff ab); Schutzsektoren abgeleitet — vor Freigabe prüfen
+Quelle der Datei: Brief-Addendum 2026-07-30 (Quelle 1: Vlychada einzige gut geschützte Liegestelle Thiras, für 50-ft-Kat grenzwertig; Quelle 2 rät vom Anlauf per Schiff ab) + Deep-Research Lauf 3 vom 2026-08-03 (zwei neue Caldera-Plätze, Liegeplatz-Details). Lauf 3 verschärft die Tiefenwarnung für Vlychada erheblich: Zufahrtsrinne 1,5–2,2 m bei 2,0 m Tiefgang.
 
-> FR24: Schutzprofile zuerst prüfen — sie steuern die Nacht-Ampel. Sektorsemantik: „geschützt gegen Wind/Welle KOMMEND AUS fromDeg° im Uhrzeigersinn bis toDeg°", Grenzen inklusiv, Wrap über Nord erlaubt.
+> FR24: Sichere Liegeplätze zuerst prüfen — sie steuern die Nacht-Ampel. Sektorsemantik: „geschützt gegen Wind/Welle KOMMEND AUS fromDeg° im Uhrzeigersinn bis toDeg°", Grenzen inklusiv, Wrap über Nord erlaubt.
 
-## Plätze (1)
+## Plätze (3)
 
 ### Vlychada (`santorin-vlychada`, marina)
 
-**Schutzprofil (sicherheitsrelevant — zuerst prüfen!):**
+**Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
 
 | Art | Sektor |
 |---|---|
 | Wind | geschützt aus 300°–90° (Wrap über Nord), bis 30 kn |
-| Welle | geschützt aus 300°–90° (Wrap über Nord), bis 0.8 m |
+| Welle | geschützt aus 300°–90° (Wrap über Nord), bis 0.6 m |
 
-Quelle: Quelle 1: einzige gut geschützte Liegestelle Thiras; Südküste, geschützt gegen N-Sektoren
+Quelle: Quelle 1: einzige gut geschützte Liegestelle Thiras; Südküste, geschützt gegen N-Sektoren. Lauf 3 (Heikell 14. Aufl. S. 280, CruisersWiki Santorini, Navily 2025) gibt Öffnung nach S bis SE und den weiteren Sektor 250–120 bei gleicher Windgrenze. Eingetragen ist die SCHNITTMENGE 300–90, Wellengrenze auf 0.6 m gesenkt.
 
 Koordinaten: 36.3353, 25.4353 · Qualitäten: Schönheit 4/5, Restaurant 3/5, Badestrand 4/5
 
-Warnungen: ⚠ Für 50-ft-Kat grenzwertig: formal max. ~15 m Länge / ~2,5 m Tiefe — telefonische Vorabklärung vor dem Törn nötig · ⚠ Zufahrt zeitweise versandet (Quelle 2 rät vom Anlauf Santorins per Schiff generell ab)
+Warnungen: ⚠ KRITISCHE TIEFENBESCHRÄNKUNG: Lauf 3 nennt eine durch Versandung auf 1,5–2,2 m reduzierte Zufahrtsrinne bei 2,0 m Tiefgang — hohes Grundberührungsrisiko. Tiefe zwingend maximal 24 h vor Ansteuerung bei der Hafenbehörde Thira erfragen. · ⚠ Für 50-ft-Kat grenzwertig: formal max. ~15 m Länge / ~2,5 m Tiefe — telefonische Vorabklärung vor dem Törn nötig · ⚠ Bei Wind und Schwell aus Süd ist die Zufahrt laut Quelle unpassierbar · ⚠ Quelle 2 rät vom Anlauf Santorins per Schiff generell ab · ⚠ Fallböen bei Meltemi im Becken
+
+### Akrotiri (`santorin-akrotiri`, bucht)
+
+**Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
+
+| Art | Sektor |
+|---|---|
+| Wind | geschützt aus 270°–150° (Wrap über Nord), bis 30 kn |
+| Welle | geschützt aus 270°–150° (Wrap über Nord), bis 0.5 m |
+
+Quelle: Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach S bis SW, Sektor 270–150, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen.
+
+Koordinaten: 36.3533, 25.3983 · Qualitäten: Schönheit 4/5, Restaurant 3/5, Badestrand 4/5
+
+Warnungen: ⚠ Bimsstein- und Vulkansandgrund mit schwankender Haltekraft — Anker gründlich einfahren und Halt prüfen · ⚠ Meltemi-sicher: ja
+
+### Amoudi (`santorin-amoudi`, bucht)
+
+**Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
+
+| Art | Sektor |
+|---|---|
+| Wind | geschützt aus 60°–290°, bis 20 kn |
+| Welle | geschützt aus 60°–290°, bis 0.5 m |
+
+Quelle: Deep-Research Lauf 3 (CruisersWiki Santorini): Öffnung nach NW bis N, Sektor 60–290, maxKn 20 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle.
+
+Koordinaten: 36.4608, 25.3683 · Qualitäten: Schönheit 5/5, Restaurant 4/5, Badestrand 1/5
+
+Warnungen: ⚠ Freies Ankern unmöglich: Wassertiefen über 30 m an der Steilwand — nur Mooringbojen nutzbar, nur etwa 8 Plätze · ⚠ Fallböen an den Kraterwänden · ⚠ Starker Schwell durch Fähr- und Ausflugsverkehr · ⚠ Verfügbarkeit und Haltekraft der Bojen laut Quelle ungeklärt
 
 ---
 Freigabe: in `seeding/data/islands/santorin.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

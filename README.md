@@ -10,12 +10,13 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Entscheidungspunkte.
 - **Karte:** Besprechungsbild mit Ampel-Markern, gestrichelten Routen-Optionen,
   Windpfeilen, Itinerar↔Karte-Hover (Google Maps, Hybrid-Ansicht).
-- **Platz-Detail:** Foto, Qualitäten, kuratiertes Schutzprofil, Nacht-Ampel.
+- **Platz-Detail:** Foto, Qualitäten, sicherer Liegeplatz (kuratiert), Nacht-Ampel.
 
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
-@vis.gl/react-google-maps 1.x · Firebase (Firestore + Hosting) · Vitest 4.
+@vis.gl/react-google-maps 1.x · Firebase (Authentication + Firestore +
+Hosting) · Vitest 4.
 
-## Schnellstart (Entwicklung, ohne Firebase)
+## Schnellstart (Entwicklung)
 
 **Voraussetzung: Node.js ≥ 22.18** (die Seeding-Skripte `npm run seed:*`
 laufen über natives TypeScript-Type-Stripping, das es erst ab dieser Version
@@ -29,9 +30,16 @@ npm run dev
 ```
 
 `VITE_DATA_SOURCE=local` lädt die Staging-JSONs aus `seeding/data/` direkt —
-die App läuft damit voll (echte Open-Meteo-Forecasts, alle Bewertungen), ohne
-dass ein Firebase-Projekt existiert. Ohne Google-Maps-Key zeigt die
+die App rechnet damit voll (echte Open-Meteo-Forecasts, alle Bewertungen), ohne
+dass Firestore befüllt sein muss. Ohne Google-Maps-Key zeigt die
 Karten-Ansicht einen Hinweis statt der Karte; alles andere funktioniert.
+
+**Die Anmeldung ist auch in der Entwicklung Pflicht.** Vor der Tagesansicht
+steht der Login-Gate (Firebase Authentication, Google Sign-in); die
+`VITE_FIREBASE_*`-Werte müssen also in jedem Fall in der `.env` stehen (siehe
+Schritt 1 und 3). Fehlen sie, zeigt der Login-Screen einen benannten Hinweis
+statt des Google-Buttons — es gibt bewusst keinen Bypass, weder für `local`
+noch für `firestore`.
 
 Verifikation:
 
@@ -42,27 +50,54 @@ npm run build      # tsc --noEmit + vite build
 
 ## Setup für den Betrieb (Philipp)
 
-### 1. Firebase-Projekt + Firestore anlegen
+### 1. Firebase-Projekt, Web-App, Authentication, Firestore
 
-1. <https://console.firebase.google.com> → **Projekt hinzufügen** (z. B.
-   `sailgreece-router`). Google Analytics ist nicht nötig.
-2. Im Projekt: **Build → Firestore Database → Datenbank erstellen** →
-   Region `europe-west` (z. B. `europe-west1`) → Produktionsmodus.
-3. **Projekteinstellungen → Allgemein → Meine Apps → Web-App hinzufügen**
-   (`</>`). Aus dem angezeigten Config-Objekt brauchst du `apiKey`,
-   `projectId`, `appId`.
-4. Firebase CLI installieren und Projekt verknüpfen:
+Alles über die CLI — die Konsole braucht es nur für den Sign-in-Provider.
+
+1. Anmelden und Projekt verknüpfen:
 
    ```bash
-   npm install -g firebase-tools     # firebase-tools 15.x
-   firebase login
-   firebase use --add               # Projekt wählen, Alias z. B. "prod"
+   npx -y firebase-tools@latest login
+   npx -y firebase-tools@latest use <projectId>
    ```
 
-5. Security Rules deployen (App liest nur, niemand schreibt — AD-5):
+2. Web-App registrieren und Config auslesen:
 
    ```bash
-   firebase deploy --only firestore:rules
+   npx -y firebase-tools@latest apps:create WEB "sailgreece-router Web"
+   npx -y firebase-tools@latest apps:sdkconfig WEB
+   ```
+
+   Aus dem Config-Objekt brauchst du `apiKey`, `projectId`, `appId` — und
+   optional `authDomain`, `messagingSenderId`, `storageBucket`.
+
+3. **Authentication einrichten und Google Sign-in aktivieren** (nur in der
+   Konsole möglich, weder CLI noch MCP können das):
+   <https://console.firebase.google.com> → Projekt → **Authentication → Jetzt
+   starten** → **Sign-in method → Google → aktivieren** → Support-E-Mail
+   wählen → Speichern.
+
+   Die beiden Stufen sind unterschiedliche Fehlerbilder, und die App
+   unterscheidet sie:
+   - Authentication nie initialisiert → `auth/configuration-not-found`. Das
+     SDK meldet diesen Fall **gar nicht** an `onAuthStateChanged` (auch
+     `authStateReady()` bleibt hängen), deshalb bricht ein Watchdog nach 8 s
+     ab und zeigt den Hinweis, statt ewig zu laden.
+   - Initialisiert, Google-Provider aus → `auth/operation-not-allowed`.
+
+4. **Autorisierte Domains** prüfen (Authentication → Settings → Authorized
+   domains): `localhost` steht dort per Default, die Hosting-Domain
+   (`<projectId>.web.app` / `.firebaseapp.com`) ebenfalls. Jede weitere Domain
+   (z. B. Vercel-Preview) muss ergänzt werden, sonst schlägt der Login mit
+   `auth/unauthorized-domain` fehl.
+
+5. Firestore-Datenbank anlegen (falls noch nicht vorhanden), Region
+   `europe-west` (z. B. `europe-west1`), Produktionsmodus.
+
+6. Security Rules deployen (angemeldet lesen, niemand schreibt — AD-5):
+
+   ```bash
+   npx -y firebase-tools@latest deploy --only firestore:rules
    ```
 
 ### 2. Google-Maps-Key
@@ -81,17 +116,28 @@ npm run build      # tsc --noEmit + vite build
 `.env` (aus `.env.example` kopieren):
 
 ```bash
-VITE_DATA_SOURCE=firestore          # 'local' für Entwicklung ohne Firebase
+VITE_DATA_SOURCE=firestore          # 'local' = Staging-JSONs statt Firestore
 VITE_GOOGLE_MAPS_API_KEY=<dein Key>
 VITE_GOOGLE_MAPS_MAP_ID=<Map-ID oder DEMO_MAP_ID>
-VITE_FIREBASE_API_KEY=<apiKey aus Schritt 1.3>
+
+# Pflicht (Login-Gate), Werte aus `apps:sdkconfig WEB`:
+VITE_FIREBASE_API_KEY=<apiKey>
 VITE_FIREBASE_PROJECT_ID=<projectId>
 VITE_FIREBASE_APP_ID=<appId>
+# optional, sonst aus projectId abgeleitet:
+VITE_FIREBASE_AUTH_DOMAIN=<projectId>.firebaseapp.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=<messagingSenderId>
+VITE_FIREBASE_STORAGE_BUCKET=<storageBucket>
 ```
+
+Der Firebase-API-Key ist — wie der Maps-Key — öffentlich by design: er
+identifiziert das Projekt, er autorisiert nichts. Der Schutz kommt aus den
+Security Rules und der Liste der autorisierten Domains, nicht aus der
+Geheimhaltung des Keys.
 
 ### 4. Seeding: Review → Freigabe → Import
 
-Die Bibliotheken (Inseln, Plätze mit Schutzprofilen, Routen, Polare,
+Die Bibliotheken (Inseln, Plätze als sichere Liegeplätze, Routen, Polare,
 Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
 **einziger programmatischer Schreiber ist das Import-Skript** (AD-5).
 
@@ -101,7 +147,7 @@ Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
    npm run seed:polar
    ```
 
-2. **Review-Sichten generieren** (FR24 — Schutzprofile zuerst, sie sind
+2. **Review-Sichten generieren** (FR24 — sichere Liegeplätze zuerst, sie sind
    sicherheitsrelevant):
 
    ```bash
@@ -183,20 +229,23 @@ src/
                    # Zeit/Törntag/Position werden injiziert (AD-2)
     __tests__/     # Vitest-Fixturen (Referenzfälle Sektorsemantik, 25-kn-Regel,
                    # Budgets, Polar-Interpolation+Offset, Athens→UTC)
-  adapters/        # openMeteo (Snapshot-Builder), firestore (read-only,
-                   # toleranter Parse, local-Modus), geolocation
-  ui/              # drei Views + Komponenten, Vanilla CSS (Creme/Navy)
-  app/             # Provider (QueryClient staleTime 1 h, TripContext-Reducer
-                   # mit localStorage, manual > gps), View-Switch ohne Router
+  adapters/        # openMeteo (Snapshot-Builder), firebase (eine einzige
+                   # App-Initialisierung, lazy), auth (Google Sign-in),
+                   # firestore (read-only, toleranter Parse, local-Modus),
+                   # geolocation
+  ui/              # drei Views + Login-Gate + Komponenten, Vanilla CSS
+  app/             # Provider (QueryClient staleTime 1 h, AuthContext mit
+                   # Login-Gate, TripContext-Reducer mit localStorage,
+                   # manual > gps), View-Switch ohne Router
 seeding/           # Staging-JSON je Insel (approved-Flag), Review-Generator,
   review/          # generierte FR24-Review-Sichten
 firebase.json      # Hosting -> dist/
-firestore.rules    # read: true, write: false
+firestore.rules    # read: nur angemeldet, write: false
 ```
 
 ## Attribution
 
 - Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0)
-- Schutzprofile quellenbasiert kuratiert (Rod Heikell *Greek Waters Pilot*,
+- Sichere Liegeplätze quellenbasiert kuratiert (Rod Heikell *Greek Waters Pilot*,
   [CruisersWiki](https://www.cruiserswiki.org/) — CC-Lizenz, Attribution in
   der Platz-Detailansicht)

@@ -1,11 +1,15 @@
 {
-  "approved": false,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Naxos Entscheidungstag, Marina im Juli/August Engpass); Schutzsektoren abgeleitet — vor Freigabe prüfen",
+  "approved": true,
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Naxos Entscheidungstag, Marina im Juli/August Engpass) + Deep-Research Lauf 3 vom 2026-08-03 (drei neue Plätze im Süden und Osten, Liegeplatz-Details). Lauf 3 übernahm die Koordinate von Naxos-Stadt exakt; Sektor dort als Schnittmenge beider Quellen. Typ 'marina' aus dem Bestand beibehalten (Lauf 3 stuft als 'hafen' ein — Ausbauzustand ungeprüft).",
   "island": {
     "id": "naxos",
     "name": "Naxos",
     "coordinates": { "lat": 37.06, "lon": 25.42 },
-    "description": "Der Wendepunkt des Törns: hier fällt der Verlängerungsentscheid — Portara inklusive."
+    "description": "Der Wendepunkt des Törns: hier fällt der Verlängerungsentscheid — Portara inklusive.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 3: täglich mehrere Verbindungen ab Piräus und Rafina (Blue Star, SeaJets), Quelle Ferryhopper / NetFerry (Abruf 2026-02)"
+    }
   },
   "places": [
     {
@@ -16,12 +20,201 @@
       "coordinates": { "lat": 37.1075, "lon": 25.3736 },
       "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 4 },
       "shelter": {
-        "windSectors": [{ "fromDeg": 340, "toDeg": 240, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 340, "toDeg": 240, "maxM": 1.0 }],
-        "sourceNote": "Quelle 1: Hafen-Kernliste; Hafen öffnet nach W, Mole gegen N"
+        "windSectors": [{ "fromDeg": 30, "toDeg": 240, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 30, "toDeg": 240, "maxM": 0.8 }],
+        "sourceNote": "Quelle 1: Hafen-Kernliste; Hafen öffnet nach W, Mole gegen N. Lauf 3 (Heikell 14. Aufl., CruisersWiki Naxos) gibt Öffnung nach NW bis W und Sektor 30–290 bei gleicher Windgrenze. Eingetragen ist die SCHNITTMENGE 30–240, Wellengrenze auf 0.8 m gesenkt."
       },
-      "warnings": ["Marina im Juli/August Engpass — früh ankommen oder Alternative planen"],
-      "description": "Chora, Portara und die lange Strandmeile — der große Etappenort des Törns."
+      "warnings": [
+        "Marina im Juli/August Engpass — früh ankommen oder Alternative planen",
+        "Hoher Schwell im Hafenbecken bei stürmischem Nordwestwind",
+        "Riffgebiet nördlich der Hafeneinfahrt beachten",
+        "Manövrierende Großfähren erzeugen kurzzeitig starken Seegang"
+      ],
+      "description": "Chora, Portara und die lange Strandmeile — der große Etappenort des Törns.",
+      "confidence": "hoch",
+      "sources": [
+        "Brief-Addendum 2026-07-30, Quelle 1",
+        "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)",
+        "Deep-Research Lauf 3: CruisersWiki Naxos"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 4.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "mittel",
+        "holdingNote": "Schlick und Sand, stellenweise durch Altketten beeinträchtigt.",
+        "seagrassNote": "Vereinzelt Seegras im inneren Hafenbereich.",
+        "capacityYachts": 40,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Supermarkt in 3 Minuten Fußweg",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "15–25 EUR/Nacht (2025, Gemeindehafen)",
+        "portAuthorityFees": "Erhebung durch die Hafenbehörde Naxos",
+        "maxLoaM": 20,
+        "swellExposureNote": "Fährwellen und kabbeliger Meltemi-Schwell erreichen das Becken.",
+        "ferryTrafficNote": "Hohe Fährfrequenz; manövrierende Großfähren erzeugen kurzzeitig starken Seegang.",
+        "dinghyLanding": null,
+        "restrictions": "Fahrwasser der Berufsschifffahrt freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.",
+          "Deep-Research Lauf 3: CruisersWiki Naxos"
+        ]
+      }
+    },
+    {
+      "id": "naxos-kalandos",
+      "islandId": "naxos",
+      "name": "Kalandos",
+      "type": "hafen",
+      "coordinates": { "lat": 36.9328, "lon": 25.4711 },
+      "qualities": { "schoenheit": 4, "restaurant": 2, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 250, "toDeg": 110, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 250, "toDeg": 110, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Naxos, Navily 2025): Öffnung nach S bis SE, Sektor 250–110, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Kleiner geschützter Hafen an der Südspitze — der Meltemi-Ausweichplatz von Naxos.",
+      "warnings": [
+        "Kaum Versorgung an Land, nur eine Saisontaverne",
+        "Grössenlimit laut Quelle 15 m — für dieses Schiff knapp, vorab klären",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 3: CruisersWiki Naxos",
+        "Deep-Research Lauf 3: Navily 2025 (Crowd-Quelle)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 3.5 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Sandgrund.",
+        "seagrassNote": "Seegras außerhalb der ausgebaggerten Rinnen.",
+        "capacityYachts": 15,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Kleine Saisontaverne, 2 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "kostenfrei, unbewirtschaftet (2025)",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 15,
+        "swellExposureNote": "Laut Quelle vollständig geschützt gegen Schwell aus N und NE.",
+        "ferryTrafficNote": "Kein gewerblicher Fährverkehr.",
+        "dinghyLanding": "Beibootanleger im Hafenbereich",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Naxos"]
+      }
+    },
+    {
+      "id": "naxos-panermos",
+      "islandId": "naxos",
+      "name": "Panermos",
+      "type": "bucht",
+      "coordinates": { "lat": 36.9031, "lon": 25.545 },
+      "qualities": { "schoenheit": 5, "restaurant": 1, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 240, "toDeg": 100, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 240, "toDeg": 100, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach S bis SE, Sektor 240–100, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Naturbucht mit Palmenhain an der Südostküste — ruhig, wenn der Meltemi bläst.",
+      "warnings": [
+        "Offen nach Süden; Fallböen bei extremen Nordwinden",
+        "Dichte Seegrasfelder im tiefen Buchtbereich meiden",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "gut",
+        "holdingNote": "Exzellente Haltekraft auf den freien Sandflecken.",
+        "seagrassNote": "Dichte Seegrasfelder im tiefen Buchtbereich meiden.",
+        "capacityYachts": 12,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Saisonaler Kiosk, 5 Minuten Fußweg",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 25,
+        "swellExposureNote": "Laut Quelle ruhige Wasserfläche bei nördlichen Winden.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlandung am flachen Sandstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "naxos-moutsouna",
+      "islandId": "naxos",
+      "name": "Moutsouna",
+      "type": "hafen",
+      "coordinates": { "lat": 37.0083, "lon": 25.5906 },
+      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 3 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 180, "toDeg": 30, "maxKn": 20 }],
+        "waveSectors": [{ "fromDeg": 180, "toDeg": 30, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Naxos): Öffnung nach E bis NE, Sektor 180–30, maxKn 20 — konsistent mit der Warnung, dass bei Meltemi Seegang direkt einläuft. Einzige Quelle ist eine Crowd-Quelle."
+      },
+      "description": "Der alte Schmirgel-Verladehafen an der Ostküste — Fischtavernen am Kai, aber auflandig bei Meltemi.",
+      "warnings": [
+        "Bei starkem Meltemi läuft hoher Seegang direkt auf den kleinen Kai — dann unbenutzbar",
+        "Grössenlimit laut Quelle 14 m — für dieses Schiff zu knapp",
+        "Nur etwa 8 Plätze, felsiger Grund",
+        "Meltemi-sicher: nein"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Naxos"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 3.2 },
+        "anchorHoldingGround": "sand-fels",
+        "holdingQuality": "mittel",
+        "holdingNote": "Felsiger Grund mit feinen Sandauflagen.",
+        "seagrassNote": "Seegras im Zufahrtsbereich.",
+        "capacityYachts": 8,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Fischtavernen direkt am Kai (1 Min)",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei, unbewirtschaftet (2025)",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 14,
+        "swellExposureNote": "Unbequem bis unbenutzbar bei auflandigem Meltemi.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": null,
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Naxos"]
+      }
     }
   ]
 }

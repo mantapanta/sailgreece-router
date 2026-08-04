@@ -1,0 +1,67 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 1 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 120 — Seitenangabe unverifiziert; CruisersWiki Epidhavros). Neu aufgenommen. Sektor und Öffnungsrichtung sind konsistent, unverändert übernommen.",
+  "island": {
+    "id": "epidavros",
+    "name": "Palaia Epidavros",
+    "coordinates": { "lat": 37.63, "lon": 23.15 },
+    "description": "Festlandbucht zwischen Orangenhainen — von hier führt der Weg zum antiken Theater.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 1: keine Fährverbindung ab Piräus oder Rafina, Anreise per Bus oder Mietwagen, Quelle Aktoploika Argolis (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "epidavros-palaia",
+      "islandId": "epidavros",
+      "name": "Palaia Epidavros",
+      "type": "hafen",
+      "coordinates": { "lat": 37.6375, "lon": 23.159 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 160, "toDeg": 20, "maxKn": 32 }],
+        "waveSectors": [{ "fromDeg": 160, "toDeg": 20, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 1 (Heikell 14. Aufl. S. 120, CruisersWiki Epidhavros): Öffnung nach O, Sektor 160–20, maxKn 32 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Geschützter kleiner Hafen — Ausgangspunkt für den Abend im antiken Theater von Epidauros.",
+      "warnings": [
+        "Untiefen an der Südseite der Hafeneinfahrt sorgfältig umfahren",
+        "Markierte Unterwasserruinen an der Südseite",
+        "Leichte Dünung bei Ostwind"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 1: Heikell, Greek Waters Pilot 14. Aufl., S. 120 (Seitenangabe unverifiziert)",
+        "Deep-Research Lauf 1: CruisersWiki Epidhavros (Abruf 2026-08)"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.1, "max": 4.0 },
+        "anchorHoldingGround": "schlamm-sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Dichter Grund, der Anker sitzt fest.",
+        "seagrassNote": "Vereinzelt Seegras außerhalb der Ansteuerungsrinne.",
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Supermarkt, 2 Minuten am Hafen",
+        "showersToilets": false,
+        "wasteDisposal": "Abfalltonnen am Pierzugang",
+        "priceIndicationEur": "ca. 8–14 EUR/Nacht (2024)",
+        "portAuthorityFees": "Limenarchio Epidavros",
+        "maxLoaM": 20,
+        "swellExposureNote": "Laut Quelle guter Schutz vor Meltemi, leichte Dünung bei Ostwind.",
+        "ferryTrafficNote": "Gelegentlicher Ausflugsbootverkehr.",
+        "dinghyLanding": null,
+        "restrictions": "Markierte Unterwasserruinen an der Südseite meiden",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 1: CruisersWiki Epidhavros (Abruf 2026-08)"]
+      }
+    }
+  ]
+}

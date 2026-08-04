@@ -1,0 +1,65 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (CruisersWiki Keros). Neu aufgenommen. Der Sektor widerspricht der eigenen Beschreibung (Westbucht mit 'exzellentem Meltemi-Schutzraum', Sektor lässt aber Nord offen) — Grenzen gekappt. Unbewohnt, archäologisches Schutzgebiet.",
+  "island": {
+    "id": "keros",
+    "name": "Keros",
+    "coordinates": { "lat": 36.88, "lon": 25.65 },
+    "description": "Unbewohnte Insel mit bedeutender Ausgrabungsstätte — Ankern ja, Anlanden nur eingeschränkt.",
+    "guestPickup": {
+      "ferryReachable": false,
+      "sourceNote": "Deep-Research Lauf 3: unbewohnt, keinerlei Fährverbindung (Abruf 2026-02)"
+    }
+  },
+  "places": [
+    {
+      "id": "keros-konakia",
+      "islandId": "keros",
+      "name": "Konakia",
+      "type": "bucht",
+      "coordinates": { "lat": 36.9042, "lon": 25.6389 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 60, "toDeg": 320, "maxKn": 15 }],
+        "waveSectors": [{ "fromDeg": 60, "toDeg": 320, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Keros): Sektor 60–320 mit maxKn 35, Öffnung nach N bis NE. SELBSTWIDERSPRUCH: Beschreibung und Schwellnotiz nennen eine WESTbucht mit exzellentem Schutz gegen Nordschwell, der Sektor lässt Nord jedoch offen. Windgrenze auf 15 kn und Welle auf 0.4 m gekappt, bis die Öffnungsrichtung geprüft ist."
+      },
+      "description": "Einsame Bucht an der Westküste der unbewohnten Insel — Sand zwischen Felsplatten.",
+      "warnings": [
+        "SEKTOR VERMUTLICH INVERTIERT: Beschreibung (Westbucht, Schutz gegen Nordschwell) und Sektor (Nord offen) widersprechen sich. Grenzen konservativ gekappt",
+        "Unbewohnt, keinerlei Versorgung an Land",
+        "Archäologisches Schutzgebiet — Betreten von Teilen der Insel untersagt; genaue Grenzen laut Quelle ungeklärt",
+        "Haltegrund nur in Sandflecken zwischen Felsplatten"
+      ],
+      "confidence": "niedrig",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Keros"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 4.0, "max": 10.0 },
+        "anchorHoldingGround": "sand-fels",
+        "holdingQuality": "mittel",
+        "holdingNote": "Sandflecken zwischen Felsplatten suchen.",
+        "seagrassNote": "Vereinzelt Seegras.",
+        "capacityYachts": 8,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Nichts",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 25,
+        "swellExposureNote": "Quelle nennt hervorragenden Schutz gegen Nordschwell — steht im Widerspruch zum angegebenen Sektor und ist ungeprüft.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Felsiges Ufer, Anlandung erschwert",
+        "restrictions": "Archäologisches Schutzgebiet, Betreten von Teilen der Insel untersagt",
+        "vhfChannel": null,
+        "confidence": "niedrig",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Keros"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Syros; Jim Baerselman, Cruising the South Aegean; Heikell Greek Waters Pilot 14. Aufl. S. 216/218 — Seitenangaben unverifiziert). Neu aufgenommen. Sektoren und Öffnungsrichtungen sind konsistent; bei Grammata weist die Quelle selbst abweichende Haltegrund-Angaben aus.",
+  "island": {
+    "id": "syros",
+    "name": "Syros",
+    "coordinates": { "lat": 37.4333, "lon": 24.9167 },
+    "description": "Hauptstadt der Kykladen mit Opernhaus — und zwei sehr unterschiedlichen Schutzhäfen.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 2: täglich 4–8 Verbindungen ab Piräus (Highspeed 2 h, konventionell 3,5 h), Quelle NetFerry / Ferryhopper Syros (Abruf 2026-08)"
+    }
+  },
+  "places": [
+    {
+      "id": "syros-finikas",
+      "islandId": "syros",
+      "name": "Finikas",
+      "type": "marina",
+      "coordinates": { "lat": 37.3917, "lon": 24.8817 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 300, "toDeg": 200, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 300, "toDeg": 200, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 218, CruisersWiki Syros, Baerselman): Öffnung nach SW, Sektor 300–200, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Marina an der Südwestküste mit Muringleinen — der ruhigste Platz der Insel.",
+      "warnings": [
+        "In der Hochsaison schnell belegt — früh anlaufen oder vorab anfragen",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: CruisersWiki Syros",
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+      ],
+      "berthingDetails": {
+        "mooringType": "murings",
+        "depthAtBerthM": { "min": 2.5, "max": 4.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Feste Mooringleinen vorhanden.",
+        "seagrassNote": "Seegras im äußeren Ankerfeld vor der Marina.",
+        "capacityYachts": 30,
+        "reservationPossible": true,
+        "reservationChannel": "Telefonisch beim Hafenmeister Finikas (Kontakt aus Lauf 2 unverifiziert — vor Verlass darauf gegenprüfen)",
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Supermarkt, Bäckerei und Bootsausrüster direkt am Hafen",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 18–25 EUR/Nacht (Gemeindemarina, 2024)",
+        "portAuthorityFees": "Liegegebühren über das Marinabüro",
+        "maxLoaM": 25,
+        "swellExposureNote": "Guter Schutz gegen Meltemi — laut Quelle sehr ruhiger Liegeplatz, geeignet für Crews mit Nichtseglern.",
+        "ferryTrafficNote": "Keine Großfähren.",
+        "dinghyLanding": "Am Marinasteg",
+        "restrictions": null,
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": [
+          "Deep-Research Lauf 2: CruisersWiki Syros",
+          "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+        ]
+      }
+    },
+    {
+      "id": "syros-ermoupoli",
+      "islandId": "syros",
+      "name": "Ermoupoli",
+      "type": "hafen",
+      "coordinates": { "lat": 37.4417, "lon": 24.945 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 220, "toDeg": 120, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 220, "toDeg": 120, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 2 (Heikell 14. Aufl. S. 216, CruisersWiki Syros): Öffnung nach SE, Sektor 220–120, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Handelshafen und Hauptort — Marmorplätze, guter Ausrüster, viel Schiffsverkehr.",
+      "warnings": [
+        "Starke Fallwinde von den Altstadthügeln",
+        "Intensiver Verkehr der Neorion-Werft und der Großfähren — Werft- und Fährbereiche meiden",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": [
+        "Deep-Research Lauf 2: CruisersWiki Syros",
+        "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
+      ],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.8, "max": 6.0 },
+        "anchorHoldingGround": "schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Hafenschlamm, der Anker gräbt sich tief ein.",
+        "seagrassNote": "Kein Kraut im Innenhafen.",
+        "capacityYachts": 50,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Hervorragend, inklusive großem Bootsausrüster am Hafen",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "ca. 15–22 EUR/Nacht (Gemeinde, 2024)",
+        "portAuthorityFees": "Hafenbehörde Syros, VHF 12",
+        "maxLoaM": 40,
+        "swellExposureNote": "Guter Schutz vor Nordwellen durch die massive Schutzmole.",
+        "ferryTrafficNote": "Sehr hoher Fähr- und Frachterverkehr.",
+        "dinghyLanding": "Am Nordkai nahe der Platia Iroon",
+        "restrictions": "Werft- und Fährbereiche strikt meiden",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Syros"]
+      }
+    },
+    {
+      "id": "syros-grammata",
+      "islandId": "syros",
+      "name": "Grammata",
+      "type": "bucht",
+      "coordinates": { "lat": 37.498, "lon": 24.8911 },
+      "qualities": { "schoenheit": 5, "restaurant": 0, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 340, "toDeg": 200, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 340, "toDeg": 200, "maxM": 0.5 }],
+        "sourceNote": "Deep-Research Lauf 2 (CruisersWiki Syros): Öffnung nach W, Sektor 340–200, maxKn 30. Sektor und Öffnungsrichtung konsistent, aber die Quelle weist im eigenen Unsicherheitsregister abweichende Tiefen- und Haltegrundangaben aus — nur der Ostteil (Americanou) gilt als verlässlich."
+      },
+      "description": "Nordwestbucht mit antiken Felsinschriften — schön, aber der Haltegrund ist Glückssache.",
+      "warnings": [
+        "Sehr starke Fallböen aus wechselnden Richtungen",
+        "Westteil der Bucht stark verkrautet, schlechte Haltekraft — im Ostteil (Americanou) ankern, ggf. mit Landfesten",
+        "Haltegrund-Angaben der Quellen widersprüchlich — Grund vor dem Ankern optisch prüfen",
+        "Felsinschriften geschützt",
+        "Meltemi-sicher: bedingt"
+      ],
+      "confidence": "mittel",
+      "sources": ["Deep-Research Lauf 2: CruisersWiki Syros"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 8.0 },
+        "anchorHoldingGround": "sand-seegras",
+        "holdingQuality": "mittel",
+        "holdingNote": "Im Ostteil (Americanou) sandige Flecken mit mäßigem bis gutem Halt, Westteil stark verkrautet.",
+        "seagrassNote": "Dichte Krautwurzeln verhindern im Westteil das Eingraben des Ankers.",
+        "capacityYachts": 12,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Keine Infrastruktur",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 30,
+        "swellExposureNote": "Laut Quelle guter Schutz gegen Dünung aus N bis NE.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Am kleinen Naturstrand",
+        "restrictions": "Antike Felsinschriften geschützt — pfleglich behandeln",
+        "vhfChannel": null,
+        "confidence": "mittel",
+        "sources": ["Deep-Research Lauf 2: CruisersWiki Syros"]
+      }
+    }
+  ]
+}

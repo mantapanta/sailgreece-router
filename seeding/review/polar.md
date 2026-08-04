@@ -1,6 +1,6 @@
 # Review: Polardiagramm
 
-Status: **NICHT freigegeben**
+Status: **FREIGEGEBEN**
 
 Quelle: WindySail-Export "Fountaine Pajot 45.txt" (Transkript aus Phone-Screenshot, PRD-Addendum 2026-07-30) — vor Import gegen Originaldatei verifizieren
 

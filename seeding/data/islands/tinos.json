@@ -1,0 +1,160 @@
+{
+  "approved": true,
+  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. ohne Seitenangabe; CruisersWiki Tinos). Neu aufgenommen. Tinos-Stadt und Panormos sind quellintern konsistent; bei Kolimvithra widerspricht der Sektor der eigenen Beschreibung, dort wurden die Grenzen gekappt.",
+  "island": {
+    "id": "tinos",
+    "name": "Tinos",
+    "coordinates": { "lat": 37.55, "lon": 25.15 },
+    "description": "Gebirgige Pilgerinsel mit starker Meltemi-Exposition — und einem sehr guten Hafen im Nordwesten.",
+    "guestPickup": {
+      "ferryReachable": true,
+      "sourceNote": "Deep-Research Lauf 3: täglich hohe Frequenz ab Rafina und Piräus, Quelle NetFerry Tinos (Abruf 2026-02)"
+    }
+  },
+  "places": [
+    {
+      "id": "tinos-panormos",
+      "islandId": "tinos",
+      "name": "Panormos",
+      "type": "hafen",
+      "coordinates": { "lat": 37.6492, "lon": 25.0408 },
+      "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 4 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 200, "toDeg": 60, "maxKn": 35 }],
+        "waveSectors": [{ "fromDeg": 200, "toDeg": 60, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach E bis SE, Sektor 200–60, maxKn 35 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Kleiner Fischerhafen im Nordwesten — laut Quelle der Zufluchtsort für den Schlag nach Westen.",
+      "warnings": [
+        "Geringe Wassertiefen im inneren Hafenbereich (ab 2,0 m) — bei 2,0 m Tiefgang genau prüfen",
+        "Grössenlimit laut Quelle 16 m — für dieses Schiff knapp, vorab klären",
+        "Nur etwa 12 Plätze, kein Landstrom",
+        "Meltemi-sicher: ja"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.0, "max": 3.5 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Sandgrund.",
+        "seagrassNote": "Seegras im äußeren Ankerbereich.",
+        "capacityYachts": 12,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": true,
+        "fuelDock": false,
+        "provisioningAshore": "Tavernen und Minimarkt am Kai (2 Min)",
+        "showersToilets": false,
+        "wasteDisposal": true,
+        "priceIndicationEur": "8–12 EUR/Nacht (2025)",
+        "portAuthorityFees": "keine regelmäßige Erhebung",
+        "maxLoaM": 16,
+        "swellExposureNote": "Laut Quelle sehr gut geschützt gegen Schwell aus N und NW.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": null,
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "tinos-stadt",
+      "islandId": "tinos",
+      "name": "Tinos-Stadt",
+      "type": "hafen",
+      "coordinates": { "lat": 37.5361, "lon": 25.1606 },
+      "qualities": { "schoenheit": 3, "restaurant": 5, "badestrand": 2 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 250, "toDeg": 130, "maxKn": 30 }],
+        "waveSectors": [{ "fromDeg": 250, "toDeg": 130, "maxM": 0.7 }],
+        "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach S bis SW, Sektor 250–130, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
+      },
+      "description": "Der Hafen der Wallfahrtsstadt an der Südküste — Mole schützt gut, die Böen kommen von oben.",
+      "warnings": [
+        "Kräftige Fallböen im Hafenbecken bei starkem Meltemi",
+        "Große Linienfähren legen am äußeren Kai an, Fährpier freihalten"
+      ],
+      "confidence": "hoch",
+      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "berthingDetails": {
+        "mooringType": "roemisch-katholisch",
+        "depthAtBerthM": { "min": 2.2, "max": 4.5 },
+        "anchorHoldingGround": "sand-schlamm",
+        "holdingQuality": "gut",
+        "holdingNote": "Fester Halt auf Schlamm und Sand.",
+        "seagrassNote": null,
+        "capacityYachts": 30,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": true,
+        "water": true,
+        "fuelDock": true,
+        "provisioningAshore": "Mehrere Supermärkte in 3 Minuten Fußweg",
+        "showersToilets": true,
+        "wasteDisposal": true,
+        "priceIndicationEur": "10–18 EUR/Nacht (2025, Hafengeld)",
+        "portAuthorityFees": "Gemeindehafen-Gebühren",
+        "maxLoaM": 22,
+        "swellExposureNote": "Hafenmole schützt laut Quelle effektiv vor Seegang; das Problem sind die Fallböen.",
+        "ferryTrafficNote": "Große Linienfähren legen am äußeren Kai an.",
+        "dinghyLanding": null,
+        "restrictions": "Fährpier freihalten",
+        "vhfChannel": "12",
+        "confidence": "hoch",
+        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+      }
+    },
+    {
+      "id": "tinos-kolimvithra",
+      "islandId": "tinos",
+      "name": "Kolimvithra",
+      "type": "bucht",
+      "coordinates": { "lat": 37.6322, "lon": 25.1481 },
+      "qualities": { "schoenheit": 4, "restaurant": 2, "badestrand": 5 },
+      "shelter": {
+        "windSectors": [{ "fromDeg": 240, "toDeg": 110, "maxKn": 12 }],
+        "waveSectors": [{ "fromDeg": 240, "toDeg": 110, "maxM": 0.4 }],
+        "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Tinos): Sektor 240–110 mit maxKn 25 und Öffnung nach S bis SW. SELBSTWIDERSPRUCH: Der Platz wird als Bucht an der NORDküste beschrieben und der Warnhinweis lautet 'offen nach Nordosten, bei Meltemi schwerer Seegang' — der Sektor behauptet dagegen Nordschutz. Windgrenze auf 12 kn und Welle auf 0.4 m gekappt, damit der Platz bei Meltemi nicht als brauchbar gilt."
+      },
+      "description": "Zweiteilige Sandbucht an der Nordküste — nur bei ruhigem Wetter oder Südwind.",
+      "warnings": [
+        "SEKTOR VERMUTLICH VERDREHT: Die Quelle beschreibt eine Nordküstenbucht, offen nach NE, gibt aber einen Sektor mit Nordschutz an. Grenzen deshalb stark gekappt — bei Meltemi grundsätzlich meiden",
+        "Bei Meltemi laut Quelle schwerer Seegang in der Bucht",
+        "Haltekraft im östlichen Buchtabschnitt laut Quelle schwankend — Ankerprüfmanöver durchführen"
+      ],
+      "confidence": "niedrig",
+      "sources": ["Deep-Research Lauf 3: CruisersWiki Tinos"],
+      "berthingDetails": {
+        "mooringType": "anker-frei",
+        "depthAtBerthM": { "min": 3.0, "max": 7.0 },
+        "anchorHoldingGround": "sand",
+        "holdingQuality": "gut",
+        "holdingNote": "Sandgrund; Sedimentverteilung im östlichen Abschnitt laut Quelle schwankend.",
+        "seagrassNote": "Geringer Bewuchs.",
+        "capacityYachts": 10,
+        "reservationPossible": false,
+        "reservationChannel": null,
+        "shorePower": false,
+        "water": false,
+        "fuelDock": false,
+        "provisioningAshore": "Taverne am Strand (4 Min)",
+        "showersToilets": false,
+        "wasteDisposal": false,
+        "priceIndicationEur": "kostenfrei",
+        "portAuthorityFees": "keine",
+        "maxLoaM": 20,
+        "swellExposureNote": "Hoher Wellenschlag bei Nordwinden.",
+        "ferryTrafficNote": "Kein Fährverkehr.",
+        "dinghyLanding": "Anlandung am Sandstrand",
+        "restrictions": null,
+        "vhfChannel": null,
+        "confidence": "niedrig",
+        "sources": ["Deep-Research Lauf 3: CruisersWiki Tinos"]
+      }
+    }
+  ]
+}
