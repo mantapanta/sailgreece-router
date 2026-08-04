@@ -141,7 +141,13 @@ describe('regression: Meltemi worst case binds beyond the reliable horizon', () 
   it('reports a far stage as unbewertet in the forecast scenario', () => {
     const snapshot = realSnapshot();
     const leg = snapshot.library.legs.find((l) => l.id === 'athen--b')!;
-    expect(assessLeg(leg, 10, snapshot).ampel).toBe('unbewertet');
+    // AD-13 REVISED: the far range is no longer silenced but COMPUTED under
+    // the persistence assumption. What must hold is that it declares itself —
+    // an unmarked far-range verdict would be the false precision AD-13 warns of.
+    const far = assessLeg(leg, 10, snapshot);
+    expect(far.ampel).not.toBe('unbewertet');
+    expect(far.basis).toBe('annahme');
+    expect(far.reasons.join(' ')).toContain('Persistenz-Annahme');
   });
 });
 
@@ -164,11 +170,18 @@ describe('regression: a thin leg library must not paint perfect weather red', ()
     // the certainty red would imply.
     const snapshot = realSnapshot({ windKn: 32, windFromDeg: 0 });
     const solved = completePlan(snapshot, 'athen')!;
-    expect(solved.validity.horizonDependent).toBe(true);
+    // AD-13 REVISED made this STRICTER, not laxer. The return legs used to be
+    // 'unbewertet' beyond the horizon, i.e. neutral — and therefore plannable.
+    // Now they are computed, come out red at 32 kn on the nose, and the solver
+    // honestly finds no sailable trip at all: it falls back to staying put.
+    expect(solved.validity.valid).toBe(false);
+    expect(stagesOf(solved.plan).length).toBe(0);
     const assessment = assessPlanning({
       ...snapshot,
       trip: { ...snapshot.trip, plan: solved.plan },
     });
+    // The claim this fixture exists for, unchanged: never green on a return
+    // that depends on the weather improving.
     expect(assessment.restTripAmpel).not.toBe('gruen');
     expect(assessment.proposal).not.toBeNull();
   });
@@ -452,7 +465,14 @@ describe('regression: the return deadline is a time, not just a day', () => {
     const snapshot = realSnapshot({ windKn: 4, windFromDeg: 90, legNm: 90 });
     const plan = makePlan([makeStage(12, ['b--athen'], 'athen', 'solver')]);
     const v = validatePlan(plan, snapshot);
-    expect(v.violations.some((x) => x.text.includes('Rückgabe'))).toBe(false);
+    // The duration is now computable under the assumption, so the late arrival
+    // IS reported. Decisive is where it lands: an assumed violation warns but
+    // must not condemn — it blocks green via horizonDependent and stays out of
+    // safetyViolations, so an extrapolated mean can never paint the plan red.
+    const deadlineViolation = v.violations.find((x) => x.text.includes('Rückgabe'));
+    expect(deadlineViolation).toBeDefined();
+    expect(deadlineViolation!.assumed).toBe(true);
+    expect(v.safetyViolations).not.toContain(deadlineViolation);
     expect(v.horizonDependent).toBe(true);
   });
 });

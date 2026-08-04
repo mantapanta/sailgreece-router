@@ -12,6 +12,7 @@
 import type { Leg } from './schema/route.ts';
 import type { Params } from './schema/params.ts';
 import type {
+  DataBasis,
   PlanningSnapshot,
   LegAssessment,
   LegHourBreakdown,
@@ -195,6 +196,7 @@ export function assessLeg(
     avgTwsKn: null,
     avgTwaDeg: null,
     upwind: false,
+    basis: 'forecast',
     reasons: [reason],
     nightLeg: null,
     arrivalHourAthens: null,
@@ -203,17 +205,30 @@ export function assessLeg(
   });
   if (!points) return unbewertet('Start- oder Zielplatz fehlt in der Bibliothek');
 
-  // AD-13: beyond the reliable horizon a forecast-based verdict would be
-  // false precision. Such a stage is 'unbewertet' and makes a plan neither
-  // valid nor invalid (FR18) — only the return check substitutes the worst
-  // case, and it asks for it explicitly via the scenario.
+  /**
+   * AD-13 REVISED — the far range is COMPUTED, not silenced.
+   *
+   * The original rule returned 'unbewertet' beyond params.reliableHorizonDays,
+   * because a forecast-based verdict out there would be false precision. That
+   * reasoning holds for an UNMARKED number; it does not hold for one that
+   * declares itself. A silent gap does not reduce the uncertainty, it only
+   * hides it — and it leaves the skipper without anything to weigh his own
+   * judgement against for the whole second week of a 12-day trip.
+   *
+   * So the horizon keeps its meaning but changes its consequence: beyond it
+   * the leg is simulated on the persistence assumption (domain/persistence.ts)
+   * and the result carries `basis: 'annahme'`. Every layer above can see that
+   * and says so; green stays out of reach for a plan that rests on it
+   * (solver.ts keeps `horizonDependent`).
+   *
+   * Unchanged: the return check still substitutes the Meltemi worst case via
+   * `scenario: 'worstCase'`. That is the safety question, and a mean-value
+   * assumption has no business answering it.
+   */
   const beyondHorizon =
     day - snapshot.trip.currentDay > params.reliableHorizonDays;
-  if (beyondHorizon && scenario === 'forecast') {
-    return unbewertet(
-      `Fernbereich: Etappentag liegt jenseits des verlässlichen Horizonts (${params.reliableHorizonDays} Tage)`,
-    );
-  }
+  /** Hours whose wind came from the assumption instead of the model run. */
+  let assumedHours = 0;
   /**
    * The worst case substitutes wherever the forecast must not be trusted:
    * beyond the reliable horizon (even though Open-Meteo still returns numbers
@@ -319,7 +334,11 @@ export function assessLeg(
 
     // FR16 rule at EVERY point this hour — worst point governs.
     for (const p of points) {
-      const raw = windAt(snapshot.forecast[p.key], idx);
+      const fc = snapshot.forecast[p.key];
+      // One assumed hour at ONE point is enough to mark the whole leg: the
+      // ampel is the worst point, so the basis must be the weakest basis.
+      if (fc?.windAssumed[idx]) assumedHours++;
+      const raw = windAt(fc, idx);
       const w = substitutes(raw) ? wc : raw;
       if (!w) {
         verdicts.push('unbewertet');
@@ -445,6 +464,25 @@ export function assessLeg(
   budget.reasons.forEach((r) => reasons.add(r));
   verdicts.push(budget.ampel);
 
+  /**
+   * 'annahme' covers BOTH ways the basis can be weaker than a model run:
+   * extrapolated hours, and hours the model does deliver but beyond the
+   * reliable horizon. The second case is what preserves AD-13's information —
+   * Open-Meteo returns numbers out to 15 days, and those are exactly the ones
+   * the original rule refused to trust.
+   */
+  const basis: DataBasis =
+    assumedHours > 0 || (beyondHorizon && scenario === 'forecast')
+      ? 'annahme'
+      : 'forecast';
+  if (basis === 'annahme') {
+    reasons.add(
+      beyondHorizon
+        ? `Jenseits des verlässlichen Horizonts (${params.reliableHorizonDays} Tage) — unter der Persistenz-Annahme gerechnet`
+        : 'Beruht teils auf der Persistenz-Annahme jenseits des Forecast-Horizonts',
+    );
+  }
+
   return {
     legId: leg.id,
     day,
@@ -455,6 +493,7 @@ export function assessLeg(
     avgTwsKn,
     avgTwaDeg,
     upwind: avgTwaDeg !== null && avgTwaDeg < params.upwindTwaDeg,
+    basis,
     reasons: [...reasons],
     nightLeg,
     arrivalHourAthens: arrivalAthens,

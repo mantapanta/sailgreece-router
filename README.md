@@ -205,6 +205,38 @@ oder `targetDayHours > maxSailHours + maxMotorHours`) werden vom Zod-Schema
 abgelehnt — ein fehlerhaft editiertes Config-Dokument fällt sichtbar auf die
 Defaults zurück statt stumm falsche Fenster/Ampeln zu erzeugen.
 
+## Der Fernbereich: es wird immer geroutet
+
+Jenseits von `reliableHorizonDays` (Default 7) liefert kein Modell mehr
+verlässliche Tageswerte. Die App schweigt dort trotzdem nicht — sonst hätte
+der zweite Törnabschnitt keine Aussage, und der Skipper nichts, wogegen er
+sein Urteil abwägen kann.
+
+`src/domain/persistence.ts` schreibt fehlende Stunden mit dem **typischen
+Tagesgang** der vorliegenden Forecast-Tage fort: Mittel je Stunde-des-Tages,
+Windrichtung vektoriell und geschwindigkeitsgewichtet. Der Tagesgang statt
+eines Tagesmittels, weil das nachmittägliche Auffrischen des Meltemi genau die
+Information ist, an der Etappen scheitern; ein Mittel über alle Tage statt
+einer Kopie des letzten, weil ein einzelner Tag verrauscht ist.
+
+Drei Regeln halten die Annahme ehrlich:
+
+1. **Sie deklariert sich.** Jede gefüllte Stunde ist einzeln markiert
+   (`windAssumed` / `waveAssumed`); jede Bewertung trägt
+   `basis: 'forecast' | 'annahme'` und sagt in ihren Gründen, worauf sie beruht.
+2. **Sie kann nichts freigeben.** Eine Etappe auf Annahme setzt
+   `horizonDependent` — der Rest-Trip wird damit nie grün.
+3. **Sie kann nichts verurteilen.** Verletzungen aus Annahme-Etappen tragen
+   `Violation.assumed` und zählen nicht als `safetyViolation`. Ein
+   extrapolierter Mittelwert darf keinen real fahrbaren Törn rot stempeln.
+
+Unangetastet bleibt die **Rückkehr-Prüfung**: sie rechnet weiter gegen den
+Meltemi-Worst-Case (`meltemiWorstCase`, kursabhängig maximal ungünstig). Das
+ist die Sicherheitsfrage, und ein Mittelwert hat darauf keine Antwort.
+
+Was ohne Daten bleibt, bleibt leer: ein Ort ohne einen einzigen echten Wert
+wird nicht erfunden, er bleibt `unbewertet`.
+
 ### Trip-Parameter (Törn-Rahmen)
 
 | Feld | Bedeutung | Default |
@@ -225,7 +257,7 @@ erreicht sein (Vorabend Tag 11, minus 1 Puffertag).
 ```text
 src/
   domain/          # purer Core: schema/ (Zod), time, polar, scoring,
-                   # ampel, options, ppr, assess — kein React/Firebase/fetch,
+                   # ampel, options, ppr, persistence, assess — kein React/Firebase/fetch,
                    # Zeit/Törntag/Position werden injiziert (AD-2)
     __tests__/     # Vitest-Fixturen (Referenzfälle Sektorsemantik, 25-kn-Regel,
                    # Budgets, Polar-Interpolation+Offset, Athens→UTC)
