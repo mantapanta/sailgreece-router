@@ -12,6 +12,7 @@ import type {
 import type { Place } from '../../domain/schema/place.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { compass, formatTripDayDate } from '../format.ts';
+import { resolveMapsEnv } from '../mapsEnv.ts';
 
 function stars(n: number, max = 5): string {
   return '●'.repeat(n) + '○'.repeat(Math.max(0, max - n));
@@ -42,9 +43,13 @@ function PlaceHero({
   islandLabel: string;
   typeLabel: string;
 }) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const mapId =
-    (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID';
+  // Story 1.3, AC 9: fehlende Maps-Konfiguration ist ein benannter Zustand —
+  // kein stiller Demo-Map-Fallback. Ohne vollständige Konfiguration bleibt
+  // der bisherige Verlaufs-Hero stehen (nie ein kaputtes Bild).
+  const maps = resolveMapsEnv(
+    import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined,
+    import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined,
+  );
   const position = { lat: place.coordinates.lat, lng: place.coordinates.lon };
 
   const caption = (
@@ -67,15 +72,15 @@ function PlaceHero({
     );
   }
 
-  if (!apiKey) return <div className="place-hero">{caption}</div>;
+  if (!maps.ok) return <div className="place-hero">{caption}</div>;
 
   return (
     <>
       <div className="place-hero place-hero-map">
-        <APIProvider apiKey={apiKey}>
+        <APIProvider apiKey={maps.env.apiKey}>
           <Map
             className="place-hero-canvas"
-            mapId={mapId}
+            mapId={maps.env.mapId}
             defaultCenter={position}
             defaultZoom={14}
             mapTypeId="hybrid"

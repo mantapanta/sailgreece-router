@@ -4,7 +4,7 @@ baseline_commit: d0bfb0cfd5f2ba67d192fa607ef160cf4193fd3c
 
 # Story 1.3: Karte redesign
 
-Status: in-progress
+Status: review
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
@@ -397,37 +397,37 @@ unless a task names it.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — `src/ui/mapsEnv.ts` + tests + all three consumers (write first)** (AC: 9, 13)
-  - [ ] 1.1 Implement `resolveMapsEnv` per the reference in Dev Notes; write
+- [x] **Task 1 — `src/ui/mapsEnv.ts` + tests + all three consumers (write first)** (AC: 9, 13)
+  - [x] 1.1 Implement `resolveMapsEnv` per the reference in Dev Notes; write
         `mapsEnv.test.ts` first (red), then green.
-  - [ ] 1.2 MapView: replace the `apiKey`/`mapId` reads + `|| 'DEMO_MAP_ID'` with the
+  - [x] 1.2 MapView: replace the `apiKey`/`mapId` reads + `|| 'DEMO_MAP_ID'` with the
         helper; split the render on `ok` (itinerary always, map area or named hint).
-  - [ ] 1.3 DayView line ~1164 and PlaceDetailView line ~45: same swap, hint copy names
+  - [x] 1.3 DayView line ~1164 and PlaceDetailView line ~45: same swap, hint copy names
         the actual missing var(s); zero other changes in those files.
-  - [ ] 1.4 `.env.example` + README: `DEMO_MAP_ID` guidance removed/rewritten.
-- [ ] **Task 2 — Extract `TripStatusLine` into `src/ui/components/TripStatusLine.tsx`**
+  - [x] 1.4 `.env.example` + README: `DEMO_MAP_ID` guidance removed/rewritten.
+- [x] **Task 2 — Extract `TripStatusLine` into `src/ui/components/TripStatusLine.tsx`**
       (AC: 2)
-  - [ ] 2.1 Move the function + its type imports verbatim; `triggerRef` optional; export.
-  - [ ] 2.2 DayView: delete the local function, import the component; verify zero diff in
+  - [x] 2.1 Move the function + its type imports verbatim; `triggerRef` optional; export.
+  - [x] 2.2 DayView: delete the local function, import the component; verify zero diff in
         rendered props/behavior (statusRef, planStamp effect untouched).
-  - [ ] 2.3 MapView: minute-tick `nowMs` state + `staleForecastLabel` + `STALE_TIME_MS`
+  - [x] 2.3 MapView: minute-tick `nowMs` state + `staleForecastLabel` + `STALE_TIME_MS`
         import; `pprHinweise` via the `atBase` rule; render at the itinerary head.
-- [ ] **Task 3 — `mapPath.ts`: `endPlaceId` on `StageEndMarker` + `formatTripDayShort`**
+- [x] **Task 3 — `mapPath.ts`: `endPlaceId` on `StageEndMarker` + `formatTripDayShort`**
       (AC: 7, 5, 13)
-  - [ ] 3.1 Extend `stageEndMarkers` (use `stagePoints` instead of `stagePath` for the
+  - [x] 3.1 Extend `stageEndMarkers` (use `stagePoints` instead of `stagePath` for the
         anchor stage to reach the final point's `placeId`); append mapPath test cases.
-  - [ ] 3.2 `formatTripDayShort(tripStartDate, day)` in `format.ts` ("So. 9.8." — weekday
+  - [x] 3.2 `formatTripDayShort(tripStartDate, day)` in `format.ts` ("So. 9.8." — weekday
         short + `d.M.` from `dateForTripDay`, no new Intl pattern beyond the existing
         weekday formatter); append format test cases.
-- [ ] **Task 4 — CSS: Karte redesign blocks + deletions** (AC: 1, 3, 4, 5, 6, 7, 8, 10, 12)
-  - [ ] 4.1 Add the reference blocks (Dev Notes): `.map-view` full-bleed layout + sheet
+- [x] **Task 4 — CSS: Karte redesign blocks + deletions** (AC: 1, 3, 4, 5, 6, 7, 8, 10, 12)
+  - [x] 4.1 Add the reference blocks (Dev Notes): `.map-view` full-bleed layout + sheet
         (`.map-itinerary` collapsed/`.open` states, `.drag-handle`, `.sheet-head`),
         `.layer-chips`/`.layer-chip`, `.legend-btn`/`.legend-pop`/`.lg-*`, `.map-attrib`,
         `.itin-card`/`.itin-*`/`.harbour-row`, `.marker-hit`/`.marker-pin` restyle/
         `.marker-chip`, `.boat-marker`, NEW `.stage-capsule` (AC 7), `.map-skeleton-caption`.
-  - [ ] 4.2 Restyle `.map-sticky` (radius-lg card, shadow-2, overflow hidden, border
+  - [x] 4.2 Restyle `.map-sticky` (radius-lg card, shadow-2, overflow hidden, border
         dropped); keep the `top` offset; keep `.map-container` 100%.
-  - [ ] 4.3 Delete: `.route-toggles` (2 rules), `.route-swatch`, `.wind-toggle`,
+  - [x] 4.3 Delete: `.route-toggles` (2 rules), `.route-swatch`, `.wind-toggle`,
         `.wind-legende` (3 rules), `.legend` (2 rules), `.legend-line` (3 rules),
         `.itinerary-card` (4 rules incl. `.past`/`.harbour`/`.active`), `.alt-toggles`
         (2 rules), `.marker-pin.highlight` (already dead — no JSX emits it), and the
@@ -437,48 +437,48 @@ unless a task names it.
         (4 rules, lines ~1229–1260): `RouteMap.tsx:125` consumes them** (AC 7 — the
         Karte capsule is the new `.stage-capsule`). StageMap's `.stage-map-legende` and
         PlaceDetail's `.place-hero-legende` are DIFFERENT classes — keep.
-- [ ] **Task 5 — MapView restructure: layout scaffold, h1, sheet state** (AC: 1, 2, 11, 12)
-  - [ ] 5.1 Root becomes `.map-view` (sr-only `h1` "Karte" first): one itinerary DOM used
+- [x] **Task 5 — MapView restructure: layout scaffold, h1, sheet state** (AC: 1, 2, 11, 12)
+  - [x] 5.1 Root becomes `.map-view` (sr-only `h1` "Karte" first): one itinerary DOM used
         by both breakpoints (sheet chrome inert on desktop), map area with overlay slots
         (chips, legend, markers).
-  - [ ] 5.2 `sheetOpen` boolean state; handle button with `aria-expanded` + labels;
+  - [x] 5.2 `sheetOpen` boolean state; handle button with `aria-expanded` + labels;
         collapsed/expanded classes; itinerary list is the scroll container in both
         states.
-- [ ] **Task 6 — Layer chips + legend popover** (AC: 3, 4, 11)
-  - [ ] 6.1 Replace the three toggle mechanisms: `showWind`, `showSeamarks` unchanged as
+- [x] **Task 6 — Layer chips + legend popover** (AC: 3, 4, 11)
+  - [x] 6.1 Replace the three toggle mechanisms: `showWind`, `showSeamarks` unchanged as
         state; `shownAlts: Set` → `showAlts: boolean` (delete `altKey`/`toggleAlt`;
         rendering maps over all alternatives when on).
-  - [ ] 6.2 Legend popover component (local to MapView is fine): PositionPopover
+  - [x] 6.2 Legend popover component (local to MapView is fine): PositionPopover
         mechanics (backdrop, Esc, focus in/out, trigger toggles), content rows per AC 4
         incl. `WindBarb` scale, `aria-live` truncation count, AmpelBadge verdict row,
         alt swatch rows, OpenSeaMap attribution + link.
-  - [ ] 6.3 Persistent `.map-attrib` micro-attribution "© OpenSeaMap (CC-BY-SA)"
+  - [x] 6.3 Persistent `.map-attrib` micro-attribution "© OpenSeaMap (CC-BY-SA)"
         (link) on the map while `showSeamarks` is on (AC 4 attribution-visibility rule).
-- [ ] **Task 7 — Itinerary cards + sync + 📌 removal** (AC: 5, 2)
-  - [ ] 7.1 Rebuild the card/harbour-row markup (button rows, day tag via
+- [x] **Task 7 — Itinerary cards + sync + 📌 removal** (AC: 5, 2)
+  - [x] 7.1 Rebuild the card/harbour-row markup (button rows, day tag via
         `formatTripDayShort`, route from→to via first-leg island, meta via
         totalHours/lastEta — same derivations as DayView's StageCard, see Dev Notes);
         AmpelBadge; "Festgelegt" chip replaces `' · 📌'`.
-  - [ ] 7.2 Sync: `hoverDay` (transient, hover/focus) + `selectedDay` (tap toggle,
+  - [x] 7.2 Sync: `hoverDay` (transient, hover/focus) + `selectedDay` (tap toggle,
         `aria-pressed`); highlight = either; card refs for `scrollIntoView` from pin
         taps.
-- [ ] **Task 8 — Markers: pins, capsules, boat** (AC: 6, 7, 8, 11)
-  - [ ] 8.1 Pin wrapper (`.marker-hit` ≥44px) + casing-ring pin; `role="button"`,
+- [x] **Task 8 — Markers: pins, capsules, boat** (AC: 6, 7, 8, 11)
+  - [x] 8.1 Pin wrapper (`.marker-hit` ≥44px) + casing-ring pin; `role="button"`,
         `tabIndex`, `aria-label` "{Ort} — {Ampel-Wort}" (`AMPEL_LABEL`), Enter/Space +
         mouse click open; touch two-step via `onPointerDown` pointer-type tracking;
         armed mini chip; `title` props deleted.
-  - [ ] 8.2 Capsules: new `.stage-capsule` class (white radius-sm; `.stage-number`
+  - [x] 8.2 Capsules: new `.stage-capsule` class (white radius-sm; `.stage-number`
         stays RouteMap's, AC 7), past = ink-secondary text, `aria-label` from the
         ex-title string, activation opens `endPlaceId`, hover sync kept.
-  - [ ] 8.3 Boat marker from `snapshot.trip.position` (accent dot + halo,
+  - [x] 8.3 Boat marker from `snapshot.trip.position` (accent dot + halo,
         "Bootsposition").
-- [ ] **Task 9 — `MapViewSkeleton` + App.tsx branch** (AC: 10)
-  - [ ] 9.1 New `src/ui/components/MapViewSkeleton.tsx` per AC 10; App.tsx loading branch:
+- [x] **Task 9 — `MapViewSkeleton` + App.tsx branch** (AC: 10)
+  - [x] 9.1 New `src/ui/components/MapViewSkeleton.tsx` per AC 10; App.tsx loading branch:
         `view.kind === 'tag'` → DayViewSkeleton, `view.kind === 'karte'` →
         MapViewSkeleton, else the "Lade Daten …" hint.
-- [ ] **Task 10 — Verify DoD** (AC: 13, 14)
-  - [ ] 10.1 Run every DoD grep; `npm test`; `npm run build`.
-  - [ ] 10.2 Manual smoke per AC 14(d) — if headless, substitute build + greps and hand
+- [x] **Task 10 — Verify DoD** (AC: 13, 14)
+  - [x] 10.1 Run every DoD grep; `npm test`; `npm run build`.
+  - [x] 10.2 Manual smoke per AC 14(d) — if headless, substitute build + greps and hand
         the browser smoke list to the reviewer (as 1.1/1.2 did).
 
 ## Dev Notes
@@ -1277,10 +1277,106 @@ stay per the scope boundary.
 
 ### Agent Model Used
 
+claude-fable-5 (BMad dev-story)
+
 ### Debug Log References
+
+- TDD: `mapsEnv.test.ts` red → `mapsEnv.ts` green; `formatTripDayShort` +
+  `endPlaceId` cases red → implementations green. Existing suites untouched.
+- `npm test`: 27 files, 433 tests green (incl. 5 new mapsEnv, 3 appended
+  mapPath, 2 appended format cases).
+- `npm run build` (`tsc --noEmit && vite build`): green (pre-existing
+  >500 kB-chunk warning unchanged).
+- All DoD greps clean: block 1 empty; the three OK checks print OK
+  (exactly ONE `title=` in MapView — the documented wind-barb tooltip;
+  `TripStatusLine` only as component file; App's "Lade Daten …" serves only
+  the platz branch, karte → MapViewSkeleton).
 
 ### Completion Notes List
 
+- All 14 ACs implemented. Manual browser smoke (AC 14d) could not be run
+  headlessly — build + greps substituted per Task 10.2; the smoke list from
+  AC 14(d) is handed to the reviewer (390px sheet toggle, status-line
+  expander, chip toggles incl. attribution show/hide, legend popover
+  contract + zoom-live truncation count, card↔map sync, pin keyboard
+  activation, touch two-step with mini chip, boat marker, missing-env state,
+  cold-load skeleton).
+- **Deviation (formatTripDayShort):** the story example says "So. 9.8." —
+  the actual de-DE ICU short weekday carries NO trailing dot in this runtime
+  ("So", not "So."), so the composed tag is "So 9.8.". Composition rule kept
+  (existing weekday formatter + d.M., no new Intl pattern); tests assert the
+  real output (story rule 8: reality wins, intent kept).
+- **Deviation (`.trip-caption`):** the class already exists from Story 1.2
+  (12.5px caption, used by DayView line ~1407). NOT redefined at the
+  reference's 11.5px — the sheet head reuses the existing 12.5px recipe so
+  the frozen 1.2 surface stays byte-identical.
+- **Deviation (capsule hit area):** AC 7 demands a ≥44px hit area via
+  wrapper — capsules reuse the `.marker-hit` wrapper (role/tabIndex/
+  aria-label/handlers on the wrapper, `.stage-capsule` is the aria-hidden
+  visual inside). `.marker-hit` uses `min-width/min-height: 44px` instead of
+  the reference's fixed `width/height` so wide capsule labels ("10·12") are
+  not clipped; `position: relative` added to anchor the armed mini chip.
+- **Deviation (sheet shadow):** the reference CSS carried positive offsets
+  with a "flipped upward" comment; implemented with genuinely mirrored
+  offsets (`0 -2px 6px…, 0 -16px 40px…`) — same Level-3 magnitudes, cast
+  upward as a bottom sheet must (no new shadow values).
+- **Deviation (legend popover z-index / mobile anchor):** reference
+  `.legend-pop` z-index 5 would sit UNDER the reused `.menu-backdrop`
+  (z-index 110) — set to 120 (the established `.popover` layer) plus
+  `max-height` + `overflow-y: auto`; on ≤860px the popover anchors above the
+  raised legend button (`bottom: 244px + 52px`), clear of the sheet peek.
+- **Deviation (cardRefs):** `useRef(new Map(...))` collides with the
+  `@vis.gl` `Map` component identifier (the module's documented trap) —
+  a `Record<number, HTMLButtonElement | undefined>` serves instead.
+- DayView/PlaceDetailView edits are strictly the sanctioned surgical scope:
+  TripStatusLine extraction (function moved verbatim, `triggerRef` optional,
+  statusRef/planStamp focus effect untouched in DayView) + `resolveMapsEnv`
+  swap; the two DayView fallback hints now name the actually missing
+  variable(s) via a module-level `MAPS_ENV`/`MAPS_MISSING` (env is
+  build-time-static under Vite — still "read once per view").
+- Harbour rows are sync-participating buttons (hover/focus/tap +
+  `aria-pressed`) like the sailing cards — they have no polyline, so hover
+  changes nothing on the map, but rows behave uniformly and stay ≥44px.
+- `DEMO_MAP_ID` is gone repo-wide (source, `.env.example`, README);
+  comments deliberately avoid the literal string so the DoD grep stays clean.
+- VERIFY-3/-7 tags for Philipp remain open questions for review (per-alt map
+  toggling dropped for the single "Alternativen" chip; no map-side
+  position/Törntag affordance).
+
 ### File List
 
+**New:**
+- `src/ui/mapsEnv.ts`
+- `src/ui/__tests__/mapsEnv.test.ts`
+- `src/ui/components/TripStatusLine.tsx`
+- `src/ui/components/MapViewSkeleton.tsx`
+
+**Modified:**
+- `src/ui/views/MapView.tsx` (full redesign: sheet layout, chips, legend
+  popover, cards, pins/capsules/boat marker, mapsEnv, sr-h1)
+- `src/ui/styles.css` (map-view redesign block incl. `.stage-capsule`;
+  legacy map classes deleted; `.stage-number`×4 + `.wind-barb` preserved)
+- `src/ui/views/DayView.tsx` (TripStatusLine extraction + mapsEnv swap only)
+- `src/ui/views/PlaceDetailView.tsx` (mapsEnv swap only)
+- `src/app/App.tsx` (MapViewSkeleton loading branch only)
+- `src/ui/mapPath.ts` (`StageEndMarker.endPlaceId`)
+- `src/ui/format.ts` (`formatTripDayShort`)
+- `src/ui/__tests__/mapPath.test.ts` (append-only)
+- `src/ui/__tests__/format.test.ts` (append-only)
+- `.env.example`, `README.md` (DEMO-Map-Fallback guidance removed)
+
 ## Change Log
+
+- 2026-08-05: Story 1.3 implemented (Karte redesign): full-bleed map +
+  two-state bottom sheet ≤860px, TripStatusLine extracted to
+  `components/TripStatusLine.tsx` and reused at the itinerary head, floating
+  layer chips (Windfiedern/Alternativen/Seezeichen) replace the
+  route-toggles panel, legend as "i" popover (direction colors, verdict
+  badge, wind-barb scale with aria-live truncation, alt identities,
+  OpenSeaMap attribution) + persistent on-map micro-attribution, itinerary
+  cards restyled with keyboard/hover/tap map sync, casing-ring pins with
+  keyboard operability and touch two-step mini chip, `.stage-capsule`
+  markers activating Platzdetail via new `endPlaceId`, boat-position marker,
+  `resolveMapsEnv` named config errors (DEMO-Fallback removed repo-wide),
+  `MapViewSkeleton` cold-load state. Tests 433 green, build green, DoD
+  greps clean. Status → review.

@@ -14,7 +14,7 @@
  * lives in the tested pure helpers of dayViewModel.ts.
  */
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
@@ -30,6 +30,7 @@ import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
 import { planKey } from '../../domain/solver.ts';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { PositionPopover } from '../components/PositionPopover.tsx';
+import { TripStatusLine } from '../components/TripStatusLine.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
@@ -58,9 +59,9 @@ import {
   dayViewStages,
   optionsSummary,
   pickupDay,
-  restTripVerdictLabel,
   staleForecastLabel,
 } from '../dayViewModel.ts';
+import { resolveMapsEnv } from '../mapsEnv.ts';
 import {
   islandName,
   islandWithPlace,
@@ -69,6 +70,17 @@ import {
   stageTitle,
   stageVia,
 } from '../stageText.ts';
+
+/**
+ * Maps-Konfiguration — EINMAL pro View gelesen (Story 1.3, AC 9). Statisch,
+ * weil Vite `import.meta.env` zur Buildzeit ersetzt; die Hinweistexte der
+ * Karten-Fallbacks nennen darüber die tatsächlich fehlenden Variablen.
+ */
+const MAPS_ENV = resolveMapsEnv(
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined,
+  import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined,
+);
+const MAPS_MISSING = MAPS_ENV.ok ? '' : MAPS_ENV.missing.join(', ');
 
 /**
  * Die Annahme in einem Satz: mit WELCHEM Wind, WELCHEM Kurs zum Wind und
@@ -667,8 +679,8 @@ function StageCard({
             />
           ) : (
             <p className="beschreibung">
-              Tageskarte nicht verfügbar — kein <code>VITE_GOOGLE_MAPS_API_KEY</code>{' '}
-              gesetzt. Die Rechnung unten ist davon unberührt.
+              Tageskarte nicht verfügbar — es fehlt: <code>{MAPS_MISSING}</code>.
+              Die Rechnung unten ist davon unberührt.
             </p>
           )}
           {stage.legs.map((l) => (
@@ -722,9 +734,8 @@ function AltPreview({
         <RouteMap stages={alt.stages} snapshot={snapshot} color={color} mapId={mapId} />
       ) : (
         <p className="beschreibung">
-          Routenkarte nicht verfügbar — kein{' '}
-          <code>VITE_GOOGLE_MAPS_API_KEY</code> gesetzt. Die Etappenliste
-          unten ist davon unberührt.
+          Routenkarte nicht verfügbar — es fehlt: <code>{MAPS_MISSING}</code>.
+          Die Etappenliste unten ist davon unberührt.
         </p>
       )}
       <div className="alt-stage-list">
@@ -933,137 +944,6 @@ function AlternativeRow({
   );
 }
 
-/**
- * FR2/FR19/FR20 — die Trip-Statuszeile: EIN Caption-Satz über allem (Punkt +
- * Verdikt + Fakten), tippen öffnet das Rest-Trip-Detail als Expander
- * (Begründungen, Rückkehr-Frist, Spätester Umkehrtag, Meltemi-fest,
- * Entscheidungspunkte). Ersetzt den früheren Rest-Trip-Banner; die
- * Badge-Tooltips von Umkehrtag/Meltemi-fest stehen jetzt als sichtbarer
- * Caption-Text im Detail. Bei veraltetem Forecast (> STALE_TIME_MS) führt
- * ein gelbes "Stand vor {h} h"-Segment die Zeile an (AC 2).
- */
-function TripStatusLine({
-  assessment,
-  main,
-  pprHinweise,
-  staleLabel,
-  triggerRef,
-}: {
-  assessment: Assessment;
-  main: PlanAssessment | null;
-  pprHinweise: string[];
-  staleLabel: string | null;
-  triggerRef: RefObject<HTMLButtonElement | null>;
-}) {
-  const [detailOpen, setDetailOpen] = useState(false);
-  const reasons = [...assessment.restTripReasons, ...pprHinweise];
-
-  return (
-    <div className="trip-status" aria-live="polite">
-      <button
-        type="button"
-        ref={triggerRef}
-        className="trip-status-trigger"
-        aria-expanded={detailOpen}
-        aria-controls="resttrip-detail"
-        onClick={() => setDetailOpen((o) => !o)}
-      >
-        <span
-          className={`status-dot ${staleLabel ? 'gelb' : assessment.restTripAmpel}`}
-          aria-hidden="true"
-        />
-        <span>
-          {staleLabel && <span className="stale">{staleLabel} · </span>}
-          <strong>
-            {restTripVerdictLabel(assessment.restTripAmpel)}
-            {assessment.restTripAmpel === 'rot' &&
-              assessment.proposal &&
-              ' — Vorschlag mit der geringsten Verletzung'}
-          </strong>
-          {' · '}Rückkehr Alimos bis Tag {assessment.ppr.effectiveDeadlineDay}
-          {main?.meltemiSafeUntilDay != null && (
-            <> · Meltemi-fest bis Tag {main.meltemiSafeUntilDay}</>
-          )}
-        </span>
-        <span className="chev" aria-hidden="true">
-          ›
-        </span>
-      </button>
-      {detailOpen && (
-        <div
-          id="resttrip-detail"
-          className="trip-status-detail"
-          onKeyDown={(e) => {
-            // Expander-Kontrakt: Esc im Detail schliesst und gibt den Fokus
-            // an den Auslöser zurück — kein Trap, kein Backdrop.
-            if (e.key === 'Escape') {
-              e.stopPropagation();
-              setDetailOpen(false);
-              triggerRef.current?.focus();
-            }
-          }}
-        >
-          {reasons.length > 0 && (
-            <ul className="reasons">
-              {reasons.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          )}
-          <p>
-            Rückkehr Alimos bis Tag {assessment.ppr.effectiveDeadlineDay} (inkl.
-            Puffertag)
-          </p>
-          <p>
-            <strong>
-              Spätester Umkehrtag:{' '}
-              {assessment.ppr.latestReturnStartDay !== null
-                ? `Tag ${assessment.ppr.latestReturnStartDay}`
-                : 'nicht mehr erreichbar'}
-            </strong>
-          </p>
-          <p className="caption">
-            Letzter Törntag, an dem die Umkehr über die Rückfallkette noch
-            rechtzeitig nach Alimos führt (Worst-Case gerechnet).
-          </p>
-          {main && main.returnChecks.length > 0 && (
-            <>
-              <p>
-                <strong>
-                  Meltemi-fest bis:{' '}
-                  {main.meltemiSafeUntilDay !== null
-                    ? `Tag ${main.meltemiSafeUntilDay}`
-                    : 'heute nicht'}
-                </strong>
-              </p>
-              <p className="caption">
-                Bis zu diesem Törntag ist die Umkehr auch unter dem
-                Meltemi-Worst-Case jederzeit möglich. Danach trägt der aktuelle
-                Forecast den Heimweg — die Tageskarten sagen, woran der Abbruch
-                zu erkennen ist.
-              </p>
-            </>
-          )}
-          {/* FR20 — die Entscheidungspunkte stehen wieder sichtbar da, genau
-              dort, wo EXPERIENCE.md sie hinlegt: im Rest-Trip-Detail. */}
-          {assessment.decisionPoints.length > 0 && (
-            <>
-              <h3>Entscheidungspunkte</h3>
-              <ul className="reasons">
-                {assessment.decisionPoints.map((p) => (
-                  <li key={`${p.day}-${p.text}`}>
-                    Tag {p.day}: {p.text}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function DayView({
   snapshot,
   assessment,
@@ -1161,10 +1041,9 @@ export function DayView({
 
   // Exactly ONE APIProvider for the whole view: several expanded stage cards
   // then share a single Maps script load instead of each mounting its own.
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const mapId = apiKey
-    ? (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID'
-    : null;
+  // Story 1.3, AC 9: fehlende Konfiguration ist ein benannter Fehler — kein
+  // stiller Demo-Map-Fallback (mapsEnv.ts, MAPS_ENV oben im Modul).
+  const mapId = MAPS_ENV.ok ? MAPS_ENV.env.mapId : null;
 
   const content = (
     <div>
@@ -1495,8 +1374,8 @@ export function DayView({
     </div>
   );
 
-  // No key: render the view unchanged. The day cards then explain the missing
-  // map in place, exactly as the map view does — never a crash (NFR).
-  if (!apiKey) return content;
-  return <APIProvider apiKey={apiKey}>{content}</APIProvider>;
+  // Missing config: render the view unchanged. The day cards then explain the
+  // missing map in place, exactly as the map view does — never a crash (NFR).
+  if (!MAPS_ENV.ok) return content;
+  return <APIProvider apiKey={MAPS_ENV.env.apiKey}>{content}</APIProvider>;
 }

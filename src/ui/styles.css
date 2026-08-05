@@ -703,28 +703,35 @@ hr.hairline,
   word-break: break-all;
 }
 
-/* ---- map view (sticky split, stacked on mobile) --------------------------- */
+/* ===================================================================== */
+/* ---- map view (redesign, Story 1.3) ---------------------------------- */
+/* ===================================================================== */
+
+/* ---- layout: desktop split (≥861px default), mobile full-bleed + sheet ---- */
+.map-view {
+  position: relative;
+}
 
 .map-split {
   display: grid;
   grid-template-columns: minmax(280px, 380px) 1fr;
-  gap: 1.2rem;
+  gap: var(--space-5);
   align-items: start;
 }
 
 .map-itinerary {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
+  min-width: 0;
 }
 
 .map-sticky {
   position: sticky;
-  /* Below the sticky header, not under it. */
+  /* Below the sticky header, not under it (1.1 fix — keep). */
   top: calc(var(--header-h) + 1rem);
   height: min(78vh, 720px);
-  border: 1px solid var(--hairline);
-  background: var(--creme-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden; /* imagery clips to the card radius */
+  box-shadow: var(--shadow-2);
+  background: var(--surface-track);
 }
 
 .map-sticky .map-container {
@@ -732,54 +739,423 @@ hr.hairline,
   height: 100%;
 }
 
-.itinerary-card {
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  border-left: 3px solid transparent;
-  padding: 0.7rem 0.9rem;
-  cursor: pointer;
-}
-
-.itinerary-card.active {
-  border-left-color: var(--navy);
-  background: #fffef9;
-}
-
-.route-toggles {
+.sheet-head {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  padding: 0.6rem 0.8rem;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0 var(--space-2);
 }
 
-.route-toggles label {
+.sheet-head .section-title {
+  margin: 0;
+}
+
+/* CC-BY-SA attribution — visible whenever the seamark layer is on (AC 4). */
+.map-attrib {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 4;
+  font: 400 10.5px/1.3 var(--font-sans);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+
+.map-attrib a {
+  color: var(--ink-secondary);
+}
+
+/* ---- floating layer chips ---- */
+.layer-chips {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 4;
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.layer-chip {
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font: 650 12.5px/1.35 var(--font-sans);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink-secondary);
+  box-shadow: var(--shadow-1);
+}
+
+.layer-chip[aria-pressed='true'] {
+  background: var(--accent-tint);
+  color: var(--accent-text);
+}
+
+/* ---- legend affordance + popover ---- */
+.legend-btn {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 4;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink-secondary);
+  font: 700 13px/1 var(--font-sans); /* sans "i" — never the mock's Georgia italic */
+  box-shadow: var(--shadow-1);
+}
+
+.legend-pop {
+  position: absolute;
+  right: var(--space-3);
+  bottom: calc(var(--space-3) + 52px);
+  /* Über dem .menu-backdrop (110) — sonst finge der Backdrop die Klicks
+     auf den Quellen-Link der Legende ab. */
+  z-index: 120;
+  width: min(320px, calc(100vw - 2 * var(--space-page-margin)));
+  max-height: calc(100% - 2 * var(--space-3) - 52px);
+  overflow-y: auto;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.lg-title {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.lg-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--space-2);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  padding: 3px 0;
 }
 
-.route-swatch {
-  width: 1.4rem;
+.lg-row.lg-wind {
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.lg-row.lg-wind > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.lg-line {
+  width: 24px;
   height: 0;
+  flex: none;
+  border-radius: 2px;
+}
+
+.lg-line.solid {
+  border-top: 3px solid currentColor; /* color via inline style (tokens) */
+}
+
+.lg-line.dashed {
   border-top: 3px dashed currentColor;
-  display: inline-block;
+}
+
+.lg-caption {
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin: var(--space-1) 0;
+}
+
+/* ---- itinerary cards ---- */
+.itin-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.itin-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-1);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.itin-card[aria-pressed='true'] {
+  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
+}
+
+.itin-card[aria-pressed='true'] .itin-day {
+  color: var(--accent-text);
+}
+
+.itin-card.past {
+  opacity: 0.75;
+}
+
+.itin-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.itin-day {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.itin-route {
+  font: 700 15.5px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--ink-primary);
+  margin-top: 2px;
+}
+
+.itin-meta {
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.harbour-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  min-height: 44px;
+  background: var(--surface-card);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  box-shadow: var(--shadow-1);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.harbour-row[aria-pressed='true'] {
+  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
+}
+
+.harbour-row .hd {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- markers ---- */
+/* ≥44px hit area around the visual pin/capsule (AC 6/7); position: relative
+   anchors the armed mini chip. */
+.marker-hit {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .marker-pin {
-  width: 1.05rem;
-  height: 1.05rem;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  width: 13px;
+  height: 13px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--map-line-casing, #fff); /* casing ring — mandatory on imagery */
+  box-shadow: 0 1px 4px rgba(30, 25, 20, 0.4);
+}
+
+.marker-pin.muted {
+  opacity: 0.5;
+  transform: scale(0.75);
+}
+
+/* armed mini label (touch two-step, AC 6) */
+.marker-chip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 4px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--surface-card);
+  color: var(--ink-primary);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  font: 600 12.5px/1.35 var(--font-sans);
+  box-shadow: var(--shadow-1);
+}
+
+.boat-marker {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+
+.boat-marker .halo {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  opacity: 0.18; /* accent fill via inline style (tokens.ts) */
+}
+
+.boat-marker .core {
+  position: absolute;
+  inset: 9px;
+  border-radius: var(--radius-full);
+  border: 2.5px solid var(--map-line-casing, #fff);
+}
+
+/* Karte-only; .stage-number stays untouched for RouteMap (AC 7). */
+.stage-capsule {
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--ink-primary);
+  font: 700 11px/18px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1.5px 4px rgba(30, 25, 20, 0.3);
+  letter-spacing: 0.02em;
   cursor: pointer;
 }
 
-.marker-pin.highlight {
-  transform: scale(1.5);
-  border-color: var(--navy);
+.stage-capsule.past {
+  color: var(--ink-secondary); /* NOT tertiary — ink rule */
+}
+
+.stage-capsule.highlight {
+  transform: scale(1.25);
+}
+
+/* ---- map skeleton caption (MapViewSkeleton) ---- */
+.map-skeleton-caption {
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+/* ---- mobile: full-bleed map + bottom sheet ---- */
+@media (max-width: 860px) {
+  .map-view {
+    /* cancel main.content's ≤860px padding (1rem 0.9rem 2.4rem) */
+    margin: -1rem -0.9rem -2.4rem;
+    height: calc(100vh - var(--header-h));
+    height: calc(100dvh - var(--header-h));
+    overflow: hidden;
+  }
+
+  .map-split {
+    display: block;
+    height: 100%;
+  }
+
+  .map-sticky {
+    position: absolute;
+    inset: 0;
+    top: 0;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* becomes the bottom sheet (AC 1: two-state toggle, no gesture physics) */
+  .map-itinerary {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    background: var(--surface-page);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* Level-3 shadow (see Elevation), offsets mirrored upward — a sheet
+       casts against the map ABOVE it, not below. No new shadow values. */
+    box-shadow: 0 -2px 6px rgba(30, 25, 20, 0.1), 0 -16px 40px rgba(30, 25, 20, 0.16);
+    padding: 0 var(--space-4) env(safe-area-inset-bottom);
+    height: 232px; /* collapsed: head + ~1.5 cards */
+    display: flex;
+    flex-direction: column;
+    transition: height 0.2s ease;
+  }
+
+  .map-itinerary.open {
+    height: 75vh;
+    height: 75dvh;
+  }
+
+  .drag-handle {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    min-height: 44px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+
+  .drag-handle .bar {
+    width: 40px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--ampel-unbewertet);
+  }
+
+  .itin-list {
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: var(--space-4);
+  }
+
+  .legend-btn {
+    bottom: 244px; /* clear of the collapsed sheet peek */
+  }
+
+  .legend-pop {
+    /* über dem hochgesetzten "i" verankert, frei vom Sheet-Peek */
+    bottom: calc(244px + 52px);
+    max-height: calc(100% - 244px - 52px - var(--space-3));
+  }
+
+  .map-attrib {
+    bottom: 244px; /* ditto — attribution must stay visible (AC 4) */
+  }
+}
+
+@media (min-width: 861px) {
+  .drag-handle {
+    display: none;
+  }
 }
 
 /* Windfiedern: die SVG traegt einen weissen Halo, damit der Schaft auch ueber
@@ -800,38 +1176,6 @@ hr.hairline,
    Stärke schon (halbe Fieder = 5 kn), die Ziffer war dieselbe Aussage ein
    zweites Mal — und über einem Feld von Fiedern war genau das die Überladung.
    Der Wert steht weiter im Tooltip. */
-
-.wind-toggle {
-  border-top: 1px solid var(--hairline);
-  margin-top: 0.35rem;
-  padding-top: 0.45rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.wind-legende {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.1rem 0.5rem;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.wind-legende > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.1rem;
-}
-
-.wind-legende .beschreibung {
-  flex-basis: 100%;
-  font-size: 0.68rem;
-  font-style: italic;
-  margin: 0;
-}
 
 /* ---- Tageskarte im Rechnungs-Panel (FR30) --------------------------------- */
 
@@ -1101,17 +1445,9 @@ table.shelter-table tr.sektor-inaktiv td {
 /* ---- responsive: stacked on mobile (NFR2) ------------------------------------ */
 
 @media (max-width: 860px) {
-  .map-split {
-    grid-template-columns: 1fr;
-  }
-
-  .map-sticky {
-    position: relative;
-    top: 0;
-    height: 60vh;
-    order: -1;
-  }
-
+  /* Die Karten-Stapelregeln von früher sind ersetzt: das Sheet-Layout steht
+     im Map-View-Block (Story 1.3). Das Padding bleibt — alle Views nutzen es;
+     die Karte hebt es dort per Negativ-Margin wieder auf. */
   main.content {
     padding: 1rem 0.9rem 2.4rem;
   }
@@ -1224,7 +1560,10 @@ table.shelter-table tr.sektor-inaktiv td {
   font-size: 0.75rem;
 }
 
-/* --- Karte: Etappen-Nummern und Legende ------------------------------- */
+/* --- Etappen-Nummern der Routen-VORSCHAU (RouteMap.tsx / AltPreview) ---
+   Die grosse Karte nutzt seit Story 1.3 die neue .stage-capsule; diese
+   Rezepte bleiben UNVERÄNDERT für die eingefrorene Tagesansicht-Vorschau
+   (Migration ist eine spätere Story). */
 
 .stage-number {
   width: 1.55rem;
@@ -1257,45 +1596,6 @@ table.shelter-table tr.sektor-inaktiv td {
   padding: 0 0.4rem;
   border-radius: 0.8rem;
   letter-spacing: 0.02em;
-}
-
-.marker-pin.muted {
-  background: var(--grau);
-  opacity: 0.5;
-  transform: scale(0.7);
-}
-
-.legend {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-  font-size: 0.78rem;
-  color: var(--navy-soft);
-}
-.legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.legend-line {
-  display: inline-block;
-  width: 1.6rem;
-  height: 0;
-}
-.legend-line.solid {
-  height: 3px;
-  border-radius: 2px;
-}
-.legend-line.dashed {
-  border-top: 3px dashed currentColor;
-}
-
-.itinerary-card.past {
-  opacity: 0.6;
-}
-.itinerary-card.harbour {
-  border-style: dashed;
 }
 
 /* ---- Persistenz-Annahme (AD-13 revised) ------------------------------------
@@ -1506,23 +1806,6 @@ table.shelter-table tr.sektor-inaktiv td {
 
 .route-map {
   margin: 0.4rem 0 0.8rem;
-}
-
-/* Einblend-Schalter der Alternativen in der Karten-Seitenleiste — gleicher
-   Block wie die Windfiedern: Blickentscheidung, keine Törnentscheidung. */
-.alt-toggles {
-  border-top: 1px solid var(--hairline);
-  margin-top: 0.35rem;
-  padding-top: 0.45rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.alt-toggles .beschreibung {
-  font-size: 0.68rem;
-  font-style: italic;
-  margin: 0;
 }
 
 /* --- Aufklappbare Belege ------------------------------------------------

@@ -11,6 +11,7 @@ import { PlaceDetailView } from '../ui/views/PlaceDetailView.tsx';
 import { SignInView } from '../ui/views/SignInView.tsx';
 import { AvatarMenu } from '../ui/components/AvatarMenu.tsx';
 import { DayViewSkeleton } from '../ui/components/DayViewSkeleton.tsx';
+import { MapViewSkeleton } from '../ui/components/MapViewSkeleton.tsx';
 import { staleForecastLabel } from '../ui/dayViewModel.ts';
 import { formatStamp } from '../ui/format.ts';
 import '../ui/styles.css';
@@ -159,6 +160,8 @@ function Shell() {
           !libraryQuery.isError && !forecastQuery.isError ? (
             view.kind === 'tag' ? (
               <DayViewSkeleton />
+            ) : view.kind === 'karte' ? (
+              <MapViewSkeleton />
             ) : (
               <div className="hint-panel">Lade Daten …</div>
             )

@@ -37,6 +37,16 @@ export function formatTripDayWeekdayShort(
   );
 }
 
+/**
+ * "Sa 8.8." — Karten-Etappenkarten (Story 1.3). Zusammengesetzt aus dem
+ * bestehenden Kurz-Wochentag und "d.M." ohne führende Nullen — kein neues
+ * Intl-Muster (die ICU liefert den de-DE-Kurz-Wochentag ohne Punkt).
+ */
+export function formatTripDayShort(tripStartDate: string, day: number): string {
+  const [, m, d] = dateForTripDay(tripStartDate, day).split('-');
+  return `${formatTripDayWeekdayShort(tripStartDate, day)} ${Number(d)}.${Number(m)}.`;
+}
+
 const rangeFmt = new Intl.DateTimeFormat('de-DE', {
   day: 'numeric',
   month: 'long',

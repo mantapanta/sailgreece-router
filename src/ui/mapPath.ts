@@ -150,6 +150,11 @@ export interface StageEndMarker {
   stops: { day: number; stageNumber: number | null }[];
   /** "4 · 8" — was auf der Markierung steht. */
   label: string;
+  /**
+   * Zielhafen des ERSTEN Anlaufs — das Aktivierungsziel der Kapsel
+   * (Story 1.3); null, wenn die Geometrie nicht an einem Platz endet.
+   */
+  endPlaceId: string | null;
 }
 
 export function stageEndMarkers(
@@ -161,8 +166,10 @@ export function stageEndMarkers(
   const order: string[] = [];
 
   for (const stage of [...stages].sort((a, b) => a.day - b.day)) {
-    const path = stagePath(stage, legsById, snapshot);
-    const end = path[path.length - 1];
+    // stagePoints statt stagePath: dieselben Positionen, aber der letzte
+    // Punkt trägt sein `placeId` — das Aktivierungsziel der Kapsel.
+    const pts = stagePoints(stage, legsById, snapshot);
+    const end = pts[pts.length - 1];
     if (!end) continue;
     const existing = byIsland[stage.toIslandId];
     if (existing) {
@@ -173,10 +180,11 @@ export function stageEndMarkers(
       key: `stage-end-${stage.toIslandId}`,
       // Die Position des ERSTEN Anlaufs: die Markierung soll nicht springen,
       // wenn der Rückweg eine andere Bucht derselben Insel nimmt.
-      position: end,
+      position: end.position,
       islandId: stage.toIslandId,
       stops: [{ day: stage.day, stageNumber: stage.stageNumber }],
       label: '',
+      endPlaceId: end.kind === 'platz' ? (end.placeId ?? null) : null,
     };
     order.push(stage.toIslandId);
   }
