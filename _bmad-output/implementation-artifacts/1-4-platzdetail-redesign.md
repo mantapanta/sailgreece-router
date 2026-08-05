@@ -4,7 +4,7 @@ baseline_commit: a60fca6
 
 # Story 1.4: Platzdetail redesign
 
-Status: in-progress
+Status: review
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
@@ -404,8 +404,8 @@ Zurück), refresh, sign-out.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — `placeViewModel.ts` + `formatWaveM` + tests (write first)** (AC: 13)
-  - [ ] 1.1 Implement `sectorTiles` / `nightWindowLabel` / `nightVerdictLine` per the
+- [x] **Task 1 — `placeViewModel.ts` + `formatWaveM` + tests (write first)** (AC: 13)
+  - [x] 1.1 Implement `sectorTiles` / `nightWindowLabel` / `nightVerdictLine` per the
         reference in Dev Notes; `placeViewModel.test.ts` red → green (cases: wrap sector
         330–60 covers N; full-circle 0–360 covers all 8; uncovered → offen/null; with
         `DEFAULT_PARAMS` (meltemi 30, Reserve 3): limit 35 → gut, limit 33 → gut
@@ -413,55 +413,55 @@ Zurück), refresh, sign-out.
         most-generous-wins overlap + null; window label zero-padding "18:00–09:00";
         verdict-line fallbacks for gruen / unbewertet / undefined night, reason
         passthrough).
-  - [ ] 1.2 `formatWaveM` in `format.ts`; append `format.test.ts` cases ("0,3 m", "1,0 m",
+  - [x] 1.2 `formatWaveM` in `format.ts`; append `format.test.ts` cases ("0,3 m", "1,0 m",
         null → "–"). Do not modify existing cases.
-- [ ] **Task 2 — CSS: Platzdetail redesign block + deletions** (AC: 1–8, 11i)
-  - [ ] 2.1 Add the reference blocks (Dev Notes) under
+- [x] **Task 2 — CSS: Platzdetail redesign block + deletions** (AC: 1–8, 11i)
+  - [x] 2.1 Add the reference blocks (Dev Notes) under
         `/* ---- place detail (redesign, Story 1.4) ---- */`: `.place-card`, `.hero` +
         tier/scrim/caption/chip classes, `.hero-legende`, `.place-head`/`.place-kicker`/
         `.place-title-row`/`.place-title`/`.ampel-sub`/`.place-desc`, `.night-head`/
         `.night-window`, `.quality-row`/`.meter`/`.quality-value`, `.shelter-grid`/
         `.sector` + three tint modifiers, `.shelter-legend`/`.shelter-source`.
-  - [ ] 2.2 Delete (grep each against `.tsx` first): `.place-hero` block, `shelter-table`
+  - [x] 2.2 Delete (grep each against `.tsx` first): `.place-hero` block, `shelter-table`
         block + `.sektor-inaktiv`, `.badge-info`, `.warnung`, `.back-link`, the legacy
         `.card` block (~518–556), the dead `.alt-route button.secondary, .option-row
         button.secondary` rule. Keep `.badges`/`.badge`/`.badge-doppelschlag`/`.versal`/
         `.reasons`/`.beschreibung`-scoped rules — DayView consumes them.
-- [ ] **Task 3 — PlaceDetailView rebuild** (AC: 1, 2, 3, 4, 5, 6, 7, 8)
-  - [ ] 3.1 Restructure `PlaceHero` → hero-inside-card (3 tiers, shared scrim + caption
+- [x] **Task 3 — PlaceDetailView rebuild** (AC: 1, 2, 3, 4, 5, 6, 7, 8)
+  - [x] 3.1 Restructure `PlaceHero` → hero-inside-card (3 tiers, shared scrim + caption
         component, fallback chip, satellite legende as in-card footnote, marker `title`
         deleted); keep the source-ranking doc comment + the pointer-events rationale.
-  - [ ] 3.2 Title block (kicker, `h1` display, AmpelBadge, verdict sub-line via
+  - [x] 3.2 Title block (kicker, `h1` display, AmpelBadge, verdict sub-line via
         `nightVerdictLine` + `nightWindowLabel`, description) + warn-notes.
-  - [ ] 3.3 Nacht-Ampel card (`.stat-grid` reuse, wave honesty caption replacing the
+  - [x] 3.3 Nacht-Ampel card (`.stat-grid` reuse, wave honesty caption replacing the
         `title`, reasons list, day/date caption).
-  - [ ] 3.4 Qualitäten meters (5-dot, `role="img"` aria-labels, "n von 5"); delete
+  - [x] 3.4 Qualitäten meters (5-dot, `role="img"` aria-labels, "n von 5"); delete
         `stars()`.
-  - [ ] 3.5 Schutzprofil grid via `sectorTiles(place.shelter, snapshot.params)` +
+  - [x] 3.5 Schutzprofil grid via `sectorTiles(place.shelter, snapshot.params)` +
         captions/legend/source footnote.
-  - [ ] 3.6 Zurück → `.btn-text` (both branches); invalid branch per AC 8; heading pass
+  - [x] 3.6 Zurück → `.btn-text` (both branches); invalid branch per AC 8; heading pass
         (h1/h2, `.versal` gone from this view).
-- [ ] **Task 4 — SignInView / auth restyle** (AC: 9)
-  - [ ] 4.1 JSX: button `className="btn-secondary google-button"`; `role="alert"` on the
+- [x] **Task 4 — SignInView / auth restyle** (AC: 9)
+  - [x] 4.1 JSX: button `className="btn-secondary google-button"`; `role="alert"` on the
         two error panels if missing. Flow/logo untouched.
-  - [ ] 4.2 CSS: rewrite `.auth-gate`/`.auth-card`/`.auth-brand`(+small)/`.auth-lead`;
+  - [x] 4.2 CSS: rewrite `.auth-gate`/`.auth-card`/`.auth-brand`(+small)/`.auth-lead`;
         replace `.google-button` recipe with the width/gap supplement; keep
         `.auth-card code` (restyled minimal). AuthGate card inherits (verify visually).
-- [ ] **Task 5 — StageEditor delta** (AC: 10) — exactly VERIFY 5's four points, nothing
+- [x] **Task 5 — StageEditor delta** (AC: 10) — exactly VERIFY 5's four points, nothing
       else in DayView.
-- [ ] **Task 6 — Wind-barb aria-label** (AC: 12) — one-const/two-attributes edit in
+- [x] **Task 6 — Wind-barb aria-label** (AC: 12) — one-const/two-attributes edit in
       MapView's `WindLayer`; keep the existing comment about the number living in the
       tooltip, extend it to name the aria-label.
-- [ ] **Task 7 — Alias retirement loop** (AC: 11)
-  - [ ] 7.1 After Tasks 2–4: retarget the two surviving `font-family: var(--serif)`
+- [x] **Task 7 — Alias retirement loop** (AC: 11)
+  - [x] 7.1 After Tasks 2–4: retarget the two surviving `font-family: var(--serif)`
         declarations (`h1,h2,h3` and `.option-name`) → `var(--font-sans)`
         (computed-identical).
-  - [ ] 7.2 Run the loop (Dev Notes grep); delete zero-consumer alias lines
+  - [x] 7.2 Run the loop (Dev Notes grep); delete zero-consumer alias lines
         (expected: `--ink`, `--sans`, `--serif`); update the alias-block comment; record
         kept aliases + counts in the Dev Agent Record as remaining debt.
-- [ ] **Task 8 — Verify DoD** (AC: 14)
-  - [ ] 8.1 All DoD greps; `npm test`; `npm run build`.
-  - [ ] 8.2 Manual smoke per AC 14(d) — **if headless, substitute build + greps and hand
+- [x] **Task 8 — Verify DoD** (AC: 14)
+  - [x] 8.1 All DoD greps; `npm test`; `npm run build`.
+  - [x] 8.2 Manual smoke per AC 14(d) — **if headless, substitute build + greps and hand
         the browser smoke list to the reviewer** (same protocol as 1.1–1.3).
 
 ## Dev Notes
@@ -1207,24 +1207,111 @@ by this epic.
 
 ### Agent Model Used
 
-_(to be filled by the dev agent)_
+claude-fable-5 (BMad dev-story)
 
 ### Debug Log References
 
-_(to be filled by the dev agent — include the baseline test count, the TDD red→green runs
-for placeViewModel/formatWaveM, and the pasted alias-retirement loop output)_
+- Baseline on branch before any change: `npm test` → 27 files / 433 tests, all green.
+- TDD Task 1: `placeViewModel.test.ts` written first → red (module missing, 1 failed
+  file); after implementing `placeViewModel.ts` + `formatWaveM` → `npm test` 28 files /
+  452 tests green (433 + 16 placeViewModel + 3 formatWaveM append-only cases).
+- Final: all DoD greps clean (negative block empty; positive block all OK,
+  `btn-secondary` in DayView = 8, `title=` in MapView = 1 with `aria-label={barbText}`,
+  TS raw-hex grep empty outside tokens.ts/SignInView); `npm test` 452 green;
+  `npm run build` (tsc --noEmit && vite build) green (pre-existing >500 kB chunk
+  warning only).
+- Alias-retirement loop output (run AFTER all deletions + the two serif retargets):
+
+  ```
+  --creme: 7 consumers
+  --creme-card: 4 consumers
+  --navy: 10 consumers
+  --navy-soft: 7 consumers
+  --ink: 0 consumers
+  --muted: 6 consumers
+  --hairline: 16 consumers
+  --gruen: 4 consumers
+  --gelb: 3 consumers
+  --rot: 2 consumers
+  --grau: 2 consumers
+  --serif: 0 consumers
+  --sans: 0 consumers
+  ```
+
+  Retired (deleted from the alias block): `--ink`, `--serif`, `--sans` — exactly the
+  VERIFY-6 expectation. `grep -n -- '--ink:\|--sans:\|--serif:' src/ui/styles.css` → empty.
 
 ### Completion Notes List
 
-_(to be filled by the dev agent — list every deviation with its rationale; explicitly
-record: which aliases were retired vs. kept + consumer counts (remaining debt), the
-manual-smoke substitution if headless (build + greps + reviewer smoke list per AC 14d),
-and the resolution of each TAG-FOR-PHILIPP item if any got decided mid-implementation)_
+1. **All 14 ACs implemented.** Sector-tile ratings are the domain's own `windHourAmpel`
+   probed at `params.meltemiWorstCase.twsKn` — no UI threshold invented; boundary tests
+   (limit 35/33 → gut, 30 → mäßig, 20 → schwach with DEFAULT_PARAMS) pass.
+2. **Deviation (a11y floor, sanctioned by the story): `.back-row` wrapper added.** The
+   bare `.btn-text` recipe is < 44px tall; per the accessibility-floor note ("min-height
+   via a `.back-row` wrapper is fine, no new recipe") both Zurück buttons are wrapped in
+   `<div className="back-row">` with a scoped `min-height: 44px` rule in the place-detail
+   CSS block. No new button recipe.
+3. **Deviation (minor): legacy `.google-button svg` white-chip rule not carried over.**
+   The old navy button needed a white plate behind the G-mark; on the white
+   `.btn-secondary` it is redundant. The GoogleMark SVG itself is untouched.
+4. **Aliases kept as remaining debt** (consumers counted after all 1.4 deletions, all
+   owned by the frozen DayView sub-surfaces — calc panel, option/alt rows, badges,
+   state/leg chips, `.versal`, `.reasons`, stage-map): `--creme` 7, `--creme-card` 4,
+   `--navy` 10, `--navy-soft` 7, `--muted` 6, `--hairline` 16, `--gruen` 4, `--gelb` 3,
+   `--rot` 2, `--grau` 2. Alias-block header comment updated to name these surfaces.
+5. **Serif retarget:** the two surviving `font-family: var(--serif)` declarations
+   (`h1,h2,h3` and `.option-name`) were retargeted to `var(--font-sans)`
+   (computed-identical — `--serif` already resolved to `--font-sans`), then `--serif`
+   retired.
+6. **Manual smoke substituted (headless environment, protocol of 1.1–1.3):** build +
+   full DoD greps ran green; the browser smoke list for the reviewer is AC 14(d)
+   verbatim — Platzdetail at 390px/desktop from berth line AND map pin; hero tiers
+   photo (needs a photoUrl fixture) / satellite (env set: scrim + caption over a
+   pannable map, marker without tooltip, legende footnote inside the card) / gradient
+   (env unset: chip "Kein Foto verfügbar"); radius clipping; verdict sub-line +
+   warn-notes; night stat tiles + reasons; quality meters incl. a 0 value ("0 von 5",
+   zero filled dots); sector grid vs. the legend's exact curated sectors; "← Zurück"
+   returns to the exact prior view from both entry paths; invalid-place branch (fake
+   id); restyled sign-in gate (Google flow works, AuthGate "Anmeldung wird geprüft …"
+   card inherits); StageEditor failed apply moves focus to the error (selects carry
+   `aria-describedby`); wind-barb announces via aria-label (devtools a11y pane).
+7. **TAG-FOR-PHILIPP items:** none decided differently mid-implementation — implemented
+   exactly as the story resolved them (probe wind 30 kn, word "schwach", rot tint shared
+   by schwach/offen with differing visible text, NE/E/SE notation, caption
+   "{Name} — {Typ}", plain "← Zurück", centered auth card). All remain open for his
+   confirmation as listed.
+8. Preserved verbatim: the hero source-ranking doc comment and pointer-events rationale
+   (moved into the rebuilt PlaceHero/CSS), the `resolveMapsEnv` call + Story-1.3
+   comment, the module-head FR5/CruisersWiki attribution note, the two shelter honesty
+   paragraphs, the satellite Luftbild note, the invalid-place sentence (+ the NFR6
+   "konservativ behandeln" addition per AC 8).
 
 ### File List
 
-_(to be filled by the dev agent)_
+- `src/ui/placeViewModel.ts` (new — pure helpers: sectorTiles, nightWindowLabel,
+  nightVerdictLine)
+- `src/ui/__tests__/placeViewModel.test.ts` (new — 16 tests)
+- `src/ui/format.ts` (+ formatWaveM)
+- `src/ui/__tests__/format.test.ts` (append-only — 3 formatWaveM cases)
+- `src/ui/views/PlaceDetailView.tsx` (full rebuild per AC 1–8)
+- `src/ui/views/SignInView.tsx` (button class + role="alert" ×2 only)
+- `src/ui/views/DayView.tsx` (StageEditor delta only — error id/tabIndex/ref/focus,
+  aria-describedby ×2, btn-secondary ×3, Standard label + title removal)
+- `src/ui/views/MapView.tsx` (wind-barb role="img" + aria-label via shared const only)
+- `src/ui/styles.css` (place-detail + auth redesign blocks in; legacy .card block,
+  legacy auth recipes, .place-hero*, shelter-table + .sektor-inaktiv, .badge-info,
+  .warnung, .back-link, dead .alt-route/.option-row button.secondary rule out; serif
+  retargets; aliases --ink/--serif/--sans retired; alias-block comment updated)
 
 ## Change Log
 
-_(to be filled by the dev agent)_
+- Story 1.4 implemented: Platzdetail rebuilt to the Consumer-Warm spine (fused place
+  card with 3-tier hero ladder + scrim/caption, title block with h1 + Nacht-AmpelBadge +
+  verdict—reason sub-line, warn-notes without ⚠, Nacht-Ampel stat tiles with visible
+  wave honesty caption, 5-dot ink quality meters, Schutzprofil 8-sector tile grid rated
+  by the domain's windHourAmpel at the Meltemi worst case, curated-sector legend +
+  CruisersWiki source footnote). Epic close-out: auth card restyled to the card language
+  (Google flow untouched), StageEditor apply-error wired (focus + aria-describedby) and
+  its buttons on .btn-secondary, wind barb gains role="img"/aria-label, legacy aliases
+  --ink/--serif/--sans retired (10 kept as documented debt of the frozen DayView
+  sub-surfaces). 452 tests green, build green, all DoD greps clean.

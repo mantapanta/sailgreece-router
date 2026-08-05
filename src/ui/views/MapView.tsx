@@ -151,26 +151,31 @@ function WindLayer({
 
   return (
     <>
-      {field.shown.map((p) => (
-        <AdvancedMarker
-          key={`wind-${p.key}`}
-          position={upwindOffset(p.lat, p.lon, p.dirDeg)}
-          zIndex={5}
-        >
-          {/* Die Zahl neben der Fieder ist weg: die Fiedern kodieren die
-              Stärke bereits (5 kn je halbe Fieder), die Ziffer sagte dasselbe
-              ein zweites Mal. Sie steht weiter im Tooltip, wo sie niemanden
-              zudeckt. */}
-          <div
-            className="wind-barb"
-            title={`Wind aus ${compass(p.dirDeg)} (${Math.round(p.dirDeg)}°), ${formatKn(
-              p.knots,
-            )}`}
+      {field.shown.map((p) => {
+        // Die Zahl neben der Fieder ist weg: die Fiedern kodieren die Stärke
+        // bereits (5 kn je halbe Fieder), die Ziffer sagte dasselbe ein
+        // zweites Mal. Der Wert steht im aria-label (Bedeutung nie nur im
+        // Tooltip, Story 1.4) und im selben Text als Hover-Tooltip.
+        const barbText = `Wind aus ${compass(p.dirDeg)} (${Math.round(p.dirDeg)}°), ${formatKn(
+          p.knots,
+        )}`;
+        return (
+          <AdvancedMarker
+            key={`wind-${p.key}`}
+            position={upwindOffset(p.lat, p.lon, p.dirDeg)}
+            zIndex={5}
           >
-            <WindBarb dirDeg={p.dirDeg} knots={p.knots} size={34} />
-          </div>
-        </AdvancedMarker>
-      ))}
+            <div
+              className="wind-barb"
+              role="img"
+              aria-label={barbText}
+              title={barbText}
+            >
+              <WindBarb dirDeg={p.dirDeg} knots={p.knots} size={34} />
+            </div>
+          </AdvancedMarker>
+        );
+      })}
     </>
   );
 }

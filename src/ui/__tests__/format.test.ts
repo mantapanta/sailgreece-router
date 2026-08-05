@@ -3,6 +3,7 @@ import {
   compass,
   formatAthensTime,
   formatTripDayShort,
+  formatWaveM,
   formatWindFrom,
   pointOfSail,
 } from '../format.ts';
@@ -94,5 +95,23 @@ describe('formatTripDayShort — Tag-Tag der Karten-Etappenkarten', () => {
 
   it('zählt den Törntag über den Kalender weiter (Tag 2)', () => {
     expect(formatTripDayShort('2026-08-08', 2)).toBe('So 9.8.');
+  });
+});
+
+/**
+ * Story 1.4 — Wellenwerte mit deutschem Dezimalkomma, eine Nachkommastelle,
+ * "–" statt einer leeren Kachel (dieselbe Konvention wie formatKn/formatHours).
+ */
+describe('formatWaveM — Wellenhöhe/-grenze in Metern', () => {
+  it('formatiert mit Dezimalkomma und einer Nachkommastelle', () => {
+    expect(formatWaveM(0.3)).toBe('0,3 m');
+  });
+
+  it('zeigt auch ganze Meter mit Nachkommastelle ("1,0 m")', () => {
+    expect(formatWaveM(1)).toBe('1,0 m');
+  });
+
+  it('ohne Wert kein erfundener Wellenwert', () => {
+    expect(formatWaveM(null)).toBe('–');
   });
 });

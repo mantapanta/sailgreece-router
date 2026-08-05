@@ -101,6 +101,12 @@ export function formatKn(v: number | null): string {
   return `${Math.round(v)} kn`;
 }
 
+/** Wellenhöhe/-grenze mit deutschem Dezimalkomma ("0,3 m") — "–" ohne Wert. */
+export function formatWaveM(m: number | null): string {
+  if (m === null) return '–';
+  return `${m.toFixed(1).replace('.', ',')} m`;
+}
+
 export function formatDeg(v: number | null): string {
   if (v === null) return '–';
   return `${Math.round(v)}°`;

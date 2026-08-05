@@ -257,6 +257,7 @@ function StageEditor({
 }) {
   const { editStage, releasePin, setStopHours } = usePlanning();
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
   const placesOnIsland = snapshot.library.places.filter(
     (p) => p.islandId === stage.toIslandId,
   );
@@ -278,6 +279,9 @@ function StageEditor({
       setError(
         'Mit diesem Ziel lässt sich kein Round-Trip bauen — es führt keine Etappe der Bibliothek dorthin.',
       );
+      // Fokus auf die Fehlermeldung, sobald sie gerendert ist (EXPERIENCE
+      // StageEditor: aria-describedby + Fokus zum Fehler).
+      requestAnimationFrame(() => errorRef.current?.focus());
       return;
     }
     onClose();
@@ -290,6 +294,7 @@ function StageEditor({
         <select
           value={stage.kind === 'harbour' ? '' : stage.toIslandId}
           onChange={(e) => apply(e.target.value || null)}
+          aria-describedby={error ? 'stage-editor-error' : undefined}
         >
           <option value="">— Hafentag: hier bleiben —</option>
           {selectableIslands.map((i) => (
@@ -312,6 +317,7 @@ function StageEditor({
             onChange={(e) =>
               apply(stage.toIslandId, e.target.value || undefined)
             }
+            aria-describedby={error ? 'stage-editor-error' : undefined}
           >
             <option value="">— Vorschlag der App übernehmen —</option>
             {placesOnIsland.map((p) => (
@@ -339,11 +345,10 @@ function StageEditor({
           />
           <button
             type="button"
-            className="secondary"
-            title={`Zurück auf den Standardwert (${snapshot.params.stopHoursDefault} h)`}
+            className="btn-secondary"
             onClick={() => setStopHours(stage.day, null)}
           >
-            Standard
+            Standard ({snapshot.params.stopHoursDefault} h)
           </button>
         </label>
       )}
@@ -358,7 +363,7 @@ function StageEditor({
         {stage.pinned && (
           <button
             type="button"
-            className="secondary"
+            className="btn-secondary"
             onClick={() => {
               releasePin(stage.day);
               onClose();
@@ -367,12 +372,18 @@ function StageEditor({
             Festlegung lösen
           </button>
         )}
-        <button type="button" className="secondary" onClick={onClose}>
+        <button type="button" className="btn-secondary" onClick={onClose}>
           Schließen
         </button>
       </div>
       {error && (
-        <div className="error-panel" role="alert">
+        <div
+          className="error-panel"
+          role="alert"
+          id="stage-editor-error"
+          tabIndex={-1}
+          ref={errorRef}
+        >
           {error}
         </div>
       )}
