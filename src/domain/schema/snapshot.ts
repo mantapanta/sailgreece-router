@@ -202,6 +202,20 @@ export interface PointPassage {
 
 export interface LegAssessment {
   legId: string;
+  /**
+   * Die Etappe, wie sie für dieses Urteil wirklich gesegelt wurde: verankert
+   * an den Plätzen der Plankette und mit landfreiem Kurs (domain/legGeometry.ts).
+   *
+   * Sie steht hier, weil Rechnung und Karte sonst zwei Geometrien hätten. Die
+   * Karte zeichnete die kuratierte Luftlinie — quer über Syros —, während die
+   * Rechnung längs eines anderen Kurses lief. Ein Urteil, dessen Kurs man nicht
+   * nachzeichnen kann, ist nicht nachvollziehbar (FR30).
+   *
+   * Null nur, wenn die Etappe gar nicht auflösbar war (tote Referenz nach
+   * einem Reimport) — dann gibt es keinen Kurs, und die Karte lässt die Lücke
+   * stehen statt eine Linie zu erfinden.
+   */
+  sailedLeg: Leg | null;
   day: number;
   ampel: Ampel;
   sailHours: number | null;
@@ -345,6 +359,13 @@ export interface StageAssessment {
    * Null Etappen oder ein Hafentag ergeben 0.
    */
   stopHoursTotal: number;
+  /**
+   * Inseln, die von der VORHERIGEN Plan-Insel aus als Tagesziel in Frage
+   * kommen (domain/reach.ts): 100 sm raumschots, 50 sm gegenan. Das
+   * Ziel-Dropdown zeigt NUR diese — eine Insel drei Tagesreisen entfernt ist
+   * kein Tagesziel (Feedback 2026-08-05).
+   */
+  reachableIslandIds: string[];
 }
 
 /**

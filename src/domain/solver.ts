@@ -288,20 +288,36 @@ export function planFromPacking(
 /**
  * The normative validity check. Conditions (1), (2), (2') and (3) — nothing
  * else makes a plan invalid, and none of them is skipped.
+ *
+ * `opts.sailedLegsByDay` übergibt die gesegelte Kette (legGeometry.ts): dieselben
+ * Etappen, aber verankert an den Plätzen der Kette und mit landfreiem Kurs. Die
+ * Bewertung übergibt sie, damit Gültigkeit und Anzeige dasselbe prüfen. Die
+ * SUCHE (packLegs, Kandidaten) rechnet weiter mit den kuratierten Etappen: dort
+ * steht der Liegeplatz jedes Tages noch nicht fest, und ein Suchraum, der von
+ * der Platzwahl abhängt, wäre nicht mehr deterministisch. Was die Suche
+ * vorschlägt, prüft die Bewertung anschliessend gegen den wirklichen Kurs.
  */
-export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidity {
+export function validatePlan(
+  plan: Plan,
+  snapshot: PlanningSnapshot,
+  opts: { sailedLegsByDay?: Map<number, (Leg | undefined)[]> } = {},
+): PlanValidity {
   const { params, library } = snapshot;
   const legs = legLibrary(snapshot);
   const frame = deadlineFrame(params);
   const violations: Violation[] = [];
   let horizonDependent = false;
 
+  /** Die Etappe des Tages, wie sie gesegelt wird — sonst die kuratierte. */
+  const legOfStage = (day: number, index: number, legId: string): Leg | undefined =>
+    opts.sailedLegsByDay?.get(day)?.[index] ?? legs.get(legId);
+
   // (1) every stage inside the reliable horizon holds the FR16 thresholds.
   for (const stage of stagesOf(plan)) {
     let offset = 0;
     const stopHours = stopHoursForDay(snapshot, stage.day);
-    for (const legId of stage.legIds) {
-      const leg = legs.get(legId);
+    for (const [legIdx, legId] of stage.legIds.entries()) {
+      const leg = legOfStage(stage.day, legIdx, legId);
       if (!leg) {
         // Dead reference after a reimport: unassessable, not a threshold
         // violation — the plan survives and the skipper repairs it (AD-12).
@@ -369,8 +385,8 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
   // (second week), and each one only in light wind — the family sleeps through
   // it, so it is admissible only when the sea is smooth.
   const nightStages = stagesOf(plan).filter((s) =>
-    s.legIds.some((legId) => {
-      const leg = legs.get(legId);
+    s.legIds.some((legId, legIdx) => {
+      const leg = legOfStage(s.day, legIdx, legId);
       if (!leg) return false;
       return assessLeg(leg, s.day, snapshot).nightLeg === true;
     }),
@@ -379,7 +395,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
     violations.push({
       kind: 'budget',
       day: nightStages[params.nightLegMaxPerTrip]?.day ?? null,
-      text: `${nightStages.length} Nachtetappen — erlaubt sind ${params.nightLegMaxPerTrip} pro Törn (FR16)`,
+      text: `${nightStages.length} Nachtetappen — erlaubt sind ${params.nightLegMaxPerTrip} pro Törn`,
     });
   }
   for (const s of nightStages) {
@@ -387,11 +403,11 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       violations.push({
         kind: 'budget',
         day: s.day,
-        text: `Nachtetappe an Tag ${s.day} — erst ab Tag ${params.nightLegEarliestDay} zulässig (FR16: zweite Woche)`,
+        text: `Nachtetappe an Tag ${s.day} — erst ab Tag ${params.nightLegEarliestDay} zulässig (zweite Woche)`,
       });
     }
-    for (const legId of s.legIds) {
-      const leg = legs.get(legId);
+    for (const [legIdx, legId] of s.legIds.entries()) {
+      const leg = legOfStage(s.day, legIdx, legId);
       if (!leg) continue;
       const a = assessLeg(leg, s.day, snapshot);
       if (a.nightLeg !== true || a.avgTwsKn === null) continue;
@@ -399,7 +415,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
         violations.push({
           kind: 'budget',
           day: s.day,
-          text: `Nachtetappe an Tag ${s.day} bei ${Math.round(a.avgTwsKn)} kn — nur unter ${params.nightLegMaxTwsKn} kn zulässig (FR16)`,
+          text: `Nachtetappe an Tag ${s.day} bei ${Math.round(a.avgTwsKn)} kn — nur unter ${params.nightLegMaxTwsKn} kn zulässig`,
         });
       }
     }
@@ -453,8 +469,8 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       let arrivalAssumed = false;
       let offset = 0;
       const arrivalStopHours = stopHoursForDay(snapshot, arrivingStage.day);
-      for (const legId of arrivingStage.legIds) {
-        const leg = legs.get(legId);
+      for (const [legIdx, legId] of arrivingStage.legIds.entries()) {
+        const leg = legOfStage(arrivingStage.day, legIdx, legId);
         if (!leg) {
           arrival = null;
           break;
@@ -591,15 +607,15 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       violations.push({
         kind: 'pickup',
         day: pickupDay,
-        text: `Am Gäste-Zustiegstag (Törntag ${pickupDay}) ist ${islandId} nicht per Fähre erreichbar (FR31)`,
+        text: `Am Gäste-Zustiegstag (Törntag ${pickupDay}) ist ${islandId} nicht per Fähre erreichbar`,
       });
     } else if (pickupEntry.kind === 'stage') {
       // Arriving that same day is allowed only before the ferry cut-off.
       let arrival = params.departureHourAthens;
       let arrivalKnown = true;
       let pickupAssumed = false;
-      for (const legId of pickupEntry.legIds) {
-        const leg = legs.get(legId);
+      for (const [legIdx, legId] of pickupEntry.legIds.entries()) {
+        const leg = legOfStage(pickupDay, legIdx, legId);
         const a = leg ? assessLeg(leg, pickupDay, snapshot) : null;
         if (a?.basis === 'annahme') pickupAssumed = true;
         // An unassessable leg (beyond the horizon, or a dead reference) must

@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert.",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin.",
   "legs": [
     {
       "id": "athen--attika",
@@ -9,7 +9,20 @@
       "fromPlaceId": "athen-alimos",
       "toPlaceId": "attika-sounion",
       "distanceNm": 22,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 37.8058,
+          "lon": 23.7601
+        },
+        {
+          "lat": 37.6699,
+          "lon": 23.9323
+        },
+        {
+          "lat": 37.6501,
+          "lon": 24.005
+        }
+      ],
       "windWarnings": [
         "Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"
       ]
@@ -26,6 +39,10 @@
         {
           "lat": 37.79,
           "lon": 23.76
+        },
+        {
+          "lat": 37.6699,
+          "lon": 23.9323
         },
         {
           "lat": 37.635,
@@ -47,7 +64,12 @@
       "fromPlaceId": "attika-sounion",
       "toPlaceId": "kea-vourkari",
       "distanceNm": 15,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 37.64,
+          "lon": 24.1062
+        }
+      ],
       "windWarnings": [
         "Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"
       ]
@@ -59,7 +81,24 @@
       "fromPlaceId": "folegandros-karavostasi",
       "toPlaceId": "milos-adamas",
       "distanceNm": 34,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 36.641,
+          "lon": 24.9274
+        },
+        {
+          "lat": 36.6613,
+          "lon": 24.8796
+        },
+        {
+          "lat": 36.7734,
+          "lon": 24.521
+        },
+        {
+          "lat": 36.7531,
+          "lon": 24.4784
+        }
+      ],
       "windWarnings": [
         "Langer offener Schlag (34 sm), keine Zwischenoption"
       ]
@@ -71,7 +110,16 @@
       "fromPlaceId": "ios-ormos",
       "toPlaceId": "santorin-vlychada",
       "distanceNm": 21,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 36.4328,
+          "lon": 25.3178
+        },
+        {
+          "lat": 36.3481,
+          "lon": 25.361
+        }
+      ],
       "windWarnings": []
     },
     {
@@ -90,6 +138,10 @@
         {
           "lat": 37.635,
           "lon": 24.02
+        },
+        {
+          "lat": 37.6699,
+          "lon": 23.9323
         },
         {
           "lat": 37.79,
@@ -117,8 +169,12 @@
           "lon": 24.24
         },
         {
-          "lat": 37.53,
-          "lon": 24.285
+          "lat": 37.518,
+          "lon": 24.2723
+        },
+        {
+          "lat": 37.4157,
+          "lon": 24.3597
         }
       ],
       "windWarnings": []
@@ -130,7 +186,20 @@
       "fromPlaceId": "kea-vourkari",
       "toPlaceId": "syros-ermoupoli",
       "distanceNm": 34,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 37.6899,
+          "lon": 24.3608
+        },
+        {
+          "lat": 37.5087,
+          "lon": 24.9213
+        },
+        {
+          "lat": 37.4879,
+          "lon": 24.9528
+        }
+      ],
       "windWarnings": [
         "Kafireas-/Andros-Sektor: Beschleunigung, Modellwerte zu niedrig"
       ]
@@ -142,7 +211,24 @@
       "fromPlaceId": "kythnos-loutra",
       "toPlaceId": "athen-alimos",
       "distanceNm": 48,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 37.4846,
+          "lon": 24.4444
+        },
+        {
+          "lat": 37.5182,
+          "lon": 24.2873
+        },
+        {
+          "lat": 37.6699,
+          "lon": 23.9323
+        },
+        {
+          "lat": 37.8058,
+          "lon": 23.7601
+        }
+      ],
       "windWarnings": [
         "Düse Kea-Kanal auf dem letzten Schlag; langer Törn (48 sm)"
       ]
@@ -156,8 +242,12 @@
       "distanceNm": 18,
       "waypoints": [
         {
-          "lat": 37.53,
-          "lon": 24.285
+          "lat": 37.4157,
+          "lon": 24.3597
+        },
+        {
+          "lat": 37.518,
+          "lon": 24.2723
         },
         {
           "lat": 37.6,
@@ -179,8 +269,12 @@
       "distanceNm": 17,
       "waypoints": [
         {
-          "lat": 37.305,
-          "lon": 24.385
+          "lat": 37.3147,
+          "lon": 24.3617
+        },
+        {
+          "lat": 37.2969,
+          "lon": 24.3591
         },
         {
           "lat": 37.23,
@@ -200,7 +294,16 @@
       "fromPlaceId": "milos-adamas",
       "toPlaceId": "polyaigos-manolis",
       "distanceNm": 8.1,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 36.7531,
+          "lon": 24.4784
+        },
+        {
+          "lat": 36.7734,
+          "lon": 24.521
+        }
+      ],
       "windWarnings": [
         "Distanz 8.1 sm GEOMETRISCH aus Koordinaten berechnet (keine Quellenangabe im Addendum) — Luftlinie unterschätzt den Seeweg, vor dem Törn verifizieren"
       ]
@@ -212,7 +315,12 @@
       "fromPlaceId": "milos-adamas",
       "toPlaceId": "sifnos-kamares",
       "distanceNm": 24,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 36.8268,
+          "lon": 24.5159
+        }
+      ],
       "windWarnings": []
     },
     {
@@ -236,12 +344,20 @@
       "distanceNm": 31,
       "waypoints": [
         {
-          "lat": 37.05,
-          "lon": 25.385
+          "lat": 37.0877,
+          "lon": 25.3328
         },
         {
-          "lat": 36.955,
-          "lon": 25.475
+          "lat": 36.9719,
+          "lon": 25.3813
+        },
+        {
+          "lat": 36.9291,
+          "lon": 25.4178
+        },
+        {
+          "lat": 36.911,
+          "lon": 25.4487
         },
         {
           "lat": 36.93,
@@ -261,8 +377,12 @@
       "distanceNm": 12,
       "waypoints": [
         {
-          "lat": 37.145,
-          "lon": 25.28
+          "lat": 37.1483,
+          "lon": 25.2973
+        },
+        {
+          "lat": 37.154,
+          "lon": 25.2683
         },
         {
           "lat": 37.15,
@@ -286,6 +406,10 @@
       "distanceNm": 51,
       "waypoints": [
         {
+          "lat": 37.0877,
+          "lon": 25.3328
+        },
+        {
           "lat": 37.04,
           "lon": 25.35
         },
@@ -298,8 +422,12 @@
           "lon": 25.475
         },
         {
-          "lat": 36.365,
-          "lon": 25.475
+          "lat": 36.3613,
+          "lon": 25.4932
+        },
+        {
+          "lat": 36.327,
+          "lon": 25.4419
         }
       ],
       "windWarnings": [
@@ -313,7 +441,28 @@
       "fromPlaceId": "paros-naoussa",
       "toPlaceId": "ios-ormos",
       "distanceNm": 32,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 37.133,
+          "lon": 25.2408
+        },
+        {
+          "lat": 37.1567,
+          "lon": 25.2661
+        },
+        {
+          "lat": 37.1567,
+          "lon": 25.2832
+        },
+        {
+          "lat": 37.1374,
+          "lon": 25.2994
+        },
+        {
+          "lat": 36.7536,
+          "lon": 25.2534
+        }
+      ],
       "windWarnings": []
     },
     {
@@ -333,8 +482,12 @@
           "lon": 25.21
         },
         {
-          "lat": 37.145,
-          "lon": 25.28
+          "lat": 37.154,
+          "lon": 25.2683
+        },
+        {
+          "lat": 37.1483,
+          "lon": 25.2973
         }
       ],
       "windWarnings": [
@@ -356,6 +509,14 @@
         {
           "lat": 37.02,
           "lon": 24.93
+        },
+        {
+          "lat": 37.0445,
+          "lon": 24.6315
+        },
+        {
+          "lat": 37.0191,
+          "lon": 24.6416
         }
       ],
       "windWarnings": [
@@ -379,7 +540,16 @@
       "fromPlaceId": "polyaigos-manolis",
       "toPlaceId": "paros-parikia",
       "distanceNm": 33,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 36.7918,
+          "lon": 24.6399
+        },
+        {
+          "lat": 37.0636,
+          "lon": 25.0844
+        }
+      ],
       "windWarnings": []
     },
     {
@@ -389,7 +559,16 @@
       "fromPlaceId": "santorin-vlychada",
       "toPlaceId": "folegandros-karavostasi",
       "distanceNm": 25,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 36.3422,
+          "lon": 25.3843
+        },
+        {
+          "lat": 36.3588,
+          "lon": 25.3478
+        }
+      ],
       "windWarnings": [
         "Offener Schlag westwärts, kein Schutz unterwegs"
       ]
@@ -411,8 +590,12 @@
           "lon": 24.555
         },
         {
-          "lat": 37.305,
-          "lon": 24.385
+          "lat": 37.2969,
+          "lon": 24.3591
+        },
+        {
+          "lat": 37.3147,
+          "lon": 24.3617
         }
       ],
       "windWarnings": []
@@ -443,7 +626,12 @@
       "fromPlaceId": "sifnos-kamares",
       "toPlaceId": "milos-adamas",
       "distanceNm": 24,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 36.8268,
+          "lon": 24.5159
+        }
+      ],
       "windWarnings": []
     },
     {
@@ -454,6 +642,14 @@
       "toPlaceId": "paros-parikia",
       "distanceNm": 26,
       "waypoints": [
+        {
+          "lat": 37.0191,
+          "lon": 24.6416
+        },
+        {
+          "lat": 37.0445,
+          "lon": 24.6315
+        },
         {
           "lat": 37.02,
           "lon": 24.93
@@ -493,7 +689,20 @@
       "fromPlaceId": "syros-ermoupoli",
       "toPlaceId": "kythnos-loutra",
       "distanceNm": 27,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 37.4879,
+          "lon": 24.9528
+        },
+        {
+          "lat": 37.5087,
+          "lon": 24.9213
+        },
+        {
+          "lat": 37.52,
+          "lon": 24.8849
+        }
+      ],
       "windWarnings": []
     },
     {

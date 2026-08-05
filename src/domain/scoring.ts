@@ -46,7 +46,7 @@ export function budgetVerdict(
   if (sailHours <= params.maxSailHours && motorHours <= params.maxMotorHours) {
     return {
       ampel: 'gelb',
-      reasons: ['Über Ziel-Budget, aber innerhalb des harten Maximums (FR16)'],
+      reasons: ['Über Ziel-Budget, aber innerhalb des harten Maximums'],
     };
   }
   if (
@@ -56,10 +56,10 @@ export function budgetVerdict(
   ) {
     return {
       ampel: 'gelb',
-      reasons: ['Langer Schlag, aber Leichtwind-Ausnahme (FR16: glattes Wasser)'],
+      reasons: ['Langer Schlag, aber Leichtwind-Ausnahme (glattes Wasser)'],
     };
   }
-  return { ampel: 'rot', reasons: ['Hartes Tagesbudget überschritten (FR16)'] };
+  return { ampel: 'rot', reasons: ['Hartes Tagesbudget überschritten'] };
 }
 
 /**
@@ -188,6 +188,7 @@ export function assessLeg(
   const points = legPoints(leg, snapshot);
   const unbewertet = (reason: string): LegAssessment => ({
     legId: leg.id,
+    sailedLeg: leg,
     day,
     ampel: 'unbewertet',
     sailHours: null,
@@ -355,8 +356,8 @@ export function assessLeg(
       const t = twaDeg(seg.course, w.fromDeg);
       const v = upwindWindVerdict(t, w.twsKn, params);
       verdicts.push(v);
-      if (v === 'rot') reasons.add('Aufkreuzen gegenan bei >25 kn wahrem Wind (FR16)');
-      if (v === 'gelb') reasons.add('Wind nahe der Aufkreuz-Schwelle (FR17)');
+      if (v === 'rot') reasons.add('Aufkreuzen gegenan bei >25 kn wahrem Wind');
+      if (v === 'gelb') reasons.add('Wind nahe der Aufkreuz-Schwelle');
     }
 
     const twa = twaDeg(seg.course, progressWind.fromDeg);
@@ -509,6 +510,11 @@ export function assessLeg(
 
   return {
     legId: leg.id,
+    // Die Etappe, GEGEN DIE gerechnet wurde — nicht zwingend die kuratierte:
+    // der Plan verankert sie an den Plätzen, an denen das Boot wirklich liegt,
+    // und legt den Kurs landfrei (legGeometry.ts). Die Karte zeichnet dann
+    // genau die Geometrie, die hier gerechnet wurde, statt eine zweite.
+    sailedLeg: leg,
     day,
     ampel: worstAmpel(verdicts),
     sailHours,

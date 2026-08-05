@@ -257,8 +257,11 @@ erreicht sein (Vorabend Tag 11, minus 1 Puffertag).
 ```text
 src/
   domain/          # purer Core: schema/ (Zod), time, polar, scoring,
-                   # ampel, options, ppr, persistence, assess — kein React/Firebase/fetch,
+                   # ampel, options, ppr, persistence, assess, searoute,
+                   # legGeometry — kein React/Firebase/fetch,
                    # Zeit/Törntag/Position werden injiziert (AD-2)
+    data/          # landmass.ts — GENERIERTE Küstenlinien des Reviers
+                   # (seeding/tools/extractLandmass.ts)
     __tests__/     # Vitest-Fixturen (Referenzfälle Sektorsemantik, 25-kn-Regel,
                    # Budgets, Polar-Interpolation+Offset, Athens→UTC)
   adapters/        # openMeteo (Snapshot-Builder), firebase (eine einzige
@@ -271,13 +274,56 @@ src/
                    # manual > gps), View-Switch ohne Router
 seeding/           # Staging-JSON je Insel (approved-Flag), Review-Generator,
   review/          # generierte FR24-Review-Sichten
+  tools/           # extractLandmass (Küstenlinien zuschneiden),
+                   # seaRouteLegs (Etappenkurse landfrei legen)
 firebase.json      # Hosting -> dist/
 firestore.rules    # read: nur angemeldet, write: false
 ```
 
+## Ein Segelboot fährt nicht durch eine Insel
+
+Etappen waren Luftlinien zwischen zwei Häfen — und in den Kykladen liegt
+zwischen zwei Häfen fast immer Land. Ermoupoli sitzt auf der Ostseite von Syros:
+wer von Kea kommt, hatte die ganze Insel im Kurs, gezeichnet UND gerechnet.
+Dazu sprang die Kette, weil dieselbe Insel je Etappe einen anderen kuratierten
+Hafen trägt (`mykonos--paros` endet in Naoussa, `paros--sifnos` beginnt in
+Parikia): der Endpunkt eines Tages war nicht der Startpunkt des nächsten.
+
+Beides hängt jetzt an zwei Modulen:
+
+- `src/domain/searoute.ts` — beantwortet gegen die Küstenlinie, ob ein Schlag
+  über Land führt, und legt den Kurs andernfalls um das Land herum
+  (Sichtbarkeitsgraph über die Inselecken). Jeder Endpunkt behält eine
+  Ansteuerungszone von 1,5 sm, in der die eigene Insel nicht blockiert — der
+  letzte Kilometer in die Bucht ist Pilotage, nicht Routing. Tiefen, Untiefen
+  und Sperrgebiete kennt das Modul **nicht**: es sagt „hier ist Land", nicht
+  „hier ist es sicher".
+- `src/domain/legGeometry.ts` — macht aus der kuratierten Etappe die gesegelte:
+  verankert an dem Platz, an dem das Boot wirklich liegt, und landfrei gelegt.
+  Die Bewertung rechnet gegen diese Geometrie, und die Karte zeichnet sie
+  (`LegAssessment.sailedLeg`) — es gibt nur eine.
+
+Die kuratierte `distanceNm` bleibt die Wahrheit über die Länge einer Etappe;
+sie wird nur mitskaliert, wenn ein Ankerpunkt die Etappe verschiebt.
+
+Die Landmaske ist eingecheckt, nicht zur Laufzeit geladen. Neu erzeugen:
+
+```bash
+npm pack @geo-maps/earth-coastlines-250m --pack-destination /tmp
+tar xzf /tmp/geo-maps-earth-coastlines-250m-*.tgz -C /tmp
+node seeding/tools/extractLandmass.ts /tmp/package/map.geo.json
+node seeding/tools/seaRouteLegs.ts --dry-run   # Etappenkurse gegen die neue Maske
+```
+
+`src/domain/__tests__/libraryGeometry.test.ts` hält den Zustand fest: kein
+Wegpunkt an Land, kein gespeicherter Kurs über Land, keine Route mit Sprung.
+
 ## Attribution
 
 - Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0)
+- Küstenlinien aus [@geo-maps](https://github.com/simonepri/geo-maps)
+  (`earth-coastlines-250m`), abgeleitet aus OpenStreetMap-Daten —
+  © OpenStreetMap-Mitwirkende, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/)
 - Sichere Liegeplätze quellenbasiert kuratiert (Rod Heikell *Greek Waters Pilot*,
   [CruisersWiki](https://www.cruiserswiki.org/) — CC-Lizenz, Attribution in
   der Platz-Detailansicht)
