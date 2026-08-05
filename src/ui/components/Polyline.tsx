@@ -8,6 +8,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
+import { MAP_LINE_CASING } from '../tokens.ts';
 
 export interface PolylineProps {
   path: google.maps.LatLngLiteral[];
@@ -35,7 +36,7 @@ export function Polyline({
   strokeWeight = 3,
   dashed = false,
   zIndex,
-  casingColor = '#ffffff',
+  casingColor = MAP_LINE_CASING,
   casingWeight = 3,
 }: PolylineProps) {
   const map = useMap();

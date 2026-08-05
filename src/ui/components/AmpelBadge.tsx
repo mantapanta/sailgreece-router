@@ -15,10 +15,3 @@ export function AmpelBadge({ ampel, label }: { ampel: Ampel; label?: string }) {
     </span>
   );
 }
-
-export const AMPEL_CSS_COLOR: Record<Ampel, string> = {
-  gruen: '#3a7d44',
-  gelb: '#d9a441',
-  rot: '#b0413e',
-  unbewertet: '#9aa5b1',
-};

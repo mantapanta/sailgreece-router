@@ -4,7 +4,7 @@ baseline_commit: 717c653db433306c4769c8f15771417aae233610
 
 # Story 1.1: Design tokens and two-line header
 
-Status: in-progress
+Status: review
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; no epics.md exists — the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are the source
@@ -182,129 +182,129 @@ Karte, Platzdetail, stage editing, refresh, sign-out.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Create `src/ui/tokens.ts`** (AC: 3, 4)
-  - [ ] 1.1 Mirror the full DESIGN.md `colors.*` table as a `COLORS` const (exact hex values
+- [x] **Task 1 — Create `src/ui/tokens.ts`** (AC: 3, 4)
+  - [x] 1.1 Mirror the full DESIGN.md `colors.*` table as a `COLORS` const (exact hex values
         from the token tables in Dev Notes), with the sync-comment header.
-  - [ ] 1.2 Export `AMPEL_HEX: Record<Ampel, string>` (gruen `#1a9d5c`, gelb `#e09112`, rot
+  - [x] 1.2 Export `AMPEL_HEX: Record<Ampel, string>` (gruen `#1a9d5c`, gelb `#e09112`, rot
         `#d93636`, unbewertet `#b6b1a9`) and `AMPEL_GRAPHIC_HEX: Record<Ampel, string>`
         (same, but gelb `#b8770c`) with a comment explaining the Gelb graphic variant
         (≈2.6:1 on white is too weak as a standalone graphic; dots/lines on light ground and
         map lines use the graphic variant).
-  - [ ] 1.3 Export `ALT_ROUTE_COLORS` (`#6f4a9c`, `#1f7a8c`, `#b05f2c`), `MAP_LINE_SAILED`
+  - [x] 1.3 Export `ALT_ROUTE_COLORS` (`#6f4a9c`, `#1f7a8c`, `#b05f2c`), `MAP_LINE_SAILED`
         (`#1a9d5c`), `MAP_LINE_CASING` (`#ffffff`), `INK_PRIMARY` (`#23211e`).
-  - [ ] 1.4 (Recommended) Add `src/ui/__tests__/tokens.test.ts`: reads `styles.css` via
+  - [x] 1.4 (Recommended) Add `src/ui/__tests__/tokens.test.ts`: reads `styles.css` via
         `node:fs` (vitest runs in node env) and asserts every hex in `COLORS` appears in the
         `:root` block — mechanizes the "must stay in sync" contract. Keep it a pure
         constants/file test (AD-2: no component tests).
 
-- [ ] **Task 2 — Re-point all TS color consumers** (AC: 4)
-  - [ ] 2.1 `AmpelBadge.tsx`: delete the `AMPEL_CSS_COLOR` export (TWO importers: MapView
+- [x] **Task 2 — Re-point all TS color consumers** (AC: 4)
+  - [x] 2.1 `AmpelBadge.tsx`: delete the `AMPEL_CSS_COLOR` export (TWO importers: MapView
         and StageMap — both re-pointed below).
-  - [ ] 2.2 `MapView.tsx`: delete `REST_LINE_COLOR` and `SAILED_LINE_COLOR`; import
+  - [x] 2.2 `MapView.tsx`: delete `REST_LINE_COLOR` and `SAILED_LINE_COLOR`; import
         `AMPEL_GRAPHIC_HEX` and `MAP_LINE_SAILED` from `../tokens.ts`; rest-trip line color =
         `AMPEL_GRAPHIC_HEX[assessment.restTripAmpel]`, sailed = `MAP_LINE_SAILED`, marker
         pins = `AMPEL_GRAPHIC_HEX[ampel]`.
-  - [ ] 2.3 `StageMap.tsx`: swap `import { AMPEL_CSS_COLOR } from './AmpelBadge.tsx'` for
+  - [x] 2.3 `StageMap.tsx`: swap `import { AMPEL_CSS_COLOR } from './AmpelBadge.tsx'` for
         `AMPEL_GRAPHIC_HEX` from `../tokens.ts`; `lineColor = AMPEL_GRAPHIC_HEX[ampel]`.
         Nothing else changes in this file.
-  - [ ] 2.4 `altRouteColors.ts`: `export { ALT_ROUTE_COLORS } from './tokens.ts'` style
+  - [x] 2.4 `altRouteColors.ts`: `export { ALT_ROUTE_COLORS } from './tokens.ts'` style
         re-point (keep `altRouteColor(index)` helper and its doc comment; values now live in
         tokens.ts only).
-  - [ ] 2.5 `WindBarb.tsx`: default `color = INK_PRIMARY` (import from `../tokens.ts`).
-  - [ ] 2.6 `Polyline.tsx`: default `casingColor = MAP_LINE_CASING`.
-  - [ ] 2.7 Leave the four Google-brand hexes in `SignInView.tsx`'s Google logo SVG
+  - [x] 2.5 `WindBarb.tsx`: default `color = INK_PRIMARY` (import from `../tokens.ts`).
+  - [x] 2.6 `Polyline.tsx`: default `casingColor = MAP_LINE_CASING`.
+  - [x] 2.7 Leave the four Google-brand hexes in `SignInView.tsx`'s Google logo SVG
         untouched — they are Google's logo colors, not design tokens (sanctioned exception).
 
-- [ ] **Task 3 — Rewrite the `styles.css` token layer + legacy alias block** (AC: 1, 2)
-  - [ ] 3.1 Replace the `:root` block with the full new token set (names/values in Dev
+- [x] **Task 3 — Rewrite the `styles.css` token layer + legacy alias block** (AC: 1, 2)
+  - [x] 3.1 Replace the `:root` block with the full new token set (names/values in Dev
         Notes) plus the sync comment.
-  - [ ] 3.2 Add the legacy alias block (mapping table in Dev Notes) directly beneath it,
+  - [x] 3.2 Add the legacy alias block (mapping table in Dev Notes) directly beneath it,
         commented as transitional ("legacy sections restyled in later stories consume these
         aliases; do not use in new code").
-  - [ ] 3.3 Update the base rules: `body` background/color/font per AC1; delete the serif
+  - [x] 3.3 Update the base rules: `body` background/color/font per AC1; delete the serif
         stack; `h1/h2/h3` keep working via aliases (they become sans + ink automatically).
-  - [ ] 3.4 Replace the file-head comment (the "Y.CO-inspired" line is no longer true) with
+  - [x] 3.4 Replace the file-head comment (the "Y.CO-inspired" line is no longer true) with
         a pointer to DESIGN.md as the visual contract.
-  - [ ] 3.5 (SHOULD) Sweep the obvious raw-hex warn/error recipes in legacy sections onto
+  - [x] 3.5 (SHOULD) Sweep the obvious raw-hex warn/error recipes in legacy sections onto
         Ampel tint/text tokens per the "recommended raw-hex sweep" table in Dev Notes.
 
-- [ ] **Task 4 — Add primitive CSS: buttons, tabs, focus, motion** (AC: 5)
-  - [ ] 4.1 `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-text` per the component
+- [x] **Task 4 — Add primitive CSS: buttons, tabs, focus, motion** (AC: 5)
+  - [x] 4.1 `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-text` per the component
         token specs (Dev Notes has a reference implementation).
-  - [ ] 4.2 `.segmented-tabs` + segment buttons per spec.
-  - [ ] 4.3 Global `:focus-visible` two-layer rule (2px `--focus-ring` outline,
+  - [x] 4.2 `.segmented-tabs` + segment buttons per spec.
+  - [x] 4.3 Global `:focus-visible` two-layer rule (2px `--focus-ring` outline,
         `outline-offset: 2px`, `box-shadow: 0 0 0 2px var(--on-accent)` as the white gap).
-  - [ ] 4.4 Global `@media (prefers-reduced-motion: reduce)` rule killing animations and
+  - [x] 4.4 Global `@media (prefers-reduced-motion: reduce)` rule killing animations and
         transitions (`animation: none; transition: none` on `*`), plus the refresh-glyph
         static swap hook.
-  - [ ] 4.5 Global `scroll-margin-top: calc(var(--header-h) + 8px)` on
+  - [x] 4.5 Global `scroll-margin-top: calc(var(--header-h) + 8px)` on
         `a, button, input, select, textarea, summary, [tabindex]`.
 
-- [ ] **Task 5 — Build the two-line header in `App.tsx`** (AC: 6, 7, 8, 12)
-  - [ ] 5.1 Replace `<header className="topbar">…</header>` and the notice-bar div with the
+- [x] **Task 5 — Build the two-line header in `App.tsx`** (AC: 6, 7, 8, 12)
+  - [x] 5.1 Replace `<header className="topbar">…</header>` and the notice-bar div with the
         new `<header className="app-header">` structure (reference JSX in Dev Notes): line 1
         wordmark + `<AvatarMenu />`; line 2 `<nav aria-label="Ansicht">` with the two tab
         buttons + `<RefreshButton />`.
-  - [ ] 5.2 Tabs: `aria-current={activeTab === 'tag' ? 'page' : undefined}` (keep the
+  - [x] 5.2 Tabs: `aria-current={activeTab === 'tag' ? 'page' : undefined}` (keep the
         existing `activeTab` derivation including the Platzdetail `returnTo` logic), labels
         "Heute" / "Karte" (rename from "Tagesansicht").
-  - [ ] 5.3 Delete the `AccountChip` component; remove the `formatTripRange` import (the
+  - [x] 5.3 Delete the `AccountChip` component; remove the `formatTripRange` import (the
         date-range line dies; `noUnusedLocals` would fail the build otherwise). Keep
         `formatStamp` (still used by footer + error panels).
-  - [ ] 5.4 Header CSS: sticky, `z-index: 100`, page background, safe-area top padding,
+  - [x] 5.4 Header CSS: sticky, `z-index: 100`, page background, safe-area top padding,
         define `--header-h` (104px, must be ≥ real rendered height at 390px viewport);
         bump `.map-sticky` `top` to `calc(var(--header-h) + 1rem)` so the sticky map no
         longer slides under the sticky header.
-  - [ ] 5.5 Delete the `.topbar`, `.brand`, old `.tabs`, `.notice-bar`, `.datenstand`,
+  - [x] 5.5 Delete the `.topbar`, `.brand`, old `.tabs`, `.notice-bar`, `.datenstand`,
         `.account-chip` CSS blocks — including BOTH rules inside the ≤860px media query:
         the `.account-chip` wrap rule AND the `.topbar` padding rule.
 
-- [ ] **Task 6 — AvatarMenu component** (AC: 9)
-  - [ ] 6.1 New `AvatarMenu` (may live in `App.tsx` or `src/ui/components/AvatarMenu.tsx` —
+- [x] **Task 6 — AvatarMenu component** (AC: 9)
+  - [x] 6.1 New `AvatarMenu` (may live in `App.tsx` or `src/ui/components/AvatarMenu.tsx` —
         prefer the component file per repo convention). 34px circle button,
         `background: linear-gradient(135deg, var(--accent) 0%, var(--accent-gradient-end)
         100%)`, white 14px/700 initial from `displayName ?? email ?? 'S'`.
-  - [ ] 6.2 Menu panel: Level-3 shadow (`--shadow-3`), `--radius-md`, white card, absolute
+  - [x] 6.2 Menu panel: Level-3 shadow (`--shadow-3`), `--radius-md`, white card, absolute
         below the avatar, right-aligned; identity block (name in label type, e-mail in
         caption type/`--ink-secondary`), hairline divider, "Abmelden" item ≥44px calling
         `void signOut()`.
-  - [ ] 6.3 Behavior: toggle on avatar click; invisible fixed backdrop closes on click; Esc
+  - [x] 6.3 Behavior: toggle on avatar click; invisible fixed backdrop closes on click; Esc
         closes; focus the first item on open; simple focus trap while open; return focus to
         the avatar button on close; `aria-haspopup="menu"`, `aria-expanded` on the trigger.
 
-- [ ] **Task 7 — RefreshButton (header)** (AC: 10)
-  - [ ] 7.1 Ghost icon button using `usePlanning().forecastQuery`; disabled + spinning while
+- [x] **Task 7 — RefreshButton (header)** (AC: 10)
+  - [x] 7.1 Ghost icon button using `usePlanning().forecastQuery`; disabled + spinning while
         `isFetching`; ⟳ glyph as text or inline SVG (`aria-hidden`), button carries
         `aria-label="Forecast aktualisieren"`.
-  - [ ] 7.2 44×44px hit area (`.icon-button` recipe in Dev Notes); spin via CSS keyframes;
+  - [x] 7.2 44×44px hit area (`.icon-button` recipe in Dev Notes); spin via CSS keyframes;
         reduced-motion: no spin, glyph swaps to "…" while fetching.
 
-- [ ] **Task 8 — Footer provenance** (AC: 11)
-  - [ ] 8.1 Replace `<footer className="attribution">` with `<footer className="app-footer">`:
+- [x] **Task 8 — Footer provenance** (AC: 11)
+  - [x] 8.1 Replace `<footer className="attribution">` with `<footer className="app-footer">`:
         provenance line (centered footnote, `--ink-secondary`) with `aria-live="polite"`,
         refresh affordance (same disabled/spin rules as Task 7, ≥44px hit area), detail
         expander button on the text (`aria-expanded` + panel with Modell / Modelllauf /
         Abgerufen / `Cache-TTL: 1 h` from `STALE_TIME_MS`), then Open-Meteo attribution +
         curation note + NFR3 disclaimer as separate footnote lines. Safe-area bottom padding.
-  - [ ] 8.2 Reuse `formatStamp` for run/fetched (or `formatAthensTime` for the time-only
+  - [x] 8.2 Reuse `formatStamp` for run/fetched (or `formatAthensTime` for the time-only
         mock format — either is acceptable; do not invent a third formatter). Model string
         from `assessment.model`; render "…" placeholders while `assessment` is null, exactly
         as the notice-bar did.
-  - [ ] 8.3 Delete `footer.attribution` CSS; add `.app-footer`/`.provenance` CSS per Dev
+  - [x] 8.3 Delete `footer.attribution` CSS; add `.app-footer`/`.provenance` CSS per Dev
         Notes.
 
-- [ ] **Task 9 — Brand strings + index.html** (AC: 7, 13)
-  - [ ] 9.1 AuthGate checking card and `SignInView` `.auth-brand`: replace
+- [x] **Task 9 — Brand strings + index.html** (AC: 7, 13)
+  - [x] 9.1 AuthGate checking card and `SignInView` `.auth-brand`: replace
         "sailgreece-router" with the wordmark markup (`Sail<span class="wordmark-accent">
         Greece</span>`); keep the "Kykladen · Törnplanung" subline; do NOT restyle the auth
         card beyond what the aliases do.
-  - [ ] 9.2 `index.html`: title, meta description, theme-color, favicon, viewport-fit per
+  - [x] 9.2 `index.html`: title, meta description, theme-color, favicon, viewport-fit per
         the exact snippet in Dev Notes.
 
-- [ ] **Task 10 — Verify DoD** (AC: 12, 14)
-  - [ ] 10.1 Run every grep in Dev Notes § "DoD greps" — all must be empty.
-  - [ ] 10.2 `npm test` and `npm run build` green.
-  - [ ] 10.3 `npm run dev` manual smoke: all four surfaces + avatar sign-out + both refresh
+- [x] **Task 10 — Verify DoD** (AC: 12, 14)
+  - [x] 10.1 Run every grep in Dev Notes § "DoD greps" — all must be empty.
+  - [x] 10.2 `npm test` and `npm run build` green.
+  - [x] 10.3 `npm run dev` manual smoke: all four surfaces + avatar sign-out + both refresh
         affordances + keyboard walk (Tab through header: wordmark is not focusable, avatar,
         tabs, refresh all show the two-layer ring; focus into main is not hidden under the
         sticky header).
@@ -931,10 +931,106 @@ alias variables — that is the migration design, not a violation.
 
 ### Agent Model Used
 
-(placeholder)
+claude-fable-5 (BMad dev-story)
 
 ### Debug Log References
 
+- Baseline before changes: `npm test` 22 files / 346 tests green.
+- `tokens.test.ts` written first and verified to FAIL against the legacy
+  `styles.css` (33/33 red), then went green after the Task-3 token layer landed.
+- Final: `npm test` 23 files / 379 tests green; `npm run build`
+  (`tsc --noEmit && vite build`) green; all DoD greps clean (see notes below).
+
 ### Completion Notes List
 
+- Tasks 1–10 implemented as specified. All 14 ACs met, with the deviations and
+  clarifications below.
+- **Deviation (`--header-h`):** the story's reference value 104px violates its
+  own constraint "must be ≥ real rendered height at 390px viewport" — the
+  binding component sizes add up to ≈116px (8px top pad + 34px avatar line +
+  12px gap + 50px tabs track incl. 3px padding + 12px bottom pad). Set to
+  120px; `.map-sticky` and the global `scroll-margin-top` consume the variable,
+  so both follow.
+- **Deviation (serif DoD grep):** the grep `grep -rni 'georgia|serif'
+  src/ui/styles.css` cannot come back sans-serif-only AND satisfy AC1/AC2,
+  which mandate the re-pointed `--serif: var(--font-sans)` alias and its five
+  legacy `var(--serif)` consumers. Kept the alias per AC1/AC2; remaining
+  matches are exactly: the `sans-serif` of the `--font-sans` stack, the
+  `--serif` alias declaration, and five `font-family: var(--serif)` legacy
+  recipes. Georgia / Times New Roman / any real serif: gone.
+- **Clarification (comment-only grep hits):** the story's own reference alias
+  block carried "was #f7f3ea"-style comments and the full UX folder path
+  (containing "sailgreece-router") in sync comments — both would have failed
+  the DoD greps. Comments were reworded (no hex values, shortened DESIGN.md
+  path) so every grep except the documented serif case returns empty.
+- Reduced-motion refresh state implemented via the story's sanctioned simpler
+  option: the global reduced-motion rule kills the spin (glyph stays static)
+  and a visually hidden "Aktualisierung läuft …" text renders while fetching
+  (both header and footer refresh buttons — one shared `RefreshButton`).
+- `.icon-button`'s `margin-left: auto` from the reference CSS was scoped to
+  `.header-line2 .icon-button` — unscoped it would have shoved the footer's
+  refresh glyph to the page edge instead of sitting next to the provenance text.
+- AvatarMenu lives in `src/ui/components/AvatarMenu.tsx` (preferred option):
+  34px gradient circle with ≥44px hit area (::after), Level-3 menu, focus
+  moved in on open, Tab-cycle trap, Esc + backdrop close, focus returned to
+  trigger, `aria-label="Konto"` / `aria-haspopup="menu"` / `aria-expanded`.
+- Task 3.5 raw-hex sweep done for all eight listed values; the "leave alone"
+  hexes (`#e4cf9f`, `#ddb3b1`, `#e3b6af`, `#bcd3bf`, `#4e6b8c`, `#eef`,
+  `#fffef9`, `#d7dfea`) remain in legacy sections per the stated exception.
+- `formatTripRange` import removed from App.tsx (with the `bundle` destructure
+  it fed); the export itself stays in `src/ui/format.ts` per the story's
+  "leave the export in place" option. No test was modified.
+- Task 10.3 manual browser smoke was NOT possible (headless environment).
+  Substitute per instruction: `npm run build` green, vite output produced, and
+  greps confirm no `.tsx` references any deleted CSS class (`topbar`, `tabs`
+  recipe, `notice-bar`, `datenstand`, `account-chip`, `attribution`).
+  **Left for reviewer: a real `npm run dev` smoke** (sign-in gate, ControlsBar,
+  StageMap line, Karte pins/barbs, Platzdetail back, avatar sign-out, keyboard
+  walk with the two-layer focus ring).
+- Untouched as mandated (verified by git status): `src/domain/**`,
+  `src/adapters/**`, all contexts, `usePlanning.ts`, `DayView.tsx`,
+  `PlaceDetailView.tsx`, `mapPath.ts`, `windField.ts`, `format.ts`, all tests,
+  all configs. No new npm dependencies (a package-lock.json drift from
+  `npm install` was reverted).
+
 ### File List
+
+New:
+- `src/ui/tokens.ts`
+- `src/ui/components/AvatarMenu.tsx`
+- `src/ui/__tests__/tokens.test.ts`
+
+Modified:
+- `src/ui/styles.css`
+- `src/app/App.tsx`
+- `src/ui/components/AmpelBadge.tsx`
+- `src/ui/components/StageMap.tsx`
+- `src/ui/components/WindBarb.tsx`
+- `src/ui/components/Polyline.tsx`
+- `src/ui/views/MapView.tsx`
+- `src/ui/views/SignInView.tsx`
+- `src/ui/altRouteColors.ts`
+- `index.html`
+
+Deleted: none (chrome removal happened inside modified files).
+
+## Change Log
+
+Story 1.1 replaced the app's visual foundation in one slice: `styles.css` now
+opens with the full DESIGN.md Consumer-Warm token layer (surfaces, ink, coral
+accent, Ampel palette incl. the Gelb graphic variant, radius/spacing/shadow
+scales, system sans stack) plus a transitional alias block that re-points every
+legacy variable (`--creme`, `--navy`, `--serif`, …) onto the new tokens so all
+untouched views inherit the calm palette without selector changes. A new
+`src/ui/tokens.ts` is the single TypeScript color source (with a vitest sync
+test against the CSS `:root`); the two divergent Ampel palettes in
+AmpelBadge/MapView died, and MapView, StageMap, WindBarb, Polyline and
+altRouteColors now consume tokens.ts. The navy topbar, notice-bar and account
+chip were replaced by a sticky two-line header (SailGreece wordmark, segmented
+"Heute"/"Karte" tabs with `aria-current`, gradient avatar menu with focus
+trap and Abmelden, spinning ⟳ refresh glyph) and the provenance line was
+demoted to an `aria-live` footer with a detail expander (Cache-TTL from
+STALE_TIME_MS), Open-Meteo attribution, curation note and NFR3 disclaimer.
+Button/tab primitives, a global two-layer focus ring, reduced-motion handling
+and index.html PWA hygiene (title, description, theme-color, inline favicon,
+safe-area viewport) complete the foundation. 379 tests green, build green.

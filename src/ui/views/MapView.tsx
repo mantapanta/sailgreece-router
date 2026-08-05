@@ -18,7 +18,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-maps';
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
-import { AMPEL_CSS_COLOR, AmpelBadge } from '../components/AmpelBadge.tsx';
+import { AmpelBadge } from '../components/AmpelBadge.tsx';
+import { AMPEL_GRAPHIC_HEX, MAP_LINE_SAILED } from '../tokens.ts';
 import { Polyline } from '../components/Polyline.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
 import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
@@ -27,16 +28,6 @@ import { formatHours, formatKn, compass } from '../format.ts';
 import { altRouteColor } from '../altRouteColors.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
-
-/** Colour of the rest-trip line follows the FR2 light. */
-const REST_LINE_COLOR: Record<Assessment['restTripAmpel'], string> = {
-  gruen: '#3f7d4f',
-  gelb: '#c8952a',
-  rot: '#b3423a',
-  unbewertet: '#8b8b8b',
-};
-
-const SAILED_LINE_COLOR = '#3f7d4f';
 
 /**
  * Abstand, um den eine Windfieder gegen die Windrichtung vom Platz weggesetzt
@@ -206,7 +197,8 @@ export function MapView({
   );
 
   const nowIdx = useMemo(() => hourIndexAt(Date.now(), snapshot.times), [snapshot.times]);
-  const restColor = REST_LINE_COLOR[assessment.restTripAmpel];
+  /** Colour of the rest-trip line follows the FR2 light. */
+  const restColor = AMPEL_GRAPHIC_HEX[assessment.restTripAmpel];
 
   const endMarkers = useMemo(
     () => stageEndMarkers(sailingStages, legsById, snapshot),
@@ -275,7 +267,7 @@ export function MapView({
         <span className="versal">Round-Trip</span>
         <div className="legend">
           <span>
-            <span className="legend-line solid" style={{ background: SAILED_LINE_COLOR }} />
+            <span className="legend-line solid" style={{ background: MAP_LINE_SAILED }} />
             gefahren
           </span>
           <span>
@@ -470,7 +462,7 @@ export function MapView({
                 <Polyline
                   key={`line-${stage.day}`}
                   path={path}
-                  strokeColor={isPast ? SAILED_LINE_COLOR : restColor}
+                  strokeColor={isPast ? MAP_LINE_SAILED : restColor}
                   dashed={!isPast}
                   // Kräftiger als bisher: über dem Satellitenbild geht eine
                   // 3-px-Linie im Blau der Ägäis unter (dazu der helle Saum
@@ -533,7 +525,7 @@ export function MapView({
                 >
                   <div
                     className={relevant ? 'marker-pin' : 'marker-pin muted'}
-                    style={relevant ? { background: AMPEL_CSS_COLOR[ampel] } : undefined}
+                    style={relevant ? { background: AMPEL_GRAPHIC_HEX[ampel] } : undefined}
                   />
                 </AdvancedMarker>
               );

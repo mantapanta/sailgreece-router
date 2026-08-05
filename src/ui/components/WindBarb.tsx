@@ -18,6 +18,8 @@
  * was der Forecast sagt, nicht was in Düsenzonen tatsächlich ankommt (FR10).
  */
 
+import { INK_PRIMARY } from '../tokens.ts';
+
 export interface WindBarbProps {
   /** Richtung, AUS DER der Wind kommt, in Grad rechtweisend. */
   dirDeg: number;
@@ -52,7 +54,7 @@ const STEP = 4.2;
 const FULL_LEN = 12;
 const FULL_RISE = 5;
 
-export function WindBarb({ dirDeg, knots, size = 44, color = '#1b2a41' }: WindBarbProps) {
+export function WindBarb({ dirDeg, knots, size = 44, color = INK_PRIMARY }: WindBarbProps) {
   const { pennants, full, half, calm } = barbParts(knots);
 
   if (calm) {
