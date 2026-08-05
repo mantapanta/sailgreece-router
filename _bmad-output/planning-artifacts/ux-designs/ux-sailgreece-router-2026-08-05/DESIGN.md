@@ -214,7 +214,7 @@ The read at 07:00 in a sunlit cockpit should feel like a booking confirmation: w
 
 This language **replaces** the legacy Y.CO-inspired creme/navy/serif system entirely (PRD NFR1 named that aesthetic; the redesign supersedes its palette and type while keeping NFR1's day-by-day structure, sticky split, and whitespace discipline). No serif headlines, no navy chrome, no letterspaced-caps `.versal` voice as default.
 
-**Wordmark.** The product name is set as a wordmark, not a repository name: `Sail` in {colors.ink-primary} + `Greece` in {colors.accent}, {typography.headline}, no lowercase-hyphenated treatment anywhere in the UI. [ASSUMPTION] Final product name and spelling ("SailGreece" vs. another treatment) are still open with Philipp; the treatment register (proper wordmark, accent-colored fragment) is decided.
+**Wordmark.** The product name is **SailGreece** (decided 2026-08-05), set as a wordmark, not a repository name: `Sail` in {colors.ink-primary} + `Greece` in {colors.accent}, {typography.headline}, no lowercase-hyphenated treatment anywhere in the UI. "Router" is not part of the visible brand.
 
 [ASSUMPTION] Light theme is the only mode (sunlight readability at the helm argues for it; dark mode not requested, open for later).
 
@@ -238,7 +238,7 @@ All values below are the **single source of truth**. They live once as CSS custo
 - **`{colors.accent-tint}`** — coral wash for selected-chip backgrounds. Sparingly.
 - **`{colors.accent-gradient-end}`** — exists solely as the second stop of the avatar gradient. Not used anywhere else.
 
-**Contrast honesty:** `{colors.on-accent}` on `{colors.accent}` measures ≈3.2:1 and `{colors.accent-deep}` on white ≈4.2:1 — below strict AA for normal text. Rule: coral fills carry text only at ≥16px weight 700; coral text is only ever ≥14px weight 600 and always paired with a second affordance (position, chevron, underline). Whether to darken `accent-deep` for strict AA is an open question for Philipp (see EXPERIENCE.md Open Questions).
+**Contrast honesty:** `{colors.on-accent}` on `{colors.accent}` measures ≈3.2:1 and `{colors.accent-deep}` on white ≈4.2:1 — below strict AA for normal text. Binding rule (decided 2026-08-05, coral kept as-is): coral fills carry text only at ≥16px weight 700; coral text is only ever ≥14px weight 600 and always paired with a second affordance (position, chevron, underline). Body-size text never sits on or in coral.
 
 ### Ampel (the one palette)
 

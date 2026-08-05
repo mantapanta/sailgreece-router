@@ -202,8 +202,8 @@ Failure path: the place is unbewertet (NFR6) → badge "Unbewertet" with conserv
 
 ## Open Questions
 
-1. **Naming/wordmark**: final product name and spelling for the "SailGreece" treatment (memlog: open).
-2. **Accent contrast**: accept coral's ≈3.2:1 (white-on-accent) / ≈4.2:1 (accent-deep text) with the size/weight rules from DESIGN.md, or darken `accent-deep` for strict AA?
+1. ~~Naming/wordmark~~ — resolved 2026-08-05: the product name is **SailGreece**.
+2. ~~Accent contrast~~ — resolved 2026-08-05: coral kept with the size/weight rules in DESIGN.md.Colors.
 3. **Rot/Unbewertet tints**: derived values in DESIGN.md need one visual confirmation against the direction file's mood.
 4. **Mobile-first + light-only**: both assumed from context — confirm.
 5. **Position/departure controls**: is folding the ControlsBar into the day-context popover + hero stat stepper acceptable, or does Philipp want departure time permanently visible as an editable control?
