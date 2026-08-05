@@ -98,26 +98,38 @@ Zurück), refresh, sign-out.
    "Bewertungszeitraum: 18:00–9:00 Uhr …". **Resolution: window label from the params via
    a pure helper `nightWindowLabel`** → "18:00–09:00" (zero-padded, tabular). The mock's
    "20:00–08:00" is illustration, never copy.
-3. **Sector grid semantics: the domain vocabulary is a kn LIMIT per direction, not
-   gut/mäßig/offen.** Ground truth (`domain/ampel.ts`): `windSectorLimitKn(sectors, deg)`
-   → most generous covering sector's `maxKn`, or `null` = luv rule ("never green under
-   meaningful wind"); curated data (seeding/) is typically ONE broad sector (110°–320°
-   wide) with maxKn 20–35. `waveSectors` carry `maxM` the same way and are non-scoring
-   (module head, skipper decision 2026-08-05). **Resolution: 8 tiles at the main compass
-   directions (center degrees 0/45/…/315), rating derived by reusing the domain's own
-   functions** (`windSectorLimitKn`, `sectorContains` — ui→domain pure-fn import,
-   `format.ts` precedent): `limit === null` → **"offen"** (rot tint; the luv rule's own
-   phrasing — "Richtung liegt in keinem Schutzsektor"); `limit ≥
-   params.meltemiWorstCase.twsKn` (default 30 — the app's own worst-case planning wind)
-   → **"gut · bis {limit} kn"** (gruen tint); otherwise → **"mäßig · bis {limit} kn"**
-   (gelb tint). The kn number rides in the word line, so color is never the only carrier
-   of the gut/mäßig distinction. Wave per tile: same sector lookup over `waveSectors`
+3. **Sector grid semantics: the domain owns the per-direction verdict — reuse it, invent
+   NO threshold.** Ground truth (`domain/ampel.ts`): `windSectorLimitKn(sectors, deg)` →
+   most generous covering sector's `maxKn`, or `null` = luv rule ("never green under
+   meaningful wind"); **`windHourAmpel(sectors, deg, kn, params)` is THE domain verdict
+   for wind from a direction** — gruen only when `kn ≤ limit − params.gelbReserveKn`
+   (reserve!), gelb up to the limit, **rot above it**; uncovered direction: gelb when
+   `kn ≤ params.openSectorMaxKn`, else rot. Curated data (seeding/) spans maxKn 12–40 —
+   26 sectors lie BELOW 30 kn, so any mapping that cannot show rot for a
+   covered-but-overwhelmed sector misstates the domain (and a "gut" at limit = 30 would
+   claim a green the domain refuses — reserve). `waveSectors` carry `maxM` the same way
+   and are non-scoring (module head, skipper decision 2026-08-05). **Resolution: 8 tiles
+   at the main compass directions (center degrees 0/45/…/315); each tile's rating IS
+   `windHourAmpel(shelter.windSectors, centerDeg, params.meltemiWorstCase.twsKn,
+   params)` — the app's own worst-case planning wind (default 30 kn) probed per
+   direction through the domain's own function** (ui→domain pure-fn import, `format.ts`
+   precedent). Word + tint: no covering sector → **"offen"** (rot tint; the luv rule —
+   "Richtung liegt in keinem Schutzsektor"); verdict gruen → **"gut · bis {limit} kn"**
+   (gruen tint — holds the worst case incl. the domain's reserve); verdict gelb →
+   **"mäßig · bis {limit} kn"** (gelb tint — worst case reaches the limit, no reserve
+   left); verdict rot → **"schwach · bis {limit} kn"** (rot tint — the curated limit
+   lies under the worst case). The kn number rides in the word line, so color is never
+   the only carrier — and the two rot states differ in visible text ("offen" vs
+   "schwach · bis {limit} kn"). Wave per tile: same sector lookup over `waveSectors`
    (`Math.max` mirror of the wind rule), rendered de-emphasized ("Welle bis 0,4 m", "–"
    when uncovered). **Precision guard:** the grid samples 8 center degrees — a narrow
    curated sector could fall between them, so the exact curated sectors render verbatim
-   as a caption legend below the grid (nothing the old table said is lost).
-   **[TAG FOR PHILIPP: confirm the gut/mäßig boundary = `meltemiWorstCase.twsKn` (30 kn)
-   and the rot tint for "offen" — both derived, not curated.]**
+   as a caption legend below the grid (nothing the old table said is lost); the reading
+   aid names the probe ("bewertet am Meltemi-Worst-Case der Planung, {twsKn} kn") so a
+   tint never claims more than it is.
+   **[TAG FOR PHILIPP: tint boundaries are the domain's own (`windHourAmpel` at
+   `meltemiWorstCase.twsKn` = 30 kn). Confirm the probe wind, the word "schwach" for
+   covered-but-under-worst-case, and that "schwach" and "offen" share the rot tint.]**
 4. **Tile direction names: international notation (NE/E/SE), NOT the mock's NO/O/SO.**
    `compassPoint` (domain/geo.ts) speaks N/NNE/NE/…, and every reason string in the app
    says "aus NNE". One vocabulary per app — the tile that the reason "Wind 22 kn aus N"
@@ -130,7 +142,8 @@ Zurück), refresh, sign-out.
    link and NO focus move** (EXPERIENCE StageEditor row demands both); the three buttons
    still carry `className="secondary"` (unstyled — 1.2's documented deviation 7); the
    "Standard" button hides the default value in a `title`
-   (`Zurück auf den Standardwert (3 h)`). **Resolution: the delta is exactly (a) error div
+   ("Zurück auf den Standardwert ({stopHoursDefault} h)" — the value is dynamic).
+   **Resolution: the delta is exactly (a) error div
    gets `id` + `tabIndex={-1}` + focus on failed apply, both selects get
    `aria-describedby` while the error shows; (b) `className="secondary"` →
    `"btn-secondary"` (3×); (c) "Standard" → visible label
@@ -253,17 +266,22 @@ Zurück), refresh, sign-out.
    `.card-surface`: (i) a 4-column grid (2 rows) of 8 sector tiles at `--radius-md`, one
    per main compass direction in compass order N → NW, each tile: direction micro-label
    (11px/600 uppercase, tabular) + rating word line (12.5px/700) + wave footnote
-   (11.5px/400, tabular). Tint + word per VERIFY 3 from the tested helper: **gut**
-   (gruen tint, dir/word in `--ampel-gruen-text`, word "gut · bis {limit} kn"), **mäßig**
-   (gelb tint, `--ampel-gelb-text`, "mäßig · bis {limit} kn"), **offen** (rot tint,
-   `--ampel-rot-text`, word "offen"); wave footnote "Welle bis {formatWaveM(maxM)}" /
+   (11.5px/400, tabular). Tint + word per VERIFY 3 from the tested helper (the rating is
+   the domain's `windHourAmpel` at the worst-case probe — four words, three tints):
+   **gut** (gruen tint, dir/word in `--ampel-gruen-text`, word "gut · bis {limit} kn"),
+   **mäßig** (gelb tint, `--ampel-gelb-text`, "mäßig · bis {limit} kn"), **schwach**
+   (rot tint, `--ampel-rot-text`, "schwach · bis {limit} kn" — covered, but the limit
+   lies under the worst case), **offen** (rot tint, `--ampel-rot-text`, word "offen" —
+   no covering sector); wave footnote "Welle bis {formatWaveM(maxM)}" /
    "–", in the tile's text color at reduced opacity or `--ink-secondary` — de-emphasized,
    non-scoring. Direction labels per VERIFY 4 (`compassPoint`: N/NE/E/SE/S/SW/W/NW).
    The grid is a `role="img"`-free plain list; each tile carries the full text visibly
-   (color never the only carrier — word + kn value differ per state).
+   (color never the only carrier — the word lines differ per state, incl. between the
+   two rot states).
    (ii) Below the grid, caption lines preserving everything the old table said:
-   the reading aid "Schutz je Windrichtung aus den kuratierten Sektoren; die Wellenwerte
-   sind kuratierte Grenzen und bewerten nichts."; the scoring honesty line VERBATIM from
+   the reading aid "Schutz je Windrichtung aus den kuratierten Sektoren, bewertet am
+   Meltemi-Worst-Case der Planung ({twsKn} kn); die Wellenwerte sind kuratierte Grenzen
+   und bewerten nichts."; the scoring honesty line VERBATIM from
    today: "**Die Ampel hängt allein an den Wind-Sektoren.** Die Wellen-Zeilen stehen als
    kuratiertes Wissen über den Platz da, bewerten aber nichts: die Wellenhöhe des Modells
    gilt für die offene See, nicht für den Liegeplatz dahinter."; and the exact curated
@@ -325,8 +343,9 @@ Zurück), refresh, sign-out.
 
 11. **Alias retirement (close-out c — VERIFY 6, as a verification loop).**
     (i) Delete the legacy CSS blocks this story orphans, each grep-verified against `.tsx`
-    consumers FIRST: the legacy `.card` block (`.card`, `.card .headline`,
-    `.card .beschreibung`, `.card .platz-zeile` ×2 — zero consumers since 1.2/1.3), the
+    consumers FIRST: the legacy `.card` block starting ~line 518 (`.card`,
+    `.card .headline`, `.card .beschreibung`, `.card .platz-zeile` ×2 — zero consumers
+    since 1.2/1.3), the
     legacy auth recipes replaced in AC 9, the Platzdetail legacy blocks (`.place-hero` ×~6
     incl. `.place-hero-legende`, `table.shelter-table` ×3 + `.sektor-inaktiv`,
     `.badge-info`, `.warnung`, `.back-link`), and the dead rule `.alt-route
@@ -356,9 +375,10 @@ Zurück), refresh, sign-out.
     `title=` in MapView" still holds. No other MapView change.
 
 13. **Pure logic in tested helpers (AD-2).** New `src/ui/placeViewModel.ts` (pure, no
-    React; imports only domain types + `windSectorLimitKn`/`sectorContains` from
-    `domain/ampel.ts` and `compassPoint` from `domain/geo.ts`) exporting:
-    `sectorTiles(shelter, meltemiKn)` (8 tiles per VERIFY 3/4, incl. the wave lookup),
+    React; imports only domain types + `windSectorLimitKn`/`windHourAmpel`/
+    `sectorContains` from `domain/ampel.ts` and `compassPoint` from `domain/geo.ts`)
+    exporting:
+    `sectorTiles(shelter, params)` (8 tiles per VERIFY 3/4, incl. the wave lookup),
     `nightWindowLabel(startHour, endHour)` ("18:00–09:00", zero-padded),
     `nightVerdictLine(night)` (`{ ampel, text }` with the reason/fallback rule of AC 2/8).
     New `formatWaveM(m: number | null)` in `format.ts` ("0,3 m" — German decimal comma —
@@ -387,10 +407,12 @@ Zurück), refresh, sign-out.
 - [ ] **Task 1 — `placeViewModel.ts` + `formatWaveM` + tests (write first)** (AC: 13)
   - [ ] 1.1 Implement `sectorTiles` / `nightWindowLabel` / `nightVerdictLine` per the
         reference in Dev Notes; `placeViewModel.test.ts` red → green (cases: wrap sector
-        330–60 covers N; full-circle 0–360 covers all 8; uncovered → offen/null; limit ≥
-        meltemi-kn → gut; below → mäßig; wave lookup incl. most-generous-wins overlap +
-        null; window label zero-padding "18:00–09:00"; verdict-line fallbacks for gruen /
-        unbewertet / undefined night, reason passthrough).
+        330–60 covers N; full-circle 0–360 covers all 8; uncovered → offen/null; with
+        `DEFAULT_PARAMS` (meltemi 30, Reserve 3): limit 35 → gut, limit 33 → gut
+        (boundary: 30 ≤ 33−3), limit 30 → mäßig, limit 20 → schwach; wave lookup incl.
+        most-generous-wins overlap + null; window label zero-padding "18:00–09:00";
+        verdict-line fallbacks for gruen / unbewertet / undefined night, reason
+        passthrough).
   - [ ] 1.2 `formatWaveM` in `format.ts`; append `format.test.ts` cases ("0,3 m", "1,0 m",
         null → "–"). Do not modify existing cases.
 - [ ] **Task 2 — CSS: Platzdetail redesign block + deletions** (AC: 1–8, 11i)
@@ -402,7 +424,7 @@ Zurück), refresh, sign-out.
         `.sector` + three tint modifiers, `.shelter-legend`/`.shelter-source`.
   - [ ] 2.2 Delete (grep each against `.tsx` first): `.place-hero` block, `shelter-table`
         block + `.sektor-inaktiv`, `.badge-info`, `.warnung`, `.back-link`, the legacy
-        `.card` block (514–555), the dead `.alt-route button.secondary, .option-row
+        `.card` block (~518–556), the dead `.alt-route button.secondary, .option-row
         button.secondary` rule. Keep `.badges`/`.badge`/`.badge-doppelschlag`/`.versal`/
         `.reasons`/`.beschreibung`-scoped rules — DayView consumes them.
 - [ ] **Task 3 — PlaceDetailView rebuild** (AC: 1, 2, 3, 4, 5, 6, 7, 8)
@@ -415,8 +437,8 @@ Zurück), refresh, sign-out.
         `title`, reasons list, day/date caption).
   - [ ] 3.4 Qualitäten meters (5-dot, `role="img"` aria-labels, "n von 5"); delete
         `stars()`.
-  - [ ] 3.5 Schutzprofil grid via `sectorTiles(place.shelter,
-        snapshot.params.meltemiWorstCase.twsKn)` + captions/legend/source footnote.
+  - [ ] 3.5 Schutzprofil grid via `sectorTiles(place.shelter, snapshot.params)` +
+        captions/legend/source footnote.
   - [ ] 3.6 Zurück → `.btn-text` (both branches); invalid branch per AC 8; heading pass
         (h1/h2, `.versal` gone from this view).
 - [ ] **Task 4 — SignInView / auth restyle** (AC: 9)
@@ -450,9 +472,11 @@ Zurück), refresh, sign-out.
   `@vis.gl/react-google-maps` for the satellite tier (already imported here).
 - **Layering:** `ui` imports `domain` types AND pure functions (`format.ts` /
   `dayViewModel.ts` precedent) — `placeViewModel.ts` imports `windSectorLimitKn`,
-  `sectorContains` (domain/ampel.ts), `compassPoint` (domain/geo.ts). It computes DISPLAY
-  aggregation from curated data + params; **it never re-derives a night verdict** — the
-  verdict is `assessment.nightAmpeln[...]`, read, not computed (AD-2).
+  `windHourAmpel`, `sectorContains` (domain/ampel.ts), `compassPoint` (domain/geo.ts).
+  It computes DISPLAY aggregation from curated data + params; **it never re-derives a
+  night verdict** — the verdict is `assessment.nightAmpeln[...]`, read, not computed;
+  the sector tiles' rating is `windHourAmpel` itself at the worst-case probe, no
+  UI-invented threshold (AD-2).
 - **AD-11/AD-12:** zero new view state beyond what exists; zero trip actions; `onBack` /
   `onOpenPlace` contracts untouched.
 - **tsconfig:** `strict`, `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax` —
@@ -483,9 +507,9 @@ Zurück), refresh, sign-out.
 | Wave honesty caption | `Die Welle ist der Modellwert für die offene See am Ort des Platzes — im Hafen oder hinter der Landzunge gilt sie nicht; sie geht nicht in die Ampel ein.` |
 | Quality names | `Schönheit` · `Restaurant` · `Badestrand` |
 | Quality value / aria | `{n} von 5` / `aria-label="{Name}: {n} von 5"` |
-| Sector words | `gut · bis {limit} kn` / `mäßig · bis {limit} kn` / `offen` |
+| Sector words | `gut · bis {limit} kn` / `mäßig · bis {limit} kn` / `schwach · bis {limit} kn` / `offen` |
 | Sector wave footnote | `Welle bis {formatWaveM(maxM)}` / `–` |
-| Shelter reading aid | `Schutz je Windrichtung aus den kuratierten Sektoren; die Wellenwerte sind kuratierte Grenzen und bewerten nichts.` |
+| Shelter reading aid | `Schutz je Windrichtung aus den kuratierten Sektoren, bewertet am Meltemi-Worst-Case der Planung ({twsKn} kn); die Wellenwerte sind kuratierte Grenzen und bewerten nichts.` |
 | Shelter scoring honesty (verbatim, kept) | `Die Ampel hängt allein an den Wind-Sektoren. Die Wellen-Zeilen stehen als kuratiertes Wissen über den Platz da, bewerten aber nichts: die Wellenhöhe des Modells gilt für die offene See, nicht für den Liegeplatz dahinter.` |
 | Sector legend rows (ex-table cells) | `Wind {from}°–{to}° ({compass}–{compass})[ · über Nord] bis {maxKn} kn` / `Welle {from}°–{to}° (…)[ · über Nord] bis {maxM} m` |
 | Source footnote (verbatim, kept) | `Quelle: {sourceNote}. Enthält ggf. Material aus CruisersWiki (CC-Lizenz, Attribution erforderlich).` |
@@ -500,18 +524,20 @@ Zurück), refresh, sign-out.
 /**
  * Pure Platzdetail view-model derivations (Story 1.4) — tested, no React.
  * Reuses the domain's own sector functions (AD-2: the semantics live in
- * domain/ampel.ts; here is only the 8-direction DISPLAY sampling). The tiles
- * summarize the curated statement — the exact sectors render verbatim as a
- * legend below the grid, so a narrow sector between two center degrees is
- * never silently lost.
+ * domain/ampel.ts; here is only the 8-direction DISPLAY sampling — the rating
+ * per tile is windHourAmpel itself, probed at the app's worst-case planning
+ * wind, so no threshold is invented here). The tiles summarize the curated
+ * statement — the exact sectors render verbatim as a legend below the grid,
+ * so a narrow sector between two center degrees is never silently lost.
  */
-import { sectorContains, windSectorLimitKn } from '../domain/ampel.ts';
+import { sectorContains, windHourAmpel, windSectorLimitKn } from '../domain/ampel.ts';
 import { compassPoint } from '../domain/geo.ts';
+import type { Params } from '../domain/schema/params.ts';
 import type { ShelterProfile, WaveSector } from '../domain/schema/shelter.ts';
 import type { PlaceNightAssessment } from '../domain/schema/snapshot.ts';
 import type { Ampel } from '../domain/schema/common.ts';
 
-export type SectorRating = 'gut' | 'maessig' | 'offen';
+export type SectorRating = 'gut' | 'maessig' | 'schwach' | 'offen';
 
 export interface SectorTile {
   /** International notation via compassPoint — the reasons' vocabulary. */
@@ -533,15 +559,29 @@ function waveLimitM(sectors: WaveSector[], deg: number): number | null {
 }
 
 /**
- * gut = hält auch den Meltemi-Worst-Case der eigenen Planung
- * (params.meltemiWorstCase.twsKn); mäßig = geschützt, aber darunter;
- * offen = Richtung in keinem Schutzsektor (Luv-Regel, nie grün).
+ * Rating = die Domänen-Funktion windHourAmpel am Meltemi-Worst-Case der
+ * eigenen Planung (params.meltemiWorstCase.twsKn) — KEINE eigene Schwelle:
+ *   gruen → gut (hält den Worst-Case einschließlich der gelbReserveKn),
+ *   gelb  → mäßig (Worst-Case erreicht die Grenze, keine Reserve mehr),
+ *   rot   → schwach (kuratierte Grenze liegt unter dem Worst-Case),
+ *   kein Sektor → offen (Luv-Regel, nie grün) — vorab kurzgeschlossen, damit
+ *   "offen" nie vom Probe-Wind abhängt.
  */
-export function sectorTiles(shelter: ShelterProfile, meltemiKn: number): SectorTile[] {
+export function sectorTiles(shelter: ShelterProfile, params: Params): SectorTile[] {
   return TILE_DEGREES.map((centerDeg) => {
     const limitKn = windSectorLimitKn(shelter.windSectors, centerDeg);
-    const rating: SectorRating =
-      limitKn === null ? 'offen' : limitKn >= meltemiKn ? 'gut' : 'maessig';
+    let rating: SectorRating;
+    if (limitKn === null) {
+      rating = 'offen';
+    } else {
+      const verdict = windHourAmpel(
+        shelter.windSectors,
+        centerDeg,
+        params.meltemiWorstCase.twsKn,
+        params,
+      );
+      rating = verdict === 'gruen' ? 'gut' : verdict === 'gelb' ? 'maessig' : 'schwach';
+    }
     return {
       dir: compassPoint(centerDeg),
       centerDeg,
@@ -587,6 +627,7 @@ export function formatWaveM(m: number | null): string {
 
 Rating → presentation mapping lives in the VIEW (one lookup object, no logic):
 `{ gut: { cls: 'gruen', word: (kn) => `gut · bis ${kn} kn` }, maessig: { cls: 'gelb', … },
+schwach: { cls: 'rot', word: (kn) => `schwach · bis ${kn} kn` },
 offen: { cls: 'rot', word: () => 'offen' } }`.
 
 ### Reference CSS (add under `/* ---- place detail (redesign, Story 1.4) ---- */`; delete the legacy blocks per Task 2.2)
@@ -739,7 +780,7 @@ const windowLabel = nightWindowLabel(
   snapshot.params.nightStartHourAthens,
   snapshot.params.nightEndHourAthens,
 );
-const tiles = sectorTiles(place.shelter, snapshot.params.meltemiWorstCase.twsKn);
+const tiles = sectorTiles(place.shelter, snapshot.params);
 const typeLabel = /* unchanged derivation */;
 
 <button type="button" className="btn-text" onClick={onBack}>← Zurück</button>
@@ -818,7 +859,7 @@ const typeLabel = /* unchanged derivation */;
       );
     })}
   </div>
-  <p className="shelter-legend">Schutz je Windrichtung aus den kuratierten Sektoren; die Wellenwerte sind kuratierte Grenzen und bewerten nichts.</p>
+  <p className="shelter-legend">Schutz je Windrichtung aus den kuratierten Sektoren, bewertet am Meltemi-Worst-Case der Planung ({snapshot.params.meltemiWorstCase.twsKn} kn); die Wellenwerte sind kuratierte Grenzen und bewerten nichts.</p>
   <p className="shelter-legend"><strong>Die Ampel hängt allein an den Wind-Sektoren.</strong> Die Wellen-Zeilen stehen als kuratiertes Wissen über den Platz da, bewerten aber nichts: die Wellenhöhe des Modells gilt für die offene See, nicht für den Liegeplatz dahinter.</p>
   <ul className="shelter-sectors">
     {place.shelter.windSectors.map((s, i) => (
@@ -929,7 +970,7 @@ const barbText = `Wind aus ${compass(p.dirDeg)} (${Math.round(p.dirDeg)}°), ${f
 **`src/ui/styles.css` (2275 lines)**
 - CURRENT: token layer + alias block (lines 89–104); legacy `.versal`/`h1,h2,h3` serif
   rule (427–449); `.section`/`.badges`/`.badge` (451–478); restyled `.ampel` (480–510);
-  legacy `.card` block (514–555, **zero `.tsx` consumers** — verify again);
+  legacy `.card` block (~518–556, **zero `.tsx` consumers** — verify again);
   `.reasons`/`.state-chip`/`.leg-chip`; 1.2 error/hint; legacy auth block (626–704); 1.3
   map block; stage-map block (1182–1239); place-detail legacy block (1241–1389:
   `.place-hero`×~6, `shelter-table`×3+`.sektor-inaktiv`, `.badge-doppelschlag`,
@@ -1000,9 +1041,12 @@ change, VERIFY 7), `src/ui/tokens.ts`, `src/ui/mapsEnv.ts`, `src/ui/dayViewModel
 ### Testing rules
 
 - vitest, node env, `src/**/__tests__/*.test.ts` only; NO component/DOM tests (AD-2).
-- New: `placeViewModel.test.ts` — minimum cases: (sector) wrap sector 330–60 covers N
+- New: `placeViewModel.test.ts` — minimum cases: (sector, with `DEFAULT_PARAMS` from
+  `domain/schema/params.ts` — the ampel.test.ts precedent) wrap sector 330–60 covers N
   (0°) and misses E; full circle 0–360 covers all 8; direction with no sector →
-  `offen`/`limitKn: null`; limit ≥ meltemiKn → `gut`; limit < meltemiKn → `maessig`;
+  `offen`/`limitKn: null`; limit 35 and limit 33 → `gut` (33 is the gruen boundary:
+  meltemi 30 ≤ 33 − Reserve 3); limit 30 → `maessig` (no reserve left); limit 20 →
+  `schwach` (under the worst case — the domain's rot, NOT mäßig);
   overlapping wind sectors → most generous wins (mirrors the domain's documented
   decision); wave lookup covered/uncovered; (window) `nightWindowLabel(18, 9)` ===
   `'18:00–09:00'`; (verdict) reason passthrough, gruen fallback, unbewertet fallback,
@@ -1017,7 +1061,7 @@ change, VERIFY 7), `src/ui/tokens.ts`, `src/ui/mapsEnv.ts`, `src/ui/dayViewModel
 ```bash
 # dead classes / functions / strings:
 grep -rn 'place-hero\|shelter-table\|sektor-inaktiv' src/
-grep -rn 'back-link\|warnung\|badge-info' src/
+grep -rn 'back-link\|warnung\|badge-info' src/ui/   # src/ui only: "Vorwarnung" in domain/options.ts is a legit hit
 grep -rn 'stars(' src/ui/
 grep -rn '●\|○' src/
 grep -rn '⚠' src/ui/ src/app/
@@ -1025,8 +1069,8 @@ grep -rn 'className="secondary"' src/
 grep -n 'versal\|beschreibung\|"badge\|badges' src/ui/views/PlaceDetailView.tsx
 grep -n 'title=' src/ui/views/PlaceDetailView.tsx
 grep -rn 'Bewertungszeitraum' src/          # replaced by "bewertet für …"
-# legacy auth recipe gone (navy fill / uppercase tracking):
-grep -n 'text-transform: uppercase' src/ui/styles.css | grep -i google
+# legacy auth recipe gone (its 0.18em uppercase tracking is unique to it in the file):
+grep -n 'letter-spacing: 0.18em' src/ui/styles.css
 # legacy .card block gone:
 grep -n '^\.card {\|\.card \.headline\|\.card \.platz-zeile' src/ui/styles.css
 ```
@@ -1040,7 +1084,7 @@ grep -q 'konservativ behandeln' src/ui/views/PlaceDetailView.tsx && echo OK
 grep -q 'CruisersWiki' src/ui/views/PlaceDetailView.tsx && echo OK
 # StageEditor delta landed:
 grep -q 'stage-editor-error' src/ui/views/DayView.tsx && echo OK
-grep -c 'btn-secondary' src/ui/views/DayView.tsx   # ≥ 3 more than baseline
+test "$(grep -c 'btn-secondary' src/ui/views/DayView.tsx)" -eq 8 && echo OK  # baseline 5 + the 3 swapped
 # wind barb: still exactly ONE title=, now with aria-label:
 test "$(grep -c 'title=' src/ui/views/MapView.tsx)" -eq 1 \
   && grep -q 'aria-label={barbText}\|aria-label={' src/ui/views/MapView.tsx && echo OK
@@ -1144,10 +1188,11 @@ by this epic.
 
 ### Open items tagged for Philipp
 
-1. **Sector rating derivation (VERIFY 3):** gut/mäßig boundary =
-   `params.meltemiWorstCase.twsKn` (30 kn — the app's own worst-case wind); "offen" tiles
-   in the rot tint. Both are derived presentation choices over the curated limits —
-   confirm or name other thresholds/tints.
+1. **Sector rating derivation (VERIFY 3):** each tile's rating is the domain's own
+   `windHourAmpel` probed at `params.meltemiWorstCase.twsKn` (30 kn — the app's own
+   worst-case wind): gut/mäßig/schwach for covered directions, offen (rot tint) for
+   uncovered ones. Confirm the probe wind, the word "schwach", and rot tint for both
+   schwach and offen.
 2. **Tile compass notation (VERIFY 4):** N/NE/E/SE… (the app's reason vocabulary), not
    the mock's N/NO/O/SO. Confirm.
 3. **Hero caption text:** "{Name} — {Hafen|Marina|Bucht}" on all tiers (the mock's
