@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './authContext.tsx';
 import { STALE_TIME_MS } from './usePlanning.ts';
 import { PlanningProvider, usePlanning } from './planningContext.tsx';
 import { getCurrentGpsPosition } from '../adapters/geolocation.ts';
+import { departureHourChoices } from '../domain/scoring.ts';
 import { DayView } from '../ui/views/DayView.tsx';
 import { MapView } from '../ui/views/MapView.tsx';
 import { PlaceDetailView } from '../ui/views/PlaceDetailView.tsx';
@@ -116,7 +117,10 @@ function ControlsBar() {
           }
         >
           <option value="">Standard ({params?.departureHourAthens ?? 9}:00)</option>
-          {[6, 7, 8, 9, 10, 11, 12].map((h) => (
+          {/* Tag 1 bietet zusätzlich das Übernahme-Fenster 14–17 Uhr an —
+              die Boots-Übergabe liegt am Nachmittag. Nur dort: an jedem
+              anderen Törntag bleibt es beim Vormittagsfenster (scoring.ts). */}
+          {departureHourChoices(currentDay).map((h) => (
             <option key={h} value={h}>
               {h}:00
             </option>

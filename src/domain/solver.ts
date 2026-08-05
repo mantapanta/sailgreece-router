@@ -56,6 +56,7 @@ import {
   type PackedLeg,
 } from './ppr.ts';
 import { legIndexWithReverses, legsOfVariant } from './legs.ts';
+import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import { enumerateRoundTrips } from './roundTrips.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
@@ -1460,6 +1461,88 @@ export function planKey(plan: Plan): string {
     .sort((a, b) => a.day - b.day)
     .map((d) => `${d.day}:${d.kind === 'stage' ? d.toIslandId : `~${d.islandId}`}`)
     .join('|');
+}
+
+/** Ergebnis von `planWithoutStopover` — Plan plus ggf. erzeugte Direktroute. */
+export interface StopoverRemoval {
+  plan: Plan;
+  /**
+   * Die dabei ERZEUGTE Direktroute — null, wenn die Bibliothek die direkte
+   * Verbindung schon kannte (auch als Gegenrichtung). Der Aufrufer persistiert
+   * sie als Custom-Etappe des Geräts (tripContext DELETE_STOPOVER), damit der
+   * Plan sie über jeden Neustart hinweg auflösen kann.
+   */
+  customLeg: Leg | null;
+}
+
+/**
+ * FR28 — den Zwischenstopp eines Doppelschlag-Tages löschen: derselbe Tag,
+ * dasselbe Tagesziel, aber als EINE direkte Etappe gesegelt.
+ *
+ * Zuerst wird im Bibliotheks-Index inklusive Gegenrichtungen (legLibrary)
+ * nach einer direkten Verbindung gesucht. Kennt die Bibliothek keine, wird
+ * sie ERZEUGT: der kürzeste landfreie Kurs zwischen dem Startplatz des Tages
+ * und dem Zielplatz (searoute.ts), mit der sphärisch gerechneten Kurslänge
+ * als Distanz. Das ist keine freie Geometrie zur Laufzeit der SUCHE — der
+ * Solver-Suchraum bleibt kuratiert —, sondern eine bewusste Skipper-
+ * Entscheidung, die als benannte Etappe in die Bibliothek dieses Geräts
+ * eingeht (usePlanning injiziert `customLegs` in den Snapshot; kuratierte
+ * Etappen gewinnen bei gleicher Id, first-writer-wins in legIndex).
+ *
+ * Null nur noch, wenn der Tag keinen Zwischenstopp trägt, eine Referenz tot
+ * ist oder KEIN landfreier Kurs gefunden wird (`SeaRoute.unresolved`) — eine
+ * Luftlinie über Land wird nie stillschweigend behauptet.
+ *
+ * Der Tag wird als Skipper-Entscheidung gestempelt (Pin, AD-12), damit eine
+ * spätere Neuberechnung das Tagesziel nicht wieder verwirft. Alle anderen
+ * Tage bleiben unberührt — Start- und Zielinsel des Tages ändern sich nicht,
+ * die Kette bleibt geschlossen.
+ */
+export function planWithoutStopover(
+  plan: Plan,
+  day: number,
+  snapshot: PlanningSnapshot,
+): StopoverRemoval | null {
+  const entry = planDay(plan, day);
+  if (!entry || entry.kind !== 'stage' || entry.legIds.length < 2) return null;
+  const legs = legLibrary(snapshot);
+  const first = legs.get(entry.legIds[0]!);
+  const last = legs.get(entry.legIds[entry.legIds.length - 1]!);
+  if (!first || !last) return null;
+
+  const replaceDay = (legId: string): Plan => ({
+    ...plan,
+    days: plan.days.map((d) =>
+      d.day === day && d.kind === 'stage'
+        ? { ...d, legIds: [legId], source: 'skipper' as const }
+        : d,
+    ),
+  });
+
+  const direct = [...legs.values()].find(
+    (l) => l.fromIslandId === first.fromIslandId && l.toIslandId === entry.toIslandId,
+  );
+  if (direct) return { plan: replaceDay(direct.id), customLeg: null };
+
+  // Erzeugen: landfreier Kurs vom Startplatz des Tages zum Zielplatz.
+  const from = snapshot.library.places.find((p) => p.id === first.fromPlaceId);
+  const to = snapshot.library.places.find((p) => p.id === last.toPlaceId);
+  if (!from || !to) return null;
+  const routed = seaRoute([from.coordinates, to.coordinates]);
+  if (routed.unresolved || routed.nm <= 0) return null;
+  const customLeg: Leg = {
+    id: `${first.fromIslandId}--${entry.toIslandId}`,
+    fromIslandId: first.fromIslandId,
+    toIslandId: entry.toIslandId,
+    fromPlaceId: from.id,
+    toPlaceId: to.id,
+    distanceNm: Math.round(routed.nm * 10) / 10,
+    waypoints: routed.path.slice(1, -1),
+    windWarnings: [
+      'Direktroute, vom Skipper erzeugt (Zwischenstopp gelöscht): Kurs landfrei gerechnet, Distanz aus der Geometrie — nicht kuratiert',
+    ],
+  };
+  return { plan: replaceDay(customLeg.id), customLeg };
 }
 
 /** Stages of a plan that could not be assessed — for display (AD-12). */

@@ -56,7 +56,11 @@ export interface TripFrame {
    * only ever RE-ASSESSES this plan — it never mutates it.
    */
   plan: Plan | null;
-  /** Athens local departure hour override for today (FR15). */
+  /**
+   * Athens local departure hour override for today (FR15). Späte Stunden aus
+   * dem Übernahme-Fenster (14–17 Uhr) gelten nur an Törntag 1 — aufgelöst
+   * wird der Wert ausschliesslich über `scoring.departureHourForDay`.
+   */
   departureHourOverride: number | null;
   /**
    * Liegezeit an den Zwischenstopps, pro Törntag überschrieben. Fehlt ein Tag,

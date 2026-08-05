@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { tripReducer, type TripState } from '../tripContext.tsx';
 import { PlanSchema, SOLVER_ALGORITHM_VERSION, planOutdated } from '../../domain/schema/plan.ts';
 import type { Plan, PlanDay } from '../../domain/schema/plan.ts';
+import type { Leg } from '../../domain/schema/route.ts';
 
 const stage = (day: number, source: 'solver' | 'skipper' = 'solver'): PlanDay => ({
   kind: 'stage',
@@ -32,6 +33,7 @@ const state = (plan: Plan | null): TripState => ({
   planUnreadable: false,
   departureHourOverride: null,
   stopHoursByDay: {},
+  customLegs: [],
 });
 
 describe('tripReducer — REFRESH_OUTDATED', () => {
@@ -53,6 +55,55 @@ describe('tripReducer — REFRESH_OUTDATED', () => {
     const next = freshPlan([stage(1)]);
     const result = tripReducer(state(null), { type: 'REFRESH_OUTDATED', plan: next });
     expect(result.plan).toBeNull();
+  });
+});
+
+/**
+ * DELETE_STOPOVER — Plan und erzeugte Direktroute kommen als EIN Payload:
+ * nie ein gespeicherter Plan, dessen Etappe fehlt (FR28 Zwischenstopp
+ * löschen). Dedupe per Id, damit wiederholtes Löschen die Bibliothek des
+ * Geräts nicht doppelt füllt.
+ */
+describe('tripReducer — DELETE_STOPOVER', () => {
+  const directLeg = (): Leg => ({
+    id: 'athen--sued',
+    fromIslandId: 'athen',
+    toIslandId: 'sued',
+    fromPlaceId: 'athen-alimos',
+    toPlaceId: 'sued-hafen',
+    distanceNm: 38,
+    waypoints: [],
+    windWarnings: [],
+  });
+
+  it('übernimmt den Plan und persistiert die erzeugte Direktroute', () => {
+    const next = freshPlan([stage(1, 'skipper'), stage(2)]);
+    const result = tripReducer(state(freshPlan([stage(1), stage(2)])), {
+      type: 'DELETE_STOPOVER',
+      plan: next,
+      customLeg: directLeg(),
+    });
+    expect(result.plan).toBe(next);
+    expect(result.customLegs.map((l) => l.id)).toEqual(['athen--sued']);
+  });
+
+  it('dedupliziert per Id — dieselbe Direktroute entsteht nie zweimal', () => {
+    const withLeg: TripState = { ...state(freshPlan([stage(1)])), customLegs: [directLeg()] };
+    const result = tripReducer(withLeg, {
+      type: 'DELETE_STOPOVER',
+      plan: freshPlan([stage(1, 'skipper')]),
+      customLeg: directLeg(),
+    });
+    expect(result.customLegs).toHaveLength(1);
+  });
+
+  it('customLeg null (Bibliothek kannte die Verbindung) lässt die Liste stehen', () => {
+    const result = tripReducer(state(freshPlan([stage(1)])), {
+      type: 'DELETE_STOPOVER',
+      plan: freshPlan([stage(1, 'skipper')]),
+      customLeg: null,
+    });
+    expect(result.customLegs).toEqual([]);
   });
 });
 
