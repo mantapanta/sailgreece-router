@@ -141,23 +141,35 @@ stepper); the Karte story decides whether Karte needs its own affordance.
    ONE caption line (`components.status-line`: 12.5px, `--ink-secondary`, 9px state dot in
    the Ampel graphic hue, verdict in `--ink-primary` 600): dot + verdict + `·`-separated
    facts — verdict per `restTripAmpel`: "Round-Trip trägt" / "Round-Trip unter Vorbehalt" /
-   "Kein gültiger Round-Trip" / "Round-Trip unbewertet"; facts: "Rückkehr Alimos bis
-   Tag {ppr.effectiveDeadlineDay}" always, "Meltemi-fest bis Tag {meltemiSafeUntilDay}" when
-   a main route reports a non-null value. The line is a button (≥44px hit area,
-   `aria-expanded` + `aria-controls`); tap opens the rest-trip detail as an **expander** (per
-   the Interaction-Primitives contract: region grows in place, Esc inside closes and returns
-   focus to the trigger, no trap, no backdrop) containing: the reasons list
-   (`restTripReasons` + PPR-Hinweise, suppressed at base as today), "Spätester Umkehrtag:
-   Tag X" / "nicht mehr erreichbar", "Meltemi-fest bis: Tag X" / "heute nicht", and the
-   FR20 decision points (`assessment.decisionPoints`, day + text). The wrapper carries
-   `aria-live="polite"`. `.resttrip-banner`/`.resttrip-head` (component markup AND CSS incl.
+   "Kein gültiger Round-Trip" / "Round-Trip unbewertet"; when rot AND
+   `assessment.proposal` exists, the verdict segment continues "— Vorschlag mit der
+   geringsten Verletzung" (EXPERIENCE State Patterns, "No valid round trip"); facts:
+   "Rückkehr Alimos bis Tag {ppr.effectiveDeadlineDay}" always, "Meltemi-fest bis
+   Tag {meltemiSafeUntilDay}" when a main route reports a non-null value. The line is a
+   button (≥44px hit area, `aria-expanded` + `aria-controls`); tap opens the rest-trip
+   detail as an **expander** (per the Interaction-Primitives contract: region grows in
+   place, Esc inside closes and returns focus to the trigger, no trap, no backdrop)
+   containing: the reasons list (`restTripReasons` + PPR-Hinweise, suppressed at base as
+   today), "Rückkehr Alimos bis Tag {d} (inkl. Puffertag)" (the qualifier the banner
+   carried), "Spätester Umkehrtag: Tag X" / "nicht mehr erreichbar", "Meltemi-fest bis:
+   Tag X" / "heute nicht" — the latter two each followed by their explanation in caption
+   type, taken VERBATIM from the current badge `title`s ("Letzter Törntag, an dem die
+   Umkehr über die Rückfallkette noch rechtzeitig nach Alimos führt (Worst-Case
+   gerechnet)." / "Bis zu diesem Törntag ist die Umkehr auch unter dem
+   Meltemi-Worst-Case jederzeit möglich. Danach trägt der aktuelle Forecast den Heimweg —
+   die Tageskarten sagen, woran der Abbruch zu erkennen ist."; the tooltips die, their
+   meaning must not) — and the FR20 decision points (`assessment.decisionPoints`,
+   day + text). The wrapper carries `aria-live="polite"`. `.resttrip-banner`/`.resttrip-head` (component markup AND CSS incl.
    the four ampel modifiers) are gone; no information the banner carried is lost.
 
 2. **Stale-forecast escalation.** When `now − fetchedAtIso > STALE_TIME_MS`: the status line
    gains a LEADING segment "Stand vor {h} h" in `--ampel-gelb-text` with a gelb dot
    (`--ampel-gelb-graphic`) before the verdict segment (announced by the existing
-   `aria-live`), and the footer provenance line prefixes the same "Stand vor {h} h ·" in
-   `--ampel-gelb-text`. The age label comes from the pure helper (AC 14) — views pass
+   `aria-live`), the footer provenance line prefixes the same "Stand vor {h} h ·" in
+   `--ampel-gelb-text`, and the FOOTER refresh affordance renders primary-toned while
+   stale (EXPERIENCE State Patterns): give `RefreshButton` an optional `stale` prop that
+   adds a class coloring the glyph `--accent-text` (footer instance only; header instance
+   unchanged). The age label comes from the pure helper (AC 14) — views pass
    `Date.now()`; the status line re-checks at most once per minute (interval effect,
    cleaned up). When fresh, neither segment renders.
 
@@ -228,10 +240,9 @@ stepper); the Karte story decides whether Karte needs its own affordance.
    headline "Hafentag in {Ort}" in display type (the `h1`), berth line with the
    Nacht-AmpelBadge (`placeAmpel`), and a caption pointer to the next sailing day ("Weiter am
    {Mi.}: {Syros} → {Paros}", weekday via a new `formatTripDayWeekdayShort`; omitted when no
-   later sailing day exists). **No stat tiles, no stepper, no "Etappe ändern" CTA** (the
-   secondary path to re-plan the day stays available via the rest-trip rows /
-   editor on other days; the existing harbour-day editing entry may remain as a ghost
-   "Tag ändern" ONLY if it costs nothing — otherwise omit, the day has no leg to edit).
+   later sailing day exists). **No stat tiles, no stepper, no "Etappe ändern" CTA — the
+   binding EXPERIENCE Hafentag variant has none; do not add a substitute affordance.**
+   Re-planning stays reachable through the rest-trip rows' editors and the Optionsraum.
    Never renders empty tiles.
 
 8. **Hero-switch rule.** The hero shows today's stage until `assessment.currentIslandId`
@@ -295,7 +306,8 @@ stepper); the Karte story decides whether Karte needs its own affordance.
 13. **Primitives added/restyled in CSS.** (i) `.ampel` (AmpelBadge) becomes the DESIGN
     ampel-badge pill: state tint background, 9px dot in the state hue (Gelb dot via the
     `--gelb` alias = graphic variant, already correct), label in the state's `--ampel-*-text`
-    color, `--radius-full`, overline-ish 12px/700 — dot + German word always together (the
+    color, `--radius-full`, overline type 13px/700/+0.06em (DESIGN `components.ampel-badge`
+    → `typography.overline`; no text-transform) — dot + German word always together (the
     component already renders both; do not add a bare-dot mode). This restyle intentionally
     reaches MapView/PlaceDetail badges (inherited improvement, same component). (ii)
     `.error-panel` = `--ampel-rot-tint` bg + `--ampel-rot-text` text + `--radius-md`, no
@@ -378,7 +390,8 @@ stepper); the Karte story decides whether Karte needs its own affordance.
         "Lade Daten …". Retire the old string.
   - [ ] 3.4 `role="alert"` on the two Shell error panels; footer provenance gains the stale
         "Stand vor {h} h ·" prefix in `--ampel-gelb-text` via `staleForecastLabel` +
-        `STALE_TIME_MS`.
+        `STALE_TIME_MS`; while stale the footer `RefreshButton` instance renders
+        primary-toned (`stale` prop → `--accent-text` glyph, AC 2).
 - [ ] **Task 4 — TripStatusLine (+ expander) in DayView** (AC: 1, 2, 3)
   - [ ] 4.1 Component (local to DayView.tsx is fine): live wrapper, trigger button with dot +
         verdict + facts, stale leading segment, detail region (reasons incl. suppressed-at-
@@ -464,9 +477,11 @@ stepper); the Karte story decides whether Karte needs its own affordance.
 | Verdict unbewertet | `Round-Trip unbewertet` |
 | Status fact 1 | `Rückkehr Alimos bis Tag {d}` |
 | Status fact 2 | `Meltemi-fest bis Tag {d}` (only when non-null) |
+| Verdict rot + proposal exists | `Kein gültiger Round-Trip — Vorschlag mit der geringsten Verletzung` |
 | Stale segment / footer prefix | `Stand vor {h} h` |
-| Detail: Umkehrtag | `Spätester Umkehrtag: Tag {d}` / `Spätester Umkehrtag: nicht mehr erreichbar` |
-| Detail: Meltemi | `Meltemi-fest bis: Tag {d}` / `Meltemi-fest bis: heute nicht` |
+| Detail: Frist | `Rückkehr Alimos bis Tag {d} (inkl. Puffertag)` |
+| Detail: Umkehrtag | `Spätester Umkehrtag: Tag {d}` / `Spätester Umkehrtag: nicht mehr erreichbar` + caption explanation (current badge `title`, verbatim — see AC 1) |
+| Detail: Meltemi | `Meltemi-fest bis: Tag {d}` / `Meltemi-fest bis: heute nicht` + caption explanation (current badge `title`, verbatim — see AC 1) |
 | Detail: FR20 heading | `Entscheidungspunkte` (rows: `Tag {d}: {text}`) |
 | Kicker | `Tag {d} · {formatTripDayDate(...)}` |
 | Position line | `Position: {Ort}` + ` (GPS)` / ` (manuell gesetzt)`; fallback `Position unbekannt` |
@@ -485,7 +500,7 @@ stepper); the Karte story decides whether Karte needs its own affordance.
 | Optionsraum empty | `Keine Optionen mehr offen — Rückweg fixiert.` + caption `Der Plan folgt der festgelegten Rückroute; neue Fenster meldet der nächste Forecast-Lauf.` |
 | Assumption chip | `Ab Tag {N} beruht die Planung auf einer Annahme.` |
 | Check-in prompt | h: `Noch keine Hauptroute festgelegt.` · body: `Vorschlag der App: {Insel} und zurück, {k} Etappen.` · button: `Vorschlag übernehmen` |
-| Bereits gefahren | `Bereits gefahren ({n})`; chips `Etappe {n}: {Insel} (Tag {d})` |
+| Bereits gefahren | `Bereits gefahren ({n})`; chips `Etappe {n}: {Insel} (Tag {d})` — omit the `Etappe {n}: ` prefix when `stageNumber === null` (harbour day), mirroring the current conditional |
 | Skeleton hidden text | `Tagesansicht wird geladen …`; Karte/Platz loading hint `Lade Daten …` |
 | Editor options | `{Platzname} — {Grün|Gelb|Rot|Unbewertet}` (replaces 🟢-symbols) |
 
@@ -618,6 +633,7 @@ export function stageFrom(
 .status-dot.rot { background: var(--ampel-rot); }
 .status-dot.unbewertet { background: var(--ampel-unbewertet); }
 .trip-status .stale { color: var(--ampel-gelb-text); font-weight: 600; }
+.icon-button.stale { color: var(--accent-text); } /* footer refresh while forecast stale (AC 2) */
 .trip-status-detail {
   background: var(--surface-card); border-radius: var(--radius-md);
   box-shadow: var(--shadow-2); padding: var(--space-4);
@@ -746,7 +762,7 @@ new):
 .ampel {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 5px 12px; border-radius: var(--radius-full);
-  font: 700 12px/1.3 var(--font-sans); letter-spacing: 0.03em;
+  font: 700 13px/1.3 var(--font-sans); letter-spacing: 0.06em; /* = typography.overline */
 }
 .ampel .dot { width: 9px; height: 9px; border-radius: var(--radius-full); }
 .ampel-gruen { background: var(--ampel-gruen-tint); color: var(--ampel-gruen-text); }
@@ -787,7 +803,8 @@ const stale = staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS);
   {detailOpen && (
     <div id="resttrip-detail" className="trip-status-detail" onKeyDown={escClosesAndRefocuses}>
       {/* reasons (restTripReasons + pprHinweise — keep the atBase suppression),
-          Spätester Umkehrtag, Meltemi-fest bis, then FR20: */}
+          "Rückkehr Alimos bis Tag {d} (inkl. Puffertag)", Spätester Umkehrtag and
+          Meltemi-fest bis (each + its verbatim ex-title explanation, AC 1), then FR20: */}
       {assessment.decisionPoints.length > 0 && (
         <>
           <h3>Entscheidungspunkte</h3>
@@ -936,8 +953,8 @@ export function DayViewSkeleton() {
   intent (decisionPoints comment updates: they now render in the status detail).
 
 **`src/app/App.tsx` (331 lines)**
-- CURRENT: `ControlsBar` (Törntag select 31–129, position select, "GPS abfragen" button,
-  "Manuelle Position lösen", Abfahrt select, gps error styled `var(--rot)` inline),
+- CURRENT: `ControlsBar` (lines 31–129: Törntag select, position select, "GPS abfragen"
+  button, "Manuelle Position lösen", Abfahrt select, gps error styled `var(--rot)` inline),
   `RefreshButton`, `Shell` (header, error panels, `view.kind !== 'platz' && <ControlsBar/>`,
   "Lade Bibliothek und Forecast …" hint, view switch, footer provenance + detail expander),
   `AuthGate`, `App`.
@@ -1017,7 +1034,9 @@ markup unchanged — keep its `title` for now).
   with all-`zu` and with `closesOnDay: null` entries, pickupDay on the trip's first/last day.
 - `npm test` and `npm run build` must both pass; do not modify `vitest.config.ts`.
 
-### DoD greps (all must return nothing; run from repo root)
+### DoD greps (run from repo root)
+
+Every grep in the first block must return NOTHING:
 
 ```bash
 # dead components / classes / strings:
@@ -1030,9 +1049,13 @@ grep -n '^\.controls' src/ui/styles.css
 grep -rn '🟢\|🟡\|🔴\|⚪\|📌\|⚓\|⚠\|⛔' src/ui/views/DayView.tsx src/app/App.tsx
 # Törntag control no longer at app level (popover dev select lives in PositionPopover):
 grep -n 'Törntag' src/app/App.tsx
-# DayView no longer uses the legacy section voice or legacy card recipe for its own chrome
-# (AltPreview's internal .versal rows are the sanctioned exception — verify count, expect ≤2):
-grep -cn 'versal' src/ui/views/DayView.tsx
+```
+
+This check must print OK — DayView keeps at most AltPreview's two `.versal` day tags
+(sanctioned exception; calc/preview content is out of scope):
+
+```bash
+test "$(grep -c 'versal' src/ui/views/DayView.tsx)" -le 2 && echo OK
 ```
 
 Exception rule, stated for the record: `.versal`, `.card`, `.badge`, `.state-chip` etc.
