@@ -14,6 +14,7 @@ import {
   validatePlan,
 } from '../solver.ts';
 import { packLegs, packLegsFeasible } from '../ppr.ts';
+import { planKey } from '../solver.ts';
 import { stagesOf } from '../schema/plan.ts';
 import { assessPlanning } from '../assess.ts';
 import type { Island } from '../schema/island.ts';
@@ -555,6 +556,65 @@ describe('solver — Resttage werden am Wendepunkt verbracht (stretchPacking)', 
     for (const alt of alts) {
       const last = Math.max(...stagesOf(alt.plan).map((s) => s.day));
       expect(last).toBe(7);
+    }
+  });
+});
+
+/**
+ * FEEDBACK 2026-08-05 — die Ziel-Sektion: Optionsraum und Alternativen je
+ * Ziel zu EINER Karte zusammengeführt (assessment.ziele). Optionen behalten
+ * Zustand/Frist/Preis und bekommen ihren konkreten Plan bewertet dazu; freie
+ * Runden, die zu keiner Option gehören, werden eigene Karten — darunter
+ * bleibt der Existenz-Zeuge erreichbar (AD-13).
+ */
+describe('assessment — Ziel-Sektion (ziele)', () => {
+  it('führt jede Option mit ihrem bewerteten Plan und die freien Runden zusammen', () => {
+    const snapshot = roundTripSnapshot();
+    const solved = completePlan(snapshot, 'athen')!;
+    const a = assessPlanning({
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: solved.plan },
+    });
+    // Jede kuratierte Option hat eine Ziel-Karte, in Options-Reihenfolge.
+    expect(a.ziele.filter((z) => z.option).map((z) => z.option!.routeId)).toEqual(
+      a.routeOptions.map((o) => o.routeId),
+    );
+    // Eine offene Option trägt ihren Plan BEWERTET (route), nicht nur roh.
+    for (const z of a.ziele) {
+      if (z.option?.plan) {
+        expect(z.route).not.toBeNull();
+        expect(planKey(z.route!.plan)).toBe(planKey(z.option.plan));
+        expect(z.route!.stages.length).toBeGreaterThan(0);
+      }
+    }
+    // Jede Alternative, deren Plan zu keiner Option gehört, wird eigene Karte.
+    const optionKeys = new Set(
+      a.ziele.filter((z) => z.option && z.route).map((z) => planKey(z.route!.plan)),
+    );
+    for (const alt of a.alternatives) {
+      if (optionKeys.has(planKey(alt.plan))) continue;
+      expect(
+        a.ziele.some((z) => !z.option && z.route && planKey(z.route.plan) === planKey(alt.plan)),
+      ).toBe(true);
+    }
+  });
+
+  it('markiert den Plan, der inhaltlich die Hauptroute ist', () => {
+    const snapshot = roundTripSnapshot();
+    const solved = completePlan(snapshot, 'athen')!;
+    const a = assessPlanning({
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: solved.plan },
+    });
+    const marked = a.ziele.filter((z) => z.istHauptroute);
+    for (const z of marked) {
+      expect(planKey(z.route!.plan)).toBe(planKey(solved.plan));
+    }
+    // Nie markiert, was inhaltlich abweicht.
+    for (const z of a.ziele) {
+      if (z.route && planKey(z.route.plan) !== planKey(solved.plan)) {
+        expect(z.istHauptroute).toBe(false);
+      }
     }
   });
 });

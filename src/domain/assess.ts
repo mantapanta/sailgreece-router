@@ -11,6 +11,7 @@ import type {
   PlanningSnapshot,
   PlaceNightAssessment,
   StageAssessment,
+  ZielAssessment,
 } from './schema/snapshot.ts';
 import type { Ampel } from './schema/common.ts';
 import type { Plan } from './schema/plan.ts';
@@ -30,6 +31,7 @@ import {
   existsValidPlan,
   legLibrary,
   meltemiSafeUntilDay,
+  planKey,
   validatePlan,
   type SolveResult,
 } from './solver.ts';
@@ -437,6 +439,46 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
       ).map((r) => toPlanAssessment(r, snapshot, bestPlaceByIsland, nightAmpeln))
     : [];
 
+  // --- Ziel-Sektion: Optionsraum + Alternativen zusammengeführt ------------
+  // (Feedback 2026-08-05.) Je kuratierter Option EINE Karte mit ihrem eigenen
+  // Plan — bewertet, damit die Vorschau dieselben Werte zeigt wie später die
+  // Hauptroute. Gehört der Plan einer Alternative inhaltlich zu einer Option,
+  // übernimmt die Options-Karte ihn (keine Doppelung); die übrigen
+  // Alternativen (freie Runden, der Existenz-Zeuge) werden eigene Karten.
+  const mainKey = trip.plan ? planKey(trip.plan) : null;
+  const ziele: ZielAssessment[] = [];
+  const claimed = new Set<string>();
+  for (const opt of routeOptions) {
+    let route: PlanAssessment | null = null;
+    if (opt.plan) {
+      const key = planKey(opt.plan);
+      claimed.add(key);
+      route =
+        alternatives.find((a) => planKey(a.plan) === key) ??
+        assessPlan(opt.plan, snapshot, bestPlaceByIsland, nightAmpeln, {
+          variantId: opt.routeId,
+          turnIslandId: opt.turnIslandId,
+          relaxedTo: opt.costLevel ?? 'none',
+        });
+    }
+    ziele.push({
+      option: opt,
+      route,
+      turnIslandId: opt.turnIslandId,
+      istHauptroute: route !== null && mainKey !== null && planKey(route.plan) === mainKey,
+    });
+  }
+  for (const alt of alternatives) {
+    if (claimed.has(planKey(alt.plan))) continue;
+    ziele.push({
+      option: null,
+      route: alt,
+      turnIslandId: alt.turnIslandId,
+      // deriveAlternatives filtert Duplikate der Hauptroute bereits aus.
+      istHauptroute: false,
+    });
+  }
+
   const restTripReasons: string[] = [];
   let restTripAmpel: Ampel;
   if (!currentIslandId) {
@@ -488,6 +530,7 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     mainRoute,
     proposal,
     alternatives,
+    ziele,
     restTripAmpel,
     restTripReasons,
     ppr,

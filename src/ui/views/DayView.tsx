@@ -15,19 +15,18 @@ import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
   LegAssessment,
-  PlanAssessment,
   PlanningSnapshot,
-  RouteOptionAssessment,
   StageAssessment,
   LegHourBreakdown,
   PointPassage,
+  ZielAssessment,
 } from '../../domain/schema/snapshot.ts';
 import type { DayReturnCheck } from '../../domain/schema/plan.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
-import { altRouteColor } from '../altRouteColors.ts';
+import { zielColors } from '../altRouteColors.ts';
 import {
   buildLegsById,
   pointNumberByForecastKey,
@@ -587,7 +586,10 @@ function StageCard({
   );
 }
 
-const OPTION_STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
+const OPTION_STATE_LABEL: Record<
+  NonNullable<ZielAssessment['option']>['state'],
+  string
+> = {
   offen: 'offen',
   'offen-horizont': 'offen · Vorbehalt',
   schliesst: 'schliesst',
@@ -595,151 +597,134 @@ const OPTION_STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
 };
 
 /**
- * FR9/FR18/FR20 — der Optionsraum: wie weit trägt welche Route noch, was
- * kostet sie, und bis wann ist sie zu haben.
+ * FEEDBACK 2026-08-05 — die EINE Ziel-Karte: Optionsraum und Alternativ-Routen
+ * beantworteten dieselbe Frage in zwei Sektionen mit zwei Buttons, die am Ende
+ * dasselbe taten (checkIn). Jetzt trägt jede Karte beides:
  *
- * Das ist der Kern der App und war bisher unsichtbar: `assessRouteOption`
- * rechnete Zustand und Schliesstag für jede kuratierte Route aus, und keine
- * View hat sie je angezeigt. Der Skipper sah nur die EINE Hauptroute und
- * konnte weder erkennen, dass Santorin noch offen ist, noch was es kostet,
- * noch dass es morgen zu ist.
+ *   WAS geht noch (Optionsraum-Erbe, `ziel.option`):
+ *     Zustand — offen / schliesst / zu,
+ *     Frist   — bis wann kann ich mich noch entscheiden,
+ *     Preis   — was nehme ich in Kauf (Doppelschläge, Nachtetappen).
+ *   WIE es aussieht (Alternativen-Erbe, `ziel.route`):
+ *     erst ansehen (Etappenliste + Karte), DANN übernehmen.
  *
- * Drei Angaben je Option, und keine davon darf fehlen:
- *   Reichweite — wie weit komme ich damit (die Törnfrage),
- *   Preis      — was nehme ich dafür in Kauf (Doppelschläge, Nachtetappen),
- *   Frist      — bis wann kann ich mich noch dafür entscheiden.
+ * Freie Runden ohne kuratierte Option haben keinen Kopf-Zustand — sie sind
+ * konkrete Pläne aus dem Suchraum, darunter der Existenz-Zeuge (AD-13).
  */
-function OptionRow({
-  option,
+function ZielCard({
+  ziel,
   snapshot,
   today,
+  color,
+  mapId,
 }: {
-  option: RouteOptionAssessment;
+  ziel: ZielAssessment;
   snapshot: PlanningSnapshot;
   today: number;
+  /** Farbe der Route (zielColors) — identisch zur Karten-Ansicht; null ohne Route. */
+  color: string | null;
+  mapId: string | null;
 }) {
   const { checkIn } = usePlanning();
-  const rest = option.closesOnDay !== null ? option.closesOnDay - today : null;
+  const [open, setOpen] = useState(false);
+  const opt = ziel.option;
+  const route = ziel.route;
+  const stages = route?.stages.filter((s) => s.kind === 'stage') ?? [];
+  /** Hafentage NACH der letzten Etappe sind Reserve, kein Törn (s. Vorschau). */
+  const lastStageDay = stages.length > 0 ? stages[stages.length - 1]!.day : null;
+  const shownDays =
+    route === null
+      ? []
+      : lastStageDay === null
+        ? route.stages
+        : route.stages.filter((s) => s.day <= lastStageDay);
+  const reserveDays = route === null ? 0 : route.stages.length - shownDays.length;
+  const rest = opt && opt.closesOnDay !== null ? opt.closesOnDay - today : null;
   const dringend =
     rest !== null && rest >= 0 && rest <= snapshot.params.decisionLookaheadDays;
+  // Chips: JEDE angelaufene Insel, nicht nur Tagesziele — an einem
+  // Doppelschlag-Tag ist der Zwischenstopp sonst unsichtbar, und genau dort
+  // kann der Wendepunkt liegen ("Wendepunkt Santorin" ohne Santorin-Chip).
+  const visited = stages.flatMap((s) =>
+    s.legs.map((l) => l.sailedLeg?.toIslandId ?? l.legId.split('--')[1] ?? l.legId),
+  );
 
   return (
-    <div className={`option-row state-${option.state}${dringend ? ' dringend' : ''}`}>
+    <div
+      className={`option-row ziel-card state-${opt?.state ?? 'frei'}${dringend ? ' dringend' : ''}`}
+      style={color ? { borderLeftColor: color } : undefined}
+    >
       <div className="option-kopf">
-        <span className="option-name">{option.name}</span>
-        <span className={`state-chip state-${option.state}`}>
-          {OPTION_STATE_LABEL[option.state]}
+        <span className="option-name">
+          {color && <span className="alt-farbe" style={{ background: color }} />}
+          {opt ? opt.name : `Runde über ${islandName(snapshot, ziel.turnIslandId)}`}
+        </span>
+        <span className="ziel-chips">
+          {ziel.istHauptroute && (
+            <span className="state-chip chip-hauptroute">aktuelle Hauptroute</span>
+          )}
+          {opt && (
+            <span className={`state-chip state-${opt.state}`}>
+              {OPTION_STATE_LABEL[opt.state]}
+            </span>
+          )}
         </span>
       </div>
 
       <div className="badges">
         <span className="badge" title="Entfernung von der Basis zum Wendepunkt">
-          bis {islandName(snapshot, option.turnIslandId)}
-          {option.reachNm !== null && ` · ${Math.round(option.reachNm)} sm`}
+          bis {islandName(snapshot, ziel.turnIslandId)}
+          {opt?.reachNm != null && ` · ${Math.round(opt.reachNm)} sm`}
         </span>
-        {option.turnDay !== null && (
+        {opt?.turnDay != null && (
           <span className="badge" title="Tag, an dem der Plan den Wendepunkt erreicht">
-            Wende an Tag {option.turnDay}
+            Wende an Tag {opt.turnDay}
           </span>
         )}
-        {option.closesOnDay !== null && (
+        {stages.length > 0 && (
+          <span
+            className="badge"
+            title={
+              reserveDays > 0
+                ? `Nach der Rückkehr bleiben ${reserveDays} ${reserveDays === 1 ? 'Tag' : 'Tage'} Reserve bis zum Stichtag`
+                : undefined
+            }
+          >
+            {stages.length} Etappen
+            {lastStageDay !== null && reserveDays > 0 && ` · zurück an Tag ${lastStageDay}`}
+          </span>
+        )}
+        {opt?.closesOnDay != null && (
           <span className={`badge${dringend ? ' badge-frist' : ''}`}>
             {rest !== null && rest <= 0
               ? 'letzte Entscheidung heute'
-              : `noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'} · bis Tag ${option.closesOnDay}`}
+              : `noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'} · bis Tag ${opt.closesOnDay}`}
           </span>
         )}
-        <AmpelBadge ampel={option.ampel} />
+        {opt && <AmpelBadge ampel={opt.ampel} />}
       </div>
 
       {/* Der Preis. Eine offene Option ohne ihn wäre eine Behauptung ohne
           Preisschild — genau die Information, die fehlte, wenn man wissen
           wollte, was ein weiter gestecktes Ziel eigentlich bedeutet. */}
-      <div className="beschreibung">
-        {option.costNote
-          ? `Kostet: ${option.costNote}.`
-          : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
-      </div>
+      {opt && (
+        <div className="beschreibung">
+          {opt.costNote
+            ? `Kostet: ${opt.costNote}.`
+            : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
+        </div>
+      )}
 
-      {option.reasons.length > 0 && (
+      {opt && opt.reasons.length > 0 && (
         <ul className="reasons">
-          {option.reasons.map((r) => (
+          {opt.reasons.map((r) => (
             <li key={r}>{r}</li>
           ))}
         </ul>
       )}
 
-      {option.plan && (
-        <button type="button" onClick={() => checkIn(option.plan!)}>
-          Diese Option verfolgen
-        </button>
-      )}
-    </div>
-  );
-}
-
-/**
- * FR29 — an alternative round trip: erst ansehen, dann übernehmen.
- *
- * FEEDBACK 2026-08-05: die Zeile bot nur den Check-in an — was sich hinter
- * der Alternative verbirgt, war nirgends anzusehen, und übernehmen ohne
- * ansehen ist keine Entscheidung. Deshalb klappt die Zeile jetzt zu einer
- * Vorschau auf (Etappenliste Tag für Tag plus Routenkarte in der Farbe, in
- * der die Karte-Ansicht dieselbe Alternative einblendet), und der
- * Übernehmen-Button steht IN der Vorschau — wer übernimmt, hat gesehen, was.
- */
-function AlternativeRow({
-  alt,
-  snapshot,
-  color,
-  mapId,
-}: {
-  alt: PlanAssessment;
-  snapshot: PlanningSnapshot;
-  /** Farbe dieser Alternative (altRouteColors.ts) — identisch zur Karte. */
-  color: string;
-  mapId: string | null;
-}) {
-  const { checkIn } = usePlanning();
-  const [open, setOpen] = useState(false);
-  const stages = alt.stages.filter((s) => s.kind === 'stage');
-  /**
-   * Hafentage NACH der letzten Etappe sind kein Törn, sondern Reserve: der
-   * Packer legt Etappen so früh wie das Wetter erlaubt, und alles bis zum
-   * Stichtag wird Hafentag an der Basis. Drei Zeilen "Hafentag Athen" lasen
-   * sich wie geplante Liegetage (Feedback 2026-08-05) — dabei heisst es nur:
-   * diese Route ist früher zurück. Also EINE Zeile mit genau dieser Aussage.
-   */
-  const lastStageDay = stages[stages.length - 1]?.day ?? null;
-  const shownDays =
-    lastStageDay === null
-      ? alt.stages
-      : alt.stages.filter((s) => s.day <= lastStageDay);
-  const reserveDays = alt.stages.length - shownDays.length;
-  return (
-    <div className="alt-route" style={{ borderLeftColor: color }}>
-      <div className="option-kopf">
-        <span className="option-name">
-          <span className="alt-farbe" style={{ background: color }} />
-          Wendepunkt {islandName(snapshot, alt.turnIslandId)}
-        </span>
-        <span className="beschreibung">
-          {stages.length} Etappen
-          {lastStageDay !== null && reserveDays > 0 && (
-            <> · zurück an Tag {lastStageDay} ({reserveDays} Tage Reserve)</>
-          )}
-        </span>
-      </div>
-      {/* Chips: JEDE angelaufene Insel, nicht nur die Tagesziele — an einem
-          Doppelschlag-Tag ist der Zwischenstopp sonst unsichtbar, und genau
-          dort kann der Wendepunkt der Route liegen (Feedback 2026-08-05). */}
-      {(() => {
-        const visited = stages.flatMap((s) =>
-          s.legs.map(
-            (l) => l.sailedLeg?.toIslandId ?? l.legId.split('--')[1] ?? l.legId,
-          ),
-        );
-        return (
+      {route && (
+        <>
           <span className="legs-inline">
             {visited.slice(0, 7).map((id, i) => (
               <span className="leg-chip" key={`${id}-${i}`}>
@@ -748,17 +733,18 @@ function AlternativeRow({
             ))}
             {visited.length > 7 && <span className="leg-chip">…</span>}
           </span>
-        );
-      })()}
-      <div className="stage-actions">
-        <button type="button" className="secondary" onClick={() => setOpen((v) => !v)}>
-          {open ? 'Vorschau schließen' : 'Route ansehen'}
-        </button>
-      </div>
-      {open && (
+          <div className="stage-actions">
+            <button type="button" className="secondary" onClick={() => setOpen((v) => !v)}>
+              {open ? 'Vorschau schließen' : 'Route ansehen'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {route && open && (
         <div className="alt-preview">
-          {mapId ? (
-            <RouteMap stages={alt.stages} snapshot={snapshot} color={color} mapId={mapId} />
+          {mapId && color ? (
+            <RouteMap stages={route.stages} snapshot={snapshot} color={color} mapId={mapId} />
           ) : (
             <p className="beschreibung">
               Routenkarte nicht verfügbar — kein{' '}
@@ -770,7 +756,7 @@ function AlternativeRow({
             {shownDays.map((s) =>
               s.kind === 'harbour' ? (
                 <div className="alt-stage harbour" key={s.day}>
-                  <span className="versal">Tag {s.day} · Hafentag</span>
+                  <span className="versal">Tag {s.day} · Liegetag</span>
                   <span>{islandWithPlace(snapshot, s.toIslandId, s.placeId)}</span>
                   <AmpelBadge ampel={s.ampel} />
                 </div>
@@ -782,10 +768,8 @@ function AlternativeRow({
                   </span>
                   <span>
                     {stageTitle(snapshot, s)}
-                    {/* Zwischenstopps eines Doppelschlag-Tages: OHNE sie kann
-                        der Wendepunkt der Route unsichtbar sein — "Wendepunkt
-                        Santorin", aber Santorin steckt als Zwischenstopp in
-                        Ios → Santorin → Folegandros (Feedback 2026-08-05). */}
+                    {/* Zwischenstopps eines Doppelschlag-Tages: ohne sie wäre
+                        der Wendepunkt der Route unsichtbar (s. Chips). */}
                     {stageVia(snapshot, s).length > 0 && (
                       <span className="beschreibung">
                         {' '}
@@ -824,20 +808,27 @@ function AlternativeRow({
               </div>
             )}
           </div>
-          <p className="beschreibung">
-            Auf der Karten-Ansicht lässt sich diese Route in derselben Farbe über
-            die Hauptroute legen. Übernehmen macht sie zur neuen Hauptroute —
-            bisherige Festlegungen (📌) werden dabei gelöst.
-          </p>
-          <button type="button" onClick={() => checkIn(alt.plan)}>
-            Als Hauptroute übernehmen
-          </button>
+          {ziel.istHauptroute ? (
+            <p className="beschreibung">
+              Das ist die aktuelle Hauptroute — sie ist bereits eingecheckt.
+            </p>
+          ) : (
+            <>
+              <p className="beschreibung">
+                Auf der Karten-Ansicht lässt sich diese Route in derselben Farbe
+                über die Hauptroute legen. Übernehmen macht sie zur neuen
+                Hauptroute — bisherige Festlegungen (📌) werden dabei gelöst.
+              </p>
+              <button type="button" onClick={() => checkIn(route.plan)}>
+                Als Hauptroute übernehmen
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
   );
 }
-
 export function DayView({
   snapshot,
   assessment,
@@ -858,6 +849,8 @@ export function DayView({
   const todayStage = main?.stages.find((s) => s.day === day) ?? null;
   const restStages = main?.stages.filter((s) => s.day > day) ?? [];
   const pastStages = main?.stages.filter((s) => s.day < day) ?? [];
+  /** Farbe je Ziel-Karte — dieselbe Zuordnung nutzt die Karten-Ansicht. */
+  const colors = zielColors(assessment.ziele);
   /** Abbruch-Notation je Tag (Zielmodell v2) — für die Etappen-Cards. */
   const returnCheckByDay = new Map(
     (main?.returnChecks ?? []).map((c) => [c.day, c]),
@@ -995,40 +988,28 @@ export function DayView({
         </section>
       )}
 
-      {/* FR9/FR18/FR20 — der Optionsraum. Steht VOR den Alternativ-Routen und
-          vor den Entscheidungspunkten, weil er die Frage beantwortet, die
-          zuerst kommt: wie weit kann ich noch, was kostet es, wie lange habe
-          ich dafür Zeit. */}
-      {assessment.routeOptions.length > 0 && (
+      {/* FEEDBACK 2026-08-05 — EINE Ziel-Sektion statt Optionsraum +
+          Alternativ-Routen: beide boten am Ende denselben Check-in an, nur mit
+          verschiedenen halben Informationen. Jede Karte trägt jetzt Zustand,
+          Frist und Preis UND die konkrete Route zum Ansehen und Übernehmen. */}
+      {assessment.ziele.length > 0 && (
         <section className="section">
-          <span className="versal">Optionsraum</span>
+          <span className="versal">Ziele & Alternativ-Routen</span>
           <h2>Wie weit kommen wir noch?</h2>
           <p className="beschreibung">
-            Reichweite, Preis und Frist je Route. Eine Option schliesst an dem Tag,
-            ab dem kein tragfähiger Restplan mehr existiert.
+            Eine Karte je Ziel: Zustand, Frist und Preis — und „Route ansehen“
+            zeigt Etappen und Karte, bevor etwas passiert. Übernommen wird erst
+            per Knopf in der Vorschau; bisherige Festlegungen werden dabei
+            gelöst. Jede Route trägt ihre Farbe, in der sie sich auf der
+            Karten-Ansicht über die Hauptroute legen lässt.
           </p>
-          {assessment.routeOptions.map((o) => (
-            <OptionRow key={o.routeId} option={o} snapshot={snapshot} today={day} />
-          ))}
-        </section>
-      )}
-
-      {assessment.alternatives.length > 0 && (
-        <section className="section">
-          <span className="versal">Alternativ-Routen</span>
-          <h2>Andere Round-Trips</h2>
-          <p className="beschreibung">
-            „Route ansehen“ zeigt Etappen und Karte, bevor etwas passiert —
-            übernommen wird erst per Knopf in der Vorschau. Jede Alternative
-            trägt ihre Farbe; in der Karten-Ansicht lässt sie sich damit über
-            die Hauptroute legen.
-          </p>
-          {assessment.alternatives.map((alt, i) => (
-            <AlternativeRow
-              key={`${alt.variantId}-${alt.turnIslandId}`}
-              alt={alt}
+          {assessment.ziele.map((z, i) => (
+            <ZielCard
+              key={z.option?.routeId ?? `${z.route?.variantId}-${z.turnIslandId}`}
+              ziel={z}
               snapshot={snapshot}
-              color={altRouteColor(i)}
+              today={day}
+              color={colors[i] ?? null}
               mapId={mapId}
             />
           ))}

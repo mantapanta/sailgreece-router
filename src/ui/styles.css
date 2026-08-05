@@ -1249,22 +1249,36 @@ footer.attribution a {
   cursor: pointer;
 }
 
-/* --- Alternativ-Routen (FR29): erst ansehen, dann übernehmen ---------------
-   Jede Alternative trägt ihre Farbe (altRouteColors.ts) als linke Kante und
-   als Punkt vor dem Namen — dieselbe Farbe, in der die Karten-Ansicht sie
-   einblendet. Die borderLeftColor kommt inline aus der View. */
+/* --- Ziel-Karten (Feedback 2026-08-05): Optionsraum + Alternativen vereint —
+   Zustand/Frist/Preis oben, "Route ansehen" mit Vorschau darunter. Karten mit
+   Route tragen ihre Farbe (altRouteColors.ts) als linke Kante und als Punkt
+   vor dem Namen — dieselbe Farbe, in der die Karten-Ansicht die Route
+   einblendet; die borderLeftColor kommt dann inline aus der View. */
 
-.alt-route {
-  border: 1px solid var(--hairline);
-  border-left-width: 4px;
-  border-radius: 4px;
-  background: var(--creme-card);
-  padding: 0.7rem 0.9rem;
-  margin-bottom: 0.6rem;
+.option-row.state-frei {
+  border-left-color: var(--navy-soft);
 }
 
-.alt-route .legs-inline {
+.option-row .legs-inline {
   margin-top: 0.35rem;
+}
+
+.option-row button.secondary {
+  background: transparent;
+  color: var(--navy);
+  border: 1px solid var(--navy-soft);
+}
+
+.ziel-chips {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.chip-hauptroute {
+  background: var(--navy);
+  color: var(--creme);
+  border-color: var(--navy);
 }
 
 .alt-farbe {
@@ -1273,23 +1287,6 @@ footer.attribution a {
   height: 0.7rem;
   border-radius: 50%;
   margin-right: 0.45rem;
-}
-
-.alt-route button {
-  background: var(--navy);
-  color: var(--creme);
-  border: none;
-  padding: 0.35rem 0.8rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.alt-route button.secondary {
-  background: transparent;
-  color: var(--navy);
-  border: 1px solid var(--navy-soft);
 }
 
 .alt-preview {

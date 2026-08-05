@@ -396,6 +396,32 @@ export interface PlanAssessment {
   meltemiSafeUntilDay: number | null;
 }
 
+/**
+ * FEEDBACK 2026-08-05 — die zusammengeführte Ziel-Sektion.
+ *
+ * Optionsraum (Zustand/Frist/Preis je benannter Route) und Alternativ-Routen
+ * (konkrete Pläne zum Übernehmen) beantworteten dieselbe Frage in zwei
+ * Sektionen mit zwei Buttons, die am Ende dasselbe taten. Jetzt gilt: EIN
+ * Ziel, EINE Karte — WAS noch geht (option: offen/schliesst/zu, Frist, Preis)
+ * und WIE es konkret aussieht (route: der bewertete Plan zum Ansehen und
+ * Übernehmen). Freie Runden aus dem Suchraum, die zu keiner kuratierten
+ * Option gehören, stehen als eigene Karten ohne option daneben — darunter
+ * ist immer der Existenz-Zeuge, damit ein gelbes Licht einlösbar bleibt
+ * (AD-13).
+ */
+export interface ZielAssessment {
+  /** Kuratierte benannte Route — null für freie Runden aus dem Suchraum. */
+  option: RouteOptionAssessment | null;
+  /**
+   * Der konkrete bewertete Plan zu diesem Ziel; null, wenn keiner existiert
+   * (Zustand 'zu' ohne besten Versuch).
+   */
+  route: PlanAssessment | null;
+  turnIslandId: string;
+  /** True, wenn dieser Plan INHALTLICH die aktuelle Hauptroute ist. */
+  istHauptroute: boolean;
+}
+
 export interface Assessment {
   fetchedAtIso: string;
   modelRunIso: string | null;
@@ -424,6 +450,13 @@ export interface Assessment {
   proposal: PlanAssessment | null;
   /** FR29 alternatives; the skipper checks one in to make it the main route. */
   alternatives: PlanAssessment[];
+  /**
+   * Die zusammengeführte Ziel-Sektion (Feedback 2026-08-05): routeOptions und
+   * alternatives, je Ziel zu EINER Karte kombiniert. Views rendern DIESE
+   * Liste; routeOptions/alternatives bleiben als Rohdaten erhalten (Tests,
+   * Entscheidungspunkte, AD-13-Invariante).
+   */
+  ziele: ZielAssessment[];
   /**
    * FR2 rest-trip light, definition per AD-3:
    *  gruen = main route valid and fully inside the reliable horizon
