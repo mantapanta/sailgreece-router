@@ -371,6 +371,33 @@ describe('deriveReturnChecks — die tägliche Abbruch-Notation', () => {
     expect(checks.every((c) => c.status === 'meltemi-fest')).toBe(true);
   });
 
+  it('mehrere Fenster-Tage in Folge: nur der erste sagt "Ab hier", Folgetage verweisen auf die tägliche Regel', () => {
+    // Der Bugreport vom 2026-08-05: an aufeinanderfolgenden Tagen stand
+    // wortgleich "hier abbrechen" — das las sich wie mehrere wählbare
+    // Abbruchpunkte. Tatsächlich fällt die Entscheidung täglich, und
+    // abgebrochen wird an dem Tag, an dem der Wind dreht.
+    const snapshot = diamondSnapshot({ reliableHorizonDays: 1 });
+    const solved = completePlan(snapshot, 'athen')!;
+    const checks = deriveReturnChecks(solved.plan, snapshot);
+    const fenster = checks.filter((c) => c.status === 'wetterfenster');
+    expect(fenster.length).toBeGreaterThan(1);
+    expect(fenster[0]!.note).toContain('Ab hier');
+    expect(fenster[0]!.note).toContain('täglich');
+    let runStart = fenster[0]!.day;
+    for (const [i, f] of fenster.slice(1).entries()) {
+      if (f.day !== fenster[i]!.day + 1) {
+        // Fenster unterbrochen (fester Tag, Basis o. Ä.) — der nächste
+        // Fenster-Tag ist zu Recht wieder ein Einstieg.
+        runStart = f.day;
+        expect(f.note).toContain('Ab hier');
+        continue;
+      }
+      expect(f.note).not.toContain('Ab hier');
+      expect(f.note).toContain(`seit Tag ${runStart}`);
+      expect(f.note).toContain('nicht erst hier');
+    }
+  });
+
   it('Tage an der Basis werden nicht geprüft — dort gibt es keinen Heimweg', () => {
     const snapshot = diamondSnapshot();
     const solved = completePlan(snapshot, 'athen')!;

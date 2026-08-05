@@ -1397,13 +1397,24 @@ export function deriveReturnChecks(
   const frame = deadlineFrame(params);
   const checks: DayReturnCheck[] = [];
   const wc = params.meltemiWorstCase;
+  // Törntag, an dem das LAUFENDE Wetterfenster begann — null, solange keins
+  // offen ist. Steuert die Formulierung des Hinweises: nur der erste Tag
+  // eines Fensters ist der Einstieg in die tägliche Abbruch-Entscheidung;
+  // stünde an jedem Folgetag wortgleich "hier abbrechen", läse sich das wie
+  // mehrere wählbare Abbruchpunkte (Skipper-Feedback 2026-08-05).
+  let fensterSeit: number | null = null;
 
   for (const entry of [...plan.days].sort((a, b) => a.day - b.day)) {
     if (entry.day < snapshot.trip.currentDay) continue;
     if (entry.day >= frame.deadlineDay) continue;
     const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
-    // An der Basis gibt es keinen Heimweg zu prüfen.
-    if (islandId === params.baseIslandId) continue;
+    // An der Basis gibt es keinen Heimweg zu prüfen — und ein Halt an der
+    // Basis schließt ein offenes Wetterfenster: wer danach wieder ausläuft,
+    // beginnt die tägliche Entscheidung von vorn.
+    if (islandId === params.baseIslandId) {
+      fensterSeit = null;
+      continue;
+    }
 
     const byForecast: Feasibility = returnFeasibleStarting(
       islandId,
@@ -1424,17 +1435,27 @@ export function deriveReturnChecks(
     if (underWorstCase === 'feasible') {
       status = 'meltemi-fest';
       note = `Heimweg hält auch bei vollem Meltemi (${wc.twsKn} kn aus N) — Umkehr von hier jederzeit möglich.`;
+      fensterSeit = null;
     } else if (byForecast !== 'infeasible') {
       status = 'wetterfenster';
+      // Der erste Fenster-Tag markiert den Einstieg ("Ab hier"); Folgetage
+      // sagen, dass dieselbe tägliche Regel weiterläuft — und dass der
+      // Abbruch an dem Tag passiert, an dem der Wind dreht, nicht erst hier.
+      const beginntHier = fensterSeit === null;
+      if (beginntHier) fensterSeit = entry.day;
       note =
-        `Heimweg trägt nur nach aktuellem Forecast: Frischt der Nordwind über ${params.maxUpwindTwsKn} kn auf, ` +
-        `hier abbrechen und den Rückweg einleiten.` +
+        (beginntHier
+          ? `Ab hier trägt der Heimweg nur nach aktuellem Forecast — die Abbruch-Entscheidung fällt ab jetzt täglich: ` +
+            `Frischt der Nordwind über ${params.maxUpwindTwsKn} kn auf, abbrechen und den Rückweg einleiten.`
+          : `Heimweg weiterhin nur nach Forecast (Wetterfenster seit Tag ${fensterSeit}): ` +
+            `Frischt der Nordwind über ${params.maxUpwindTwsKn} kn auf, wird am selben Tag abgebrochen — nicht erst hier.`) +
         (byForecast === 'horizon'
           ? ' Ein Teil der Strecke liegt jenseits des verlässlichen Horizonts (Vorbehalt).'
           : '');
     } else {
       status = 'kritisch';
       note = 'Rückkehr ist von hier schon nach aktuellem Forecast nicht mehr darstellbar.';
+      fensterSeit = null;
     }
 
     checks.push({ day: entry.day, islandId, byForecast, underWorstCase, status, note });

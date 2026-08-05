@@ -244,8 +244,11 @@ export type RelaxationLevel = (typeof RELAXATION_ORDER)[number];
  *
  *  - 'meltemi-fest':  der Heimweg hält auch unter dem vollen Meltemi-Worst-Case.
  *  - 'wetterfenster': der Heimweg trägt nur nach aktuellem Forecast — dreht der
- *                     Wind auf starken Nord, ist HIER der Punkt, an dem
- *                     abgebrochen und der Rückweg eingeleitet wird.
+ *                     Wind auf starken Nord, wird an DEM Tag abgebrochen, an
+ *                     dem es passiert. Der Abbruchpunkt ist also keiner, den
+ *                     der Skipper unter mehreren Fenster-Tagen wählt; die
+ *                     `note` unterscheidet darum den ersten Fenster-Tag
+ *                     (Einstieg in die tägliche Entscheidung) von Folgetagen.
  *  - 'kritisch':      schon nach Forecast keine Rückkehr mehr darstellbar
  *                     (deckt sich mit der harten Verletzung 'return').
  */
