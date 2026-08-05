@@ -1322,6 +1322,12 @@ export function deriveAlternatives(
     };
     const key = planKey(plan);
     if (seen.has(key)) continue;
+    // Ein Round-Trip, der nicht segelt, ist keiner — dieselbe Regel, die
+    // existsValidPlan an den Zeugen anlegt. Der "(bleiben)"-Kandidat ist im
+    // Suchraum legitim (FR18: die am wenigsten verletzende Antwort, wenn der
+    // Meltemi alles sperrt), aber "Wendepunkt Basis · 0 Etappen" ist keine
+    // Alternative, die man einem Skipper zur Übernahme anbietet.
+    if (stagesOf(plan).length === 0) continue;
     const validity = validatePlan(plan, snapshot);
     // Only offer alternatives that are actually safe and on time; structural
     // shortfalls (extra harbour days) are tolerable in an alternative.

@@ -24,6 +24,7 @@ import { WindBarb } from '../components/WindBarb.tsx';
 import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
 import { type BarbPoint, windFieldFor } from '../windField.ts';
 import { formatHours, formatKn, compass } from '../format.ts';
+import { altRouteColor } from '../altRouteColors.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
 
@@ -150,6 +151,23 @@ export function MapView({
    * ist eine Blickentscheidung, keine Törnentscheidung.
    */
   const [showWind, setShowWind] = useState(true);
+  /**
+   * FEEDBACK 2026-08-05: die Alternativ-Routen waren auf der Karte unsichtbar.
+   * Jetzt sind sie EINBLENDBAR — gestrichelt, jede in ihrer Farbe (dieselbe
+   * wie in der Vorschau der Tagesansicht, altRouteColors.ts). Transienter
+   * View-State wie die Windfiedern: einblenden ist eine Blickentscheidung,
+   * keine Törnentscheidung — übernommen wird in der Tagesansicht.
+   */
+  const [shownAlts, setShownAlts] = useState<ReadonlySet<string>>(new Set());
+  const altKey = (alt: { variantId: string; turnIslandId: string }) =>
+    `${alt.variantId}-${alt.turnIslandId}`;
+  const toggleAlt = (key: string, on: boolean) =>
+    setShownAlts((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
 
   const legsById = useMemo(
     () => buildLegsById(snapshot.library.legs),
@@ -300,6 +318,33 @@ export function MapView({
             </span>
           </div>
         )}
+        {assessment.alternatives.length > 0 && (
+          <div className="alt-toggles">
+            <span className="versal">Alternativ-Routen</span>
+            {assessment.alternatives.map((alt, i) => {
+              const key = altKey(alt);
+              const n = alt.stages.filter((s) => s.kind === 'stage').length;
+              return (
+                <label key={key}>
+                  <input
+                    type="checkbox"
+                    checked={shownAlts.has(key)}
+                    onChange={(e) => toggleAlt(key, e.target.checked)}
+                  />
+                  <span
+                    className="legend-line dashed"
+                    style={{ borderColor: altRouteColor(i) }}
+                  />
+                  Wendepunkt {islandName(alt.turnIslandId)} · {n} Etappen
+                </label>
+              );
+            })}
+            <span className="beschreibung">
+              Zum Vergleich über die Hauptroute gelegt — übernommen wird in der
+              Tagesansicht.
+            </span>
+          </div>
+        )}
       </div>
 
       {!main && (
@@ -388,6 +433,32 @@ export function MapView({
             mapTypeId="hybrid"
             gestureHandling="greedy"
           >
+            {/* Eingeblendete Alternativ-Routen: gestrichelt in ihrer Farbe,
+                UNTER der Hauptroute (zIndex) — sie sind Vergleichsbild, nicht
+                Plan. Wo Alternative und Hauptroute dieselbe Etappe nutzen,
+                deckt die Hauptroute die Alternative ab; das ist die ehrliche
+                Aussage: dort unterscheiden sich die Routen nicht. */}
+            {assessment.alternatives.map((alt, i) => {
+              const key = altKey(alt);
+              if (!shownAlts.has(key)) return null;
+              return alt.stages
+                .filter((s) => s.kind === 'stage')
+                .map((stage) => {
+                  const path = stagePath(stage, legsById, snapshot);
+                  if (path.length < 2) return null;
+                  return (
+                    <Polyline
+                      key={`alt-${key}-${stage.day}`}
+                      path={path}
+                      strokeColor={altRouteColor(i)}
+                      dashed
+                      strokeWeight={3}
+                      zIndex={12}
+                    />
+                  );
+                });
+            })}
+
             {/* FR2 — round-trip overlay: sailed solid green, rest dashed in the
                 rest-trip light's colour. One polyline per stage, so a single
                 stage can be highlighted on hover. */}

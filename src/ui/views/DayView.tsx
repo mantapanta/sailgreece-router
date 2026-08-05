@@ -24,8 +24,10 @@ import type {
 } from '../../domain/schema/snapshot.ts';
 import type { DayReturnCheck } from '../../domain/schema/plan.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
+import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
+import { altRouteColor } from '../altRouteColors.ts';
 import {
   buildLegsById,
   pointNumberByForecastKey,
@@ -671,23 +673,40 @@ function OptionRow({
   );
 }
 
-/** FR29 — an alternative round trip the skipper can check in. */
+/**
+ * FR29 — an alternative round trip: erst ansehen, dann übernehmen.
+ *
+ * FEEDBACK 2026-08-05: die Zeile bot nur den Check-in an — was sich hinter
+ * der Alternative verbirgt, war nirgends anzusehen, und übernehmen ohne
+ * ansehen ist keine Entscheidung. Deshalb klappt die Zeile jetzt zu einer
+ * Vorschau auf (Etappenliste Tag für Tag plus Routenkarte in der Farbe, in
+ * der die Karte-Ansicht dieselbe Alternative einblendet), und der
+ * Übernehmen-Button steht IN der Vorschau — wer übernimmt, hat gesehen, was.
+ */
 function AlternativeRow({
   alt,
   snapshot,
+  color,
+  mapId,
 }: {
   alt: PlanAssessment;
   snapshot: PlanningSnapshot;
+  /** Farbe dieser Alternative (altRouteColors.ts) — identisch zur Karte. */
+  color: string;
+  mapId: string | null;
 }) {
   const { checkIn } = usePlanning();
+  const [open, setOpen] = useState(false);
   const stages = alt.stages.filter((s) => s.kind === 'stage');
   return (
-    <div className="route-state">
-      <span>
-        <strong>Wendepunkt {islandName(snapshot, alt.turnIslandId)}</strong>
-        {' · '}
-        {stages.length} Etappen
-      </span>
+    <div className="alt-route" style={{ borderLeftColor: color }}>
+      <div className="option-kopf">
+        <span className="option-name">
+          <span className="alt-farbe" style={{ background: color }} />
+          Wendepunkt {islandName(snapshot, alt.turnIslandId)}
+        </span>
+        <span className="beschreibung">{stages.length} Etappen</span>
+      </div>
       <span className="legs-inline">
         {stages.slice(0, 6).map((s) => (
           <span className="leg-chip" key={s.day}>
@@ -696,9 +715,70 @@ function AlternativeRow({
         ))}
         {stages.length > 6 && <span className="leg-chip">…</span>}
       </span>
-      <button type="button" onClick={() => checkIn(alt.plan)}>
-        Als Hauptroute übernehmen
-      </button>
+      <div className="stage-actions">
+        <button type="button" className="secondary" onClick={() => setOpen((v) => !v)}>
+          {open ? 'Vorschau schließen' : 'Route ansehen'}
+        </button>
+      </div>
+      {open && (
+        <div className="alt-preview">
+          {mapId ? (
+            <RouteMap stages={alt.stages} snapshot={snapshot} color={color} mapId={mapId} />
+          ) : (
+            <p className="beschreibung">
+              Routenkarte nicht verfügbar — kein{' '}
+              <code>VITE_GOOGLE_MAPS_API_KEY</code> gesetzt. Die Etappenliste
+              unten ist davon unberührt.
+            </p>
+          )}
+          <div className="alt-stage-list">
+            {alt.stages.map((s) =>
+              s.kind === 'harbour' ? (
+                <div className="alt-stage harbour" key={s.day}>
+                  <span className="versal">Tag {s.day} · Hafentag</span>
+                  <span>{islandWithPlace(snapshot, s.toIslandId, s.placeId)}</span>
+                  <AmpelBadge ampel={s.ampel} />
+                </div>
+              ) : (
+                <div className="alt-stage" key={s.day}>
+                  <span className="versal">
+                    Tag {s.day} · Etappe {s.stageNumber ?? '–'}
+                  </span>
+                  <span>
+                    {stageTitle(snapshot, s)}
+                    {(() => {
+                      // Dieselbe Anzeige-Summe wie in der StageCard: die
+                      // GESEGELTE Etappe trägt die Distanz, die Bewertung die
+                      // Stunden — hier wird nichts neu gerechnet (AD-2).
+                      const nm = s.legs.reduce(
+                        (sum, l) => sum + (l.sailedLeg?.distanceNm ?? 0),
+                        0,
+                      );
+                      const h = s.legs.reduce((sum, l) => sum + (l.totalHours ?? 0), 0);
+                      return (
+                        <span className="beschreibung">
+                          {' '}
+                          — {nm > 0 ? `${Math.round(nm)} sm · ` : ''}
+                          {formatHours(h || null)}
+                        </span>
+                      );
+                    })()}
+                  </span>
+                  <AmpelBadge ampel={s.ampel} />
+                </div>
+              ),
+            )}
+          </div>
+          <p className="beschreibung">
+            Auf der Karten-Ansicht lässt sich diese Route in derselben Farbe über
+            die Hauptroute legen. Übernehmen macht sie zur neuen Hauptroute —
+            bisherige Festlegungen (📌) werden dabei gelöst.
+          </p>
+          <button type="button" onClick={() => checkIn(alt.plan)}>
+            Als Hauptroute übernehmen
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -883,14 +963,18 @@ export function DayView({
           <span className="versal">Alternativ-Routen</span>
           <h2>Andere Round-Trips</h2>
           <p className="beschreibung">
-            Erst ansehen, dann einchecken — eingecheckt wird die Alternative zur
-            neuen Hauptroute, bisherige Festlegungen werden dabei gelöst.
+            „Route ansehen“ zeigt Etappen und Karte, bevor etwas passiert —
+            übernommen wird erst per Knopf in der Vorschau. Jede Alternative
+            trägt ihre Farbe; in der Karten-Ansicht lässt sie sich damit über
+            die Hauptroute legen.
           </p>
-          {assessment.alternatives.map((alt) => (
+          {assessment.alternatives.map((alt, i) => (
             <AlternativeRow
               key={`${alt.variantId}-${alt.turnIslandId}`}
               alt={alt}
               snapshot={snapshot}
+              color={altRouteColor(i)}
+              mapId={mapId}
             />
           ))}
         </section>
