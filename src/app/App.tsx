@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 import { TripProvider, useTrip } from './tripContext.tsx';
 import { AuthProvider, useAuth } from './authContext.tsx';
 import { STALE_TIME_MS } from './usePlanning.ts';
@@ -306,6 +307,7 @@ export default function App() {
       <AuthProvider>
         <AuthGate />
       </AuthProvider>
+      <Analytics />
     </QueryClientProvider>
   );
 }
