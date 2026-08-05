@@ -1220,3 +1220,46 @@ footer.attribution a {
   text-transform: uppercase;
   cursor: pointer;
 }
+
+/* --- Aufklappbare Belege ------------------------------------------------
+   Hinweise, Herleitungen und Vorbehalte sind wichtig, aber sie sind BELEG,
+   nicht Aussage. Eingeklappt steht der Satz da, der zählt; der Rest ist einen
+   Klick entfernt statt oben auf der Seite ausgebreitet. */
+
+details.hint-panel > summary,
+details.lesehilfe > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+details.hint-panel > summary::-webkit-details-marker,
+details.lesehilfe > summary::-webkit-details-marker {
+  display: none;
+}
+details.hint-panel > summary::before,
+details.lesehilfe > summary::before {
+  content: '›';
+  display: inline-block;
+  transition: transform 0.15s;
+  color: var(--muted);
+  font-size: 1.1em;
+  line-height: 1;
+}
+details[open].hint-panel > summary::before,
+details[open].lesehilfe > summary::before {
+  transform: rotate(90deg);
+}
+
+details.hint-panel {
+  padding: 0.7rem 1rem;
+}
+
+details.lesehilfe {
+  margin-top: 0.5rem;
+}
+details.lesehilfe > summary {
+  font-style: normal;
+  letter-spacing: 0.03em;
+}

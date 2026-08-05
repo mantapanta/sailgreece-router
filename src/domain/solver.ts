@@ -54,7 +54,8 @@ import {
 } from './ppr.ts';
 import { legIndexWithReverses, legsOfVariant } from './legs.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
-import { distanceNm } from './geo.ts';
+import { distanceNm, isClockwise } from './geo.ts';
+import type { Coordinates } from './schema/common.ts';
 
 // ---------------------------------------------------------------------------
 // Relaxation
@@ -155,6 +156,41 @@ export interface Candidate {
  * our position, every turning point along it, plus the way home over the
  * chain. Deduplicated by leg chain, deterministic order.
  */
+/**
+ * Der Wendepunkt eines Kandidaten ist seine FERNSTE Insel — nicht die letzte.
+ *
+ * Ein kuratierter Rundkurs endet wieder an der Basis. Seine letzte Insel als
+ * Wendepunkt zu lesen ergab Reichweite 0, und weil die Reichweite in
+ * `preferred` gleich nach der Gültigkeit kommt, verlor die ganze Runde gegen
+ * jedes Hin-und-zurück. Genau deshalb kam nie eine Runde heraus, sondern immer
+ * dieselbe Strecke vor und zurück — obwohl die Bibliothek zwei fertige
+ * Rundkurse enthält, die jede Insel genau einmal anlaufen.
+ */
+function makeCandidate(
+  variant: Variant,
+  legs: Leg[],
+  snapshot: PlanningSnapshot,
+): Candidate {
+  const base = snapshot.library.islands.find(
+    (i) => i.id === snapshot.params.baseIslandId,
+  );
+  const reachOf = (islandId: string): number => {
+    const island = snapshot.library.islands.find((i) => i.id === islandId);
+    return base && island ? distanceNm(base.coordinates, island.coordinates) : 0;
+  };
+  const seq = routeIslandSequence(legs);
+  const turnIslandId =
+    seq.length > 0
+      ? seq.reduce((far, id) => (reachOf(id) > reachOf(far) ? id : far), seq[0]!)
+      : snapshot.params.baseIslandId;
+  return {
+    variantId: variant.id,
+    escalationRank: variant.escalationRank,
+    turnIslandId,
+    legs,
+  };
+}
+
 export function buildCandidates(
   snapshot: PlanningSnapshot,
   startIslandId: string,
@@ -181,15 +217,9 @@ export function buildCandidates(
     if (startIdx < 0) continue;
     for (let turnIdx = startIdx; turnIdx < seq.length; turnIdx++) {
       const outbound = vLegs.slice(startIdx, turnIdx);
-      const turnIslandId = seq[turnIdx]!;
-      const ret = remainingReturnLegs(turnIslandId, snapshot);
+      const ret = remainingReturnLegs(seq[turnIdx]!, snapshot);
       if (!ret) continue;
-      push({
-        variantId: variant.id,
-        escalationRank: variant.escalationRank,
-        turnIslandId,
-        legs: [...outbound, ...ret],
-      });
+      push(makeCandidate(variant, [...outbound, ...ret], snapshot));
     }
   }
 
@@ -463,6 +493,16 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
   // paint every trip red — at 30 kn from the north no northward return is
   // sailable, so nothing but Alimos itself would ever be "Meltemi-safe", and
   // the app would cry wolf instead of planning conservatively.
+  //
+  // WELCHER STICHTAG (korrigiert): Der harte Teil rechnet gegen den echten
+  // Rückgabetermin, der weiche weiterhin gegen den PoR-Tag inklusive
+  // Puffertag. Vorher galt für beide der Puffertag — und weil Bedingung (2)
+  // eine Ankunft AM Stichtag ausdrücklich erlaubt, verlangte (2') vom
+  // Notausstieg damit einen ganzen Tag mehr Reserve als vom Plan selbst. Jeder
+  // Törn, der den Rahmen ausnutzt, war dadurch ungültig; besonders traf es
+  // Rundkurse, deren Notausstieg über die Rückfallkette naturgemäss weiter ist
+  // als die Fortsetzung der Runde. Die Aussage "der Puffertag wäre aufgebraucht"
+  // bleibt erhalten — sie ist jetzt ein Vorbehalt und kein Urteil.
   for (const stage of stagesOf(plan)) {
     if (stage.day >= frame.deadlineDay) continue;
     if (stage.toIslandId === params.baseIslandId) continue;
@@ -471,6 +511,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       stage.day + 1,
       snapshot,
       'forecast',
+      frame.deadlineDay,
     );
     if (byForecast === 'infeasible') {
       violations.push({
@@ -491,9 +532,19 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       snapshot,
       'worstCase',
     );
-    if (byWorstCase !== 'feasible' || byForecast === 'horizon') {
+    // Der weiche Teil misst weiter am Puffertag: "der Notausstieg ginge nur
+    // noch ohne Reserve" ist genau die Art Vorbehalt, die ein Grün verhindern
+    // soll, ohne den Plan zu verwerfen.
+    const withBuffer: Feasibility = returnFeasibleStarting(
+      stage.toIslandId,
+      stage.day + 1,
+      snapshot,
+      'forecast',
+    );
+    if (byWorstCase !== 'feasible' || byForecast === 'horizon' || withBuffer !== 'feasible') {
       // Conservative caveat: the return holds under the current forecast, but
-      // not if the full Meltemi sets in beyond the horizon (FR19).
+      // not if the full Meltemi sets in beyond the horizon (FR19), or only by
+      // spending the buffer day.
       horizonDependent = true;
     }
   }
@@ -620,6 +671,53 @@ export function reachNmFor(snapshot: PlanningSnapshot): (islandId: string) => nu
 }
 
 /**
+ * Die Kennzahlen, nach denen ein Round-Trip beurteilt wird.
+ *
+ * `reach` allein hat einen Törn beschrieben, der so weit wie möglich fährt —
+ * aber nichts darüber gesagt, WIE er das tut. Herausgekommen ist deshalb immer
+ * dieselbe Strecke hin und zurück: sie erreicht denselben Wendepunkt wie eine
+ * Runde und ist leichter gültig. Das ist keine Törnplanung, das ist Pendeln.
+ */
+export interface PlanMetrics {
+  /** Entfernung Basis → fernster Punkt. */
+  reachNm: number;
+  /** Zahl der VERSCHIEDENEN Inseln, die angelaufen werden. */
+  distinctIslands: number;
+  /** Läuft die Runde im Uhrzeigersinn? */
+  clockwise: boolean;
+  turnDay: number;
+  harbourDays: number;
+  stages: number;
+}
+
+export function planMetricsFor(
+  snapshot: PlanningSnapshot,
+): (r: SolveResult) => PlanMetrics {
+  const reach = reachNmFor(snapshot);
+  const coordsOf = (islandId: string): Coordinates | null =>
+    snapshot.library.islands.find((i) => i.id === islandId)?.coordinates ?? null;
+
+  return (r) => {
+    const stages = stagesOf(r.plan);
+    const islands = stages.map((s) => s.toIslandId);
+    // Der geschlossene Kurs für den Umlaufsinn: Basis, dann die Tagesziele.
+    // Endet der Plan ohnehin an der Basis, schliesst signedAreaDeg2 den Ring
+    // selbst — der doppelte Punkt am Ende stört die Formel nicht.
+    const ring = [snapshot.params.baseIslandId, ...islands]
+      .map(coordsOf)
+      .filter((c): c is Coordinates => c !== null);
+    return {
+      reachNm: reach(r.turnIslandId),
+      distinctIslands: new Set(islands).size,
+      clockwise: isClockwise(ring),
+      turnDay: turnDayOf(r),
+      harbourDays: r.plan.days.filter((d) => d.kind === 'harbour').length,
+      stages: stages.length,
+    };
+  };
+}
+
+/**
  * Tag, an dem der Plan den Wendepunkt erreicht — die Trennlinie zwischen Hin-
  * und Rückweg. Ohne Wende-Etappe (Plan bleibt an der Basis) zählt der letzte
  * Tag, damit "gar nicht losfahren" nicht als früheste Wende gewinnt.
@@ -660,26 +758,31 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
 export function preferred(
   a: SolveResult | null,
   b: SolveResult,
-  reach: (islandId: string) => number,
+  metrics: (r: SolveResult) => PlanMetrics,
 ): SolveResult {
   if (!a) return b;
+  const ma = metrics(a);
+  const mb = metrics(b);
   const cmp: [number, number][] = [
     [a.validity.valid ? 1 : 0, b.validity.valid ? 1 : 0],
     [-a.validity.safetyViolations.length, -b.validity.safetyViolations.length],
     [-a.validity.violations.length, -b.validity.violations.length],
-    [Math.round(reach(a.turnIslandId)), Math.round(reach(b.turnIslandId))],
+    // Wie weit kommen wir — die Törnfrage.
+    [Math.round(ma.reachNm), Math.round(mb.reachNm)],
+    // Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der Westseite
+    // zurück. Die Empfehlung fürs Revier, nicht bloss Geschmack.
+    [ma.clockwise ? 1 : 0, mb.clockwise ? 1 : 0],
+    // So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
+    // Törn, der zwölf Tage dieselbe Kette auf und ab fährt, genauso gut wie
+    // eine Runde — er erreicht denselben Wendepunkt und ist leichter gültig.
+    [ma.distinctIslands, mb.distinctIslands],
     [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
     // "So früh wie möglich nach Süden, um genug Zeit für zurück zu haben":
-    // bei gleicher Reichweite gewinnt der Plan, der den Wendepunkt FRÜHER
-    // erreicht. Jeder Tag, den die Wende früher liegt, ist ein Tag Reserve auf
-    // dem Heimweg — und der Heimweg ist die Strecke, die halten muss, wenn der
-    // Meltemi einsetzt.
-    [-turnDayOf(a), -turnDayOf(b)],
-    [
-      -a.plan.days.filter((d) => d.kind === 'harbour').length,
-      -b.plan.days.filter((d) => d.kind === 'harbour').length,
-    ],
-    [stagesOf(a.plan).length, stagesOf(b.plan).length],
+    // jeder Tag, den die Wende früher liegt, ist ein Tag Reserve auf dem
+    // Heimweg — der Strecke, die halten muss, wenn der Meltemi einsetzt.
+    [-ma.turnDay, -mb.turnDay],
+    [-ma.harbourDays, -mb.harbourDays],
+    [ma.stages, mb.stages],
   ];
   for (const [x, y] of cmp) if (x !== y) return x > y ? a : b;
   return a.variantId <= b.variantId ? a : b;
@@ -827,6 +930,7 @@ export function completePlan(
   if (candidates.length === 0) return null;
   const constraint = dayConstraintFor(snapshot, futurePins);
 
+  const metrics = planMetricsFor(snapshot);
   const reach = reachNmFor(snapshot);
 
   let best: SolveResult | null = null;
@@ -904,7 +1008,7 @@ export function completePlan(
         variantId: candidate.variantId,
         turnIslandId: candidate.turnIslandId,
       };
-      best = preferred(best, result, reach);
+      best = preferred(best, result, metrics);
     }
 
     if (opts.stopAtFirstValid && best?.validity.valid) break;

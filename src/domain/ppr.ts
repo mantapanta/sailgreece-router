@@ -349,13 +349,18 @@ export function returnFeasibleStarting(
   startDay: number,
   snapshot: PlanningSnapshot,
   scenario: LegScenario = 'worstCase',
+  /**
+   * Bis wann der Notausstieg zu Hause sein muss. Ohne Angabe der PoR-Stichtag
+   * inklusive Puffertag (FR19) — das ist die Frage, die der Point of Return
+   * stellt. Die Plan-Prüfung stellt eine andere und übergibt deshalb ihren
+   * eigenen Tag; siehe solver.ts, Bedingung (2').
+   */
+  deadlineDay: number = effectiveDeadlineDay(snapshot),
 ): Feasibility {
   if (islandId === snapshot.params.baseIslandId) return 'feasible';
   const legs = remainingReturnLegs(islandId, snapshot);
   if (!legs) return 'infeasible';
-  return packLegsFeasible(legs, startDay, effectiveDeadlineDay(snapshot), snapshot, {
-    scenario,
-  });
+  return packLegsFeasible(legs, startDay, deadlineDay, snapshot, { scenario });
 }
 
 /** FR19: the Predicted Point of Return for the current position. */

@@ -8,8 +8,8 @@ import {
   existsValidPlan,
   legLibrary,
   planFromPacking,
+  planMetricsFor,
   preferred,
-  reachNmFor,
   relaxParams,
   validatePlan,
 } from '../solver.ts';
@@ -624,7 +624,7 @@ describe('solver — die Reichweite ist das Ziel, nicht die Etappenzahl', () => 
    */
   describe('preferred — die Rangfolge der Kriterien', () => {
     const snapshot = roundTripSnapshot();
-    const reach = reachNmFor(snapshot);
+    const metrics = planMetricsFor(snapshot);
     const result = (
       over: Partial<SolveResult> & { turnIslandId: string },
     ): SolveResult => ({
@@ -641,27 +641,27 @@ describe('solver — die Reichweite ist das Ziel, nicht die Etappenzahl', () => 
         turnIslandId: 'sued',
         validity: { valid: false, horizonDependent: false, violations: [{ kind: 'deadline', day: 5, text: 'zu spät' }], safetyViolations: [] },
       });
-      expect(preferred(nah, weit, reach)).toBe(nah);
-      expect(preferred(weit, nah, reach)).toBe(nah);
+      expect(preferred(nah, weit, metrics)).toBe(nah);
+      expect(preferred(weit, nah, metrics)).toBe(nah);
     });
 
     it('weiter schlägt näher', () => {
       const nah = result({ turnIslandId: 'mitte' });
       const weit = result({ turnIslandId: 'sued' });
-      expect(preferred(nah, weit, reach)).toBe(weit);
-      expect(preferred(weit, nah, reach)).toBe(weit);
+      expect(preferred(nah, weit, metrics)).toBe(weit);
+      expect(preferred(weit, nah, metrics)).toBe(weit);
     });
 
     it('eine Eskalationsstufe ist hinnehmbar, wenn sie WEITER trägt', () => {
       const nahOhne = result({ turnIslandId: 'mitte', relaxedTo: 'none' });
       const weitMit = result({ turnIslandId: 'sued', relaxedTo: 'doppelschlag' });
-      expect(preferred(nahOhne, weitMit, reach)).toBe(weitMit);
+      expect(preferred(nahOhne, weitMit, metrics)).toBe(weitMit);
     });
 
     it('bei gleicher Reichweite gewinnt die Stufe, die weniger nachgibt', () => {
       const ohne = result({ turnIslandId: 'sued', relaxedTo: 'none' });
       const mit = result({ turnIslandId: 'sued', relaxedTo: 'doppelschlag' });
-      expect(preferred(mit, ohne, reach)).toBe(ohne);
+      expect(preferred(mit, ohne, metrics)).toBe(ohne);
     });
 
     it('bei gleicher Reichweite und Stufe gewinnt der Plan mit weniger Hafentagen', () => {
@@ -673,7 +673,7 @@ describe('solver — die Reichweite ist das Ziel, nicht die Etappenzahl', () => 
         turnIslandId: 'sued',
         plan: makePlan([makeStage(1, ['athen--mitte'], 'mitte'), makeStage(2, ['mitte--sued'], 'sued')]),
       });
-      expect(preferred(viel, wenig, reach)).toBe(wenig);
+      expect(preferred(viel, wenig, metrics)).toBe(wenig);
     });
 
     it('weniger Sicherheitsverletzungen schlagen alles andere', () => {
@@ -688,7 +688,7 @@ describe('solver — die Reichweite ist das Ziel, nicht die Etappenzahl', () => 
         validity: { valid: false, horizonDependent: false,
           violations: [{ kind: 'incomplete', day: null, text: 'Hafentage' }], safetyViolations: [] },
       });
-      expect(preferred(unsicher, sicherer, reach)).toBe(sicherer);
+      expect(preferred(unsicher, sicherer, metrics)).toBe(sicherer);
     });
   });
 
@@ -707,5 +707,109 @@ describe('solver — die Reichweite ist das Ziel, nicht die Etappenzahl', () => 
     expect(JSON.stringify(a.plan)).toBe(JSON.stringify(b.plan));
     expect(a.turnIslandId).toBe(b.turnIslandId);
     expect(a.relaxedTo).toBe(b.relaxedTo);
+  });
+});
+
+/**
+ * SKIPPER-VORGABE 2026-08-05 — "plant doch niemals die gleiche Strecke hin und
+ * zurück. Man plant einen Round Trip. In den Kykladen wird empfohlen, im
+ * Uhrzeigersinn zu routen."
+ *
+ * Der Solver konnte gar keine Runde liefern: der Wendepunkt eines Kandidaten
+ * war seine LETZTE Insel, und ein Rundkurs endet an der Basis — Reichweite 0.
+ * Weil die Reichweite gleich nach der Gültigkeit verglichen wird, verlor jede
+ * Runde gegen jedes Hin-und-zurück, obwohl die Bibliothek fertige Rundkurse
+ * enthält.
+ */
+describe('solver — Round Trip statt Pendeln', () => {
+  it('der Wendepunkt einer Runde ist ihre fernste Insel, nicht die Basis', () => {
+    const snapshot = roundTripSnapshot();
+    const rundkurse = buildCandidates(snapshot, 'athen').filter(
+      (c) => c.legs.length > 0 && c.legs[c.legs.length - 1]!.toIslandId === 'athen',
+    );
+    expect(rundkurse.length).toBeGreaterThan(0);
+    // Kein Kandidat darf die Basis als Wendepunkt führen, solange er irgendwo
+    // hinfährt — sonst wäre seine Reichweite null.
+    for (const c of rundkurse) expect(c.turnIslandId).not.toBe('athen');
+  });
+
+  it('zählt VERSCHIEDENE Inseln, nicht Etappen', () => {
+    const snapshot = roundTripSnapshot();
+    const metrics = planMetricsFor(snapshot);
+    const solved = completePlan(snapshot, 'athen')!;
+    const m = metrics(solved);
+    const angelaufen = stagesOf(solved.plan).map((s) => s.toIslandId);
+    expect(m.distinctIslands).toBe(new Set(angelaufen).size);
+    expect(m.distinctIslands).toBeLessThanOrEqual(m.stages);
+  });
+
+  it('mehr verschiedene Inseln schlagen dieselbe Kette auf und ab', () => {
+    const snapshot = roundTripSnapshot();
+    const metrics = planMetricsFor(snapshot);
+    const basis = {
+      validity: { valid: true, horizonDependent: false, violations: [], safetyViolations: [] },
+      relaxedTo: 'none' as const,
+      variantId: 'a',
+      turnIslandId: 'sued',
+    };
+    const pendeln = {
+      ...basis,
+      plan: makePlan([
+        makeStage(1, ['athen--mitte'], 'mitte'),
+        makeStage(2, ['mitte--sued'], 'sued'),
+        makeStage(3, ['sued--mitte'], 'mitte'),
+        makeStage(4, ['mitte--athen'], 'athen'),
+      ]),
+    };
+    const runde = {
+      ...basis,
+      plan: makePlan([
+        makeStage(1, ['athen--mitte'], 'mitte'),
+        makeStage(2, ['mitte--sued'], 'sued'),
+        makeStage(3, ['sued--athen'], 'athen'),
+      ]),
+    };
+    // Gleiche Reichweite, gleiche Stufe — die Runde läuft drei verschiedene
+    // Inseln an, das Pendeln nur drei bei vier Etappen (mitte doppelt).
+    expect(metrics(runde).distinctIslands).toBe(3);
+    expect(metrics(pendeln).distinctIslands).toBe(3);
+    // Der Unterschied wird sichtbar, sobald das Pendeln eine Insel WENIGER hat.
+    const kurz = {
+      ...basis,
+      turnIslandId: 'sued',
+      plan: makePlan([
+        makeStage(1, ['athen--sued'], 'sued'),
+        makeStage(2, ['sued--athen'], 'athen'),
+      ]),
+    };
+    expect(preferred(kurz, runde, metrics)).toBe(runde);
+  });
+
+  it('bei gleicher Reichweite gewinnt der Uhrzeigersinn', () => {
+    const snapshot = roundTripSnapshot();
+    const metrics = planMetricsFor(snapshot);
+    const basis = {
+      validity: { valid: true, horizonDependent: false, violations: [], safetyViolations: [] },
+      relaxedTo: 'none' as const,
+      variantId: 'a',
+      turnIslandId: 'sued',
+    };
+    // athen (37.9/23.7) → mitte (37.6/24.2) → sued (37.3/24.6) → athen:
+    // nach Südost und zurück nach Nordwest. Die Umkehrung läuft andersherum.
+    const hin = { ...basis, plan: makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeStage(3, ['sued--athen'], 'athen'),
+    ]) };
+    const zurueck = { ...basis, plan: makePlan([
+      makeStage(1, ['athen--sued'], 'sued'),
+      makeStage(2, ['sued--mitte'], 'mitte'),
+      makeStage(3, ['mitte--athen'], 'athen'),
+    ]) };
+    // Genau eine der beiden Richtungen ist der Uhrzeigersinn.
+    expect(metrics(hin).clockwise).not.toBe(metrics(zurueck).clockwise);
+    const gewinner = metrics(hin).clockwise ? hin : zurueck;
+    expect(preferred(hin, zurueck, metrics)).toBe(gewinner);
+    expect(preferred(zurueck, hin, metrics)).toBe(gewinner);
   });
 });
