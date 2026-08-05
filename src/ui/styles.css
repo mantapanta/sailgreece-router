@@ -905,8 +905,54 @@ footer.attribution a {
   font-size: 0.68rem;
   color: var(--navy-soft);
 }
+.breakdown-table td.abfahrt {
+  /* Der Startpunkt hat keinen Abschnitt — "Abfahrt" gehört an den linken Rand
+     der zusammengefassten Spalten, nicht rechtsbündig unter "Fahrt". */
+  text-align: left;
+}
 .breakdown-table tr.worst-case td {
   background: rgba(176, 65, 62, 0.07);
+}
+
+/* --- Grundlage der Rechnung: Wind, Kurs zum Wind, Fahrt ---------------- */
+
+.wind-basis {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: var(--creme-card);
+}
+/* Fieder und Werte in einer Zeile; fehlt die Fieder (keine mittlere Richtung),
+   rücken die Werte einfach nach links — kein Sonderfall nötig. */
+.wind-basis-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+.wind-basis-row > svg {
+  flex: none;
+}
+.wind-basis dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.4rem;
+  margin: 0;
+}
+.wind-basis dt {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--navy-soft);
+}
+.wind-basis dd {
+  margin: 0;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.wind-basis .beschreibung {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
 }
 
 .past-list {
@@ -993,4 +1039,60 @@ footer.attribution a {
   background: #e9eef4;
   color: var(--navy-soft);
   cursor: help;
+}
+
+/**
+ * FR30-Rechnung auf dem Telefon: die Tabelle wird zu gestapelten Karten.
+ *
+ * Neun Spalten passen auf kein Telefon. Als scrollende Tabelle lag genau das
+ * Interessante — Wind, TWA, Fahrt — ausserhalb des Bildschirms, und nichts
+ * zeigte an, dass da noch etwas ist: die Rechnung sah aus, als bestünde sie
+ * aus Punkt, Zeit und Distanz. Gestapelt steht jeder Wert sichtbar da, mit
+ * seiner Beschriftung aus `data-label` (die <thead>-Zeile fällt weg, weil eine
+ * Kopfzeile über gestapelten Blöcken nichts mehr beschriftet).
+ */
+@media (max-width: 700px) {
+  .breakdown-table {
+    min-width: 0;
+    width: 100%;
+    display: block;
+  }
+  .breakdown-table thead {
+    /* Nicht display:none — Screenreader sollen die Spalten weiter kennen. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .breakdown-table tbody,
+  .breakdown-table tr {
+    display: block;
+  }
+  .breakdown-table tr {
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 0.35rem 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+  .breakdown-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: right;
+    padding: 0.18rem 0;
+    border-bottom: none;
+    white-space: normal;
+  }
+  .breakdown-table td + td {
+    border-top: 1px dotted var(--hairline);
+  }
+  .breakdown-table td::before {
+    content: attr(data-label);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--navy-soft);
+    text-align: left;
+  }
 }

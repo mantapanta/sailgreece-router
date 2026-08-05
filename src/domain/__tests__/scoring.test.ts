@@ -7,6 +7,7 @@ import {
   upwindWindVerdict,
 } from '../scoring.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
+import { twaDeg } from '../geo.ts';
 import { constantForecast, northSouthScenario } from './fixtures.ts';
 
 const params = DEFAULT_PARAMS;
@@ -243,6 +244,136 @@ describe('FR30 pointPassages — jeder Etappenpunkt genau einmal', () => {
     const a = assessWithWaypoints();
     const sum = a.pointPassages.reduce((s, p) => s + (p.segment?.distanceNm ?? 0), 0);
     expect(sum).toBeCloseTo(20, 6);
+  });
+});
+
+/**
+ * FR30 — die Rechnung muss ihre Windannahme AUSWEISEN.
+ *
+ * TWA und Fahrt allein sind nicht nachprüfbar: derselbe Winkel entsteht aus
+ * beliebig vielen Kombinationen von Kurs und Windrichtung. Erst die Richtung,
+ * AUS DER gerechnet wurde (AD-6), macht die Zeile überprüfbar — sie ist damit
+ * kein Anzeigedetail, sondern Teil des Ergebnisses.
+ */
+describe('FR30 — ausgewiesene Windannahme (Richtung, Stärke, TWA, Fahrt)', () => {
+  it('jede Stunde nennt die Windrichtung, aus der sie gerechnet hat', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 14,
+      windFromDeg: 315,
+      southbound: true,
+    });
+    const a = assessLeg(leg, 1, snapshot);
+    expect(a.breakdown.length).toBeGreaterThan(0);
+    for (const h of a.breakdown) {
+      expect(h.twdDeg).toBe(315);
+      expect(h.twsKn).toBe(14);
+    }
+  });
+
+  it('TWA ist der Winkel zwischen ausgewiesenem Kurs und ausgewiesener Richtung', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 14,
+      windFromDeg: 315,
+      southbound: true,
+    });
+    const a = assessLeg(leg, 1, snapshot);
+    for (const h of a.breakdown) {
+      expect(h.twaDeg).toBeCloseTo(twaDeg(h.courseDeg, h.twdDeg), 6);
+    }
+    // Kurs ~180 gegen Wind aus 315 => 135° TWA, raumschots.
+    expect(a.breakdown[0]!.twaDeg).toBeCloseTo(135, 0);
+  });
+
+  it('jeder Abschnitt der Tabelle trägt dieselbe Richtung wie seine Stunde', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 14,
+      windFromDeg: 315,
+      southbound: true,
+    });
+    const a = assessLeg(leg, 1, snapshot);
+    for (const p of a.pointPassages.slice(1)) {
+      expect(p.segment!.twdDeg).toBe(315);
+      expect(p.segment!.twaDeg).toBeCloseTo(
+        twaDeg(p.segment!.courseDeg, p.segment!.twdDeg),
+        6,
+      );
+    }
+  });
+
+  /**
+   * Der eigentliche Grund, warum die mittlere Richtung in der Domain liegt:
+   * arithmetisch gemittelt ergäben 350° und 10° die Zahl 180 — die exakte
+   * Gegenrichtung. Eine View, die das selbst rechnet, macht aus Nordwind
+   * Südwind.
+   */
+  it('die mittlere Richtung wird zirkulär gemittelt (350°/10° => ~0°, nicht 180°)', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 0,
+      southbound: true,
+      polar: null,
+    });
+    const dirs = snapshot.times.map((_, i) => (i % 2 === 0 ? 350 : 10));
+    const fc = {
+      ...constantForecast(snapshot.times.length, 12, 0),
+      windDirDeg: dirs,
+    };
+    const a = assessLeg(leg, 1, {
+      ...snapshot,
+      forecast: { 'start-hafen': fc, 'ziel-bucht': fc },
+    });
+    expect(new Set(a.breakdown.map((h) => h.twdDeg))).toEqual(new Set([350, 10]));
+    const avg = a.avgTwdDeg!;
+    expect(avg).not.toBeNull();
+    // Abstand zur Nordrichtung über die 0°-Grenze hinweg.
+    expect(Math.min(avg, 360 - avg)).toBeLessThan(15);
+  });
+
+  it('heben sich die Richtungen auf, gibt es keine mittlere Richtung (null statt Nord)', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 0,
+      southbound: true,
+      polar: null,
+    });
+    // 0°/180° im Wechsel: die Vektorsumme ist null — atan2(0,0) wäre 0 und
+    // würde "Nord" behaupten, obwohl es die Hälfte der Zeit von Süd wehte.
+    const dirs = snapshot.times.map((_, i) => (i % 2 === 0 ? 0 : 180));
+    const fc = {
+      ...constantForecast(snapshot.times.length, 12, 0),
+      windDirDeg: dirs,
+    };
+    const a = assessLeg(leg, 1, {
+      ...snapshot,
+      forecast: { 'start-hafen': fc, 'ziel-bucht': fc },
+    });
+    expect(a.breakdown.length % 2).toBe(0);
+    expect(a.avgTwdDeg).toBeNull();
+    // Die Stundenzeilen selbst behalten ihre echten Richtungen.
+    expect(a.breakdown.map((h) => h.twdDeg)).toContain(180);
+  });
+
+  it('avgSpeedKn ist die zurückgelegte Distanz je Stunde unter Weg', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 15,
+      windFromDeg: 0,
+      southbound: true,
+      distanceNm: 18,
+      polar: null,
+    });
+    const a = assessLeg(leg, 1, snapshot);
+    // 18 sm bei flachen 6,0 kn Segelfahrt => 3 h => 6,0 kn im Mittel.
+    expect(a.avgSpeedKn).toBeCloseTo(6.0, 2);
+    expect(a.avgSpeedKn).toBeCloseTo(leg.distanceNm / a.totalHours!, 6);
+  });
+
+  it('eine unbewertete Etappe behauptet keine Windannahme', () => {
+    const { snapshot, leg } = northSouthScenario({ windKn: 12, windFromDeg: 0 });
+    const a = assessLeg({ ...leg, fromPlaceId: 'gibt-es-nicht' }, 1, snapshot);
+    expect(a.ampel).toBe('unbewertet');
+    expect(a.avgTwdDeg).toBeNull();
+    expect(a.avgSpeedKn).toBeNull();
+    expect(a.breakdown).toEqual([]);
   });
 });
 

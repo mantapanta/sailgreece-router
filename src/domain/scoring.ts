@@ -195,6 +195,8 @@ export function assessLeg(
     totalHours: null,
     avgTwsKn: null,
     avgTwaDeg: null,
+    avgTwdDeg: null,
+    avgSpeedKn: null,
     upwind: false,
     basis: 'forecast',
     reasons: [reason],
@@ -290,6 +292,11 @@ export function assessLeg(
   let motorHours = 0;
   let twsSum = 0;
   let twaSum = 0;
+  // Richtungen werden als Einheitsvektoren summiert (Zirkulärmittel): der
+  // arithmetische Mittelwert von 350° und 10° wäre 180° — die exakte
+  // Gegenrichtung des tatsächlichen Windes.
+  let twdSinSum = 0;
+  let twdCosSum = 0;
   let samples = 0;
   const total = leg.distanceNm;
   // Single source for the simulation bound: time.ts (legWindow uses it too).
@@ -355,6 +362,8 @@ export function assessLeg(
     const twa = twaDeg(seg.course, progressWind.fromDeg);
     twsSum += progressWind.twsKn;
     twaSum += twa;
+    twdSinSum += Math.sin(rad(progressWind.fromDeg));
+    twdCosSum += Math.cos(rad(progressWind.fromDeg));
     samples++;
 
     // Speed model: polar (+offset, only in polar.ts) with upwind VMG folding;
@@ -392,6 +401,7 @@ export function assessLeg(
     breakdown.push({
       timeIso: snapshot.times[idx] ?? `+${h}h`,
       courseDeg: seg.course,
+      twdDeg: progressWind.fromDeg,
       twsKn: progressWind.twsKn,
       twaDeg: twa,
       speedKn: speed,
@@ -420,6 +430,7 @@ export function assessLeg(
         segment: {
           courseDeg: segments[nextPointIdx - 1]?.course ?? seg.course,
           distanceNm: segments[nextPointIdx - 1]?.nm ?? 0,
+          twdDeg: progressWind.fromDeg,
           twsKn: progressWind.twsKn,
           twaDeg: twa,
           speedKn: speed,
@@ -460,6 +471,19 @@ export function assessLeg(
 
   const avgTwsKn = samples > 0 ? twsSum / samples : null;
   const avgTwaDeg = samples > 0 ? twaSum / samples : null;
+  /**
+   * Zirkulärmittel der Windrichtung. Ist der resultierende Vektor nahe null,
+   * heben sich die Richtungen auf (Dreher über die ganze Etappe) — dann gibt
+   * es keine mittlere Richtung, und atan2(0,0) = 0 würde fälschlich "Nord"
+   * behaupten. In dem Fall bleibt der Wert null; die Stundenzeilen zeigen die
+   * echten Richtungen weiterhin einzeln.
+   */
+  const twdVectorLen =
+    samples > 0 ? Math.hypot(twdSinSum, twdCosSum) / samples : 0;
+  const avgTwdDeg =
+    samples > 0 && twdVectorLen >= 0.1
+      ? (((Math.atan2(twdSinSum, twdCosSum) * 180) / Math.PI) + 360) % 360
+      : null;
   const budget = budgetVerdict(sailHours, motorHours, avgTwsKn, params);
   budget.reasons.forEach((r) => reasons.add(r));
   verdicts.push(budget.ampel);
@@ -492,6 +516,9 @@ export function assessLeg(
     totalHours: sailHours + motorHours,
     avgTwsKn,
     avgTwaDeg,
+    avgTwdDeg,
+    avgSpeedKn:
+      sailHours + motorHours > 0 ? traveled / (sailHours + motorHours) : null,
     upwind: avgTwaDeg !== null && avgTwaDeg < params.upwindTwaDeg,
     basis,
     reasons: [...reasons],

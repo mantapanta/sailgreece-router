@@ -18,6 +18,7 @@ import {
 } from '../solver.ts';
 import { assessPlanning } from '../assess.ts';
 import { assessLeg } from '../scoring.ts';
+import { twaDeg } from '../geo.ts';
 import { packLegs } from '../ppr.ts';
 import { deadlineFrame } from '../time.ts';
 import { ParamsSchema } from '../schema/params.ts';
@@ -128,6 +129,14 @@ describe('regression: Meltemi worst case binds beyond the reliable horizon', () 
     expect(worst.breakdown.every((h) => h.worstCase)).toBe(true);
     // 30 kn from the north on a northbound leg must not read as a gentle 6 kn.
     expect(worst.breakdown[0]!.twsKn).toBe(30);
+    // And the DIRECTION shown is the substituted one, not the forecast's 90°:
+    // otherwise the row would pair a worst-case TWA with a forecast wind and
+    // read as arithmetically wrong.
+    expect(worst.breakdown[0]!.twdDeg).not.toBe(90);
+    expect(worst.breakdown[0]!.twaDeg).toBeCloseTo(
+      twaDeg(worst.breakdown[0]!.courseDeg, worst.breakdown[0]!.twdDeg),
+      6,
+    );
   });
 
   it('keeps using the real forecast inside the horizon', () => {
