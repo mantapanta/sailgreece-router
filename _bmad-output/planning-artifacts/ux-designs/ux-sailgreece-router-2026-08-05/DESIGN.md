@@ -19,6 +19,7 @@ colors:
   border-hairline: '#ecebe7'
   accent: '#f2604d'
   accent-deep: '#d94c3a'
+  accent-text: '#c23a28'
   accent-tint: '#fdeeec'
   accent-gradient-end: '#e5893c'
   on-accent: '#ffffff'
@@ -27,9 +28,9 @@ colors:
   ampel-gruen-tint: '#e4f5ec'
   ampel-gruen-text: '#147a47'
   ampel-gelb: '#e09112'
+  ampel-gelb-graphic: '#b8770c'
   ampel-gelb-tint: '#fcf3e0'
-  ampel-gelb-text: '#a86c09'
-  ampel-gelb-text-strong: '#7a5306'
+  ampel-gelb-text: '#7a5306'
   ampel-rot: '#d93636'
   ampel-rot-tint: '#fbe9e9'
   ampel-rot-text: '#a72020'
@@ -69,6 +70,11 @@ typography:
     fontSize: 14px
     fontWeight: '600'
     lineHeight: '1.3'
+  cta:
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif'
+    fontSize: 19px
+    fontWeight: '700'
+    lineHeight: '1.2'
   overline:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif'
     fontSize: 13px
@@ -112,6 +118,7 @@ components:
   button-primary:
     background: '{colors.accent}'
     foreground: '{colors.on-accent}'
+    label: '{typography.cta}'
     radius: '{rounded.full}'
     shadow: '0 4px 14px rgba(242,96,77,0.35)'
     min-height: 48px
@@ -124,7 +131,7 @@ components:
     min-height: 44px
   button-ghost:
     background: 'transparent'
-    foreground: '{colors.accent-deep}'
+    foreground: '{colors.accent-text}'
     radius: '{rounded.full}'
     min-height: 44px
   button-text:
@@ -149,6 +156,7 @@ components:
     divider: '{colors.border-hairline}'
     radius: '{rounded.md}'
     label: '{typography.micro-label}'
+    label-foreground: '{colors.ink-secondary}'
     value: '{typography.headline}'
   ampel-badge:
     radius: '{rounded.full}'
@@ -166,7 +174,7 @@ components:
     dot-size: 9px
   info-chip:
     circle-background: '{colors.surface-track}'
-    circle-foreground: '{colors.ink-tertiary}'
+    circle-foreground: '{colors.ink-secondary}'
     text: '{colors.ink-secondary}'
     typography: '{typography.caption}'
   popover:
@@ -196,7 +204,7 @@ components:
     item-min-height: 44px
   provenance-line:
     typography: '{typography.footnote}'
-    foreground: '{colors.ink-tertiary}'
+    foreground: '{colors.ink-secondary}'
   warn-note:
     radius: '{rounded.md}'
     typography: '{typography.body-sm}'
@@ -228,28 +236,33 @@ All values below are the **single source of truth**. They live once as CSS custo
 - **Card (`{colors.surface-card}`)** — pure white. Every content container is a white card; contrast against the page comes from shadow, not border.
 - **Inset (`{colors.surface-inset}`)** — page-tone tiles *inside* white cards (stat grid, berth line). Depth by tone, one level only.
 - **Track (`{colors.surface-track}`)** — segmented-tab track, info-chip circle, unbewertet tint, skeleton base. The lowest-contrast structural gray-beige.
-- **Ink** — three steps only: `{colors.ink-primary}` for content, `{colors.ink-secondary}` for supporting text (≈5.3:1 on white), `{colors.ink-tertiary}` for non-essential meta (provenance, frame labels; ≈3.1:1 — never for information that exists nowhere else in stronger ink or behind a tap).
+- **Ink** — three steps only: `{colors.ink-primary}` for content, `{colors.ink-secondary}` for supporting text (≈5.3:1 on white) **including all informational meta** — provenance line, footnotes, stat-tile labels, breakdown headers. `{colors.ink-tertiary}` (≈3.1:1) is restricted by rule to disabled states and decorative glyphs only; it never carries information. Any text a user might need to read — even "just" the fetched-at time — sits in `{colors.ink-secondary}` or stronger.
 - **Hairline (`{colors.border-hairline}`)** — row dividers inside list cards and the divider grid between stat tiles. Never as a card outline.
 
 ### Accent (Aegean coral)
 
 - **`{colors.accent}`** — the one brand color. Used for: the primary pill button, the wordmark fragment, selected states of interactive elements, and the focus ring. Never for status — status belongs to the Ampel palette exclusively.
-- **`{colors.accent-deep}`** — coral for *text*: ghost-button labels, the day kicker ("Tag 1 · Samstag, 8. August"), inline "show more" rows. Also the hover/pressed shift of `{colors.accent}` fills.
+- **`{colors.accent-text}`** — coral for *text* at sub-large sizes (≈5.3:1 on white): ghost-button labels, the day kicker ("Tag 1 · Samstag, 8. August"), inline "show more" rows.
+- **`{colors.accent-deep}`** — the hover/pressed shift of `{colors.accent}` fills, and coral text only at WCAG large-text sizes (≥18.66px weight 700 / ≥24px regular; ≈4.2:1 on white passes the 3:1 large-text threshold).
 - **`{colors.accent-tint}`** — coral wash for selected-chip backgrounds. Sparingly.
 - **`{colors.accent-gradient-end}`** — exists solely as the second stop of the avatar gradient. Not used anywhere else.
 
-**Contrast honesty:** `{colors.on-accent}` on `{colors.accent}` measures ≈3.2:1 and `{colors.accent-deep}` on white ≈4.2:1 — below strict AA for normal text. Binding rule (decided 2026-08-05, coral kept as-is): coral fills carry text only at ≥16px weight 700; coral text is only ever ≥14px weight 600 and always paired with a second affordance (position, chevron, underline). Body-size text never sits on or in coral.
+**Contrast honesty:** `{colors.on-accent}` on `{colors.accent}` measures ≈3.2:1 — below AA for normal text, above the 3:1 large-text threshold. Binding rule (decided 2026-08-05, coral kept as-is): coral fills carry text only at `{typography.cta}` size or larger (≥19px weight 700 — genuinely WCAG large text, so 3:1 applies and 3.2:1 passes); coral text at sub-large sizes is always `{colors.accent-text}` (≈5.3:1 on white) and paired with a second affordance (position, chevron, underline); `{colors.accent-deep}` text is reserved for ≥large-text contexts. Body-size text never sits on or in coral. **Guard:** no passing pair may be moved to a smaller size or lighter surface than specified here without re-measuring.
+
+**Focus indicator (two-layer):** every `:focus-visible` renders a 2px `{colors.focus-ring}` outer ring plus a 2px white inner gap — the gap is explicitly part of the indicator, not incidental offset. The indicator must contrast ≥3:1 with both the control's fill and the surrounding surface; on coral fills (where ring and fill are same-hue) the white gap carries the signal.
 
 ### Ampel (the one palette)
 
-Four states, each with a strong hue (dots, map lines, pin markers), a tint (badge/note backgrounds), and a text color for use *on* that tint (all text-on-tint pairs target ≥4.5:1):
+Four states, each with a strong hue (dots, map lines, pin markers), a tint (badge/note backgrounds), and **one** text color for use *on* that tint — no per-state text tiers (all text-on-tint pairs measure ≥4.5:1: Grün 4.76, Gelb 6.21, Rot 6.25, Unbewertet 4.63):
 
 | State | Hue | Tint | Text on tint |
 |---|---|---|---|
 | Grün | `{colors.ampel-gruen}` | `{colors.ampel-gruen-tint}` | `{colors.ampel-gruen-text}` |
-| Gelb | `{colors.ampel-gelb}` | `{colors.ampel-gelb-tint}` | `{colors.ampel-gelb-text}` (long copy: `{colors.ampel-gelb-text-strong}`) |
+| Gelb | `{colors.ampel-gelb}` | `{colors.ampel-gelb-tint}` | `{colors.ampel-gelb-text}` |
 | Rot | `{colors.ampel-rot}` | `{colors.ampel-rot-tint}` | `{colors.ampel-rot-text}` |
 | Unbewertet | `{colors.ampel-unbewertet}` | `{colors.ampel-unbewertet-tint}` | `{colors.ampel-unbewertet-text}` |
+
+**Graphic variant for Gelb:** `{colors.ampel-gelb}` measures only ≈2.6:1 against white — fine inside its tint pill next to text, but too weak as a standalone graphic. Gelb as a **non-text graphic on light surfaces** (dots in list rows, dashed map lines) uses `{colors.ampel-gelb-graphic}` (≥3:1 on white/page/tints); the hue/tint/text trio is unchanged.
 
 [ASSUMPTION] The direction file renders the Grün and Gelb pairings; the Rot and Unbewertet tint/text values are derived to the same lightness logic and need one visual pass.
 
@@ -258,11 +271,12 @@ Ampel color is **never the only carrier of meaning** — every Ampel surface als
 ### Map & routes
 
 - Sailed track: solid `{colors.map-line-sailed}` (identical to `{colors.ampel-gruen}` — one green, not two).
-- Rest-trip track: dashed, colored by the rest-trip Ampel verdict using the Ampel hues above (retires the divergent `REST_LINE_COLOR` set).
+- Rest-trip track: dashed, colored by the per-leg Ampel verdict using the Ampel hues above (Gelb legs use `{colors.ampel-gelb-graphic}`; retires the divergent `REST_LINE_COLOR` set).
+- Beyond-horizon return legs (the "Annahme" part of the round trip): dashed `{colors.ampel-unbewertet}` gray — **never** an Ampel verdict hue; the legend names it "Rückweg (Annahme)". Adopted from `.working/keyscreen-karte-consumer-warm.html`.
 - Line casing: `{colors.map-line-casing}` under every polyline for legibility on hybrid imagery.
 - Alternative routes: `{colors.alt-route-1}` / `{colors.alt-route-2}` / `{colors.alt-route-3}` — retained from the current code; deliberately outside the Ampel hue ranges so an alternative is never mistaken for a verdict.
 - Wind barbs: `{colors.ink-primary}` strokes with white halo (replaces the navy default in `WindBarb.tsx`).
-- Muted place pins (not relevant today): `{colors.ampel-unbewertet}`.
+- Place pins: always with a `{colors.map-line-casing}` casing ring (see the Map marker component); muted pins (not relevant today): `{colors.ampel-unbewertet}`.
 
 ## Typography
 
@@ -271,13 +285,14 @@ Ampel color is **never the only carrier of meaning** — every Ampel surface als
 The ramp:
 
 - `{typography.display}` — today's destination only ("Kythnos"). One per screen, maximum.
-- `{typography.headline}` — wordmark, stat values, place names in Ortsdetail.
+- `{typography.headline}` — wordmark, stat values, place names in Platzdetail.
 - `{typography.body}` / `{typography.body-sm}` — running text, list rows, notes. Semibold (600–650) inline for emphasis, never a size change.
-- `{typography.label}` — button and tab labels (primary full-width CTAs step up to 16px, weight stays 700).
+- `{typography.label}` — button and tab labels (secondary/ghost/text).
+- `{typography.cta}` — primary pill CTA labels only ("Etappe ändern"): 19px/700 = WCAG large text, which is what makes white-on-coral pass (see Contrast honesty).
 - `{typography.overline}` — uppercase section titles ("REST-TRIP", "OPTIONSRAUM") and the day kicker. Together with `micro-label` this is the **only** uppercase-tracked role; it replaces the six divergent `.versal` recipes.
 - `{typography.micro-label}` — uppercase stat-tile labels ("ABFAHRT", "WIND").
 - `{typography.caption}` — trip status line, chips, option metadata.
-- `{typography.footnote}` — provenance line, attribution. Tertiary ink, never load-bearing.
+- `{typography.footnote}` — provenance line, attribution. Set in `{colors.ink-secondary}` (informational text never drops to tertiary ink).
 
 **Tabular numerals** (`font-variant-numeric: tabular-nums`) on everything quantitative: times ("12:00"), knots ("NNE 18 kn"), distances ("17 sm"), durations ("5,5 h"), day numbers in lists. German number formatting (decimal comma, narrow no-break space before units).
 
@@ -301,6 +316,8 @@ Soft, layered, always warm-tinted (`rgba(30,25,20,…)` — never pure-black sha
 
 Borders are not an elevation device. Cards get shadow, not outline; hairlines live only *inside* cards.
 
+**This section is the single source of truth for shadows.** The shadow literals repeated in the `components` frontmatter (button-primary, button-secondary, segmented-tabs, card, popover, avatar-menu) restate Level 1 / Level 2 / Level 3 / Accent glow verbatim; a shadow value changes here first and everywhere at once — no component may carry a shadow recipe that doesn't match one of the four named levels.
+
 ## Shapes
 
 - `{rounded.lg}` (20px) — cards. The defining silhouette.
@@ -315,7 +332,7 @@ Imagery (place photos, satellite heroes) follows its container radius exactly.
 
 One button system, one badge system — the five legacy ad-hoc button recipes and all native unstyled buttons are retired.
 
-- **Button / primary** — coral pill, `{components.button-primary}`. 16px/700 label for full-width CTAs ("Etappe ändern"). One primary action per card maximum. Hover/pressed: fill shifts to `{colors.accent-deep}`. Disabled: `{colors.surface-track}` fill, `{colors.ink-tertiary}` text, no shadow.
+- **Button / primary** — coral pill, `{components.button-primary}`. Label in `{typography.cta}` (19px/700 — WCAG large text; the size is load-bearing for contrast, see Colors). One primary action per card maximum. Hover/pressed: fill shifts to `{colors.accent-deep}`. Disabled: `{colors.surface-track}` fill, `{colors.ink-tertiary}` text (a sanctioned tertiary use — disabled state), no shadow.
 - **Button / secondary** — white pill with hairline border and Level-1 shadow, `{components.button-secondary}`. For real-but-not-primary actions ("Route ansehen", "Als Hauptroute übernehmen" in list contexts, "Schließen").
 - **Button / ghost** — coral text pill, no chrome, `{components.button-ghost}`. Low-commitment actions under a primary ("Wie kommt die Zeit zustande?").
 - **Button / text** — inline underlined ink link, `{components.button-text}`. Navigation-in-prose ("← Zurück", berth-name links into Ortsdetail).
