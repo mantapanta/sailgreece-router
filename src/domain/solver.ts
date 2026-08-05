@@ -1294,9 +1294,12 @@ export function existsValidPlan(
 }
 
 /**
- * FR29 alternatives: at most `params.alternativesMax`, diversified by turning
- * point and variant, always including the existence witness so a yellow
- * rest-trip light is guaranteed to be cashable (AD-13 invariant).
+ * Inhaltsschlüssel eines Plans — Tag für Tag Ziel oder Hafentag. Die
+ * FR29-Alternativen entstehen seit der Verschmelzung mit dem Optionsraum in
+ * `assessPlanning` aus den Options-Plänen selbst (dedupliziert über diesen
+ * Schlüssel, der FR2-Zeuge angehängt); eine eigene Solver-Suche nach
+ * "anderen Round-Trips" gibt es nicht mehr — sie nannte dieselben Ziele mit
+ * womöglich anderem Plan, und zwei Behauptungen zum selben Ziel verbietet AD-3.
  */
 export function planKey(plan: Plan): string {
   return plan.days
@@ -1304,106 +1307,6 @@ export function planKey(plan: Plan): string {
     .sort((a, b) => a.day - b.day)
     .map((d) => `${d.day}:${d.kind === 'stage' ? d.toIslandId : `~${d.islandId}`}`)
     .join('|');
-}
-
-export function deriveAlternatives(
-  snapshot: PlanningSnapshot,
-  startIslandId: string,
-  witness: SolveResult | null,
-  /** The current main route — an "alternative" identical to it is none.
-   *  Compared by CONTENT: comparing by variant id would drop the existence
-   *  witness whenever it happens to share a variant with the main route,
-   *  which is exactly what made a yellow light uncashable. */
-  mainPlan?: Plan,
-): SolveResult[] {
-  const frame = deadlineFrame(snapshot.params);
-  const startDay = snapshot.trip.currentDay;
-  const out: SolveResult[] = [];
-  const seen = new Set<string>();
-  if (mainPlan) seen.add(planKey(mainPlan));
-
-  // The witness comes first and is never dropped for cosmetic reasons: the
-  // AD-13 invariant is that a yellow rest-trip light is always cashable.
-  if (witness && !seen.has(planKey(witness.plan))) {
-    out.push(witness);
-    seen.add(planKey(witness.plan));
-  }
-
-  const constraint = dayConstraintFor(snapshot, []);
-  // Collect ALL safe candidates first, then SPREAD the selection (AD-13: at
-  // least one more conservative escalation step and — if open — a more
-  // ambitious southern option). Taking the first N in candidate order would
-  // only ever show the most conservative ones, hiding exactly the curated
-  // round trips the skipper wants to weigh.
-  const safe: SolveResult[] = [];
-  for (const candidate of buildCandidates(snapshot, startIslandId)) {
-    const daysAvailable = frame.deadlineDay - startDay + 1;
-    const packing = packLegs(candidate.legs, startDay, frame.deadlineDay, snapshot, {
-      maxWaitDays: Math.max(
-        snapshot.params.harbourDaysMax,
-        daysAvailable - candidate.legs.length,
-      ),
-      startIslandId,
-      dayConstraint: constraint,
-    });
-    const pastDays: PlanDay[] = (snapshot.trip.plan?.days ?? []).filter(
-      (d) => d.day < startDay,
-    );
-    const plan: Plan = {
-      schemaVersion: PLAN_SCHEMA_VERSION,
-      days: [
-        ...pastDays,
-        ...planFromPacking(packing.packed, startDay, frame.deadlineDay, startIslandId),
-      ],
-    };
-    const key = planKey(plan);
-    if (seen.has(key)) continue;
-    // Ein Round-Trip, der nicht segelt, ist keiner — dieselbe Regel, die
-    // existsValidPlan an den Zeugen anlegt. Der "(bleiben)"-Kandidat ist im
-    // Suchraum legitim (FR18: die am wenigsten verletzende Antwort, wenn der
-    // Meltemi alles sperrt), aber "Wendepunkt Basis · 0 Etappen" ist keine
-    // Alternative, die man einem Skipper zur Übernahme anbietet.
-    if (stagesOf(plan).length === 0) continue;
-    const validity = validatePlan(plan, snapshot);
-    // Only offer alternatives that are actually safe and on time; structural
-    // shortfalls (extra harbour days) are tolerable in an alternative.
-    if (validity.safetyViolations.length > 0) continue;
-    seen.add(key);
-    safe.push({
-      plan,
-      validity,
-      relaxedTo: 'none',
-      variantId: candidate.variantId,
-      turnIslandId: candidate.turnIslandId,
-    });
-  }
-
-  // Spread by reach: most ambitious, least ambitious, then fill from the middle.
-  // Alternatives are only useful if they differ in how far south they go.
-  // (Sortiert nach REICHWEITE — vorher stand hier die Etappenzahl, und die
-  // misst etwas anderes; siehe reachNmFor.)
-  const reach = reachNmFor(snapshot);
-  const byReach = [...safe].sort(
-    (a, b) =>
-      reach(b.turnIslandId) - reach(a.turnIslandId) ||
-      stagesOf(b.plan).length - stagesOf(a.plan).length ||
-      a.variantId.localeCompare(b.variantId),
-  );
-  const room = () => out.length < snapshot.params.alternativesMax;
-  const take = (r: SolveResult | undefined) => {
-    if (!r || !room()) return;
-    const k = planKey(r.plan);
-    if (seen.has(k) && out.some((o) => planKey(o.plan) === k)) return;
-    out.push(r);
-  };
-  take(byReach[0]);
-  take(byReach[byReach.length - 1]);
-  for (let i = Math.floor(byReach.length / 2); i < byReach.length && room(); i++) {
-    if (!out.includes(byReach[i]!)) take(byReach[i]);
-  }
-
-  // Conservative first, so the escalation ladder reads naturally (FR9).
-  return out.sort((a, b) => stagesOf(a.plan).length - stagesOf(b.plan).length);
 }
 
 /** Stages of a plan that could not be assessed — for display (AD-12). */

@@ -199,9 +199,10 @@ const ParamsObjectSchema = z.object({
   stageHoursBandMinH: z.number().min(0).default(5),
   stageHoursBandMaxH: z.number().positive().default(7),
 
-  // --- solver (FR29, AD-13) -------------------------------------------------------
-  /** Max alternatives offered besides the main route. */
-  alternativesMax: z.number().int().min(0).default(3),
+  // (alternativesMax entfiel mit der Verschmelzung von Optionsraum und
+  //  Alternativ-Routen: je Option ihr Plan, dedupliziert — kein eigener
+  //  Suchraum mehr, der zu kappen wäre. Persistierte Werte werden von zod
+  //  weiterhin klaglos verworfen.)
 
   // --- position derivation ----------------------------------------------------
   /**
