@@ -1,5 +1,6 @@
 /** German display formatting (UI layer — display only, no domain values computed here). */
 
+import { compassPoint } from '../domain/geo.ts';
 import { dateForTripDay } from '../domain/time.ts';
 
 const dayFmt = new Intl.DateTimeFormat('de-DE', {
@@ -80,9 +81,43 @@ export function formatDeg(v: number | null): string {
   return `${Math.round(v)}°`;
 }
 
-const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-
+/**
+ * Himmelsrichtung eines Winkels. Die Tabelle selbst liegt in domain/geo.ts —
+ * die Domain benennt Richtungen in ihren Begründungen ("Wind 31 kn aus NNE"),
+ * und zwei Kopien derselben 16 Namen könnten auseinanderlaufen. Hier bleibt
+ * nur, was Anzeige ist: der Umgang mit "kein Wert".
+ */
 export function compass(deg: number | null): string {
   if (deg === null) return '–';
-  return DIRS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]!;
+  return compassPoint(deg);
+}
+
+/**
+ * Windrichtung, wie ein Segler sie liest: "NNW 335°".
+ *
+ * AD-6 — alle Windrichtungen im Projekt sind rechtweisend und "kommend aus".
+ * Die Himmelsrichtung steht vorn, weil sie im Cockpit gesprochen wird; die
+ * Gradzahl dahinter, weil nur sie mit dem TWA zusammen nachrechenbar ist.
+ */
+export function formatWindFrom(deg: number | null): string {
+  if (deg === null) return '–';
+  return `${compass(deg)} ${Math.round(((deg % 360) + 360) % 360)}°`;
+}
+
+/**
+ * Kurs zum Wind als Name — die Übersetzung des TWA in Segler-Sprache.
+ *
+ * Reine ANZEIGE (wie compass): die Grenzen sind die übliche Einteilung, NICHT
+ * die Schwellen der Bewertung. Ob eine Etappe als Aufkreuzer gilt, entscheidet
+ * allein `params.upwindTwaDeg` in der Domain (FR16) — ein Label hier darf
+ * dieser Regel weder vorgreifen noch widersprechen.
+ */
+export function pointOfSail(twa: number | null): string {
+  if (twa === null) return '–';
+  const t = Math.abs(twa);
+  if (t < 30) return 'gegenan';
+  if (t < 60) return 'Am Wind';
+  if (t < 100) return 'Halbwind';
+  if (t < 150) return 'Raumschots';
+  return 'Vor dem Wind';
 }

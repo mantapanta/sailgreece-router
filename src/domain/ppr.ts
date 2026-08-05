@@ -51,16 +51,36 @@ export function effectiveDeadlineDay(snapshot: PlanningSnapshot): number {
 }
 
 /**
+ * Wie viele Etappen ein Tag tragen KANN — nicht, wie viele der Planer legen
+ * soll. Zwei kurze Schläge an einem Tag sind seemännisch möglich, solange die
+ * Summe im FR16-Hartmaximum bleibt; ob man sie auch plant, ist eine andere
+ * Frage und steht in `params.maxLegsPerDay`.
+ */
+const LEGS_PER_DAY_POSSIBLE = 2;
+
+/**
  * Can `legs` be sailed in order (waiting days allowed), starting on
  * `startDay` and finishing by `deadlineDay`?
- * Normally one leg per day; TWO consecutive short legs may share a day when
- * their combined duration stays inside the FR16 hard maximum (the brief's
- * plan does exactly that, e.g. Serifos -> Sifnos -> Paros on one day).
+ *
+ * Wie viele Etappen auf einen Tag dürfen, entscheidet `opts.maxLegsPerDay`,
+ * sonst `params.maxLegsPerDay` (Standard 1 — ein Tag, eine Verbindung).
+ * Ein Doppelschlag ist zusätzlich nur zulässig, wenn die Summe beider Etappen
+ * im FR16-Hartmaximum bleibt; die zweite startet zur echten Ankunftszeit der
+ * ersten, damit der Nachmittags-Meltemi sie trifft.
+ *
  * A leg day is admissible when its assessment is not red. Days that are
  * unconfirmed — either 'unbewertet' (no data) or computed under the
  * persistence assumption beyond the horizon (`basis: 'annahme'`) — are treated
  * as admissible-but-unconfirmed; if every surviving plan relies on such days
  * the result is 'horizon'.
+ *
+ * WARUM DAS ÜBERHAUPT AUFFIEL: praktisch jeder Tag jenseits des verlässlichen
+ * Horizonts liefert 'horizon' statt 'feasible' (basis 'annahme'). Der
+ * Ein-Etappen-Zug erreichte damit nie 'feasible', der Doppelschlag wurde also
+ * IMMER mitgeprobt — und `better()` bevorzugt bei Gleichstand den früheren
+ * Abschluss. So gewann der Doppelschlag systematisch, ohne dass ihn je jemand
+ * angefordert hätte. Deshalb ist die Obergrenze jetzt eine Vorgabe und keine
+ * Nebenwirkung eines Tie-Breaks.
  */
 export function packLegs(
   legs: Leg[],
@@ -82,6 +102,12 @@ export function packLegs(
      * discard almost every packing instead of steering the search.
      */
     dayConstraint?: (day: number, endIslandId: string) => boolean;
+    /**
+     * Obergrenze für Etappen pro Tag. Ohne Angabe gilt die Planungsvorgabe
+     * `params.maxLegsPerDay` — wer nach dem MÖGLICHEN fragt statt nach dem
+     * Geplanten, setzt sie bewusst hoch (siehe packLegsFeasible).
+     */
+    maxLegsPerDay?: number;
   } = {},
 ): PackResult {
   const memo = new Map<string, PackResult>();
@@ -98,6 +124,7 @@ export function packLegs(
   // more waiting days than that — which SHRINKS the search space instead of
   // growing it. Callers that only ask about feasibility (PoR) leave it open.
   const maxWaitDays = opts.maxWaitDays ?? Number.POSITIVE_INFINITY;
+  const maxLegsPerDay = opts.maxLegsPerDay ?? params.maxLegsPerDay;
 
   const combine = (rest: Feasibility, unconfirmed: boolean): Feasibility =>
     rest === 'infeasible'
@@ -164,7 +191,12 @@ export function packLegs(
       // Checked SEPARATELY from the single-leg move: a pin or the pickup that
       // is only reachable via a double leg must not be blocked by the
       // single-leg destination failing the constraint.
-      if (best.verdict !== 'feasible' && legIdx + 1 < legs.length && a.totalHours !== null) {
+      if (
+        maxLegsPerDay >= 2 &&
+        best.verdict !== 'feasible' &&
+        legIdx + 1 < legs.length &&
+        a.totalHours !== null
+      ) {
         const b = assessLeg(legs[legIdx + 1]!, day, snapshot, {
           departureOffsetHours: a.totalHours,
           scenario,
@@ -219,7 +251,18 @@ export function packLegs(
   return search(0, startDay, 0);
 }
 
-/** Feasibility-only view of {@link packLegs} — same notion, no schedule (AD-3). */
+/**
+ * Feasibility-only view of {@link packLegs} — same notion, no schedule (AD-3).
+ *
+ * Diese Sicht beantwortet KAPAZITÄTSFRAGEN: Kommen wir noch heim (Bedingung
+ * 2'), wann müssen wir spätestens umkehren (FR19), wie früh wäre eine Insel
+ * erreichbar (options.ts). Alle drei fragen, was das Schiff kann — nicht, wie
+ * der Törn aussehen soll. Deshalb rechnen sie mit dem Doppelschlag, auch wenn
+ * der Planer ihn nicht einsetzt: die Stilvorgabe "eine Verbindung pro Tag" in
+ * eine Sicherheitsaussage zu übersetzen hiesse, Alarm zu schlagen, wo keiner
+ * ist. Was der Plan davon wirklich einlösen kann, prüft Bedingung (2) — die
+ * Ankunft an der Basis bis zum Stichtag — am fertigen Plan.
+ */
 export function packLegsFeasible(
   legs: Leg[],
   startDay: number,
@@ -227,7 +270,10 @@ export function packLegsFeasible(
   snapshot: PlanningSnapshot,
   opts: { scenario?: LegScenario } = {},
 ): Feasibility {
-  return packLegs(legs, startDay, deadlineDay, snapshot, opts).verdict;
+  return packLegs(legs, startDay, deadlineDay, snapshot, {
+    ...opts,
+    maxLegsPerDay: LEGS_PER_DAY_POSSIBLE,
+  }).verdict;
 }
 
 /** The normative return chain from the snapshot (fixed id, AD-10), as legs. */

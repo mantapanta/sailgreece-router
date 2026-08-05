@@ -30,6 +30,22 @@ export function normDeg(d: number): number {
   return ((d % 360) + 360) % 360;
 }
 
+const COMPASS_POINTS = [
+  'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+  'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
+];
+
+/**
+ * 16-point compass name of a direction.
+ *
+ * Liegt hier und nicht in der Anzeige, weil die Domain selbst Richtungen
+ * benennen muss: eine Begründung wie "Wind 31 kn aus NNE (25°)" ist Teil des
+ * Urteils, nicht seiner Formatierung — sie sagt, WORAN die Ampel hängt.
+ */
+export function compassPoint(directionDeg: number): string {
+  return COMPASS_POINTS[Math.round(normDeg(directionDeg) / 22.5) % 16]!;
+}
+
 /** Smallest angular difference between two directions, 0-180. */
 export function angleDiffDeg(a: number, b: number): number {
   const d = Math.abs(normDeg(a) - normDeg(b)) % 360;

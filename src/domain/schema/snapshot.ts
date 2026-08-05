@@ -110,9 +110,15 @@ export interface PlaceNightAssessment {
   placeId: string;
   nightDay: number;
   ampel: Ampel;
-  /** Worst wind / wave observed inside the night window (for display). */
+  /** Worst wind observed inside the night window — this drives `ampel`. */
   maxWindKn: number | null;
   windDirDeg: number | null;
+  /**
+   * Höchste Wellenhöhe der Nacht — REINE INFORMATION, sie geht NICHT in
+   * `ampel` ein (domain/ampel.ts, Modulkopf). Es ist der Wert der offenen See
+   * am Ort des Platzes; im Hafen oder hinter der Landzunge gilt er nicht.
+   * Anzeigen ja, bewerten nein — und die Anzeige muss das dazusagen.
+   */
   maxWaveM: number | null;
   basis: DataBasis;
   reasons: string[];
@@ -128,6 +134,12 @@ export interface LegHourBreakdown {
   timeIso: string;
   /** Course over the segment being sailed this hour. */
   courseDeg: number;
+  /**
+   * AD-6 — Richtung, AUS DER der Wind weht, rechtweisend. Zusammen mit
+   * `courseDeg` ist das die Herkunft von `twaDeg`: ohne sie steht in der
+   * Rechnung ein Winkel, dessen Grundlage der Skipper nicht nachprüfen kann.
+   */
+  twdDeg: number;
   twsKn: number;
   twaDeg: number;
   /** Boat speed used — from the polar (+offset) or the motor parameter. */
@@ -173,7 +185,12 @@ export interface PointPassage {
     courseDeg: number;
     /** Länge NUR dieses Abschnitts in sm. */
     distanceNm: number;
-    /** Wind und Fahrt der Stunde, in der der Punkt passiert wurde. */
+    /**
+     * Wind und Fahrt der Stunde, in der der Punkt passiert wurde.
+     * `twdDeg` ist die Richtung, AUS DER der Wind weht (AD-6, rechtweisend) —
+     * ohne sie liesse sich der `twaDeg` daneben nicht nachrechnen.
+     */
+    twdDeg: number;
     twsKn: number;
     twaDeg: number;
     speedKn: number;
@@ -193,6 +210,21 @@ export interface LegAssessment {
   /** Mean TWS / TWA over the simulated passage (display). */
   avgTwsKn: number | null;
   avgTwaDeg: number | null;
+  /**
+   * Mittlere Windrichtung (AD-6: woher) über die simulierte Passage — als
+   * VEKTOR-Mittel, nicht als arithmetisches: 350° und 10° mitteln zu 0°, nicht
+   * zu 180°. Null, wenn keine Stunde simuliert wurde oder die Richtungen sich
+   * gegenseitig aufheben — dann gibt es keine mittlere Richtung, und eine
+   * ausgewiesene wäre erfunden.
+   */
+  avgTwdDeg: number | null;
+  /**
+   * Mittlere Fahrt über der simulierten Passage (zurückgelegte sm je Stunde
+   * unter Weg, Segeln und Motor zusammen). Gehört hierher und nicht in die
+   * View: `Distanz / Zeit` ist eine Aussage über die Etappe, und AD-2 lässt
+   * Views keine Domänenwerte rechnen — auch keine scheinbar trivialen.
+   */
+  avgSpeedKn: number | null;
   upwind: boolean;
   /**
    * Whether this verdict rests on real model hours or partly on the

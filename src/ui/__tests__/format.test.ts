@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatAthensTime } from '../format.ts';
+import { compass, formatAthensTime, formatWindFrom, pointOfSail } from '../format.ts';
 
 /**
  * Die Stunden-Achse des Snapshots ist normativ UTC, angezeigt wird Ortszeit
@@ -24,5 +24,53 @@ describe('formatAthensTime — UTC-Achse, Anzeige in Ortszeit Athen', () => {
   it('reicht den Fallback der Simulation unverändert durch', () => {
     // domain/scoring.ts setzt '+7h', wenn die Achse die Stunde nicht deckt.
     expect(formatAthensTime('+7h')).toBe('+7h');
+  });
+});
+
+/**
+ * Die Rechnung soll ohne Rückfrage lesbar sein: "aus NNW 335°" sagt dasselbe
+ * zweimal — einmal in Cockpit-Sprache, einmal nachrechenbar.
+ */
+describe('formatWindFrom — Windrichtung als Himmelsrichtung und Grad', () => {
+  it('nennt Himmelsrichtung und Gradzahl', () => {
+    expect(formatWindFrom(335)).toBe('NNW 335°');
+    expect(formatWindFrom(0)).toBe('N 0°');
+    expect(formatWindFrom(90)).toBe('E 90°');
+  });
+
+  it('normalisiert auf 0–359°, statt 361° zu behaupten', () => {
+    expect(formatWindFrom(361)).toBe('N 1°');
+    expect(formatWindFrom(-90)).toBe('W 270°');
+  });
+
+  it('ohne Wert kein erfundener Nordwind', () => {
+    expect(formatWindFrom(null)).toBe('–');
+    expect(compass(null)).toBe('–');
+  });
+});
+
+/**
+ * Der TWA in Segler-Sprache. Reine Anzeige: die Grenzen hier sind die übliche
+ * Einteilung und NICHT die Bewertungsschwelle params.upwindTwaDeg — deshalb
+ * darf ein Label auch nie als Ampel-Aussage gelesen werden.
+ */
+describe('pointOfSail — Kurs zum Wind als Name', () => {
+  it('benennt die Kurse über den ganzen Winkelbereich', () => {
+    expect(pointOfSail(10)).toBe('gegenan');
+    expect(pointOfSail(45)).toBe('Am Wind');
+    expect(pointOfSail(90)).toBe('Halbwind');
+    expect(pointOfSail(120)).toBe('Raumschots');
+    expect(pointOfSail(175)).toBe('Vor dem Wind');
+  });
+
+  it('ist an den Grenzen eindeutig (kein Loch, keine Überschneidung)', () => {
+    expect(pointOfSail(30)).toBe('Am Wind');
+    expect(pointOfSail(60)).toBe('Halbwind');
+    expect(pointOfSail(100)).toBe('Raumschots');
+    expect(pointOfSail(150)).toBe('Vor dem Wind');
+  });
+
+  it('ohne TWA keinen Kursnamen', () => {
+    expect(pointOfSail(null)).toBe('–');
   });
 });

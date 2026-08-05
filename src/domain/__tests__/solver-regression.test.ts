@@ -18,6 +18,7 @@ import {
 } from '../solver.ts';
 import { assessPlanning } from '../assess.ts';
 import { assessLeg } from '../scoring.ts';
+import { twaDeg } from '../geo.ts';
 import { packLegs } from '../ppr.ts';
 import { deadlineFrame } from '../time.ts';
 import { ParamsSchema } from '../schema/params.ts';
@@ -128,6 +129,14 @@ describe('regression: Meltemi worst case binds beyond the reliable horizon', () 
     expect(worst.breakdown.every((h) => h.worstCase)).toBe(true);
     // 30 kn from the north on a northbound leg must not read as a gentle 6 kn.
     expect(worst.breakdown[0]!.twsKn).toBe(30);
+    // And the DIRECTION shown is the substituted one, not the forecast's 90°:
+    // otherwise the row would pair a worst-case TWA with a forecast wind and
+    // read as arithmetically wrong.
+    expect(worst.breakdown[0]!.twdDeg).not.toBe(90);
+    expect(worst.breakdown[0]!.twaDeg).toBeCloseTo(
+      twaDeg(worst.breakdown[0]!.courseDeg, worst.breakdown[0]!.twdDeg),
+      6,
+    );
   });
 
   it('keeps using the real forecast inside the horizon', () => {
@@ -275,10 +284,29 @@ describe('regression: double-leg days can satisfy pins and the pickup', () => {
         startIslandId: 'athen',
         // Day 1 must end at 'c' — only possible by sailing both legs.
         dayConstraint: (day, island) => day !== 1 || island === 'c',
+        // Seit dem Ein-Etappen-Standard muss der Doppelschlag angefordert
+        // werden — der Packer kann ihn weiterhin, er wählt ihn nur nicht mehr
+        // von sich aus (params.maxLegsPerDay, RELAXATION_ORDER).
+        maxLegsPerDay: 2,
       },
     );
     expect(packed.verdict).not.toBe('infeasible');
     expect(packed.packed.filter((p) => p.day === 1)).toHaveLength(2);
+  });
+
+  it('ohne Freigabe bleibt derselbe Pin unerreichbar — statt still zwei Schläge zu legen', () => {
+    const snapshot = realSnapshot({ legNm: 6, windKn: 10, windFromDeg: 90 });
+    const packed = packLegs(
+      snapshot.library.legs.filter((l) => ['athen--b', 'b--c'].includes(l.id)),
+      1,
+      12,
+      snapshot,
+      {
+        startIslandId: 'athen',
+        dayConstraint: (day, island) => day !== 1 || island === 'c',
+      },
+    );
+    expect(packed.verdict).toBe('infeasible');
   });
 
   it('finds a pickup harbour that needs a double leg', () => {

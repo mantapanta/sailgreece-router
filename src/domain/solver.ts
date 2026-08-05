@@ -62,7 +62,12 @@ import { deadlineFrame, tripDayForDate } from './time.ts';
  * ABSENT — they are never relaxed, and leaving them out of this list is the
  * structural guarantee, not a runtime check that could be forgotten.
  */
-export const RELAXATION_ORDER = ['none', 'hardMax', 'nightLeg'] as const;
+export const RELAXATION_ORDER = [
+  'none',
+  'hardMax',
+  'doppelschlag',
+  'nightLeg',
+] as const;
 export type RelaxationLevel = (typeof RELAXATION_ORDER)[number];
 
 /**
@@ -84,6 +89,21 @@ export function relaxParams(params: Params, level: RelaxationLevel): Params {
         targetDayHours: params.maxSailHours + params.maxMotorHours,
         targetMotorHours: params.maxMotorHours,
       };
+    case 'doppelschlag':
+      // Zwei Verbindungen an einem Tag. Standard ist EINE (params.maxLegsPerDay
+      // = 1: ein Tag, eine Insel-zu-Insel-Verbindung) — der Zwischenstopp ist
+      // eine Nachgabe, kein Normalfall, und steht deshalb hier in der Leiter.
+      //
+      // Nach 'hardMax', weil ein längerer einzelner Schlag der Vorgabe näher
+      // bleibt als ein zerlegter Tag; vor 'nightLeg', weil zwei Tagschläge
+      // milder sind als eine Nacht unterwegs. Die Summe beider Etappen bleibt
+      // dabei im Hartmaximum — das prüft der Packer selbst.
+      return {
+        ...params,
+        targetDayHours: params.maxSailHours + params.maxMotorHours,
+        targetMotorHours: params.maxMotorHours,
+        maxLegsPerDay: 2,
+      };
     case 'nightLeg':
       // FR16 night-leg exception: a long light-wind passage (the family sleeps)
       // becomes admissible. This raises the HARD ceiling, which is what the
@@ -96,6 +116,10 @@ export function relaxParams(params: Params, level: RelaxationLevel): Params {
         maxSailHours: Math.max(params.maxSailHours, params.lightWindMaxHours),
         maxMotorHours: Math.max(params.maxMotorHours, params.lightWindMaxHours),
         lightWindMaxTwsKn: Math.max(params.lightWindMaxTwsKn, params.nightLegMaxTwsKn),
+        // Jede Stufe muss alles zulassen, was die vorige zuliess — sonst
+        // NÄHME die letzte Stufe eine Freiheit zurück und könnte weniger
+        // lösen als die davor.
+        maxLegsPerDay: 2,
       };
   }
 }

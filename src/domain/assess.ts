@@ -115,6 +115,8 @@ function assessPlan(
                     totalHours: null,
                     avgTwsKn: null,
                     avgTwaDeg: null,
+                    avgTwdDeg: null,
+                    avgSpeedKn: null,
                     upwind: false,
                     basis: 'forecast' as const,
                     reasons: [`Etappe ${legId} nicht in der Bibliothek`],

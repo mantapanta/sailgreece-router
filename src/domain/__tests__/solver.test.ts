@@ -3,12 +3,14 @@ import {
   RELAXATION_ORDER,
   buildCandidates,
   completePlan,
+  deriveAlternatives,
   existsValidPlan,
   legLibrary,
   planFromPacking,
   relaxParams,
   validatePlan,
 } from '../solver.ts';
+import { packLegs, packLegsFeasible } from '../ppr.ts';
 import { stagesOf } from '../schema/plan.ts';
 import { assessPlanning } from '../assess.ts';
 import type { Island } from '../schema/island.ts';
@@ -43,6 +45,8 @@ function roundTripSnapshot(
     returnDeadlineDate?: string;
     reliableHorizonDays?: number;
     days?: number;
+    /** Länge jeder Etappe. Kurze Etappen passen zu zweit auf einen Tag. */
+    legNm?: number;
   } = {},
 ): PlanningSnapshot {
   const windKn = opts.windKn ?? 10;
@@ -73,8 +77,9 @@ function roundTripSnapshot(
       distanceNm: nm,
     });
 
-  const outbound = [leg(base, mitte, 20), leg(mitte, sued, 20)];
-  const homeward = [leg(sued, mitte, 20), leg(mitte, base, 20)];
+  const nm = opts.legNm ?? 20;
+  const outbound = [leg(base, mitte, nm), leg(mitte, sued, nm)];
+  const homeward = [leg(sued, mitte, nm), leg(mitte, base, nm)];
   const legs = [...outbound, ...homeward];
   const variants = [
     makeVariant('sued-route', outbound, { escalationRank: 1, name: 'Südroute' }),
@@ -224,7 +229,12 @@ describe('solver — FR31 pickup is hard and never relaxed (AD-13)', () => {
 
   it('never relaxes the pickup or the upwind threshold', () => {
     // The relaxation ladder must not contain them — structural guarantee.
-    expect(RELAXATION_ORDER).toEqual(['none', 'hardMax', 'nightLeg']);
+    expect(RELAXATION_ORDER).toEqual([
+      'none',
+      'hardMax',
+      'doppelschlag',
+      'nightLeg',
+    ]);
     const base = roundTripSnapshot().params;
     for (const level of RELAXATION_ORDER) {
       const relaxed = relaxParams(base, level);
@@ -387,5 +397,119 @@ describe('assessment — FR2 rest-trip light (AD-3)', () => {
     });
     // Solver stages never carry a place, so every berth shown is a suggestion.
     expect(assessment.mainRoute!.stages.every((s) => s.placeIsSuggestion)).toBe(true);
+  });
+});
+
+/**
+ * SKIPPER-VORGABE 2026-08-05 — ein Tag, eine Verbindung von Insel zu Insel.
+ *
+ * Der Zwischenstopp war vorher kein Sonderfall, sondern die stille Regel: weil
+ * jeder Tag jenseits des verlässlichen Horizonts 'horizon' statt 'feasible'
+ * liefert, erreichte der Ein-Etappen-Zug nie das Abbruchkriterium, der
+ * Doppelschlag wurde immer mitgeprobt — und der Tie-Break bevorzugt den
+ * früheren Abschluss. Diese Fälle halten fest, dass er jetzt angefordert
+ * werden muss.
+ */
+describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
+  it('der Standard ist eine Etappe pro Tag', () => {
+    expect(roundTripSnapshot().params.maxLegsPerDay).toBe(1);
+  });
+
+  it('plant jede Verbindung auf einen eigenen Tag, wenn der Rahmen es hergibt', () => {
+    // Vier Etappen, fünf Tage — ein Tag pro Verbindung passt.
+    const solved = completePlan(roundTripSnapshot(), 'athen')!;
+    for (const stage of stagesOf(solved.plan)) {
+      expect(stage.legIds).toHaveLength(1);
+    }
+    expect(solved.relaxedTo).toBe('none');
+  });
+
+  it('auch jenseits des Forecast-Horizonts — dort kam der Doppelschlag früher her', () => {
+    // reliableHorizonDays 1: ab Tag 2 rechnet alles unter der Annahme, jede
+    // Packung meldet 'horizon'. Genau die Konstellation, in der der frühere
+    // Tie-Break den Doppelschlag gewinnen liess.
+    const solved = completePlan(roundTripSnapshot({ reliableHorizonDays: 1 }), 'athen')!;
+    for (const stage of stagesOf(solved.plan)) {
+      expect(stage.legIds).toHaveLength(1);
+    }
+  });
+
+  it('die Alternativen halten sich an dieselbe Vorgabe', () => {
+    const snapshot = roundTripSnapshot();
+    const witness = existsValidPlan(snapshot, 'athen');
+    for (const alt of deriveAlternatives(snapshot, 'athen', witness)) {
+      for (const stage of stagesOf(alt.plan)) {
+        expect(stage.legIds).toHaveLength(1);
+      }
+    }
+  });
+
+  /**
+   * Die Vorgabe ist eine Vorgabe, keine Mauer: passt der Törn mit einem Tag je
+   * Verbindung nicht mehr in den Rahmen, darf der Planer nicht schweigend
+   * scheitern (FR18) — er gibt nach und sagt es über `relaxedTo`.
+   */
+  it('gibt den Doppelschlag frei, wenn ihn eine harte Bedingung erzwingt', () => {
+    // Kurze Etappen (zwei passen auf einen Tag) und die Gäste steigen schon an
+    // Tag 1 auf 'sued' zu — dorthin führen zwei Verbindungen. Mit einem Tag je
+    // Verbindung ist die FR31-Bedingung nicht zu erfüllen, also muss der Planer
+    // nachgeben statt die Gäste stehen zu lassen (FR18).
+    const snapshot = roundTripSnapshot({
+      legNm: 8,
+      ferryIslands: ['sued'],
+      pickupDate: '2026-08-08', // Törntag 1
+    });
+    const solved = completePlan(snapshot, 'athen')!;
+    const tag1 = stagesOf(solved.plan).find((s) => s.day === 1);
+    expect(tag1?.legIds).toHaveLength(2);
+    expect(solved.relaxedTo).toBe('doppelschlag');
+    expect(solved.validity.violations.some((v) => v.kind === 'pickup')).toBe(false);
+  });
+
+  it('dieselbe Lage bleibt ohne die harte Bedingung bei einer Etappe pro Tag', () => {
+    // Gleiche kurzen Etappen, aber kein Zwang: der Planer nutzt die Tage, die
+    // er hat, statt zwei Schläge zusammenzuziehen.
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    const solved = completePlan(snapshot, 'athen')!;
+    for (const stage of stagesOf(solved.plan)) {
+      expect(stage.legIds).toHaveLength(1);
+    }
+    expect(solved.relaxedTo).toBe('none');
+  });
+
+  it('die Leiter nimmt nichts zurück: nach doppelschlag bleibt der Doppelschlag erlaubt', () => {
+    const base = roundTripSnapshot().params;
+    expect(relaxParams(base, 'none').maxLegsPerDay).toBe(1);
+    expect(relaxParams(base, 'hardMax').maxLegsPerDay).toBe(1);
+    expect(relaxParams(base, 'doppelschlag').maxLegsPerDay).toBe(2);
+    expect(relaxParams(base, 'nightLeg').maxLegsPerDay).toBe(2);
+  });
+});
+
+/**
+ * Die Vorgabe gilt dem PLAN, nicht der Frage "kommen wir überhaupt noch heim?".
+ * Sonst würde aus einer Stilentscheidung eine Sicherheitsaussage: der
+ * Rückkehr-Check meldete eine Falle, wo das Schiff in Wahrheit zwei kurze
+ * Schläge an einem Tag segeln könnte.
+ */
+describe('solver — Kapazitätsfragen rechnen weiter mit dem Doppelschlag', () => {
+  it('packLegsFeasible nutzt zwei Etappen am Tag, packLegs (Plan) nur eine', () => {
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    const legs = legLibrary(snapshot);
+    // Beide Etappen an EINEM Tag (Stichtag = Tag 1): nur mit Doppelschlag.
+    const chain = [legs.get('athen--mitte')!, legs.get('mitte--sued')!];
+    expect(packLegsFeasible(chain, 1, 1, snapshot)).not.toBe('infeasible');
+    expect(
+      packLegs(chain, 1, 1, snapshot, { startIslandId: 'athen' }).verdict,
+    ).toBe('infeasible');
+  });
+
+  it('der Rückkehr-Check meldet keine Falle, wo zwei kurze Schläge heimführen', () => {
+    // Von 'sued' am vorletzten Tag: mit einem Tag je Verbindung zu spät, mit
+    // dem Doppelschlag machbar. Eine Stilvorgabe darf daraus keine Falle machen.
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    const legs = legLibrary(snapshot);
+    const heim = [legs.get('sued--mitte')!, legs.get('mitte--athen')!];
+    expect(packLegsFeasible(heim, 5, 5, snapshot)).not.toBe('infeasible');
   });
 });

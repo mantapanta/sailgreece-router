@@ -55,10 +55,33 @@ const ParamsObjectSchema = z.object({
    */
   stopHoursDefault: z.number().min(0).max(12).default(3),
 
+  /**
+   * Wie viele Etappen der Planer HÖCHSTENS auf einen Tag legt. Standard 1:
+   * ein Tag, eine Verbindung von Insel zu Insel (Skipper-Entscheidung
+   * 2026-08-05).
+   *
+   * Der Zwischenstopp ist damit kein Normalfall mehr, sondern eine Stufe der
+   * Eskalationsleiter (solver.ts, RELAXATION_ORDER 'doppelschlag'): Er kommt,
+   * wenn ein Tag pro Verbindung den Stichtag oder den Zustiegstag nicht mehr
+   * erreicht — und weil er dann aus der Leiter kommt, steht auch dabei, dass
+   * etwas nachgegeben werden musste.
+   *
+   * Gilt für den PLAN. Die Frage "kommen wir überhaupt noch heim?"
+   * (packLegsFeasible: Rückkehr-Check, PoR, früheste Ankunft) rechnet
+   * weiterhin mit dem, was das Schiff KANN — dort wäre die Stilvorgabe eine
+   * erfundene Einschränkung, die Alarm schlägt, wo keiner ist.
+   */
+  maxLegsPerDay: z.number().int().min(1).max(2).default(1),
+
   // --- place ampel (FR8) ----------------------------------------------------
   /** Unprotected ("Luv") direction: yellow up to this wind, red above. */
   openSectorMaxKn: z.number().positive().default(10),
-  /** Unprotected direction: yellow up to this wave height, red above. */
+  /**
+   * OHNE WIRKUNG seit 2026-08-05: Wellen bewerten keinen Liegeplatz mehr
+   * (domain/ampel.ts, Modulkopf). Das Feld bleibt, weil die gespeicherte
+   * Konfiguration es mitbringt und ein unbekannter Schlüssel den Import
+   * scheitern liesse — nicht, weil noch etwas darauf hört.
+   */
   openSectorMaxWaveM: z.number().positive().default(0.5),
 
   // --- time windows (AD-9) --------------------------------------------------

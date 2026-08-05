@@ -706,6 +706,44 @@ hr.hairline,
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
+/* --- Luftbild als Kopfbild ------------------------------------------------
+   Die Karte füllt den Kopf, die Beschriftung liegt darüber. Das Padding wandert
+   dabei vom Kasten in die Beschriftung: läge es weiter aussen, bliebe rund um
+   die Karte ein blauer Rahmen stehen. */
+.place-hero-map {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.place-hero-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* Im Foto- und Verlaufs-Kopf trägt `.place-hero` selbst das Padding — die
+   Beschriftung bringt hier keins mit, sonst stünde es doppelt. */
+.place-hero-caption {
+  position: relative;
+  z-index: 2;
+}
+
+.place-hero-map .place-hero-caption {
+  padding: 2.2rem 1.4rem 1.2rem;
+  /* Ohne dies fängt die Beschriftung die Gesten ab, die der Karte gelten. */
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(20, 32, 50, 0.88), rgba(20, 32, 50, 0));
+}
+
+.place-hero-caption .versal {
+  color: #d7dfea;
+}
+
+.place-hero-legende {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
 table.shelter-table {
   border-collapse: collapse;
   width: 100%;
@@ -725,6 +763,32 @@ table.shelter-table th {
   font-size: 0.72rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+/* Kuratiert, aber ohne Wirkung auf die Ampel (Wellen-Sektoren). Zurückgenommen
+   statt versteckt: das Wissen bleibt lesbar, der Anspruch verschwindet. */
+table.shelter-table tr.sektor-inaktiv td {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Eine Abweichung von der Regel "eine Verbindung pro Tag" — sichtbar, aber
+   keine Warnung: erzwungen und zulässig, nur eben nicht der Normalfall. */
+.badge-doppelschlag {
+  border-style: dashed;
+  background: #f7ecd7;
+  color: #8a6414;
+  border-color: #e4cf9f;
+  cursor: help;
+  white-space: normal;
+}
+
+/* Ein Wert, der informiert statt zu bewerten. */
+.badge-info {
+  border-style: dashed;
+  color: var(--muted);
+  cursor: help;
+  white-space: normal;
 }
 
 .warnung {
@@ -905,8 +969,54 @@ footer.attribution a {
   font-size: 0.68rem;
   color: var(--navy-soft);
 }
+.breakdown-table td.abfahrt {
+  /* Der Startpunkt hat keinen Abschnitt — "Abfahrt" gehört an den linken Rand
+     der zusammengefassten Spalten, nicht rechtsbündig unter "Fahrt". */
+  text-align: left;
+}
 .breakdown-table tr.worst-case td {
   background: rgba(176, 65, 62, 0.07);
+}
+
+/* --- Grundlage der Rechnung: Wind, Kurs zum Wind, Fahrt ---------------- */
+
+.wind-basis {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: var(--creme-card);
+}
+/* Fieder und Werte in einer Zeile; fehlt die Fieder (keine mittlere Richtung),
+   rücken die Werte einfach nach links — kein Sonderfall nötig. */
+.wind-basis-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+.wind-basis-row > svg {
+  flex: none;
+}
+.wind-basis dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.4rem;
+  margin: 0;
+}
+.wind-basis dt {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--navy-soft);
+}
+.wind-basis dd {
+  margin: 0;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.wind-basis .beschreibung {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
 }
 
 .past-list {
@@ -993,4 +1103,60 @@ footer.attribution a {
   background: #e9eef4;
   color: var(--navy-soft);
   cursor: help;
+}
+
+/**
+ * FR30-Rechnung auf dem Telefon: die Tabelle wird zu gestapelten Karten.
+ *
+ * Neun Spalten passen auf kein Telefon. Als scrollende Tabelle lag genau das
+ * Interessante — Wind, TWA, Fahrt — ausserhalb des Bildschirms, und nichts
+ * zeigte an, dass da noch etwas ist: die Rechnung sah aus, als bestünde sie
+ * aus Punkt, Zeit und Distanz. Gestapelt steht jeder Wert sichtbar da, mit
+ * seiner Beschriftung aus `data-label` (die <thead>-Zeile fällt weg, weil eine
+ * Kopfzeile über gestapelten Blöcken nichts mehr beschriftet).
+ */
+@media (max-width: 700px) {
+  .breakdown-table {
+    min-width: 0;
+    width: 100%;
+    display: block;
+  }
+  .breakdown-table thead {
+    /* Nicht display:none — Screenreader sollen die Spalten weiter kennen. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .breakdown-table tbody,
+  .breakdown-table tr {
+    display: block;
+  }
+  .breakdown-table tr {
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 0.35rem 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+  .breakdown-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: right;
+    padding: 0.18rem 0;
+    border-bottom: none;
+    white-space: normal;
+  }
+  .breakdown-table td + td {
+    border-top: 1px dotted var(--hairline);
+  }
+  .breakdown-table td::before {
+    content: attr(data-label);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--navy-soft);
+    text-align: left;
+  }
 }

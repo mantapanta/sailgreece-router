@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
+  LegAssessment,
   PlanAssessment,
   PlanningSnapshot,
   StageAssessment,
@@ -22,6 +23,7 @@ import type {
 } from '../../domain/schema/snapshot.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { StageMap } from '../components/StageMap.tsx';
+import { WindBarb } from '../components/WindBarb.tsx';
 import {
   buildLegsById,
   pointNumberByForecastKey,
@@ -30,10 +32,13 @@ import {
 import { usePlanning } from '../../app/planningContext.tsx';
 import {
   formatAthensTime,
+  formatDeg,
   formatHours,
   formatKn,
   formatStamp,
   formatTripDayDate,
+  formatWindFrom,
+  pointOfSail,
 } from '../format.ts';
 
 function islandName(snapshot: PlanningSnapshot, islandId: string): string {
@@ -92,11 +97,79 @@ function stageVia(snapshot: PlanningSnapshot, stage: StageAssessment): string[] 
 }
 
 /**
+ * Die Annahme in einem Satz: mit WELCHEM Wind, WELCHEM Kurs zum Wind und
+ * WELCHER Fahrt diese Etappe gerechnet wurde.
+ *
+ * Die Tabelle darunter führt das Stunde für Stunde aus, aber sie beantwortet
+ * die Frage nicht auf einen Blick — und auf dem Telefon steht sie ausserdem
+ * hinter einer Seitwärts-Scroll. Deshalb steht die Grundlage hier VOR der
+ * Rechnung, nicht in ihr — und jeder Wert kommt fertig aus der Bewertung
+ * (AD-2), keiner wird in der View gerechnet.
+ */
+function WindBasis({ leg }: { leg: LegAssessment }) {
+  if (leg.avgTwsKn === null) return null;
+  const worstCase = leg.breakdown.some((h) => h.worstCase);
+  return (
+    <div className="wind-basis">
+      <div className="wind-basis-row">
+        {leg.avgTwdDeg !== null && (
+          <WindBarb dirDeg={leg.avgTwdDeg} knots={leg.avgTwsKn} size={38} />
+        )}
+        <dl>
+          <div>
+            <dt>Wind (Ø)</dt>
+            <dd>
+              {leg.avgTwdDeg !== null
+                ? `aus ${formatWindFrom(leg.avgTwdDeg)} · `
+                : ''}
+              {formatKn(leg.avgTwsKn)}
+            </dd>
+          </div>
+          <div>
+            <dt>Kurs zum Wind (Ø)</dt>
+            <dd>
+              {formatDeg(leg.avgTwaDeg)} TWA · {pointOfSail(leg.avgTwaDeg)}
+            </dd>
+          </div>
+          <div>
+            <dt>Fahrt (Ø)</dt>
+            <dd>
+              {leg.avgSpeedKn !== null ? `${leg.avgSpeedKn.toFixed(1)} kn` : '–'}
+              {leg.sailHours !== null && leg.motorHours !== null && (
+                <>
+                  {' · '}
+                  {formatHours(leg.sailHours)} Segeln, {formatHours(leg.motorHours)}{' '}
+                  Motor
+                </>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <p className="beschreibung">
+        Windrichtung rechtweisend und <strong>kommend aus</strong> (AD-6). TWA ist
+        der Winkel zwischen anliegendem Kurs und Wind: 0° genau von vorn, 180°
+        genau von achtern. Die Mittelwerte fassen die Stundenzeilen zusammen —
+        maßgeblich für die Ampel ist die jeweils schlechteste Stunde, nicht der
+        Durchschnitt.
+        {worstCase &&
+          ' Stunden jenseits des Horizonts rechnen gegen den Meltemi-Worst-Case statt gegen den Forecast.'}
+      </p>
+    </div>
+  );
+}
+
+/**
  * FR30 — how this duration came about, hour by hour.
  *
  * `pointNumbers` bildet den Forecast-Key jeder Stunde auf die Punktnummer der
  * Tageskarte ab. Fehlt ein Key in der Karte (abgeleitete Etappe mit fremden
  * Keys), bleibt die Zelle leer statt eine falsche Nummer zu behaupten.
+ *
+ * Jede Zeile nennt Wind, Kurs zum Wind und Fahrt der Stunde, IN DER der Punkt
+ * passiert wurde. `data-label` an den Zellen ist kein Beiwerk: auf schmalen
+ * Schirmen bricht die Tabelle in gestapelte Blöcke um (styles.css), und dann
+ * ist das Attribut die einzige Beschriftung, die eine Zelle noch hat.
  */
 function Breakdown({
   hours,
@@ -129,9 +202,10 @@ function Breakdown({
             <th>Distanz ab Start</th>
             <th>Abschnitt</th>
             <th>Kurs</th>
-            <th>Wind</th>
+            <th>Wind aus</th>
+            <th>Stärke</th>
             <th>TWA</th>
-            <th>Speed</th>
+            <th>Fahrt</th>
           </tr>
         </thead>
         <tbody>
@@ -140,23 +214,40 @@ function Breakdown({
               key={p.pointKey}
               className={p.segment?.worstCase ? 'worst-case' : ''}
             >
-              <td>{pointNumbers[p.pointKey] ?? '–'}</td>
-              <td>{p.etaIso ? formatAthensTime(p.etaIso) : '–'}</td>
-              <td>{p.distanceNm.toFixed(1)} sm</td>
+              <td data-label="Punkt">{pointNumbers[p.pointKey] ?? '–'}</td>
+              <td data-label="Zeit (Athen)">
+                {p.etaIso ? formatAthensTime(p.etaIso) : '–'}
+              </td>
+              <td data-label="Distanz ab Start">{p.distanceNm.toFixed(1)} sm</td>
               {p.segment ? (
                 <>
-                  <td>{p.segment.distanceNm.toFixed(1)} sm</td>
-                  <td>{Math.round(p.segment.courseDeg)}°</td>
-                  <td>{formatKn(p.segment.twsKn)}</td>
-                  <td>{Math.round(p.segment.twaDeg)}°</td>
-                  <td>
+                  <td data-label="Abschnitt">{p.segment.distanceNm.toFixed(1)} sm</td>
+                  <td data-label="Kurs" title="Anliegender Kurs über Grund, rechtweisend">
+                    {formatDeg(p.segment.courseDeg)}
+                  </td>
+                  <td
+                    data-label="Wind aus"
+                    title="Richtung, AUS DER der Wind weht (rechtweisend)"
+                  >
+                    {formatWindFrom(p.segment.twdDeg)}
+                  </td>
+                  <td data-label="Stärke">{formatKn(p.segment.twsKn)}</td>
+                  <td
+                    data-label="TWA"
+                    title="Wahrer Windeinfallswinkel: 0° von vorn, 180° von achtern"
+                  >
+                    {formatDeg(p.segment.twaDeg)} {pointOfSail(p.segment.twaDeg)}
+                  </td>
+                  <td data-label="Fahrt">
                     {p.segment.speedKn.toFixed(1)} kn
                     {p.segment.motoring ? ' (Motor)' : ''}
                   </td>
                 </>
               ) : (
                 // Startpunkt: es gibt keinen Abschnitt, der zu ihm führt.
-                <td colSpan={5}>Abfahrt</td>
+                <td className="abfahrt" data-label="Abschnitt" colSpan={6}>
+                  Abfahrt
+                </td>
               )}
             </tr>
           ))}
@@ -348,8 +439,17 @@ function StageCard({
               {formatHours(stage.stopHoursTotal)} Liegezeit
             </span>
           )}
+          {/* Der Zwischenstopp ist die Ausnahme, nicht die Regel — geplant wird
+              eine Verbindung pro Tag. Steht hier trotzdem einer, hat eine harte
+              Bedingung ihn erzwungen, und der Tag sagt das statt es zu
+              verschweigen (params.maxLegsPerDay / RELAXATION_ORDER). */}
           {stage.legs.length > 1 && (
-            <span className="badge">{stage.legs.length} Schläge an einem Tag</span>
+            <span
+              className="badge badge-doppelschlag"
+              title="Normalerweise plant die App eine Verbindung pro Tag. Zwei Schläge an einem Tag kommen nur, wenn ein Tag je Verbindung den Stichtag oder den Gäste-Zustiegstag nicht mehr erreicht."
+            >
+              {stage.legs.length} Schläge an einem Tag — Ausnahme
+            </span>
           )}
         </div>
       )}
@@ -417,6 +517,7 @@ function StageCard({
               <div className="beschreibung">
                 <strong>{l.legId.replace('--', ' → ')}</strong>
               </div>
+              <WindBasis leg={l} />
               <Breakdown
                 hours={l.breakdown}
                 passages={l.pointPassages}
@@ -526,8 +627,9 @@ export function DayView({
             </li>
             <li>
               Wellenvorhersage bis {formatStamp(assessment.waveHorizonIso)} — sie endet
-              in der Regel früher als der Wind und bestimmt damit oft, ab wann die
-              Nacht-Ampeln auf der Annahme beruhen.
+              in der Regel früher als der Wind, zieht die Nacht-Ampeln aber nicht mit
+              hinunter: Wellenwerte gelten für die offene See und bewerten keinen
+              Liegeplatz.
             </li>
             <li>
               Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:

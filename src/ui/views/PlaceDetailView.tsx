@@ -4,15 +4,98 @@
  * (Consistency Conventions).
  */
 
+import { APIProvider, AdvancedMarker, Map } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
   PlanningSnapshot,
 } from '../../domain/schema/snapshot.ts';
+import type { Place } from '../../domain/schema/place.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { compass, formatTripDayDate } from '../format.ts';
 
 function stars(n: number, max = 5): string {
   return '●'.repeat(n) + '○'.repeat(Math.max(0, max - n));
+}
+
+/**
+ * Der Kopf der Platzseite zeigt den Platz — nicht einen blauen Verlauf.
+ *
+ * Reihenfolge der Quellen, absichtlich in dieser Rangfolge:
+ *   1. `place.photoUrl` — ein kuratiertes Foto schlägt alles, sobald es eines
+ *      gibt. Die Bibliothek hat heute keine, das Feld existiert aber schon.
+ *   2. Satellitenbild aus derselben Maps-Instanz, die Karten- und Tagesansicht
+ *      ohnehin laden. Für die Planung ist das Luftbild sogar die nützlichere
+ *      Ansicht als ein Postkartenfoto: Ankerfeld, Mole, Öffnung der Bucht und
+ *      die Richtung, aus der es hereinsteht, sind darauf ablesbar.
+ *   3. Ohne Maps-Key der bisherige Verlauf — nie ein kaputtes Bild.
+ *
+ * Die Beschriftung liegt ÜBER der Karte, nimmt aber keine Klicks an
+ * (pointer-events: none in styles.css): sonst liesse sich genau der Ausschnitt
+ * nicht verschieben, für den das Bild überhaupt dasteht.
+ */
+function PlaceHero({
+  place,
+  islandLabel,
+  typeLabel,
+}: {
+  place: Place;
+  islandLabel: string;
+  typeLabel: string;
+}) {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+  const mapId =
+    (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID';
+  const position = { lat: place.coordinates.lat, lng: place.coordinates.lon };
+
+  const caption = (
+    <div className="place-hero-caption">
+      <span className="versal">
+        {islandLabel} · {typeLabel}
+      </span>
+      <div className="headline">{place.name}</div>
+    </div>
+  );
+
+  if (place.photoUrl) {
+    return (
+      <div
+        className="place-hero"
+        style={{ backgroundImage: `url(${place.photoUrl})` }}
+      >
+        {caption}
+      </div>
+    );
+  }
+
+  if (!apiKey) return <div className="place-hero">{caption}</div>;
+
+  return (
+    <>
+      <div className="place-hero place-hero-map">
+        <APIProvider apiKey={apiKey}>
+          <Map
+            className="place-hero-canvas"
+            mapId={mapId}
+            defaultCenter={position}
+            defaultZoom={14}
+            mapTypeId="hybrid"
+            gestureHandling="cooperative"
+            disableDefaultUI
+            zoomControl
+            fullscreenControl
+          >
+            <AdvancedMarker position={position} title={place.name} />
+          </Map>
+        </APIProvider>
+        {caption}
+      </div>
+      <p className="beschreibung place-hero-legende">
+        Luftbild der Bucht — Position {place.coordinates.lat.toFixed(4)}° N,{' '}
+        {place.coordinates.lon.toFixed(4)}° E. Zoomen und verschieben ist möglich;
+        der Ausschnitt ist keine Seekarte und ersetzt keine Hafenhandbuch-Angabe.
+      </p>
+    </>
+  );
 }
 
 export function PlaceDetailView({
@@ -56,19 +139,11 @@ export function PlaceDetailView({
       <button type="button" className="back-link" onClick={onBack}>
         ← Zurück
       </button>
-      <div
-        className="place-hero"
-        style={
-          place.photoUrl
-            ? { backgroundImage: `url(${place.photoUrl})` }
-            : undefined
-        }
-      >
-        <span className="versal">
-          {island?.name ?? place.islandId} · {typeLabel}
-        </span>
-        <div className="headline">{place.name}</div>
-      </div>
+      <PlaceHero
+        place={place}
+        islandLabel={island?.name ?? place.islandId}
+        typeLabel={typeLabel}
+      />
 
       {place.description && (
         <p className="beschreibung" style={{ marginTop: '0.8rem' }}>
@@ -96,7 +171,12 @@ export function PlaceDetailView({
             </span>
           )}
           {night?.maxWaveM !== null && night?.maxWaveM !== undefined && (
-            <span className="badge">max. Welle {night.maxWaveM.toFixed(1)} m</span>
+            <span
+              className="badge badge-info"
+              title="Modellwert für die offene See am Ort des Platzes — im Hafen oder hinter der Landzunge gilt er nicht, deshalb geht er nicht in die Ampel ein."
+            >
+              Welle offene See {night.maxWaveM.toFixed(1)} m · nicht in der Ampel
+            </span>
           )}
         </div>
         {night && night.reasons.length > 0 && (
@@ -145,7 +225,7 @@ export function PlaceDetailView({
               </tr>
             ))}
             {place.shelter.waveSectors.map((s, i) => (
-              <tr key={`s${i}`}>
+              <tr key={`s${i}`} className="sektor-inaktiv">
                 <td>Welle</td>
                 <td>
                   {s.fromDeg}°–{s.toDeg}° ({compass(s.fromDeg)}–{compass(s.toDeg)})
@@ -156,6 +236,12 @@ export function PlaceDetailView({
             ))}
           </tbody>
         </table>
+        <p className="beschreibung">
+          <strong>Die Ampel hängt allein an den Wind-Sektoren.</strong> Die
+          Wellen-Zeilen stehen als kuratiertes Wissen über den Platz da, bewerten
+          aber nichts: die Wellenhöhe des Modells gilt für die offene See, nicht für
+          den Liegeplatz dahinter.
+        </p>
         <p className="beschreibung">
           Quelle: {place.shelter.sourceNote}. Enthält ggf. Material aus CruisersWiki
           (CC-Lizenz, Attribution erforderlich).
