@@ -728,6 +728,15 @@ export function DayView({
     (main?.returnChecks ?? []).map((c) => [c.day, c]),
   );
 
+  /**
+   * PPR-Hinweise für den Banner (Feedback 2026-08-05): die frühere
+   * "Point of Return"-Sektion am Seitenende ist in den Rest-Trip-Banner
+   * gewandert. An der Basis trägt der einzige Hinweis ("Bereits an der
+   * Basis") nichts — dort bleibt die Liste leer.
+   */
+  const atBase = assessment.currentIslandId === params.baseIslandId;
+  const pprHinweise = atBase ? [] : assessment.ppr.reasons;
+
   // Exactly ONE APIProvider for the whole view: several expanded stage cards
   // then share a single Maps script load instead of each mounting its own.
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -806,9 +815,38 @@ export function DayView({
             Puffertag)
           </span>
         </div>
-        {assessment.restTripReasons.length > 0 && (
+        {/* FR19/Zielmodell v2 — die beiden tragenden Rückweg-Angaben stehen
+            HIER, wo die Rückkehr-Frist ohnehin steht, statt in einer eigenen
+            Sektion am Seitenende (Feedback 2026-08-05). */}
+        <div className="badges">
+          <span
+            className="badge"
+            title="Letzter Törntag, an dem die Umkehr über die Rückfallkette noch rechtzeitig nach Alimos führt (Worst-Case gerechnet)."
+          >
+            Spätester Umkehrtag:{' '}
+            <strong>
+              {assessment.ppr.latestReturnStartDay !== null
+                ? `Tag ${assessment.ppr.latestReturnStartDay}`
+                : 'nicht mehr erreichbar'}
+            </strong>
+          </span>
+          {main && main.returnChecks.length > 0 && (
+            <span
+              className="badge"
+              title="Bis zu diesem Törntag ist die Umkehr auch unter dem Meltemi-Worst-Case jederzeit möglich. Danach trägt der aktuelle Forecast den Heimweg — die Tageskarten sagen, woran der Abbruch zu erkennen ist."
+            >
+              Meltemi-fest bis:{' '}
+              <strong>
+                {main.meltemiSafeUntilDay !== null
+                  ? `Tag ${main.meltemiSafeUntilDay}`
+                  : 'heute nicht'}
+              </strong>
+            </span>
+          )}
+        </div>
+        {(assessment.restTripReasons.length > 0 || pprHinweise.length > 0) && (
           <ul className="reasons">
-            {assessment.restTripReasons.map((r) => (
+            {[...assessment.restTripReasons, ...pprHinweise].map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>
@@ -860,10 +898,11 @@ export function DayView({
         </section>
       )}
 
-      {/* FR9/FR18/FR20 — der Optionsraum. Steht VOR den Alternativ-Routen und
-          vor den Entscheidungspunkten, weil er die Frage beantwortet, die
-          zuerst kommt: wie weit kann ich noch, was kostet es, wie lange habe
-          ich dafür Zeit. */}
+      {/* FR9/FR18/FR20 — der Optionsraum. Steht VOR den Alternativ-Routen,
+          weil er die Frage beantwortet, die zuerst kommt: wie weit kann ich
+          noch, was kostet es, wie lange habe ich dafür Zeit. Er trägt auch
+          die FR20-Fristen: das Frist-Badge je Option ist der Entscheidungs-
+          punkt, dort wo die Entscheidung ansteht. */}
       {assessment.routeOptions.length > 0 && (
         <section className="section">
           <span className="versal">Optionsraum</span>
@@ -910,72 +949,15 @@ export function DayView({
         </section>
       )}
 
-      <section className="section">
-        <span className="versal">Point of Return</span>
-        <h2>Rückweg nach Alimos</h2>
-        <div className="badges">
-          <span className="badge">
-            Spätester Umkehrtag:{' '}
-            <strong>
-              {assessment.ppr.latestReturnStartDay !== null
-                ? `Tag ${assessment.ppr.latestReturnStartDay}`
-                : 'nicht mehr erreichbar'}
-            </strong>
-          </span>
-          <span className="badge">
-            Restdistanz über Rückfallkette:{' '}
-            {assessment.ppr.remainingDistanceNm !== null
-              ? `${Math.round(assessment.ppr.remainingDistanceNm)} sm`
-              : '–'}
-          </span>
-          {/* Zielmodell v2 — die Kurzfassung der Abbruch-Notation: bis zu
-              diesem Tag hält der Heimweg auch unter dem vollen Meltemi. */}
-          {main && main.returnChecks.length > 0 && (
-            <span
-              className="badge"
-              title="Bis zu diesem Törntag ist die Umkehr auch unter dem Meltemi-Worst-Case jederzeit möglich. Danach trägt der aktuelle Forecast den Heimweg — die Tageskarten sagen, woran der Abbruch zu erkennen ist."
-            >
-              Meltemi-fest bis:{' '}
-              <strong>
-                {main.meltemiSafeUntilDay !== null
-                  ? `Tag ${main.meltemiSafeUntilDay}`
-                  : 'heute nicht'}
-              </strong>
-            </span>
-          )}
-        </div>
-        {main && main.returnChecks.some((c) => c.status === 'wetterfenster') && (
-          <p className="beschreibung">
-            Die Route ist auf das Wetterfenster geplant, nicht auf den Worst
-            Case — die Absicherung passiert täglich: jede Etappen-Karte trägt
-            ihren Heimweg-Status, und mit jedem neuen Forecast wird neu
-            beurteilt, ob weitergefahren oder abgebrochen wird.
-          </p>
-        )}
-        {assessment.ppr.reasons.length > 0 && (
-          <ul className="reasons">
-            {assessment.ppr.reasons.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="section">
-        <span className="versal">Entscheidungspunkte</span>
-        <h2>Was muss wann entschieden sein?</h2>
-        {assessment.decisionPoints.length === 0 ? (
-          <p className="beschreibung">Aktuell keine terminierten Entscheidungen.</p>
-        ) : (
-          <ul>
-            {assessment.decisionPoints.map((dp) => (
-              <li key={`${dp.day}-${dp.text}`}>
-                <strong>Tag {dp.day}:</strong> {dp.text}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {/* Die früheren Sektionen "Point of Return" und "Entscheidungspunkte"
+          sind bewusst ENTFERNT (Feedback 2026-08-05): am Seitenende trugen
+          sie nichts — alles stand dort doppelt. Der spätere Umkehrtag und
+          "Meltemi-fest bis" stehen jetzt als Badges im Rest-Trip-Banner oben
+          (neben der Rückkehr-Frist, zu der sie gehören), die PPR-Hinweise in
+          dessen Begründungsliste. Die Options-Fristen aus FR20 zeigt der
+          Optionsraum weiterhin je Option (Frist-Badge inkl. Dringlichkeit
+          und Preis); `assessment.decisionPoints` bleibt als Domain-Ergebnis
+          bestehen. */}
 
       {/* Die frühere Sektion "Platzbibliothek — Alle Plätze mit Nacht-Ampel"
           ist bewusst ENTFERNT (Feedback 2026-08-05): ~60 Plätze des ganzen
