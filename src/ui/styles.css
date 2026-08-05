@@ -979,3 +979,18 @@ footer.attribution a {
 .itinerary-card.harbour {
   border-style: dashed;
 }
+
+/* ---- Persistenz-Annahme (AD-13 revised) ------------------------------------
+   Gestrichelt und zurückhaltend: die Annahme ist eine Einschränkung der
+   Aussage, keine Warnung — sie darf das Ampelbild nicht überschreien. */
+
+.hint-annahme {
+  border-left: 3px solid var(--navy-soft);
+}
+
+.badge-annahme {
+  border-style: dashed;
+  background: #e9eef4;
+  color: var(--navy-soft);
+  cursor: help;
+}

@@ -10,6 +10,7 @@ import {
   makeTimes,
   TRIP_START,
   makeVariant,
+  truncateForecast,
 } from './fixtures.ts';
 import { TEST_POLAR } from './fixtures.ts';
 import { dateForTripDay } from '../time.ts';
@@ -116,13 +117,7 @@ describe('options — FR18 open / closes / closed', () => {
 
   it('feasible now, closing-day scan hits the horizon: offen-horizont with visible caveat', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    snapshot.times = snapshot.times.slice(0, 4 * 24); // horizon: 4 days only
-    for (const key of Object.keys(snapshot.forecast)) {
-      const fc = snapshot.forecast[key]!;
-      for (const k of Object.keys(fc) as (keyof typeof fc)[]) {
-        fc[k] = fc[k].slice(0, 4 * 24);
-      }
-    }
+    truncateForecast(snapshot, 4 * 24); // horizon: 4 days only
     const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     // Today's rest plan is fully computable within the horizon, but the
@@ -135,13 +130,7 @@ describe('options — FR18 open / closes / closed', () => {
 
   it("today's rest plan itself crosses the horizon: offen-horizont (first-class state)", () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    snapshot.times = snapshot.times.slice(0, 30); // horizon: 30 h only
-    for (const key of Object.keys(snapshot.forecast)) {
-      const fc = snapshot.forecast[key]!;
-      for (const k of Object.keys(fc) as (keyof typeof fc)[]) {
-        fc[k] = fc[k].slice(0, 30);
-      }
-    }
+    truncateForecast(snapshot, 30); // horizon: 30 h only
     const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     // Outbound today fits the axis, the return leg does not: the whole rest

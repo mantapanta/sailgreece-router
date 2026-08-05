@@ -56,9 +56,11 @@ export function effectiveDeadlineDay(snapshot: PlanningSnapshot): number {
  * Normally one leg per day; TWO consecutive short legs may share a day when
  * their combined duration stays inside the FR16 hard maximum (the brief's
  * plan does exactly that, e.g. Serifos -> Sifnos -> Paros on one day).
- * A leg day is admissible when its assessment is not red. Days beyond the
- * forecast horizon ('unbewertet') are treated as admissible-but-unconfirmed;
- * if every surviving plan relies on such days the result is 'horizon'.
+ * A leg day is admissible when its assessment is not red. Days that are
+ * unconfirmed — either 'unbewertet' (no data) or computed under the
+ * persistence assumption beyond the horizon (`basis: 'annahme'`) — are treated
+ * as admissible-but-unconfirmed; if every surviving plan relies on such days
+ * the result is 'horizon'.
  */
 export function packLegs(
   legs: Leg[],
@@ -140,7 +142,17 @@ export function packLegs(
       if (ok(day, legs[legIdx]!.toIslandId)) {
         const rest = search(legIdx + 1, day + 1, waitsUsed);
         best = {
-          verdict: combine(rest.verdict, a.ampel === 'unbewertet'),
+          // AD-13 REVISED — the far range is now COMPUTED under the persistence
+          // assumption (scoring.ts) instead of being left 'unbewertet', so the
+          // "unconfirmed" signal can no longer be driven by 'unbewertet' alone.
+          // A leg whose verdict rests on the assumption (`basis: 'annahme'`)
+          // must still degrade the plan to 'horizon' — otherwise options.ts
+          // would report a plain 'offen' with a firm closing day derived from
+          // extrapolated weather (mirrors solver.ts `validatePlan`).
+          verdict: combine(
+            rest.verdict,
+            a.ampel === 'unbewertet' || a.basis === 'annahme',
+          ),
           packed: [{ legIdx, leg: legs[legIdx]!, day }, ...rest.packed],
         };
       }
@@ -171,7 +183,13 @@ export function packLegs(
         ) {
           const rest2 = search(legIdx + 2, day + 1, waitsUsed);
           best = better(best, {
-            verdict: combine(rest2.verdict, false),
+            // Same reasoning as the single-leg move: if either leg of the
+            // double-leg day rests on the persistence assumption, the day is
+            // unconfirmed and the plan must degrade to 'horizon'.
+            verdict: combine(
+              rest2.verdict,
+              a.basis === 'annahme' || b.basis === 'annahme',
+            ),
             packed: [
               { legIdx, leg: legs[legIdx]!, day },
               { legIdx: legIdx + 1, leg: legs[legIdx + 1]!, day },

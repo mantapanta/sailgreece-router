@@ -17,6 +17,7 @@ import type { Plan } from './schema/plan.ts';
 import { stageNumber, stagesOf } from './schema/plan.ts';
 import { worstAmpel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
+import { applyPersistenceAssumption } from './persistence.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { assessLeg, stopHoursForDay } from './scoring.ts';
@@ -115,6 +116,7 @@ function assessPlan(
                     avgTwsKn: null,
                     avgTwaDeg: null,
                     upwind: false,
+                    basis: 'forecast' as const,
                     reasons: [`Etappe ${legId} nicht in der Bibliothek`],
                     nightLeg: null,
                     arrivalHourAthens: null,
@@ -178,7 +180,13 @@ const toPlanAssessment = (
     relaxedTo: r.relaxedTo,
   });
 
-export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
+export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
+  // FIRST step, before anything is judged: extend the hour axis over the whole
+  // trip and fill the gaps with the persistence assumption. A forecast that
+  // does not reach the second week must not mean "no statement" — it means
+  // "statement under a named assumption", flagged per hour and reported per
+  // verdict. Everything downstream therefore sees a complete axis.
+  const { snapshot, info: persistence } = applyPersistenceAssumption(rawSnapshot);
   const { library, trip, params } = snapshot;
   const { islandId: currentIslandId, note: positionNote } =
     deriveCurrentIsland(snapshot);
@@ -205,6 +213,7 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
         maxWindKn: null,
         windDirDeg: null,
         maxWaveM: null,
+        basis: 'forecast',
         reasons: [`Platz-Dokument ungültig: ${invalid.error}`],
       };
     }
@@ -357,5 +366,26 @@ export function assessPlanning(snapshot: PlanningSnapshot): Assessment {
       ? `Position (${currentIslandId}) weicht vom Plan ab — erwartet war ${expectedIsland}. Der Rest-Trip ist ab der echten Position gerechnet.${positionNote ? ` ${positionNote}` : ''}`
       : positionNote,
     offPlan,
+    forecastHorizonIso: persistence.horizonIso,
+    waveHorizonIso: persistence.waveHorizonIso,
+    // Taken from the verdicts themselves rather than re-derived from the
+    // horizon timestamp: the leg basis already folds in BOTH reasons a day can
+    // be untrusted (extrapolated hours, and days past reliableHorizonDays).
+    assumedFromDay: (() => {
+      const days: number[] = [];
+      for (const st of mainRoute?.stages ?? []) {
+        for (const l of st.legs) if (l.basis === 'annahme') days.push(l.day);
+      }
+      for (const opt of routeOptions) {
+        for (const l of opt.legAssessments) if (l.basis === 'annahme') days.push(l.day);
+      }
+      for (const byNight of Object.values(nightAmpeln)) {
+        for (const a of Object.values(byNight)) {
+          if (a.basis === 'annahme') days.push(a.nightDay);
+        }
+      }
+      return days.length > 0 ? Math.min(...days) : null;
+    })(),
+    assumptionNote: persistence.note,
   };
 }

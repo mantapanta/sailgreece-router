@@ -32,6 +32,7 @@ import {
   formatAthensTime,
   formatHours,
   formatKn,
+  formatStamp,
   formatTripDayDate,
 } from '../format.ts';
 
@@ -505,6 +506,35 @@ export function DayView({
       </p>
       {assessment.positionNote && (
         <div className="hint-panel">{assessment.positionNote}</div>
+      )}
+
+      {/* AD-13 revised: the app always routes — where the forecast runs out it
+          says so instead of falling silent. This is the ONE place that states
+          the extent of the assumption for the whole plan; the per-day cards
+          only carry the short marker. */}
+      {assessment.assumedFromDay !== null && (
+        <div className="hint-panel hint-annahme">
+          <strong>
+            Ab Tag {assessment.assumedFromDay} beruht die Planung auf einer Annahme.
+          </strong>{' '}
+          {assessment.assumptionNote}
+          <ul className="reasons">
+            <li>
+              Windvorhersage ({assessment.model}) verlässlich bis Tag{' '}
+              {snapshot.trip.currentDay + snapshot.params.reliableHorizonDays}, Werte
+              bis {formatStamp(assessment.forecastHorizonIso)}.
+            </li>
+            <li>
+              Wellenvorhersage bis {formatStamp(assessment.waveHorizonIso)} — sie endet
+              in der Regel früher als der Wind und bestimmt damit oft, ab wann die
+              Nacht-Ampeln auf der Annahme beruhen.
+            </li>
+            <li>
+              Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:
+              sie warnt, sie verurteilt nicht.
+            </li>
+          </ul>
+        </div>
       )}
 
       {/* FR2 — the rest-trip light governs the whole view. */}

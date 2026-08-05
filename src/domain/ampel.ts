@@ -23,6 +23,7 @@ import type { WindSector, WaveSector } from './schema/shelter.ts';
 import type { Place } from './schema/place.ts';
 import type { Params } from './schema/params.ts';
 import type {
+  DataBasis,
   PlanningSnapshot,
   PlaceNightAssessment,
 } from './schema/snapshot.ts';
@@ -148,6 +149,7 @@ export function placeNightAmpel(
       maxWindKn: null,
       windDirDeg: null,
       maxWaveM: null,
+      basis: 'forecast',
       reasons: ['Kein Forecast für diesen Platz/Zeitraum'],
     };
   }
@@ -158,8 +160,10 @@ export function placeNightAmpel(
   let maxWaveM: number | null = null;
   let sawNullWind = false;
   let sawNullWave = false;
+  let assumedHours = 0;
 
   for (const i of indices) {
+    if (fc.windAssumed[i] || fc.waveAssumed[i]) assumedHours++;
     const wKn = fc.windKn[i] ?? null;
     const wDir = fc.windDirDeg[i] ?? null;
     if (wKn === null || wDir === null) {
@@ -190,9 +194,25 @@ export function placeNightAmpel(
   if (forecastAmpel === 'gelb' && !sawNullWind && !sawNullWave)
     reasons.push('Nahe an der Schutzgrenze oder ungeschützte Richtung bei Schwachwind');
 
+  const basis: DataBasis = assumedHours > 0 ? 'annahme' : 'forecast';
+  if (basis === 'annahme') {
+    reasons.push(
+      `${assumedHours} von ${indices.length} Nachtstunden aus der Persistenz-Annahme (jenseits des Forecast-Horizonts)`,
+    );
+  }
+
   const ampel = capByConfidence(forecastAmpel, place, reasons);
 
-  return { placeId: place.id, nightDay, ampel, maxWindKn, windDirDeg, maxWaveM, reasons };
+  return {
+    placeId: place.id,
+    nightDay,
+    ampel,
+    maxWindKn,
+    windDirDeg,
+    maxWaveM,
+    basis,
+    reasons,
+  };
 }
 
 const AMPEL_RANK: Record<Ampel, number> = {

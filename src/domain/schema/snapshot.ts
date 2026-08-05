@@ -8,9 +8,20 @@ import type { Params } from './params.ts';
 
 /**
  * AD-3 — engine contract: one snapshot in, one assessment out.
- * The snapshot hour axis is normatively UTC; hours beyond the model horizon
- * (marine < weather!) are `null` and assessed as 'unbewertet'.
+ * The snapshot hour axis is normatively UTC. Hours the model does not cover
+ * (marine horizon < weather horizon!) arrive as `null` from the adapter and
+ * are filled by the persistence assumption (domain/persistence.ts) before
+ * anything is judged — the filled hours are flagged `windAssumed`/`waveAssumed`
+ * so every verdict can say whether it rests on forecast or on assumption.
+ * Hours that stay null (no data basis at all) remain 'unbewertet'.
  */
+
+/**
+ * Basis of a verdict: real forecast hours only, or partly the persistence
+ * assumption beyond the forecast horizon. 'annahme' means AT LEAST one
+ * contributing hour is assumed — the assumption is never silently mixed in.
+ */
+export type DataBasis = 'forecast' | 'annahme';
 
 /** Hourly forecast series for one location. Missing hours are null. */
 export interface PointForecast {
@@ -19,6 +30,10 @@ export interface PointForecast {
   waveM: (number | null)[];
   waveDirDeg: (number | null)[];
   wavePeriodS: (number | null)[];
+  /** Per hour: wind values stem from the persistence assumption, not the model. */
+  windAssumed: boolean[];
+  /** Per hour: wave values stem from the persistence assumption, not the model. */
+  waveAssumed: boolean[];
 }
 
 /** Position with source precedence (AD-11): 'manual' wins until released. */
@@ -99,6 +114,7 @@ export interface PlaceNightAssessment {
   maxWindKn: number | null;
   windDirDeg: number | null;
   maxWaveM: number | null;
+  basis: DataBasis;
   reasons: string[];
 }
 
@@ -178,6 +194,11 @@ export interface LegAssessment {
   avgTwsKn: number | null;
   avgTwaDeg: number | null;
   upwind: boolean;
+  /**
+   * Whether this verdict rests on real model hours or partly on the
+   * persistence assumption beyond the forecast horizon.
+   */
+  basis: DataBasis;
   reasons: string[];
   /**
    * FR16 night leg: departure before the night window ends or arrival after it
@@ -332,4 +353,23 @@ export interface Assessment {
   positionNote: string | null;
   /** True when the boat is not where the plan expected it to be. */
   offPlan: boolean;
+  /**
+   * Last hour with real WIND data (ISO-UTC); hours after it come from the
+   * persistence assumption. null = no usable forecast at all.
+   */
+  forecastHorizonIso: string | null;
+  /**
+   * Last hour with real WAVE data — regularly EARLIER than the wind horizon,
+   * because marine models run shorter. Reported separately so that
+   * "assumption from day X" is traceable to the series that actually ran out.
+   */
+  waveHorizonIso: string | null;
+  /**
+   * First trip day whose assessment rests wholly or partly on the assumption —
+   * either because hours were extrapolated or because the day lies beyond
+   * params.reliableHorizonDays. null = the whole trip stands on trusted data.
+   */
+  assumedFromDay: number | null;
+  /** Human-readable description of the assumption actually applied. */
+  assumptionNote: string | null;
 }

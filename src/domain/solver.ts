@@ -12,8 +12,10 @@
  * decision, the way home is the chain.
  *
  * Validity is three-tiered and normative (see `validatePlan`):
- *   (1) every stage inside the reliable horizon holds the FR16 thresholds;
- *       stages beyond it are 'unbewertet' and count NEITHER way (FR18)
+ *   (1) every stage holds the FR16 thresholds. Stages beyond the reliable
+ *       horizon are computed on the persistence assumption: they DO count,
+ *       but their violations are flagged `assumed` and thus never safety-
+ *       relevant — they block green without being able to force red (FR18)
  *   (2) arrival at the base by the ONE deadline constant
  *  (2') the return is sailable under the Meltemi worst case (shared with PoR)
  *   (3) a ferry-reachable pickup harbour is reached on the pickup date (FR31)
@@ -269,12 +271,26 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
         horizonDependent = true;
         continue;
       }
+      /**
+       * AD-13 REVISED — the far range is now COMPUTED under the persistence
+       * assumption instead of being left 'unbewertet' (scoring.ts). The plan
+       * therefore gets a real ampel out there, and this flag can no longer be
+       * driven by 'unbewertet' alone.
+       *
+       * It MUST still be raised, because it is what keeps green out of reach:
+       * a plan whose later stages rest on extrapolation is not a plan the app
+       * may call safe. Unlike 'unbewertet' the day is NOT skipped — its
+       * violations count, so an assumed stage that busts a budget or the
+       * upwind rule still shows up as a violation rather than vanishing.
+       */
+      if (a.basis === 'annahme') horizonDependent = true;
       if (a.ampel === 'rot') {
         const upwind = a.reasons.some((r) => r.includes('Aufkreuzen'));
         violations.push({
           kind: upwind ? 'upwind' : 'budget',
           day: stage.day,
           text: `Tag ${stage.day}: ${a.reasons.join('; ')}`,
+          assumed: a.basis === 'annahme',
         });
       }
     }
@@ -383,6 +399,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       .pop();
     if (arrivingStage && arrivingStage.day === frame.deadlineDay) {
       let arrival: number | null = null;
+      let arrivalAssumed = false;
       let offset = 0;
       const arrivalStopHours = stopHoursForDay(snapshot, arrivingStage.day);
       for (const legId of arrivingStage.legIds) {
@@ -400,6 +417,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
           horizonDependent = true;
           break;
         }
+        if (a.basis === 'annahme') arrivalAssumed = true;
         offset += (a.totalHours ?? 0) + arrivalStopHours;
         arrival = a.arrivalHourAthens;
       }
@@ -408,6 +426,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
           kind: 'deadline',
           day: arrivingStage.day,
           text: `Ankunft an der Basis erst um ${arrival.toFixed(1)} Uhr — die Rückgabe ist um ${params.returnDeadlineHourAthens}:00 (Athen)`,
+          assumed: arrivalAssumed,
         });
       }
     }
@@ -437,6 +456,10 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
         kind: 'return',
         day: stage.day,
         text: `Von ${stage.toIslandId} (Tag ${stage.day}) ist die Rückkehr schon nach dem aktuellen Forecast nicht mehr darstellbar`,
+        // The return starts the day after this stage; if THAT lies beyond the
+        // reliable horizon, the verdict rests on the assumption, not on data.
+        assumed:
+          stage.day + 1 - snapshot.trip.currentDay > params.reliableHorizonDays,
       });
       // One trapped day is enough to condemn the plan; no need to list all.
       break;
@@ -502,9 +525,11 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       // Arriving that same day is allowed only before the ferry cut-off.
       let arrival = params.departureHourAthens;
       let arrivalKnown = true;
+      let pickupAssumed = false;
       for (const legId of pickupEntry.legIds) {
         const leg = legs.get(legId);
         const a = leg ? assessLeg(leg, pickupDay, snapshot) : null;
+        if (a?.basis === 'annahme') pickupAssumed = true;
         // An unassessable leg (beyond the horizon, or a dead reference) must
         // not be silently counted as zero hours — that would let the arrival
         // stay at the departure time and pass the cut-off unchecked, turning
@@ -521,6 +546,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
           kind: 'pickup',
           day: pickupDay,
           text: `Ankunft am Zustiegstag erst um ${arrival.toFixed(1)} Uhr — nach der Fähren-Grenze (${params.pickupLatestArrivalHourAthens} Uhr)`,
+          assumed: pickupAssumed,
         });
       }
     }

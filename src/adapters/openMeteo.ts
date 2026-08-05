@@ -250,7 +250,17 @@ export async function fetchForecastBundle(
         }
       });
     }
-    forecast[loc.key] = { windKn, windDirDeg, waveM, waveDirDeg, wavePeriodS };
+    // The adapter delivers FACTS only (AD-10): nothing here is assumed. Gaps
+    // stay null; filling them is the domain's persistence step.
+    forecast[loc.key] = {
+      windKn,
+      windDirDeg,
+      waveM,
+      waveDirDeg,
+      wavePeriodS,
+      windAssumed: new Array<boolean>(times.length).fill(false),
+      waveAssumed: new Array<boolean>(times.length).fill(false),
+    };
   });
 
   return {

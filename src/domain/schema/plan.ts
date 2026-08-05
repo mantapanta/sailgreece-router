@@ -111,6 +111,17 @@ export interface Violation {
   /** Trip day it occurs on, when the violation is day-bound. */
   day: number | null;
   text: string;
+  /**
+   * True when this violation was derived from a stage resting on the
+   * persistence assumption rather than on trusted forecast hours.
+   *
+   * Such a violation WARNS but does not CONDEMN: it is reported and it keeps
+   * the plan out of green (via `horizonDependent`), but it does not count as a
+   * safety violation and therefore cannot turn the plan red. An extrapolated
+   * mean must not make the skipper write off a trip that is actually sailable —
+   * red stays reserved for what the real forecast says.
+   */
+  assumed?: boolean;
 }
 
 /**
@@ -126,8 +137,13 @@ export const SAFETY_VIOLATION_KINDS: ViolationKind[] = [
   'pickup',
 ];
 
+/**
+ * Safety-relevant AND actually established. A violation derived from the
+ * persistence assumption (`assumed`) is deliberately excluded: it is reported
+ * and it blocks green, but it must not be the thing that turns a plan red.
+ */
 export function isSafetyViolation(v: Violation): boolean {
-  return SAFETY_VIOLATION_KINDS.includes(v.kind);
+  return SAFETY_VIOLATION_KINDS.includes(v.kind) && v.assumed !== true;
 }
 
 export interface PlanValidity {

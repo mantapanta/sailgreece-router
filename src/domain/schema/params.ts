@@ -104,9 +104,14 @@ const ParamsObjectSchema = z.object({
 
   // --- forecast horizon & worst case (AD-13) --------------------------------
   /**
-   * Stages beyond this many days from the current day are 'unbewertet' and
-   * count NEITHER for nor against validity (FR18). Only the return check
-   * falls back to the worst case below.
+   * Stages beyond this many days from the current day are computed on the
+   * PERSISTENCE ASSUMPTION (domain/persistence.ts) and carry
+   * `basis: 'annahme'`. The parameter is a marking threshold, not a gag:
+   *   - such a stage blocks green (solver: `horizonDependent`), and
+   *   - its violations warn but never condemn (`Violation.assumed`), so an
+   *     extrapolated mean can neither certify nor red-flag a trip.
+   * The return check still substitutes the worst case below — that is the
+   * safety question, and an average has no business answering it.
    */
   reliableHorizonDays: z.number().int().positive().default(7),
   /**
