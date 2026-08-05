@@ -342,7 +342,7 @@ function StageEditor({
                 onClose();
               } else {
                 setError(
-                  `Der Zwischenstopp lässt sich nicht löschen — die Bibliothek kennt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}.`,
+                  `Der Zwischenstopp lässt sich nicht löschen — es gibt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}, und ein landfreier Direktkurs liess sich nicht berechnen.`,
                 );
               }
             }}
@@ -351,8 +351,10 @@ function StageEditor({
           </button>
           <p className="beschreibung">
             Der Tag wird zu EINER direkten Etappe auf dasselbe Tagesziel — ohne
-            den Anlauf von {stageVia(snapshot, stage).join(' und ')}. Der Tag
-            gilt danach als festgelegt (📌).
+            den Anlauf von {stageVia(snapshot, stage).join(' und ')}. Kennt die
+            Bibliothek keine direkte Verbindung, berechnet die App den
+            kürzesten landfreien Kurs selbst (Distanz aus der Geometrie, nicht
+            kuratiert). Der Tag gilt danach als festgelegt (📌).
           </p>
         </>
       )}

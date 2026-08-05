@@ -48,25 +48,41 @@ export function usePlanningEngine() {
 
   const bundle = libraryQuery.data;
 
+  /**
+   * Die Bibliothek DIESES Geräts: kuratierte Etappen plus die vom Skipper
+   * erzeugten Direktrouten (FR28 Zwischenstopp löschen). EIN Einfügepunkt,
+   * damit Plan-Auflösung, Karte, Reichweite und Forecast-Abruf dieselbe
+   * Etappenmenge sehen. Kuratierte Etappen gewinnen bei gleicher Id
+   * (first-writer-wins in legIndex) — liefert die Kuration die Verbindung
+   * später nach, ersetzt sie die erzeugte stillschweigend.
+   */
+  const library = useMemo(() => {
+    if (!bundle) return null;
+    if (trip.customLegs.length === 0) return bundle.library;
+    return { ...bundle.library, legs: [...bundle.library.legs, ...trip.customLegs] };
+  }, [bundle, trip.customLegs]);
+
   // The forecast cache key must change when the LIBRARY changes: a new place
   // or waypoint enlarges the normative location set (AD-3) — without the hash
-  // the stale cached response would leave new locations 'unbewertet'.
+  // the stale cached response would leave new locations 'unbewertet'. Das
+  // schliesst erzeugte Direktrouten ein: ihre Umfahrungspunkte werden wie
+  // kuratierte Wegpunkte abgerufen, nicht geliehen.
   const libHash = useMemo(
     () =>
-      bundle
+      library
         ? libraryLocationsHash(
-            collectLocations(bundle.library).map(
+            collectLocations(library).map(
               (l) => `${l.key}@${l.coordinates.lat},${l.coordinates.lon}`,
             ),
           )
         : null,
-    [bundle],
+    [library],
   );
 
   const forecastQuery = useQuery({
     queryKey: ['forecast', bundle?.params.forecastModel, libHash],
-    queryFn: () => fetchForecastBundle(bundle!.library, bundle!.params),
-    enabled: !!bundle,
+    queryFn: () => fetchForecastBundle(library!, bundle!.params),
+    enabled: !!bundle && !!library,
     staleTime: STALE_TIME_MS,
     refetchInterval: STALE_TIME_MS,
   });
@@ -80,10 +96,10 @@ export function usePlanningEngine() {
       : deriveCurrentDay(bundle?.params.tripStartDate, tripLengthDays);
 
   const snapshot: PlanningSnapshot | null = useMemo(() => {
-    if (!bundle || !forecastQuery.data) return null;
+    if (!bundle || !library || !forecastQuery.data) return null;
     return {
       ...forecastQuery.data,
-      library: bundle.library,
+      library,
       polar: bundle.polar,
       params: bundle.params,
       trip: {
@@ -96,6 +112,7 @@ export function usePlanningEngine() {
     };
   }, [
     bundle,
+    library,
     forecastQuery.data,
     currentDay,
     trip.position,
@@ -196,16 +213,21 @@ export function usePlanningEngine() {
   /**
    * FR28 — den Zwischenstopp eines Doppelschlag-Tages löschen: der Tag wird
    * zur EINEN direkten Etappe auf dasselbe Tagesziel (solver.planWithoutStopover).
-   * Wie editStage geht ein fertiger Plan durch den einen Mutationspfad
-   * (AD-12); false, wenn die Bibliothek keine direkte Verbindung kennt —
-   * ein Datenlimit, keine Bewertung.
+   * Kennt die Bibliothek keine direkte Verbindung, wird sie dort landfrei
+   * ERZEUGT und hier zusammen mit dem Plan als EIN Payload persistiert
+   * (DELETE_STOPOVER) — nie ein Plan ohne seine Etappe. False nur, wenn kein
+   * landfreier Kurs berechenbar ist oder der Tag keinen Zwischenstopp trägt.
    */
   const removeStopover = useCallback(
     (day: number): boolean => {
       if (!snapshot || !trip.plan) return false;
-      const next = planWithoutStopover(trip.plan, day, snapshot);
-      if (!next) return false;
-      dispatch({ type: 'EDIT_STAGE', plan: next });
+      const removal = planWithoutStopover(trip.plan, day, snapshot);
+      if (!removal) return false;
+      dispatch({
+        type: 'DELETE_STOPOVER',
+        plan: removal.plan,
+        customLeg: removal.customLeg,
+      });
       return true;
     },
     [snapshot, trip.plan, dispatch],
