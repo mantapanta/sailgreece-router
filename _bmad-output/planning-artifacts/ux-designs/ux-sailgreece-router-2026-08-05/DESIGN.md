@@ -270,9 +270,7 @@ Ampel color is **never the only carrier of meaning** — every Ampel surface als
 
 ### Map & routes
 
-- Sailed track: solid `{colors.map-line-sailed}` (identical to `{colors.ampel-gruen}` — one green, not two).
-- Rest-trip track: dashed, colored by the per-leg Ampel verdict using the Ampel hues above (Gelb legs use `{colors.ampel-gelb-graphic}`; retires the divergent `REST_LINE_COLOR` set).
-- Beyond-horizon return legs (the "Annahme" part of the round trip): dashed `{colors.ampel-unbewertet}` gray — **never** an Ampel verdict hue; the legend names it "Rückweg (Annahme)". Adopted from `mockups/keyscreen-karte-consumer-warm.html`.
+- Route lines encode **direction, not verdict** (decided 2026-08-05, Philipp's map feedback — the round trip reuses legs in both directions and verdict-colored lines were unreadable): outbound legs `#2f6fd0`, return legs `#c2418f` (TS constants `HIN_LINE_COLOR`/`RUECK_LINE_COLOR` in `tokens.ts`). Both hues deliberately avoid Ampel and alt-route ranges; lines carry direction arrows for color-blind safety. Sailed vs. planned stays solid vs. dashed. The rest-trip verdict lives in the legend as an `{components.ampel-badge}` — never in line color. (Supersedes the earlier Ampel-hue rest-line rule and the karte mock's gray "Annahme" leg.)
 - Line casing: `{colors.map-line-casing}` under every polyline for legibility on hybrid imagery.
 - Alternative routes: `{colors.alt-route-1}` / `{colors.alt-route-2}` / `{colors.alt-route-3}` — retained from the current code; deliberately outside the Ampel hue ranges so an alternative is never mistaken for a verdict.
 - Wind barbs: `{colors.ink-primary}` strokes with white halo (replaces the navy default in `WindBarb.tsx`).
