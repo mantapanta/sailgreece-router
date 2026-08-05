@@ -1,5 +1,6 @@
 /** German display formatting (UI layer — display only, no domain values computed here). */
 
+import { compassPoint } from '../domain/geo.ts';
 import { dateForTripDay } from '../domain/time.ts';
 
 const dayFmt = new Intl.DateTimeFormat('de-DE', {
@@ -80,11 +81,15 @@ export function formatDeg(v: number | null): string {
   return `${Math.round(v)}°`;
 }
 
-const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-
+/**
+ * Himmelsrichtung eines Winkels. Die Tabelle selbst liegt in domain/geo.ts —
+ * die Domain benennt Richtungen in ihren Begründungen ("Wind 31 kn aus NNE"),
+ * und zwei Kopien derselben 16 Namen könnten auseinanderlaufen. Hier bleibt
+ * nur, was Anzeige ist: der Umgang mit "kein Wert".
+ */
 export function compass(deg: number | null): string {
   if (deg === null) return '–';
-  return DIRS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]!;
+  return compassPoint(deg);
 }
 
 /**

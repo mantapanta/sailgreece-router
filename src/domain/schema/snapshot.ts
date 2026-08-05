@@ -110,9 +110,15 @@ export interface PlaceNightAssessment {
   placeId: string;
   nightDay: number;
   ampel: Ampel;
-  /** Worst wind / wave observed inside the night window (for display). */
+  /** Worst wind observed inside the night window — this drives `ampel`. */
   maxWindKn: number | null;
   windDirDeg: number | null;
+  /**
+   * Höchste Wellenhöhe der Nacht — REINE INFORMATION, sie geht NICHT in
+   * `ampel` ein (domain/ampel.ts, Modulkopf). Es ist der Wert der offenen See
+   * am Ort des Platzes; im Hafen oder hinter der Landzunge gilt er nicht.
+   * Anzeigen ja, bewerten nein — und die Anzeige muss das dazusagen.
+   */
   maxWaveM: number | null;
   basis: DataBasis;
   reasons: string[];

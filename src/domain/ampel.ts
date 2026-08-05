@@ -17,9 +17,23 @@
  * are disputed is not a place the app may recommend for the night, however
  * favourable the forecast reads. `confidence: 'niedrig'` therefore caps the
  * verdict at yellow — the same shape as "uncurated places never go green".
+ *
+ * WELLEN GEHEN NICHT IN DIE PLATZ-AMPEL EIN (Skipper-Entscheidung 2026-08-05).
+ * Die Wellenhöhe des Modells ist eine Aussage über die offene See; im Hafen und
+ * hinter der Landzunge einer Bucht gilt sie nicht. Sie an einer kuratierten
+ * Wellengrenze zu messen, verwechselt zwei Orte und erzeugt genau den Fehler,
+ * der die Regel ausgelöst hat: Serifos/Livadi stand auf ROT, obwohl 17 kn Nord
+ * mitten im Schutzsektor lagen (Grenze 30 kn) — allein die 1,2 m offene See
+ * gegen eine kuratierte 0,5-m-Grenze kippten das Urteil, und die Begründung
+ * behauptete dann auch noch, die Nacht liege "außerhalb der Schutzsektoren".
+ *
+ * Die kuratierten `waveSectors` bleiben im Schema und in der Bibliothek: sie
+ * sind gesammeltes Wissen über den Platz und werden angezeigt. Sie bewerten
+ * nur nichts mehr. Was Wind an einem Liegeplatz anrichtet, sagen die
+ * Windsektoren — und die sind genau dafür kuratiert.
  */
 
-import type { WindSector, WaveSector } from './schema/shelter.ts';
+import type { WindSector } from './schema/shelter.ts';
 import type { Place } from './schema/place.ts';
 import type { Params } from './schema/params.ts';
 import type {
@@ -28,7 +42,7 @@ import type {
   PlaceNightAssessment,
 } from './schema/snapshot.ts';
 import { worstAmpel, type Ampel } from './schema/common.ts';
-import { normDeg } from './geo.ts';
+import { compassPoint, normDeg } from './geo.ts';
 import { hourIndices, nightWindow } from './time.ts';
 
 /**
@@ -50,6 +64,22 @@ export function sectorContains(
   return d >= from || d <= to;
 }
 
+/**
+ * Shelter limit that governs a direction, or null when no sector covers it.
+ *
+ * DECISION (documented, fixture-covered): overlapping curated sectors are
+ * independent shelter statements about the same direction — the MOST GENEROUS
+ * limit wins (Math.max). A curator who wants a stricter limit must narrow the
+ * broader sector instead of overlaying a stricter one.
+ */
+export function windSectorLimitKn(
+  sectors: WindSector[],
+  windFromDeg: number,
+): number | null {
+  const matching = sectors.filter((s) => sectorContains(s, windFromDeg));
+  return matching.length > 0 ? Math.max(...matching.map((s) => s.maxKn)) : null;
+}
+
 /** Verdict for one hour of wind at a place. */
 export function windHourAmpel(
   sectors: WindSector[],
@@ -57,40 +87,47 @@ export function windHourAmpel(
   windKn: number,
   params: Params,
 ): Ampel {
-  const matching = sectors.filter((s) => sectorContains(s, windFromDeg));
-  if (matching.length > 0) {
-    // DECISION (documented, fixture-covered): overlapping curated sectors are
-    // independent shelter statements about the same direction — the MOST
-    // GENEROUS limit wins (Math.max). A curator who wants a stricter limit
-    // must narrow the broader sector instead of overlaying a stricter one.
-    const limit = Math.max(...matching.map((s) => s.maxKn));
-    if (windKn <= limit - params.gelbReserveKn) return 'gruen';
-    if (windKn <= limit) return 'gelb';
-    return 'rot';
+  const limit = windSectorLimitKn(sectors, windFromDeg);
+  if (limit === null) {
+    // Unprotected direction (luv): never green under meaningful wind.
+    return windKn <= params.openSectorMaxKn ? 'gelb' : 'rot';
   }
-  // Unprotected direction (luv): never green under meaningful wind.
-  return windKn <= params.openSectorMaxKn ? 'gelb' : 'rot';
+  if (windKn <= limit - params.gelbReserveKn) return 'gruen';
+  if (windKn <= limit) return 'gelb';
+  return 'rot';
 }
 
-/** Verdict for one hour of waves at a place. */
-export function waveHourAmpel(
-  sectors: WaveSector[],
-  waveFromDeg: number,
-  waveM: number,
-  params: Params,
-): Ampel {
-  const matching = sectors.filter((s) => sectorContains(s, waveFromDeg));
-  if (matching.length > 0) {
-    // Overlap decision as in windHourAmpel: most generous limit wins.
-    const limit = Math.max(...matching.map((s) => s.maxM));
-    // DECISION (documented, fixture-covered): waves have NO yellow reserve
-    // band — curated wave limits are already conservative comfort limits and
-    // wave forecasts are coarser than wind; a synthetic yellow band would
-    // suggest precision the marine model does not have. Green up to the
-    // limit (inclusive), red above — asymmetric to wind on purpose.
-    return waveM <= limit ? 'gruen' : 'rot';
+/** Die Stunde, die das Urteil trägt — Grundlage der Begründung. */
+interface GoverningHour {
+  verdict: Ampel;
+  windKn: number;
+  windFromDeg: number;
+  /** Schutzgrenze des Sektors, oder null für eine ungeschützte Richtung. */
+  limitKn: number | null;
+}
+
+/**
+ * Warum diese Ampel — benannt an der Stunde, die sie erzwungen hat.
+ *
+ * Der alte Text ("Nacht außerhalb der Schutzsektoren") behauptete IMMER eine
+ * Richtung ausserhalb der Sektoren, auch wenn der Wind mitten im Sektor stand
+ * und nur die Stärke über der Grenze lag — oder, vor dieser Änderung, wenn gar
+ * nicht der Wind, sondern die Welle das Urteil gefällt hatte. Eine Begründung,
+ * die auf die falsche Ursache zeigt, ist schlimmer als keine: sie schickt den
+ * Skipper zum falschen Sektor in der Tabelle darunter.
+ */
+function windReason(h: GoverningHour, params: Params): string {
+  const wind = `${Math.round(h.windKn)} kn aus ${compassPoint(h.windFromDeg)} (${Math.round(
+    normDeg(h.windFromDeg),
+  )}°)`;
+  if (h.limitKn === null) {
+    return h.verdict === 'rot'
+      ? `Wind ${wind} — Richtung liegt in keinem Schutzsektor, und über ${params.openSectorMaxKn} kn ist ein ungeschützter Liegeplatz nicht mehr tragbar`
+      : `Wind ${wind} — Richtung liegt in keinem Schutzsektor, bei dieser Stärke aber noch tragbar`;
   }
-  return waveM <= params.openSectorMaxWaveM ? 'gelb' : 'rot';
+  return h.verdict === 'rot'
+    ? `Wind ${wind} über der Schutzgrenze dieses Sektors (${h.limitKn} kn)`
+    : `Wind ${wind} innerhalb des Schutzsektors, aber in der Reserve vor der Grenze (${h.limitKn} kn, Reserve ${params.gelbReserveKn} kn)`;
 }
 
 /**
@@ -120,10 +157,16 @@ function capByConfidence(ampel: Ampel, place: Place, reasons: string[]): Ampel {
 }
 
 /**
- * Place traffic light for night N: forecast (wind + waves) mapped onto the
- * shelter profile over the overnight window [N 18:00, N+1 09:00) Athens.
- * Missing hours (null / beyond horizon) => 'unbewertet' contribution —
+ * Place traffic light for night N: the WIND forecast mapped onto the shelter
+ * profile over the overnight window [N 18:00, N+1 09:00) Athens.
+ * Missing wind hours (null / beyond horizon) => 'unbewertet' contribution —
  * never green, never silently hidden.
+ *
+ * Die Wellenhöhe wird weiterhin mitgeführt und ausgegeben (`maxWaveM`), aber
+ * sie bewertet nichts — siehe Modulkopf. Eine fehlende Marine-Stunde macht die
+ * Nacht deshalb auch nicht mehr 'unbewertet': der Marine-Horizont endet
+ * regelmäßig früher als der Wind-Horizont, und ein Wert, der nicht zählt, darf
+ * ein Urteil nicht blockieren, das ohne ihn vollständig ist.
  */
 export function placeNightAmpel(
   place: Place,
@@ -159,40 +202,52 @@ export function placeNightAmpel(
   let windDirDeg: number | null = null;
   let maxWaveM: number | null = null;
   let sawNullWind = false;
-  let sawNullWave = false;
   let assumedHours = 0;
+  /** Schlechteste Stunde, bei Gleichstand die mit dem meisten Wind. */
+  let governing: GoverningHour | null = null;
 
   for (const i of indices) {
-    if (fc.windAssumed[i] || fc.waveAssumed[i]) assumedHours++;
+    // Nur `windAssumed`: die Wellen-Annahme trägt kein Urteil mehr, also darf
+    // sie die Nacht auch nicht als "beruht auf Annahme" markieren.
+    if (fc.windAssumed[i]) assumedHours++;
     const wKn = fc.windKn[i] ?? null;
     const wDir = fc.windDirDeg[i] ?? null;
     if (wKn === null || wDir === null) {
       sawNullWind = true;
       verdicts.push('unbewertet');
     } else {
-      verdicts.push(windHourAmpel(place.shelter.windSectors, wDir, wKn, params));
+      const limitKn = windSectorLimitKn(place.shelter.windSectors, wDir);
+      const verdict = windHourAmpel(place.shelter.windSectors, wDir, wKn, params);
+      verdicts.push(verdict);
+      if (
+        governing === null ||
+        AMPEL_RANK[verdict] > AMPEL_RANK[governing.verdict] ||
+        (verdict === governing.verdict && wKn > governing.windKn)
+      ) {
+        governing = { verdict, windKn: wKn, windFromDeg: wDir, limitKn };
+      }
       if (maxWindKn === null || wKn > maxWindKn) {
         maxWindKn = wKn;
         windDirDeg = wDir;
       }
     }
+    // Nur für die Anzeige — siehe Modulkopf: die Welle bewertet nichts.
     const hM = fc.waveM[i] ?? null;
-    const hDir = fc.waveDirDeg[i] ?? null;
-    if (hM === null || hDir === null) {
-      sawNullWave = true;
-      verdicts.push('unbewertet');
-    } else {
-      verdicts.push(waveHourAmpel(place.shelter.waveSectors, hDir, hM, params));
-      if (maxWaveM === null || hM > maxWaveM) maxWaveM = hM;
-    }
+    if (hM !== null && (maxWaveM === null || hM > maxWaveM)) maxWaveM = hM;
   }
 
   const forecastAmpel = worstAmpel(verdicts);
   if (sawNullWind) reasons.push('Wind-Forecast unvollständig (Horizont)');
-  if (sawNullWave) reasons.push('Wellen-Forecast unvollständig (Marine-Horizont)');
-  if (forecastAmpel === 'rot') reasons.push('Nacht außerhalb der Schutzsektoren');
-  if (forecastAmpel === 'gelb' && !sawNullWind && !sawNullWave)
-    reasons.push('Nahe an der Schutzgrenze oder ungeschützte Richtung bei Schwachwind');
+  // Die Begründung nennt die Stunde, die das Urteil trägt — nicht eine
+  // Pauschalformel, die auch dann von "außerhalb der Sektoren" spricht, wenn
+  // der Wind mitten im Sektor stand.
+  if (
+    (forecastAmpel === 'rot' || forecastAmpel === 'gelb') &&
+    governing !== null &&
+    governing.verdict === forecastAmpel
+  ) {
+    reasons.push(windReason(governing, params));
+  }
 
   const basis: DataBasis = assumedHours > 0 ? 'annahme' : 'forecast';
   if (basis === 'annahme') {

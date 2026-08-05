@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { placeNightAmpel, sectorContains, waveHourAmpel, windHourAmpel } from '../ampel.ts';
+import {
+  placeNightAmpel,
+  sectorContains,
+  windHourAmpel,
+  windSectorLimitKn,
+} from '../ampel.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
 import {
   constantForecast,
@@ -75,17 +80,166 @@ describe('wind hour verdict (FR8)', () => {
   });
 });
 
-describe('wave hour verdict (FR8) — DECISION: no yellow reserve band for waves', () => {
-  const waveSectors = [{ fromDeg: 330, toDeg: 60, maxM: 1.5 }];
-
-  it('protected sector: gruen up to the limit (inclusive), rot directly above — no gelb band', () => {
-    expect(waveHourAmpel(waveSectors, 10, 1.5, params)).toBe('gruen');
-    expect(waveHourAmpel(waveSectors, 10, 1.6, params)).toBe('rot');
+describe('windSectorLimitKn — welche Grenze eine Richtung regiert', () => {
+  it('nennt die Grenze des deckenden Sektors', () => {
+    expect(windSectorLimitKn([{ fromDeg: 330, toDeg: 60, maxKn: 35 }], 10)).toBe(35);
   });
 
-  it('unprotected wave direction: gelb only in near-calm, rot above', () => {
-    expect(waveHourAmpel(waveSectors, 180, 0.4, params)).toBe('gelb');
-    expect(waveHourAmpel(waveSectors, 180, 0.8, params)).toBe('rot');
+  it('bei Überlappung gilt die großzügigste Grenze (wie in windHourAmpel)', () => {
+    const overlapping = [
+      { fromDeg: 90, toDeg: 180, maxKn: 20 },
+      { fromDeg: 100, toDeg: 200, maxKn: 30 },
+    ];
+    expect(windSectorLimitKn(overlapping, 120)).toBe(30);
+  });
+
+  it('null für eine ungeschützte Richtung — kein stillschweigendes Limit 0', () => {
+    expect(windSectorLimitKn([{ fromDeg: 330, toDeg: 60, maxKn: 35 }], 180)).toBeNull();
+  });
+});
+
+/**
+ * SKIPPER-ENTSCHEIDUNG 2026-08-05 — Wellen bewerten keinen Liegeplatz.
+ *
+ * Der Auslöser stand als konkreter Fehler auf dem Schirm: Serifos/Livadi ROT
+ * bei 17 kn Nord, obwohl Nord mitten im Schutzsektor liegt (Grenze 30 kn).
+ * Rot kam allein von 1,2 m offener See gegen eine kuratierte 0,5-m-Grenze.
+ * Die Wellenhöhe des Modells gilt für die offene See, nicht für den Hafen —
+ * diese Fälle halten die Regel fest.
+ */
+describe('FR8 — Wellen gehen NICHT in die Platz-Ampel ein', () => {
+  const times = makeTimes();
+
+  /** Der Fall aus dem Feld, mit den echten Zahlen von Livadi. */
+  const livadi = () =>
+    makePlace({
+      id: 'serifos-livadi',
+      shelter: {
+        windSectors: [{ fromDeg: 190, toDeg: 90, maxKn: 30 }],
+        waveSectors: [{ fromDeg: 190, toDeg: 90, maxM: 0.5 }],
+        sourceNote: 'fixture nach seeding/data/islands/serifos.json',
+      },
+    });
+
+  it('17 kn Nord im Schutzsektor bleibt grün, obwohl 1,2 m Welle die 0,5-m-Grenze reissen', () => {
+    const place = livadi();
+    const fc = constantForecast(times.length, 17, 0, 1.2, 0);
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [place.id]: fc },
+      library: { islands: [], places: [place], invalidPlaces: [], legs: [], variants: [] },
+    });
+    const result = placeNightAmpel(place, 1, snapshot);
+    expect(result.ampel).toBe('gruen');
+    // Die Welle wird weiterhin ausgewiesen — sie bewertet nur nichts.
+    expect(result.maxWaveM).toBeCloseTo(1.2, 6);
+  });
+
+  it('auch eine haushohe Welle kippt die Ampel nicht, solange der Wind trägt', () => {
+    const place = livadi();
+    const fc = constantForecast(times.length, 12, 0, 4.0, 0);
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [place.id]: fc },
+      library: { islands: [], places: [place], invalidPlaces: [], legs: [], variants: [] },
+    });
+    expect(placeNightAmpel(place, 1, snapshot).ampel).toBe('gruen');
+  });
+
+  it('fehlende Marine-Stunden machen die Nacht nicht mehr unbewertet', () => {
+    const place = livadi();
+    // Wind vollständig, Marine-Horizont zu Ende — der häufige Normalfall.
+    const fc = constantForecast(times.length, 17, 0, null, null);
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [place.id]: fc },
+      library: { islands: [], places: [place], invalidPlaces: [], legs: [], variants: [] },
+    });
+    const result = placeNightAmpel(place, 1, snapshot);
+    expect(result.ampel).toBe('gruen');
+    expect(result.maxWaveM).toBeNull();
+    expect(result.reasons.join(' ')).not.toMatch(/Marine-Horizont/);
+  });
+
+  it('eine reine Wellen-Annahme macht die Nacht nicht zur Annahme', () => {
+    const place = livadi();
+    const fc = constantForecast(times.length, 17, 0, 1.2, 0);
+    fc.waveAssumed = fc.waveAssumed.map(() => true);
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [place.id]: fc },
+      library: { islands: [], places: [place], invalidPlaces: [], legs: [], variants: [] },
+    });
+    expect(placeNightAmpel(place, 1, snapshot).basis).toBe('forecast');
+  });
+
+  it('eine Wind-Annahme dagegen schon', () => {
+    const place = livadi();
+    const fc = constantForecast(times.length, 17, 0, 1.2, 0);
+    fc.windAssumed = fc.windAssumed.map(() => true);
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [place.id]: fc },
+      library: { islands: [], places: [place], invalidPlaces: [], legs: [], variants: [] },
+    });
+    expect(placeNightAmpel(place, 1, snapshot).basis).toBe('annahme');
+  });
+});
+
+/**
+ * Die Begründung muss auf die Ursache zeigen. Der alte Text behauptete pauschal
+ * "Nacht außerhalb der Schutzsektoren" — auch dann, wenn der Wind mitten im
+ * Sektor stand und nur die Stärke über der Grenze lag. Das schickt den Skipper
+ * zum falschen Sektor in der Tabelle darunter.
+ */
+describe('FR8 — die Begründung nennt die Stunde, die das Urteil trägt', () => {
+  const times = makeTimes();
+  const nightAt = (place: ReturnType<typeof makePlace>, kn: number, dir: number) => {
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [place.id]: constantForecast(times.length, kn, dir, 0.3, dir) },
+      library: { islands: [], places: [place], invalidPlaces: [], legs: [], variants: [] },
+    });
+    return placeNightAmpel(place, 1, snapshot);
+  };
+  const sheltered = () =>
+    makePlace({
+      id: 'testinsel-sektorplatz',
+      shelter: {
+        windSectors: [{ fromDeg: 330, toDeg: 60, maxKn: 30 }],
+        waveSectors: [{ fromDeg: 330, toDeg: 60, maxM: 1.5 }],
+        sourceNote: 'fixture',
+      },
+    });
+
+  it('rot INNERHALB des Sektors nennt die Grenze, nicht die Sektorlage', () => {
+    const r = nightAt(sheltered(), 34, 10);
+    expect(r.ampel).toBe('rot');
+    expect(r.reasons.join(' ')).toContain('über der Schutzgrenze dieses Sektors (30 kn)');
+    expect(r.reasons.join(' ')).not.toMatch(/außerhalb/);
+  });
+
+  it('rot AUSSERHALB des Sektors sagt genau das', () => {
+    const r = nightAt(sheltered(), 22, 180);
+    expect(r.ampel).toBe('rot');
+    expect(r.reasons.join(' ')).toContain('in keinem Schutzsektor');
+  });
+
+  it('die Begründung nennt Stärke und Richtung als Himmelsrichtung und Grad', () => {
+    const r = nightAt(sheltered(), 34, 20);
+    expect(r.reasons.join(' ')).toContain('34 kn aus NNE (20°)');
+  });
+
+  it('gelb in der Reserve benennt die Reserve, nicht eine Sektorverletzung', () => {
+    const r = nightAt(sheltered(), 29, 10);
+    expect(r.ampel).toBe('gelb');
+    expect(r.reasons.join(' ')).toContain('in der Reserve vor der Grenze');
+  });
+
+  it('grün begründet sich nicht — es gibt nichts zu erklären', () => {
+    const r = nightAt(sheltered(), 12, 10);
+    expect(r.ampel).toBe('gruen');
+    expect(r.reasons).toEqual([]);
   });
 });
 
@@ -238,7 +392,13 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
     expect(result.ampel).toBe('unbewertet');
   });
 
-  it('missing marine hours only => unbewertet (marine horizon < weather horizon)', () => {
+  /**
+   * Vor der Skipper-Entscheidung vom 2026-08-05 war dieser Fall 'unbewertet':
+   * fehlende Marine-Stunden blockierten das Urteil. Der Marine-Horizont endet
+   * aber regelmäßig früher als der Wind — und seit die Welle nichts mehr
+   * bewertet, fehlt damit nichts, was zum Urteil gehört.
+   */
+  it('missing marine hours only => das Wind-Urteil steht trotzdem', () => {
     const bay = makePlace({ id: 'testinsel-marine' });
     const fc = constantForecast(times.length, 15, 0, null, null);
     const snapshot = makeSnapshot({
@@ -246,7 +406,21 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
       forecast: { [bay.id]: fc },
       library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
-    expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('unbewertet');
+    // Der Default-Platz aus makePlace ist rundum bis 40 kn geschützt.
+    expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('gruen');
+  });
+
+  it('fehlende WIND-Stunden blockieren das Urteil weiterhin', () => {
+    const bay = makePlace({ id: 'testinsel-windluecke' });
+    const fc = constantForecast(times.length, null, null, 0.4, 0);
+    const snapshot = makeSnapshot({
+      times,
+      forecast: { [bay.id]: fc },
+      library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
+    });
+    const result = placeNightAmpel(bay, 1, snapshot);
+    expect(result.ampel).toBe('unbewertet');
+    expect(result.reasons.join(' ')).toContain('Wind-Forecast unvollständig');
   });
 
   it('a red hour dominates missing hours: rot, not unbewertet', () => {

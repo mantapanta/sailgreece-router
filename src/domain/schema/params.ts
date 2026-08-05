@@ -58,7 +58,12 @@ const ParamsObjectSchema = z.object({
   // --- place ampel (FR8) ----------------------------------------------------
   /** Unprotected ("Luv") direction: yellow up to this wind, red above. */
   openSectorMaxKn: z.number().positive().default(10),
-  /** Unprotected direction: yellow up to this wave height, red above. */
+  /**
+   * OHNE WIRKUNG seit 2026-08-05: Wellen bewerten keinen Liegeplatz mehr
+   * (domain/ampel.ts, Modulkopf). Das Feld bleibt, weil die gespeicherte
+   * Konfiguration es mitbringt und ein unbekannter Schlüssel den Import
+   * scheitern liesse — nicht, weil noch etwas darauf hört.
+   */
   openSectorMaxWaveM: z.number().positive().default(0.5),
 
   // --- time windows (AD-9) --------------------------------------------------

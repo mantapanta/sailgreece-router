@@ -618,8 +618,9 @@ export function DayView({
             </li>
             <li>
               Wellenvorhersage bis {formatStamp(assessment.waveHorizonIso)} — sie endet
-              in der Regel früher als der Wind und bestimmt damit oft, ab wann die
-              Nacht-Ampeln auf der Annahme beruhen.
+              in der Regel früher als der Wind, zieht die Nacht-Ampeln aber nicht mit
+              hinunter: Wellenwerte gelten für die offene See und bewerten keinen
+              Liegeplatz.
             </li>
             <li>
               Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:

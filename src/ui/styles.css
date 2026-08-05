@@ -706,6 +706,44 @@ hr.hairline,
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
+/* --- Luftbild als Kopfbild ------------------------------------------------
+   Die Karte füllt den Kopf, die Beschriftung liegt darüber. Das Padding wandert
+   dabei vom Kasten in die Beschriftung: läge es weiter aussen, bliebe rund um
+   die Karte ein blauer Rahmen stehen. */
+.place-hero-map {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.place-hero-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* Im Foto- und Verlaufs-Kopf trägt `.place-hero` selbst das Padding — die
+   Beschriftung bringt hier keins mit, sonst stünde es doppelt. */
+.place-hero-caption {
+  position: relative;
+  z-index: 2;
+}
+
+.place-hero-map .place-hero-caption {
+  padding: 2.2rem 1.4rem 1.2rem;
+  /* Ohne dies fängt die Beschriftung die Gesten ab, die der Karte gelten. */
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(20, 32, 50, 0.88), rgba(20, 32, 50, 0));
+}
+
+.place-hero-caption .versal {
+  color: #d7dfea;
+}
+
+.place-hero-legende {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
 table.shelter-table {
   border-collapse: collapse;
   width: 100%;
@@ -725,6 +763,21 @@ table.shelter-table th {
   font-size: 0.72rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+/* Kuratiert, aber ohne Wirkung auf die Ampel (Wellen-Sektoren). Zurückgenommen
+   statt versteckt: das Wissen bleibt lesbar, der Anspruch verschwindet. */
+table.shelter-table tr.sektor-inaktiv td {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Ein Wert, der informiert statt zu bewerten. */
+.badge-info {
+  border-style: dashed;
+  color: var(--muted);
+  cursor: help;
+  white-space: normal;
 }
 
 .warnung {
