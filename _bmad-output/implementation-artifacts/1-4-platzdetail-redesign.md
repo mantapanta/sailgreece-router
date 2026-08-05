@@ -4,7 +4,7 @@ baseline_commit: a60fca6
 
 # Story 1.4: Platzdetail redesign
 
-Status: ready-for-dev
+Status: in-progress
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
