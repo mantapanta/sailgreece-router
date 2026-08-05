@@ -30,6 +30,7 @@ import {
   existsValidPlan,
   legLibrary,
   meltemiSafeUntilDay,
+  planTurnDay,
   validatePlan,
   type SolveResult,
 } from './solver.ts';
@@ -262,6 +263,9 @@ function assessPlan(
     stages,
     variantId: meta.variantId,
     turnIslandId: meta.turnIslandId,
+    // Aus der Kette selbst, nicht aus meta: meta.turnIslandId kann beim
+    // Hauptrouten-Assessment vom Solver-Vorschlag stammen (siehe Schema).
+    turnDay: planTurnDay(plan, snapshot),
     relaxedTo: meta.relaxedTo,
     returnChecks,
     meltemiSafeUntilDay: meltemiSafeUntilDay(returnChecks),
