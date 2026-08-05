@@ -1,11 +1,13 @@
 /**
  * F1 — map & briefing picture (FR1-FR4).
  *
- * The map shows the ROUND TRIP (FR2): the distance already sailed as a solid
- * green line, the planned rest as a dashed line in the rest-trip light's colour,
- * and every stage numbered at its day target. Ampel markers appear only for the
- * current island and today's target island (FR1) — what matters is which
- * harbour we enter today, not what happens in five days.
+ * The map shows the ROUND TRIP (FR2): Hinweg und Rückweg in ZWEI Farben mit
+ * Fahrtrichtungspfeilen (Feedback 2026-08-05 — Hin und Rück laufen teils über
+ * dieselben Etappen und waren einfarbig nicht unterscheidbar), gefahren als
+ * durchgezogene, geplant als gestrichelte Linie, and every stage numbered at
+ * its day target. Die Rest-Trip-Ampel steht als Badge in der Legende. Ampel
+ * markers appear only for the current island and today's target island (FR1) —
+ * what matters is which harbour we enter today, not what happens in five days.
  *
  * Google Maps via @vis.gl/react-google-maps 1.x: AdvancedMarker for pins,
  * numbers and rotated wind arrows; dashed lines via the symbol-repeat
@@ -29,15 +31,23 @@ import { altRouteColor } from '../altRouteColors.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
 
-/** Colour of the rest-trip line follows the FR2 light. */
-const REST_LINE_COLOR: Record<Assessment['restTripAmpel'], string> = {
-  gruen: '#3f7d4f',
-  gelb: '#c8952a',
-  rot: '#b3423a',
-  unbewertet: '#8b8b8b',
-};
-
-const SAILED_LINE_COLOR = '#3f7d4f';
+/**
+ * Hin- und Rückweg in ZWEI Farben (Feedback 2026-08-05): der Round-Trip nutzt
+ * teils dieselben Etappen in beide Richtungen, und einfarbig war auf der Karte
+ * nicht lesbar, welche Linie hin und welche zurück meint. Die Trennlinie ist
+ * `PlanAssessment.turnDay` (Etappen bis einschliesslich Wendetag = Hinweg).
+ *
+ * Gefahren vs. geplant bleibt als durchgezogen vs. gestrichelt kodiert; die
+ * Rest-Trip-Ampel, die vorher die Linienfarbe stellte, war ohnehin EIN
+ * Aggregat für alle Rest-Linien und steht jetzt allein im Legenden-Badge.
+ * Beide Farben meiden Grün/Gelb/Rot (Ampel) und die Alternativ-Farben
+ * (altRouteColors.ts) — eine Richtung, die aussieht wie ein Urteil oder wie
+ * eine Alternative, wäre nicht mehr als Richtung lesbar. Weil Blau/Magenta
+ * für Farbfehlsichtige zusammenfallen können, tragen die Linien zusätzlich
+ * Fahrtrichtungspfeile (Polyline.tsx).
+ */
+const HIN_LINE_COLOR = '#2f6fd0';
+const RUECK_LINE_COLOR = '#c2418f';
 
 /**
  * Abstand, um den eine Windfieder gegen die Windrichtung vom Platz weggesetzt
@@ -213,7 +223,18 @@ export function MapView({
   );
 
   const nowIdx = useMemo(() => hourIndexAt(Date.now(), snapshot.times), [snapshot.times]);
-  const restColor = REST_LINE_COLOR[assessment.restTripAmpel];
+
+  /**
+   * Wendetag der Hauptroute — Domänenwert (AD-2), hier nur gelesen. Null ohne
+   * Segeltage; dann ist alles Hinweg-Farbe, und die Legende lässt den
+   * Wende-Hinweis weg statt einen zu erfinden.
+   */
+  const turnDay = main?.turnDay ?? null;
+  const turnIsland =
+    turnDay === null
+      ? null
+      : (sailingStages.find((s) => s.day === turnDay)?.toIslandId ?? null);
+  const isRueckweg = (stageDay: number) => turnDay !== null && stageDay > turnDay;
 
   const endMarkers = useMemo(
     () => stageEndMarkers(sailingStages, legsById, snapshot),
@@ -282,15 +303,22 @@ export function MapView({
         <span className="versal">Round-Trip</span>
         <div className="legend">
           <span>
-            <span className="legend-line solid" style={{ background: SAILED_LINE_COLOR }} />
-            gefahren
+            <span className="legend-line solid" style={{ background: HIN_LINE_COLOR }} />
+            Hinweg
           </span>
           <span>
-            <span className="legend-line dashed" style={{ borderColor: restColor }} />
-            Rest-Trip
+            <span className="legend-line solid" style={{ background: RUECK_LINE_COLOR }} />
+            Rückweg
           </span>
           <AmpelBadge ampel={assessment.restTripAmpel} />
         </div>
+        <span className="beschreibung">
+          Durchgezogen = gefahren, gestrichelt = geplant; Pfeile zeigen die
+          Fahrtrichtung.
+          {turnDay !== null && turnIsland && (
+            <> Wende: {islandName(turnIsland)} (Tag {turnDay}).</>
+          )}
+        </span>
         <label className="wind-toggle">
           <input
             type="checkbox"
@@ -482,6 +510,7 @@ export function MapView({
                       path={path}
                       strokeColor={altRouteColor(i)}
                       dashed
+                      directionArrows
                       strokeWeight={3}
                       zIndex={12}
                     />
@@ -489,24 +518,33 @@ export function MapView({
                 });
             })}
 
-            {/* FR2 — round-trip overlay: sailed solid green, rest dashed in the
-                rest-trip light's colour. One polyline per stage, so a single
-                stage can be highlighted on hover. */}
+            {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
+                gefahren durchgezogen, geplant gestrichelt, Pfeile in
+                Fahrtrichtung. One polyline per stage, so a single stage can be
+                highlighted on hover. Der Rückweg liegt ÜBER dem Hinweg und um
+                die halbe Strichperiode versetzt: wo beide dieselbe Etappe
+                nutzen, scheint der Hinweg durch die Lücken der oberen
+                Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
+                Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
+                dashOffset). */}
             {sailingStages.map((stage) => {
               const path = stagePath(stage, legsById, snapshot);
               if (path.length < 2) return null;
               const isPast = stage.day < day;
+              const rueck = isRueckweg(stage.day);
               return (
                 <Polyline
                   key={`line-${stage.day}`}
                   path={path}
-                  strokeColor={isPast ? SAILED_LINE_COLOR : restColor}
+                  strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
                   dashed={!isPast}
+                  dashOffset={rueck ? '9px' : undefined}
+                  directionArrows
                   // Kräftiger als bisher: über dem Satellitenbild geht eine
                   // 3-px-Linie im Blau der Ägäis unter (dazu der helle Saum
                   // in Polyline.tsx).
                   strokeWeight={hoverDay === stage.day ? 6 : 4}
-                  zIndex={hoverDay === stage.day ? 60 : 20}
+                  zIndex={hoverDay === stage.day ? 60 : rueck ? 21 : 20}
                 />
               );
             })}

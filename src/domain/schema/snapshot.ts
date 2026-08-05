@@ -379,6 +379,16 @@ export interface PlanAssessment {
   /** Variant the outbound part follows and the turning point (display). */
   variantId: string;
   turnIslandId: string;
+  /**
+   * Tag, an dem DIESE Kette ihren fernsten Punkt erreicht — die Trennlinie
+   * zwischen Hin- und Rückweg: Etappen bis einschliesslich `turnDay` sind
+   * Hinweg, alles danach Rückweg (Feedback 2026-08-05: die Karte muss die
+   * beiden unterscheidbar zeichnen). Aus der eigenen Etappenfolge abgeleitet
+   * (solver.planTurnDay), nicht aus `turnIslandId` — der kann beim
+   * Hauptrouten-Assessment vom aktuellen Solver-Vorschlag stammen und muss in
+   * dieser Kette nicht vorkommen. Null ohne Segeltage.
+   */
+  turnDay: number | null;
   /** Relaxation level the solver needed ('none' = nothing relaxed). */
   relaxedTo: string;
   /**

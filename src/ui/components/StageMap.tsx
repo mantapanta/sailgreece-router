@@ -89,7 +89,17 @@ export function StageMap({
             gezoomt — genau der Massstab, in dem Tonnen und Feuer der
             Ansteuerung sichtbar werden. Ein Toggle wäre hier nur UI. */}
         <SeamarkLayer />
-        <Polyline path={path} strokeColor={lineColor} strokeWeight={3} zIndex={20} />
+        {/* Fahrtrichtungspfeile (Feedback 2026-08-05): die Punktnummern geben
+            die Reihenfolge, aber erst der Pfeil macht die Richtung auf einen
+            Blick lesbar — gerade wenn Hin- und Rücketappe desselben Törns
+            dieselbe Strecke nutzen. */}
+        <Polyline
+          path={path}
+          strokeColor={lineColor}
+          strokeWeight={3}
+          directionArrows
+          zIndex={20}
+        />
 
         {points.map((p) =>
           p.kind === 'platz' ? (

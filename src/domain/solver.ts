@@ -825,6 +825,42 @@ export function reachNmFor(snapshot: PlanningSnapshot): (islandId: string) => nu
 }
 
 /**
+ * Tag, an dem ein Plan seinen Wendepunkt erreicht — die Trennlinie zwischen
+ * Hin- und Rückweg (Etappen bis einschliesslich dieses Tags sind Hinweg).
+ *
+ * Abgeleitet aus der EIGENEN Etappenfolge des Plans, nach derselben Regel wie
+ * `makeCandidate`: fernster Punkt ist die südlichste angelaufene Insel
+ * (reachNmFor), bei Gleichstand die von der Basis entfernteste. Bewusst NICHT
+ * über `SolveResult.turnIslandId`: beim Hauptrouten-Assessment stammt der vom
+ * aktuellen Solver-Vorschlag und muss in der persistierten Kette gar nicht
+ * vorkommen. Bei vollem Gleichstand gewinnt der FRÜHESTE Anlauf — dieselbe
+ * Erst-Anlauf-Konvention wie die Marker der Karte. Null ohne Segeltage.
+ */
+export function planTurnDay(plan: Plan, snapshot: PlanningSnapshot): number | null {
+  const stages = stagesOf(plan);
+  if (stages.length === 0) return null;
+  const reach = reachNmFor(snapshot);
+  const base = snapshot.library.islands.find(
+    (i) => i.id === snapshot.params.baseIslandId,
+  );
+  const distOf = (islandId: string): number => {
+    const island = snapshot.library.islands.find((i) => i.id === islandId);
+    return base && island ? distanceNm(base.coordinates, island.coordinates) : 0;
+  };
+  let turn = stages[0]!;
+  for (const stage of stages.slice(1)) {
+    if (
+      reach(stage.toIslandId) > reach(turn.toIslandId) ||
+      (reach(stage.toIslandId) === reach(turn.toIslandId) &&
+        distOf(stage.toIslandId) > distOf(turn.toIslandId))
+    ) {
+      turn = stage;
+    }
+  }
+  return turn.day;
+}
+
+/**
  * Die Kennzahlen, nach denen ein Round-Trip beurteilt wird.
  *
  * `reach` allein hat einen Törn beschrieben, der so weit wie möglich fährt —

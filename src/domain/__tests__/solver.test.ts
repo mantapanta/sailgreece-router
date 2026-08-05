@@ -9,6 +9,7 @@ import {
   legLibrary,
   planFromPacking,
   planMetricsFor,
+  planTurnDay,
   preferred,
   relaxParams,
   validatePlan,
@@ -852,5 +853,38 @@ describe('solver — Round Trip statt Pendeln', () => {
     const gewinner = metrics(hin).clockwise ? hin : zurueck;
     expect(preferred(hin, zurueck, metrics)).toBe(gewinner);
     expect(preferred(zurueck, hin, metrics)).toBe(gewinner);
+  });
+});
+
+describe('solver — planTurnDay (Hin-/Rückweg-Trennlinie)', () => {
+  it('nennt den Tag des ersten Anlaufs der südlichsten Insel', () => {
+    const snapshot = roundTripSnapshot();
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeHarbourDay(3, 'sued'),
+      makeStage(4, ['sued--mitte'], 'mitte'),
+      makeStage(5, ['mitte--athen'], 'athen'),
+    ]);
+    // sued (37.3° N) liegt südlich von mitte und athen — Tag 2 ist die Wende;
+    // der Hafentag AN der Wende verschiebt sie nicht.
+    expect(planTurnDay(plan, snapshot)).toBe(2);
+  });
+
+  it('bei mehrfachem Anlauf des Wendepunkts zählt der ERSTE (Erst-Anlauf-Konvention der Karte)', () => {
+    const snapshot = roundTripSnapshot();
+    const plan = makePlan([
+      makeStage(1, ['athen--sued'], 'sued'),
+      makeStage(2, ['sued--mitte'], 'mitte'),
+      makeStage(3, ['mitte--sued'], 'sued'),
+      makeStage(4, ['sued--athen'], 'athen'),
+    ]);
+    expect(planTurnDay(plan, snapshot)).toBe(1);
+  });
+
+  it('ohne Segeltage gibt es keine Wende', () => {
+    const snapshot = roundTripSnapshot();
+    const plan = makePlan([makeHarbourDay(1, 'athen')]);
+    expect(planTurnDay(plan, snapshot)).toBe(null);
   });
 });
