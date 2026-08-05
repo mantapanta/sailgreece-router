@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Screen: Ortsdetail — Consumer Warm — SailGreece</title>
+<style>
+/* ============================================================
+   KEY SCREEN — ORTSDETAIL · RICHTUNG „CONSUMER WARM"
+   Farbwerte (Hex-Dokumentation, Quelle: DESIGN.md)
+   ------------------------------------------------------------
+   Seiten-Hintergrund (Stage) .... #eeece7
+   App-Hintergrund (Page) ........ #faf9f7
+   Karten-Oberfläche ............. #ffffff
+   Inset-Fläche .................. #faf9f7
+   Track-Fläche .................. #f0eeea
+   Text primär ................... #23211e
+   Text sekundär ................. #6f6a62
+   Text tertiär / Fußnote ........ #98928a
+   Hairline ...................... #ecebe7
+   Akzent (Ägäis-Koralle) ........ #f2604d
+   Akzent dunkel (Text/Hover) .... #d94c3a
+   Akzent-Gradient-Ende .......... #e5893c
+   Ampel Grün .................... #1a9d5c
+   Ampel Grün Tint ............... #e4f5ec
+   Ampel Grün Text ............... #147a47
+   Ampel Gelb .................... #e09112
+   Ampel Gelb Tint ............... #fcf3e0
+   Ampel Gelb Text ............... #a86c09
+   Ampel Gelb Text (lang) ........ #7a5306
+   Ampel Rot ..................... #d93636
+   Ampel Rot Tint ................ #fbe9e9
+   Ampel Rot Text ................ #a72020
+   Ampel Unbewertet .............. #b6b1a9
+   Ampel Unbewertet Tint ......... #f0eeea
+   Ampel Unbewertet Text ......... #6f6a62
+   Bezel ......................... #1c1b19
+   Hero-Fake-Foto (nur Imagery):
+     Himmel #cfe4ef / #a8cfe2 · Meer #1f7a9c / #14607e /
+     #0e4a63 · Fels #8a7a66 / #6e6152 / #55493d ·
+     Kai #d9cfc0 · Scrim rgba(20,32,40,…)
+   Hero-Fallback (Imagery): Navy-Warm #22303e / #31424f /
+     #4a5561 · Küstenlinie rgba(255,255,255,…)
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #eeece7;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: #23211e;
+  padding: 48px 24px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+.intro { max-width: 860px; margin: 0 auto 44px; }
+.intro .kicker {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #d94c3a; margin-bottom: 10px;
+}
+.intro h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+.intro p { font-size: 15.5px; line-height: 1.55; color: #6f6a62; max-width: 720px; }
+.stage-area {
+  max-width: 1020px; margin: 0 auto;
+  display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start; justify-content: center;
+}
+.frame-label {
+  text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #98928a; margin-top: 18px;
+}
+
+/* ---------- iPhone-Rahmen ---------- */
+.phone {
+  width: 406px; background: #1c1b19; border-radius: 54px; padding: 8px;
+  box-shadow: 0 2px 6px rgba(30,25,20,0.18), 0 24px 60px rgba(30,25,20,0.28);
+}
+.phone-screen { background: #faf9f7; border-radius: 46px; overflow: hidden; position: relative; }
+.phone.small { width: 346px; border-radius: 46px; }
+.phone.small .phone-screen { border-radius: 39px; }
+.statusbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 28px 4px; font-size: 14px; font-weight: 600;
+}
+.statusbar .sb-icons { display: flex; gap: 5px; align-items: center; }
+.sb-dot { width: 16px; height: 10px; border-radius: 3px; background: #23211e; opacity: 0.85; }
+.sb-dot.thin { width: 20px; }
+
+/* ---------- App-Header (kompakt, zweizeilig) ---------- */
+.app-header { padding: 8px 20px 0; }
+.header-row { display: flex; align-items: center; justify-content: space-between; }
+.wordmark { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.wordmark .accent { color: #f2604d; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #f2604d 0%, #e5893c 100%);
+  color: #fff; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.tabs { display: flex; gap: 4px; background: #f0eeea; border-radius: 999px; padding: 3px; width: max-content; }
+.tab { padding: 7px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #6f6a62; }
+.tab.active {
+  background: #ffffff; color: #23211e;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.08), 0 2px 8px rgba(30,25,20,0.06);
+}
+.refresh {
+  margin-left: auto; align-self: center; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: #98928a; font-size: 15px;
+}
+.tabs-row { display: flex; margin-top: 10px; }
+
+/* ---------- Zurück-Affordance (Button/Text, AD-11) ---------- */
+.back-row { padding: 16px 20px 0; }
+.back-link {
+  font-size: 14px; font-weight: 600; color: #23211e;
+  text-decoration: underline; text-decoration-color: #cfcbc4; text-underline-offset: 2px;
+}
+.back-link .arr { text-decoration: none; margin-right: 4px; }
+
+/* ---------- Ortskarte mit Hero ---------- */
+.card {
+  background: #ffffff; border-radius: 20px; margin: 12px 16px 0;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.06), 0 10px 30px rgba(30,25,20,0.08);
+  overflow: hidden;
+}
+.hero { position: relative; height: 240px; overflow: hidden; }
+/* Fake-Foto: warme Ägäis-Bucht rein aus CSS-Gradients (Himmel, Meer, Fels, Kai) */
+.hero-photo {
+  position: absolute; inset: 0;
+  background:
+    /* Sonnenschimmer auf dem Wasser */
+    radial-gradient(ellipse 55% 22% at 62% 58%, rgba(255,236,200,0.35) 0%, rgba(255,236,200,0) 70%),
+    /* Fels links */
+    radial-gradient(ellipse 62% 46% at -6% 88%, #55493d 0%, #6e6152 38%, rgba(110,97,82,0) 71%),
+    /* Fels rechts */
+    radial-gradient(ellipse 52% 38% at 104% 80%, #6e6152 0%, #8a7a66 42%, rgba(138,122,102,0) 72%),
+    /* Kaikante unten */
+    linear-gradient(178deg, rgba(217,207,192,0) 78%, #d9cfc0 88%, #c9bda9 100%),
+    /* Himmel → Meer */
+    linear-gradient(180deg, #cfe4ef 0%, #a8cfe2 26%, #1f7a9c 44%, #14607e 66%, #0e4a63 100%);
+}
+.hero-scrim {
+  position: absolute; inset: auto 0 0 0; height: 96px;
+  background: linear-gradient(180deg, rgba(20,32,40,0) 0%, rgba(20,32,40,0.55) 100%);
+}
+.hero-caption {
+  position: absolute; left: 20px; right: 20px; bottom: 14px;
+  color: #ffffff; font-size: 13px; font-weight: 600; letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(20,32,40,0.5);
+}
+/* Fallback-Hero (kein Foto): navy-warmer Verlauf + Satelliten-Mini-Map-Platzhalter */
+.hero.fallback { height: 190px; }
+.hero-fallback-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 78% 18%, rgba(229,137,60,0.18) 0%, rgba(229,137,60,0) 65%),
+    linear-gradient(160deg, #22303e 0%, #31424f 55%, #4a5561 100%);
+}
+.hero-fallback-bg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-fallback-chip {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  background: rgba(255,255,255,0.14); color: #ffffff;
+  font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: 999px;
+  backdrop-filter: blur(2px); white-space: nowrap;
+}
+.hero.fallback .hero-caption { font-weight: 500; color: rgba(255,255,255,0.85); }
+
+/* ---------- Titelblock ---------- */
+.place-head { padding: 18px 20px 0; }
+.place-kicker {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #98928a;
+}
+.place-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.place-title { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+.ampel-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  margin-top: 4px; white-space: nowrap;
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.gruen { background: #1a9d5c; }
+.dot.gelb  { background: #e09112; }
+.dot.rot   { background: #d93636; }
+.dot.unbew { background: #b6b1a9; }
+.ampel-pill.gruen { background: #e4f5ec; color: #147a47; }
+.ampel-pill.gelb  { background: #fcf3e0; color: #a86c09; }
+.ampel-sub { font-size: 12.5px; color: #6f6a62; margin-top: 8px; line-height: 1.35; }
+.ampel-sub b { font-weight: 600; color: #23211e; }
+.place-desc { padding: 12px 20px 0; font-size: 15px; line-height: 1.5; color: #23211e; }
+.place-desc span { color: #6f6a62; }
+.warn-note {
+  margin: 14px 20px 0; padding: 12px 14px; border-radius: 14px;
+  background: #fcf3e0; color: #7a5306; font-size: 13.5px; line-height: 1.45;
+}
+.warn-note b { font-weight: 700; }
+.card-pad-bottom { height: 20px; }
+
+/* ---------- Sektionen ---------- */
+.section-title {
+  padding: 22px 20px 8px; font-size: 13px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase; color: #98928a;
+}
+.section-card { padding: 20px; margin-top: 0; }
+
+/* Nacht-Ampel */
+.night-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.night-head .ampel-pill { margin-top: 0; }
+.night-window { font-size: 12.5px; color: #6f6a62; font-variant-numeric: tabular-nums; }
+.stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: #ecebe7; border-radius: 14px; overflow: hidden; margin-top: 14px;
+}
+.stat { background: #faf9f7; padding: 12px 14px; }
+.stat .label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #98928a; }
+.stat .value { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.stat .value small { font-size: 13px; font-weight: 500; color: #6f6a62; }
+.night-reason { margin-top: 12px; font-size: 12.5px; color: #6f6a62; line-height: 1.35; }
+
+/* Qualitäten: 5-Punkte-Meter */
+.quality-row {
+  display: flex; align-items: center; gap: 12px; padding: 13px 0;
+  border-bottom: 1px solid #ecebe7;
+}
+.quality-row:first-of-type { padding-top: 2px; }
+.quality-row:last-of-type { border-bottom: none; padding-bottom: 2px; }
+.quality-name { font-size: 14.5px; font-weight: 600; width: 108px; flex: none; }
+.meter { display: inline-flex; gap: 5px; align-items: center; }
+.meter i { width: 9px; height: 9px; border-radius: 50%; background: #f0eeea; }
+.meter i.fill { background: #23211e; }
+.quality-value { margin-left: auto; font-size: 12.5px; color: #6f6a62; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Sicherer Liegeplatz: Schutz-Grid */
+.shelter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 2px; }
+.sector { border-radius: 14px; padding: 10px 8px 9px; text-align: center; }
+.sector .dir { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+.sector .word { font-size: 12.5px; font-weight: 700; margin-top: 2px; }
+.sector .wave { font-size: 11.5px; margin-top: 4px; color: #98928a; font-weight: 400; font-variant-numeric: tabular-nums; }
+.sector.gruen { background: #e4f5ec; } .sector.gruen .dir { color: #147a47; opacity: 0.75; } .sector.gruen .word { color: #147a47; }
+.sector.gelb  { background: #fcf3e0; } .sector.gelb .dir { color: #a86c09; opacity: 0.8; }  .sector.gelb .word { color: #a86c09; }
+.sector.rot   { background: #fbe9e9; } .sector.rot .dir { color: #a72020; opacity: 0.8; }  .sector.rot .word { color: #a72020; }
+.shelter-legend { margin-top: 12px; font-size: 12.5px; color: #6f6a62; line-height: 1.4; }
+.shelter-source { margin-top: 10px; font-size: 11.5px; color: #98928a; line-height: 1.4; }
+
+/* ---------- Footer / Provenienz ---------- */
+.provenance { padding: 24px 20px 26px; font-size: 11.5px; color: #98928a; text-align: center; }
+.provenance .r { display: inline-block; margin-left: 4px; }
+.home-indicator { width: 130px; height: 5px; border-radius: 3px; background: #23211e; opacity: 0.25; margin: 0 auto 10px; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="kicker">Key Screen · Ortsdetail · Consumer Warm</div>
+  <h1>Ortsdetail: Loutra (Kythnos)</h1>
+  <p>Das Ortsdetail übernimmt die Sprache der Tagesansicht: ein emotionaler Foto-Hero mit Scrim eröffnet die weiße Karte, darunter folgen Nacht-Ampel, Qualitäten und Schutz-Grid als ruhige, klar getrennte Sektionen. Die Ampel bleibt der einzige Statusträger — immer als getintete Pille mit Punkt und deutschem Wortlaut, nie als Farbe allein. Der zweite Frame zeigt den Fallback ohne Foto (navy-warmer Verlauf statt Bild) und die Gelb-Behandlung der Nacht-Ampel.</p>
+</div>
+
+<div class="stage-area">
+
+  <!-- ================= FRAME 1: Ortsdetail Loutra (GRÜN) ================= -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>07:00</span>
+          <span class="sb-icons"><span class="sb-dot thin"></span><span class="sb-dot"></span></span>
+        </div>
+
+        <header class="app-header">
+          <div class="header-row">
+            <div class="wordmark">Sail<span class="accent">Greece</span></div>
+            <div class="avatar">P</div>
+          </div>
+          <div class="tabs-row">
+            <nav class="tabs">
+              <span class="tab">Heute</span>
+              <span class="tab active">Karte</span>
+            </nav>
+            <span class="refresh">⟳</span>
+          </div>
+        </header>
+
+        <div class="back-row">
+          <span class="back-link"><span class="arr">←</span>Zurück zu Tag&nbsp;1</span>
+        </div>
+
+        <!-- Ortskarte: Hero + Titel + Beschreibung + Warnung -->
+        <section class="card">
+          <div class="hero">
+            <div class="hero-photo"></div>
+            <div class="hero-scrim"></div>
+            <div class="hero-caption">Loutra — Gemeindekai</div>
+          </div>
+          <div class="place-head">
+            <div class="place-kicker">Kythnos · Westküste</div>
+            <div class="place-title-row">
+              <div class="place-title">Loutra</div>
+              <span class="ampel-pill gruen"><span class="dot gruen"></span>Grün</span>
+            </div>
+            <div class="ampel-sub"><b>Grün — ruhige Nacht erwartet</b> · bewertet für 20:00–08:00</div>
+          </div>
+          <div class="place-desc">
+            Kleiner Fischerort an der Nordwestküste von Kythnos, bekannt für seine heißen Thermalquellen direkt am Strand. Der Gemeindekai liegt geschützt im inneren Becken, Wasser und Strom sind am Kai verfügbar. <span>Abends ruhig; die Tavernen am Hafen sind fußläufig.</span>
+          </div>
+          <div class="warn-note"><b>Bei Meltemi über 25&nbsp;kn</b> Schwell am Kaieingang.</div>
+          <div class="card-pad-bottom"></div>
+        </section>
+
+        <!-- Nacht-Ampel -->
+        <div class="section-title">Nacht-Ampel</div>
+        <section class="card section-card">
+          <div class="night-head">
+            <span class="ampel-pill gruen"><span class="dot gruen"></span>Grün</span>
+            <span class="night-window">20:00–08:00</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Max. Wind</div><div class="value">16 <small>kn · NNE</small></div></div>
+            <div class="stat"><div class="label">Welle</div><div class="value">0,3 <small>m</small></div></div>
+          </div>
+          <div class="night-reason">Kai liegt im Lee des NNE-Winds — keine kritischen Böen im Zeitfenster.</div>
+        </section>
+
+        <!-- Qualitäten -->
+        <div class="section-title">Qualitäten</div>
+        <section class="card section-card">
+          <div class="quality-row">
+            <span class="quality-name">Schutz</span>
+            <span class="meter" role="img" aria-label="Schutz: 4 von 5"><i class="fill"></i><i class="fill"></i><i class="fill"></i><i class="fill"></i><i></i></span>
+            <span class="quality-value">4&nbsp;von&nbsp;5</span>
+          </div>
+          <div class="quality-row">
+            <span class="quality-name">Versorgung</span>
+            <span class="meter" role="img" aria-label="Versorgung: 3 von 5"><i class="fill"></i><i class="fill"></i><i class="fill"></i><i></i><i></i></span>
+            <span class="quality-value">3&nbsp;von&nbsp;5</span>
+          </div>
+          <div class="quality-row">
+            <span class="quality-name">Atmosphäre</span>
+            <span class="meter" role="img" aria-label="Atmosphäre: 5 von 5"><i class="fill"></i><i class="fill"></i><i class="fill"></i><i class="fill"></i><i class="fill"></i></span>
+            <span class="quality-value">5&nbsp;von&nbsp;5</span>
+          </div>
+        </section>
+
+        <!-- Sicherer Liegeplatz: Schutz nach Windrichtung -->
+        <div class="section-title">Sicherer Liegeplatz</div>
+        <section class="card section-card">
+          <div class="shelter-grid">
+            <div class="sector rot"><div class="dir">N</div><div class="word">offen</div><div class="wave">0,8&nbsp;m</div></div>
+            <div class="sector gelb"><div class="dir">NO</div><div class="word">mäßig</div><div class="wave">0,5&nbsp;m</div></div>
+            <div class="sector gruen"><div class="dir">O</div><div class="word">gut</div><div class="wave">0,2&nbsp;m</div></div>
+            <div class="sector gruen"><div class="dir">SO</div><div class="word">gut</div><div class="wave">0,1&nbsp;m</div></div>
+            <div class="sector gruen"><div class="dir">S</div><div class="word">gut</div><div class="wave">0,1&nbsp;m</div></div>
+            <div class="sector gruen"><div class="dir">SW</div><div class="word">gut</div><div class="wave">0,1&nbsp;m</div></div>
+            <div class="sector gruen"><div class="dir">W</div><div class="word">gut</div><div class="wave">0,2&nbsp;m</div></div>
+            <div class="sector gelb"><div class="dir">NW</div><div class="word">mäßig</div><div class="wave">0,4&nbsp;m</div></div>
+          </div>
+          <div class="shelter-legend">Schutz am Gemeindekai je Windrichtung · kleine Werte darunter: typische Wellenhöhe im Becken.</div>
+          <div class="shelter-source">Quelle: Hafenhandbuch Kykladen, Ausgabe 2025 · redaktionell gepflegt.</div>
+        </section>
+
+        <footer class="provenance">
+          Forecast: ECMWF · Lauf 05.08. 09:00 · abgerufen 16:19 <span class="r">⟳</span>
+        </footer>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+    <div class="frame-label">Ortsdetail · Loutra · Nacht-Ampel Grün</div>
+  </div>
+
+  <!-- ================= FRAME 2: Fallback-Hero + GELB ================= -->
+  <div>
+    <div class="phone small">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>07:00</span>
+          <span class="sb-icons"><span class="sb-dot thin"></span><span class="sb-dot"></span></span>
+        </div>
+
+        <div class="back-row" style="padding-top:10px;">
+          <span class="back-link"><span class="arr">←</span>Zurück zu Tag&nbsp;1</span>
+        </div>
+
+        <section class="card">
+          <div class="hero fallback">
+            <div class="hero-fallback-bg">
+              <!-- Satelliten-Mini-Map-Platzhalter: angedeutete Küstenlinie + Ankerpunkt -->
+              <svg viewBox="0 0 330 190" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <path d="M-10,150 C 40,120 70,138 105,112 C 140,86 150,96 178,78 C 210,58 236,70 268,52 C 296,36 320,44 345,30 L 345,200 L -10,200 Z"
+                      fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
+                <path d="M-10,178 C 60,158 130,170 200,148 C 260,130 310,140 345,124"
+                      fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+                <circle cx="150" cy="118" r="5" fill="#f2604d"/>
+                <circle cx="150" cy="118" r="10" fill="none" stroke="rgba(242,96,77,0.45)" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="hero-fallback-chip">Kein Foto verfügbar</div>
+            <div class="hero-scrim"></div>
+            <div class="hero-caption">Loutra — Satellitenansicht folgt</div>
+          </div>
+          <div class="place-head">
+            <div class="place-kicker">Kythnos · Westküste</div>
+            <div class="place-title-row">
+              <div class="place-title">Loutra</div>
+              <span class="ampel-pill gelb"><span class="dot gelb"></span>Gelb</span>
+            </div>
+            <div class="ampel-sub"><b>Gelb — Schwell möglich, Böen bis 22&nbsp;kn</b> · bewertet für 20:00–08:00</div>
+          </div>
+          <div class="warn-note"><b>Bei Meltemi über 25&nbsp;kn</b> Schwell am Kaieingang.</div>
+          <div class="card-pad-bottom"></div>
+        </section>
+
+        <div class="section-title">Nacht-Ampel</div>
+        <section class="card section-card">
+          <div class="night-head">
+            <span class="ampel-pill gelb"><span class="dot gelb"></span>Gelb</span>
+            <span class="night-window">20:00–08:00</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Max. Wind</div><div class="value">22 <small>kn · N</small></div></div>
+            <div class="stat"><div class="label">Welle</div><div class="value">0,6 <small>m</small></div></div>
+          </div>
+          <div class="night-reason">Nordwind steht auf den Kaieingang — Schwell im Becken möglich, zweite Leine empfohlen.</div>
+        </section>
+
+        <footer class="provenance">
+          Forecast: ECMWF · Lauf 05.08. 09:00 · abgerufen 16:19 <span class="r">⟳</span>
+        </footer>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+    <div class="frame-label">Zustandsvariante · Foto-Fallback · Gelb</div>
+  </div>
+
+</div>
+
+</body>
+</html>
