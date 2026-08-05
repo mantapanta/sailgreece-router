@@ -188,6 +188,7 @@ export function assessLeg(
   const points = legPoints(leg, snapshot);
   const unbewertet = (reason: string): LegAssessment => ({
     legId: leg.id,
+    sailedLeg: leg,
     day,
     ampel: 'unbewertet',
     sailHours: null,
@@ -509,6 +510,11 @@ export function assessLeg(
 
   return {
     legId: leg.id,
+    // Die Etappe, GEGEN DIE gerechnet wurde — nicht zwingend die kuratierte:
+    // der Plan verankert sie an den Plätzen, an denen das Boot wirklich liegt,
+    // und legt den Kurs landfrei (legGeometry.ts). Die Karte zeichnet dann
+    // genau die Geometrie, die hier gerechnet wurde, statt eine zweite.
+    sailedLeg: leg,
     day,
     ampel: worstAmpel(verdicts),
     sailHours,

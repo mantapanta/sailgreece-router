@@ -81,7 +81,14 @@ export function stagePoints(
   };
 
   stage.legs.forEach((legAssessment, i) => {
-    const leg = legsById[legAssessment.legId];
+    /**
+     * Die GESEGELTE Etappe hat Vorrang vor der kuratierten: sie ist an den
+     * Plätzen der Plankette verankert und landfrei gelegt (domain/legGeometry.ts)
+     * — und sie ist die Geometrie, gegen die die Rechnung dieses Tages läuft.
+     * Die Bibliotheks-Etappe bleibt der Notnagel für Ansichten, die (noch) keine
+     * Bewertung mitgeben.
+     */
+    const leg = legAssessment.sailedLeg ?? legsById[legAssessment.legId];
     if (!leg) return;
     if (i === 0) pushPlace(leg.fromPlaceId);
     leg.waypoints.forEach((w, n) => {

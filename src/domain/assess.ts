@@ -21,6 +21,7 @@ import { applyPersistenceAssumption } from './persistence.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { assessLeg, stopHoursForDay } from './scoring.ts';
+import { sailedLegsByDay } from './legGeometry.ts';
 import {
   completePlan,
   deriveAlternatives,
@@ -89,80 +90,112 @@ function assessPlan(
   meta: { variantId: string; turnIslandId: string; relaxedTo: string },
 ): PlanAssessment {
   const legs = legLibrary(snapshot);
-  const stages: StageAssessment[] = plan.days
-    .slice()
-    .sort((a, b) => a.day - b.day)
-    .map((entry) => {
-      const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
-      const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
-      const suggestion = bestPlaceByIsland[islandId]?.[entry.day] ?? null;
-      const placeId = chosen ?? suggestion;
-      const stopHoursPerStop = stopHoursForDay(snapshot, entry.day);
-      const legAssessments =
-        entry.kind === 'stage'
-          ? (() => {
-              let offset = 0;
-              const stopHours = stopHoursPerStop;
-              return entry.legIds.map((legId) => {
-                const leg = legs.get(legId);
-                if (!leg) {
-                  return {
-                    legId,
-                    day: entry.day,
-                    ampel: 'unbewertet' as Ampel,
-                    sailHours: null,
-                    motorHours: null,
-                    totalHours: null,
-                    avgTwsKn: null,
-                    avgTwaDeg: null,
-                    avgTwdDeg: null,
-                    avgSpeedKn: null,
-                    upwind: false,
-                    basis: 'forecast' as const,
-                    reasons: [`Etappe ${legId} nicht in der Bibliothek`],
-                    nightLeg: null,
-                    arrivalHourAthens: null,
-                    breakdown: [],
-                    pointPassages: [],
-                  };
-                }
-                const a = assessLeg(leg, entry.day, snapshot, {
-                  departureOffsetHours: offset || undefined,
-                });
-                // Nach jeder Etappe die Liegezeit des Zwischenstopps: die
-                // Folge-Etappe startet nach der Pause, nicht direkt bei
-                // Ankunft. Nach der LETZTEN Etappe ist der Offset unbenutzt,
-                // deshalb hier ohne Sonderfall.
-                offset += (a.totalHours ?? 0) + stopHours;
-                return a;
+  const ordered = plan.days.slice().sort((a, b) => a.day - b.day);
+
+  /** Der Platz, an dem ein Tag endet: gewählt (AD-12) oder vorgeschlagen. */
+  const placeIdOf = (entry: (typeof ordered)[number]): string | null => {
+    const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+    const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
+    return chosen ?? bestPlaceByIsland[islandId]?.[entry.day] ?? null;
+  };
+
+  /**
+   * Die Kette, wie sie wirklich gesegelt wird — EINMAL für den ganzen Plan,
+   * chronologisch (legGeometry.ts): jeder Tag startet dort, wo der vorige
+   * endete, und jeder Kurs liegt landfrei. Bewertung und Karte lesen von hier,
+   * damit die Rechnung nicht einem anderen Kurs folgt als die Linie.
+   *
+   * An einem HAFENTAG zählt nur ein gewählter Platz, nie der vorgeschlagene:
+   * ein Hafentag segelt keine Etappe, also wird auch keine gezeichnet. Würde
+   * der Vorschlag die Position verschieben, stünde das Boot am nächsten Morgen
+   * in einer Bucht, in die es nie gefahren ist — genau der Sprung, den diese
+   * Kette abschafft. Verlegt der Skipper am Hafentag, sagt er es (AD-12), und
+   * dann gilt sein Platz.
+   */
+  const sailed = sailedLegsByDay(
+    ordered.map((entry) => ({
+      day: entry.day,
+      legIds: entry.kind === 'stage' ? entry.legIds : [],
+      placeId: entry.kind === 'stage' ? placeIdOf(entry) : (entry.placeId ?? null),
+    })),
+    legs,
+    snapshot.library.places,
+  );
+
+  const stages: StageAssessment[] = ordered.map((entry) => {
+    const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+    const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
+    const placeId = placeIdOf(entry);
+    const stopHoursPerStop = stopHoursForDay(snapshot, entry.day);
+    const legAssessments =
+      entry.kind === 'stage'
+        ? (() => {
+            let offset = 0;
+            const stopHours = stopHoursPerStop;
+            const dayLegs = sailed.get(entry.day) ?? [];
+            return entry.legIds.map((legId, i) => {
+              const leg = dayLegs[i];
+              if (!leg) {
+                return {
+                  legId,
+                  sailedLeg: null,
+                  day: entry.day,
+                  ampel: 'unbewertet' as Ampel,
+                  sailHours: null,
+                  motorHours: null,
+                  totalHours: null,
+                  avgTwsKn: null,
+                  avgTwaDeg: null,
+                  avgTwdDeg: null,
+                  avgSpeedKn: null,
+                  upwind: false,
+                  basis: 'forecast' as const,
+                  reasons: [`Etappe ${legId} nicht in der Bibliothek`],
+                  nightLeg: null,
+                  arrivalHourAthens: null,
+                  breakdown: [],
+                  pointPassages: [],
+                };
+              }
+              const a = assessLeg(leg, entry.day, snapshot, {
+                departureOffsetHours: offset || undefined,
               });
-            })()
-          : [];
-      return {
-        day: entry.day,
-        stageNumber: stageNumber(plan, entry.day),
-        kind: entry.kind,
-        toIslandId: islandId,
-        placeId,
-        placeIsSuggestion: chosen === undefined || chosen === null,
-        placeAmpel: placeId
-          ? (nightAmpeln[placeId]?.[entry.day]?.ampel ?? 'unbewertet')
-          : 'unbewertet',
-        ampel:
-          entry.kind === 'harbour'
-            ? (placeId ? (nightAmpeln[placeId]?.[entry.day]?.ampel ?? 'unbewertet') : 'unbewertet')
-            : worstAmpel(legAssessments.map((l) => l.ampel)),
-        legs: legAssessments,
-        pinned: entry.source === 'skipper',
-        stopHoursPerStop,
-        stopHoursTotal:
-          Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
-      };
-    });
+              // Nach jeder Etappe die Liegezeit des Zwischenstopps: die
+              // Folge-Etappe startet nach der Pause, nicht direkt bei
+              // Ankunft. Nach der LETZTEN Etappe ist der Offset unbenutzt,
+              // deshalb hier ohne Sonderfall.
+              offset += (a.totalHours ?? 0) + stopHours;
+              return a;
+            });
+          })()
+        : [];
+    return {
+      day: entry.day,
+      stageNumber: stageNumber(plan, entry.day),
+      kind: entry.kind,
+      toIslandId: islandId,
+      placeId,
+      placeIsSuggestion: chosen === undefined || chosen === null,
+      placeAmpel: placeId
+        ? (nightAmpeln[placeId]?.[entry.day]?.ampel ?? 'unbewertet')
+        : 'unbewertet',
+      ampel:
+        entry.kind === 'harbour'
+          ? (placeId ? (nightAmpeln[placeId]?.[entry.day]?.ampel ?? 'unbewertet') : 'unbewertet')
+          : worstAmpel(legAssessments.map((l) => l.ampel)),
+      legs: legAssessments,
+      pinned: entry.source === 'skipper',
+      stopHoursPerStop,
+      stopHoursTotal:
+        Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
+    };
+  });
 
   return {
     plan,
-    validity: validatePlan(plan, snapshot),
+    // Geprüft wird die gesegelte Kette, nicht die kuratierte: sonst könnte die
+    // Anzeige einen Tag rot rechnen, den die Gültigkeit für grün hält.
+    validity: validatePlan(plan, snapshot, { sailedLegsByDay: sailed }),
     stages,
     variantId: meta.variantId,
     turnIslandId: meta.turnIslandId,

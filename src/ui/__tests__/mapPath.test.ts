@@ -59,6 +59,9 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
     legs: [
       {
         legId,
+        // Diese Tests prüfen den Fallback auf die Bibliothek: die Bewertung
+        // gibt hier keine gesegelte Geometrie mit.
+        sailedLeg: null,
         day,
         ampel: 'gruen',
         sailHours: 3,

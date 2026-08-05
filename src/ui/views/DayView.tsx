@@ -397,10 +397,10 @@ function StageCard({
   );
   const pointNumbers = useMemo(() => pointNumberByForecastKey(points), [points]);
   const totalHours = stage.legs.reduce((s, l) => s + (l.totalHours ?? 0), 0);
-  const distance = stage.legs.reduce((s, l) => {
-    const leg = snapshot.library.legs.find((x) => x.id === l.legId);
-    return s + (leg?.distanceNm ?? 0);
-  }, 0);
+  // Distanz aus der GESEGELTEN Etappe. Die Bibliothek nach der Id zu fragen
+  // fand eine umgedrehte Etappe (Heimweg) gar nicht und zeigte für den ganzen
+  // Tag 0 sm — und sie kannte die Verankerung an einem anderen Hafen nicht.
+  const distance = stage.legs.reduce((s, l) => s + (l.sailedLeg?.distanceNm ?? 0), 0);
 
   return (
     <article className={`card stage-card${isToday ? ' today' : ''}`}>
