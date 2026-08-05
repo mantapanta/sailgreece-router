@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Screen: Karte — Consumer Warm — SailGreece Router</title>
+<style>
+/* ============================================================
+   KEY SCREEN — KARTE · RICHTUNG 1 „CONSUMER WARM"
+   Farbwerte (Hex-Dokumentation) — identisch zur Direction-Datei
+   ------------------------------------------------------------
+   Seiten-Hintergrund .......... #eeece7
+   Phone-App-Hintergrund ....... #faf9f7
+   Karten-Oberfläche ........... #ffffff
+   Text primär ................. #23211e
+   Text sekundär ............... #6f6a62
+   Text tertiär / Fußnote ...... #98928a
+   Akzent (Ägäis-Koralle) ...... #f2604d
+   Akzent dunkel (Hover/Text) .. #d94c3a
+   Akzent-Tint (Chip-BG) ....... #fdeeec
+   Ampel Grün .................. #1a9d5c
+   Ampel Grün Tint ............. #e4f5ec
+   Ampel Gelb .................. #e09112
+   Ampel Gelb Tint ............. #fcf3e0
+   Ampel Rot ................... #d93636
+   Ampel Unbewertet ............ #b6b1a9
+   Hairline / Border ........... #ecebe7
+   Bezel ....................... #1c1b19
+   ------------------------------------------------------------
+   Zusätzliche Karten-Töne (nur Map-Fläche, gedeckt & warm)
+   Wasser hell ................. #d3e6ec
+   Wasser tief ................. #a9cbd8
+   Insel Sand .................. #eadfc4
+   Insel Sand Kontur ........... #d8c9a6
+   Insel Olive ................. #d7d4b2
+   Insel Olive Kontur .......... #c2bf97
+   Map-Beschriftung ............ #58757f
+   Windfieder .................. #4e7383
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #eeece7;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: #23211e;
+  padding: 48px 24px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+.intro { max-width: 900px; margin: 0 auto 44px; }
+.intro .kicker {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #d94c3a; margin-bottom: 10px;
+}
+.intro h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+.intro p { font-size: 15.5px; line-height: 1.55; color: #6f6a62; max-width: 760px; }
+.stage-area {
+  max-width: 1380px; margin: 0 auto;
+  display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start; justify-content: center;
+}
+.frame-label {
+  text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #98928a; margin-top: 18px;
+}
+
+/* ---------- iPhone-Rahmen ---------- */
+.phone {
+  width: 406px; background: #1c1b19; border-radius: 54px; padding: 8px;
+  box-shadow: 0 2px 6px rgba(30,25,20,0.18), 0 24px 60px rgba(30,25,20,0.28);
+}
+.phone-screen {
+  background: #faf9f7; border-radius: 46px; overflow: hidden; position: relative;
+}
+.statusbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 28px 4px; font-size: 14px; font-weight: 600;
+  position: relative; z-index: 5;
+}
+.statusbar .sb-icons { display: flex; gap: 5px; align-items: center; }
+.sb-dot { width: 16px; height: 10px; border-radius: 3px; background: #23211e; opacity: 0.85; }
+.sb-dot.thin { width: 20px; }
+
+/* ---------- App-Header (identische Konstruktion) ---------- */
+.app-header { padding: 8px 20px 0; position: relative; z-index: 5; }
+.header-row { display: flex; align-items: center; justify-content: space-between; }
+.wordmark { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.wordmark .accent { color: #f2604d; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #f2604d 0%, #e5893c 100%);
+  color: #fff; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.tabs {
+  display: flex; gap: 4px;
+  background: #f0eeea; border-radius: 999px; padding: 3px; width: max-content;
+}
+.tab {
+  padding: 7px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #6f6a62;
+}
+.tab.active {
+  background: #ffffff; color: #23211e;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.08), 0 2px 8px rgba(30,25,20,0.06);
+}
+.refresh {
+  margin-left: auto; align-self: center; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #98928a; font-size: 15px;
+}
+.tabs-row { display: flex; margin-top: 10px; padding-bottom: 10px; }
+
+/* ---------- Map-Fläche ---------- */
+.map {
+  position: relative; overflow: hidden;
+  background: linear-gradient(160deg, #d3e6ec 0%, #bfd9e2 46%, #a9cbd8 100%);
+}
+.map svg.chart { display: block; width: 100%; height: 100%; }
+.phone .map { height: 596px; }
+
+/* Layer-Chips (schwebend, statt Toggle-Panel) */
+.layer-chips {
+  position: absolute; top: 12px; left: 14px; display: flex; gap: 8px; z-index: 4;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 650;
+  background: rgba(255,255,255,0.92); color: #6f6a62;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.10), 0 4px 12px rgba(30,25,20,0.10);
+}
+.chip.active { background: #fdeeec; color: #d94c3a; }
+.chip .tick { font-size: 11px; }
+
+/* Legende: kompakter Popover-Indikator */
+.legend-btn {
+  position: absolute; z-index: 4;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.92); color: #6f6a62;
+  font-size: 13px; font-weight: 700; font-style: italic; font-family: Georgia, serif;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.10), 0 4px 12px rgba(30,25,20,0.10);
+}
+.phone .legend-btn { right: 14px; bottom: 224px; }
+.legend-pop {
+  position: absolute; z-index: 4; left: 14px; bottom: 58px;
+  background: #ffffff; border-radius: 14px; padding: 12px 14px;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.08), 0 12px 32px rgba(30,25,20,0.16);
+  width: 188px;
+}
+.legend-pop::after {
+  content: ""; position: absolute; left: 13px; bottom: -6px;
+  width: 12px; height: 12px; background: #ffffff; transform: rotate(45deg);
+  border-radius: 2px;
+}
+.legend-pop .lg-title {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #98928a; margin-bottom: 8px;
+}
+.lg-row { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #6f6a62; padding: 3px 0; }
+.lg-line { width: 24px; height: 0; flex: none; }
+.lg-line.solid-gruen  { border-top: 3px solid #1a9d5c; border-radius: 2px; }
+.lg-line.dash-gruen   { border-top: 3px dashed #1a9d5c; }
+.lg-line.dash-gelb    { border-top: 3px dashed #e09112; }
+.lg-line.dash-grau    { border-top: 3px dashed #b6b1a9; }
+
+/* ---------- Bottom Sheet (mobil) ---------- */
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: #faf9f7; border-radius: 22px 22px 0 0;
+  box-shadow: 0 -2px 8px rgba(30,25,20,0.08), 0 -14px 40px rgba(30,25,20,0.16);
+  height: 212px; overflow: hidden;
+  padding: 8px 16px 0;
+}
+.drag-handle { width: 40px; height: 5px; border-radius: 3px; background: #d8d4cd; margin: 0 auto 8px; }
+.sheet-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 0 4px 8px;
+}
+.sheet-head .t { font-size: 13px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #98928a; }
+.sheet-head .m { font-size: 12px; color: #98928a; }
+
+/* ---------- Etappen-Karten ---------- */
+.stage-card {
+  background: #ffffff; border-radius: 16px; padding: 12px 14px;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.06), 0 6px 18px rgba(30,25,20,0.06);
+  margin-bottom: 8px;
+}
+.stage-card.selected {
+  box-shadow: 0 0 0 1.5px #f2604d, 0 1px 2px rgba(30,25,20,0.06), 0 8px 22px rgba(242,96,77,0.16);
+}
+.stage-card.done { opacity: 0.78; }
+.sc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sc-day { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #98928a; }
+.stage-card.selected .sc-day { color: #d94c3a; }
+.sc-route { font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; margin-top: 2px; }
+.sc-meta { font-size: 12.5px; color: #6f6a62; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.sc-ampel {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 999px;
+}
+.sc-ampel.gruen { background: #e4f5ec; color: #147a47; }
+.sc-ampel.gelb  { background: #fcf3e0; color: #a86c09; }
+.sc-ampel.grau  { background: #f0eeea; color: #98928a; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.gruen { background: #1a9d5c; }
+.dot.gelb  { background: #e09112; }
+.dot.grau  { background: #b6b1a9; }
+
+/* Hafentag: schmale Zeile */
+.harbour-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 14px; margin-bottom: 8px;
+  background: #ffffff; border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.05);
+  font-size: 12.5px; color: #6f6a62;
+}
+.harbour-row .hd { font-weight: 700; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #98928a; }
+.harbour-row .anchor { font-size: 12px; }
+
+.home-indicator {
+  width: 130px; height: 5px; border-radius: 3px; background: #23211e; opacity: 0.25;
+  margin: 0 auto; position: absolute; bottom: 9px; left: 0; right: 0; z-index: 7;
+}
+
+/* ---------- Desktop-Frame ---------- */
+.desktop {
+  width: 876px; background: #1c1b19; border-radius: 22px; padding: 8px;
+  box-shadow: 0 2px 6px rgba(30,25,20,0.18), 0 24px 60px rgba(30,25,20,0.28);
+}
+.desktop-screen { background: #faf9f7; border-radius: 15px; overflow: hidden; }
+.desktop .app-header { padding: 14px 22px 0; }
+.desktop .tabs-row { padding-bottom: 14px; }
+.desktop-body { display: flex; align-items: stretch; border-top: 1px solid #ecebe7; }
+.itinerary {
+  width: 348px; flex: none; padding: 16px 16px 12px;
+  display: flex; flex-direction: column;
+  background: #faf9f7;
+}
+.itinerary .section-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: #98928a; padding: 2px 4px 6px;
+}
+.itinerary .trip-sub { font-size: 12.5px; color: #6f6a62; padding: 0 4px 12px; }
+.itinerary .trip-sub b { font-weight: 650; color: #23211e; }
+.assume-row {
+  display: flex; align-items: center; gap: 7px; font-size: 12px; color: #98928a;
+  padding: 6px 4px 0;
+}
+.assume-row .i {
+  width: 15px; height: 15px; border-radius: 50%; background: #f0eeea;
+  color: #98928a; font-size: 10px; font-weight: 700; font-style: normal;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+}
+.desktop .map { flex: 1; height: 638px; }
+.desktop .legend-btn { left: 16px; bottom: 16px; }
+.desktop .legend-pop { left: 16px; bottom: 60px; }
+.zoom {
+  position: absolute; right: 14px; bottom: 16px; z-index: 4;
+  display: flex; flex-direction: column; border-radius: 999px; overflow: hidden;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 1px 2px rgba(30,25,20,0.10), 0 4px 12px rgba(30,25,20,0.10);
+}
+.zoom span {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 600; color: #6f6a62;
+}
+.zoom span:first-child { border-bottom: 1px solid #ecebe7; }
+
+/* Footer / Provenienz (Desktop, linke Spalte unten) */
+.provenance {
+  margin-top: auto; padding: 14px 4px 4px; font-size: 11.5px; color: #98928a;
+}
+.provenance .r { display: inline-block; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="kicker">Key Screen · Karte · Richtung 1 „Consumer Warm"</div>
+  <h1>Kartenansicht: Route zuerst, Bedienung am Rand</h1>
+  <p>Die Karte zeigt den Kykladen-Törn (8.–19. August) als eine zusammenhängende Geschichte: gefahrene Strecke durchgezogen in Grün, der Rest-Trip gestrichelt in Ampelfarben, Etappen als nummerierte Tag-Kapseln. Statt des alten, toggle-lastigen Layer-Panels gibt es nur noch zwei schwebende Layer-Chips („Windfiedern", „Alternativen") und einen kompakten Legende-Popover — die Karte gewinnt die Fläche zurück. Auf Mobile gilt die Hierarchie Karte&nbsp;&gt;&nbsp;Liste: die Etappenliste liegt als Bottom Sheet über der Karte, angerissen mit anderthalb Karten, und lässt sich hochziehen.</p>
+</div>
+
+<div class="stage-area">
+
+  <!-- ================= FRAME 1: MOBILE (iPhone, ~390px Screen) ================= -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>07:00</span>
+          <span class="sb-icons"><span class="sb-dot thin"></span><span class="sb-dot"></span></span>
+        </div>
+
+        <header class="app-header">
+          <div class="header-row">
+            <div class="wordmark">Sail<span class="accent">Greece</span></div>
+            <div class="avatar">P</div>
+          </div>
+          <div class="tabs-row">
+            <nav class="tabs">
+              <span class="tab">Heute</span>
+              <span class="tab active">Karte</span>
+            </nav>
+            <span class="refresh">⟳</span>
+          </div>
+        </header>
+
+        <!-- ===== Karte ===== -->
+        <div class="map">
+          <div class="layer-chips">
+            <span class="chip active"><span class="tick">✓</span>Windfiedern</span>
+            <span class="chip">Alternativen</span>
+          </div>
+          <span class="legend-btn">i</span>
+
+          <svg class="chart" viewBox="0 0 390 596" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ägäis-Karte mit Törnroute">
+            <defs>
+              <filter id="capShadowM" x="-40%" y="-40%" width="180%" height="180%">
+                <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#1e1914" flood-opacity="0.22"/>
+              </filter>
+            </defs>
+
+            <!-- Festland Attika (oben links) -->
+            <path d="M -20 -20 L 152 -20 C 130 16 112 32 106 56 C 100 80 110 100 97 121 C 85 142 60 149 42 168 C 25 187 26 214 8 226 L -20 234 Z"
+                  fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+            <text x="26" y="118" font-size="10.5" font-weight="700" letter-spacing="1.4" fill="#a5906b">ATTIKA</text>
+
+            <!-- Inseln -->
+            <!-- Kythnos -->
+            <path d="M 140 196 C 154 190 168 198 170 212 C 172 226 164 240 150 244 C 136 248 124 238 124 224 C 124 210 128 201 140 196 Z"
+                  fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+            <text x="112" y="262" font-size="10.5" font-weight="600" fill="#58757f">Kythnos</text>
+            <!-- Serifos (Deko) -->
+            <path d="M 108 330 C 120 324 132 330 133 342 C 134 354 124 362 112 361 C 100 360 96 350 98 341 C 99 335 102 333 108 330 Z"
+                  fill="#d7d4b2" stroke="#c2bf97" stroke-width="1.2"/>
+            <!-- Syros -->
+            <path d="M 246 224 C 262 218 276 226 278 240 C 280 254 272 268 256 270 C 240 272 230 262 231 248 C 232 236 236 228 246 224 Z"
+                  fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+            <text x="232" y="290" font-size="10.5" font-weight="600" fill="#58757f">Syros</text>
+            <!-- Mykonos (Deko) -->
+            <path d="M 336 174 C 348 168 360 174 361 186 C 362 198 352 206 340 205 C 328 204 324 194 326 185 C 327 179 330 177 336 174 Z"
+                  fill="#d7d4b2" stroke="#c2bf97" stroke-width="1.2"/>
+            <!-- Paros -->
+            <path d="M 286 338 C 306 330 324 340 326 358 C 328 376 316 392 296 394 C 276 396 264 384 266 366 C 268 352 274 343 286 338 Z"
+                  fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+            <text x="270" y="414" font-size="10.5" font-weight="600" fill="#58757f">Paros</text>
+            <!-- Sifnos (Deko) -->
+            <path d="M 148 428 C 160 422 172 428 173 440 C 174 452 164 460 152 459 C 140 458 136 448 138 439 C 139 433 142 431 148 428 Z"
+                  fill="#d7d4b2" stroke="#c2bf97" stroke-width="1.2"/>
+            <!-- Ios -->
+            <path d="M 230 452 C 246 446 260 454 261 468 C 262 482 252 494 238 495 C 224 496 214 486 215 472 C 216 462 220 456 230 452 Z"
+                  fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+            <text x="222" y="514" font-size="10.5" font-weight="600" fill="#58757f">Ios</text>
+
+            <!-- Windfiedern (NNE-Wind) -->
+            <g stroke="#4e7383" stroke-width="1.6" stroke-linecap="round" opacity="0.55">
+              <g transform="translate(322,120) rotate(22)">
+                <line x1="0" y1="0" x2="0" y2="-26"/>
+                <line x1="0" y1="-26" x2="8" y2="-30"/>
+                <line x1="0" y1="-20" x2="8" y2="-24"/>
+              </g>
+              <g transform="translate(60,388) rotate(22)">
+                <line x1="0" y1="0" x2="0" y2="-26"/>
+                <line x1="0" y1="-26" x2="8" y2="-30"/>
+                <line x1="0" y1="-20" x2="8" y2="-24"/>
+                <line x1="0" y1="-14" x2="5" y2="-17"/>
+              </g>
+              <g transform="translate(342,470) rotate(22)">
+                <line x1="0" y1="0" x2="0" y2="-26"/>
+                <line x1="0" y1="-26" x2="8" y2="-30"/>
+              </g>
+            </g>
+
+            <!-- Route: gefahren (solid grün) Alimos → Kythnos -->
+            <polyline points="76,78 112,136 142,200" fill="none"
+                      stroke="#1a9d5c" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Rest-Trip: Kythnos → Syros — GEWÄHLT (dicker) -->
+            <polyline points="162,236 240,246" fill="none"
+                      stroke="#1a9d5c" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 7"/>
+            <!-- Syros → Paros (gelb) -->
+            <polyline points="262,272 288,336" fill="none"
+                      stroke="#e09112" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6"/>
+            <!-- Paros → Ios (grün) -->
+            <polyline points="286,396 248,450" fill="none"
+                      stroke="#1a9d5c" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6"/>
+            <!-- Ios → zurück Alimos (unbewertet / Annahme) -->
+            <polyline points="222,478 140,438 96,300 74,150 76,84" fill="none"
+                      stroke="#b6b1a9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+
+            <!-- Orts-Pins -->
+            <g>
+              <circle cx="76" cy="78" r="4.5" fill="#6f6a62" stroke="#ffffff" stroke-width="2"/>
+              <text x="88" y="74" font-size="10.5" font-weight="600" fill="#58757f">Alimos</text>
+              <circle cx="262" cy="272" r="4.5" fill="#1a9d5c" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="288" cy="336" r="4.5" fill="#e09112" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="248" cy="450" r="4.5" fill="#1a9d5c" stroke="#ffffff" stroke-width="2"/>
+            </g>
+
+            <!-- Bootsposition: Kythnos (Loutra) -->
+            <circle cx="152" cy="218" r="11" fill="#f2604d" fill-opacity="0.18"/>
+            <circle cx="152" cy="218" r="5.5" fill="#f2604d" stroke="#ffffff" stroke-width="2.5"/>
+
+            <!-- Etappen-Kapseln (Tagesnummern) -->
+            <g filter="url(#capShadowM)" font-size="11" font-weight="700" fill="#23211e" text-anchor="middle">
+              <rect x="97" y="152" width="22" height="18" rx="9" fill="#ffffff"/>
+              <text x="108" y="165">1</text>
+              <rect x="186" y="216" width="34" height="18" rx="9" fill="#ffffff"/>
+              <text x="203" y="229">2·3</text>
+              <rect x="298" y="294" width="34" height="18" rx="9" fill="#ffffff"/>
+              <text x="315" y="307">4·5</text>
+              <rect x="284" y="426" width="22" height="18" rx="9" fill="#ffffff"/>
+              <text x="295" y="439">6</text>
+              <rect x="60" y="288" width="44" height="18" rx="9" fill="#ffffff"/>
+              <text x="82" y="301" fill="#98928a">7–11</text>
+            </g>
+          </svg>
+
+          <!-- ===== Bottom Sheet: Etappen ===== -->
+          <div class="sheet">
+            <div class="drag-handle"></div>
+            <div class="sheet-head">
+              <span class="t">Etappen</span>
+              <span class="m">Kykladen-Törn · 8.–19. Aug · 12 Tage</span>
+            </div>
+
+            <div class="stage-card selected">
+              <div class="sc-top">
+                <div>
+                  <div class="sc-day">Tag 2 · So 9.8.</div>
+                  <div class="sc-route">Kythnos → Syros</div>
+                  <div class="sc-meta">4,0 h · an 15:00</div>
+                </div>
+                <span class="sc-ampel gruen"><span class="dot gruen"></span>Grün</span>
+              </div>
+            </div>
+
+            <div class="harbour-row">
+              <span class="hd">Tag 3</span>
+              <span class="anchor">⚓</span>
+              <span>Hafentag Syros (Ermoupoli)</span>
+            </div>
+
+            <div class="stage-card">
+              <div class="sc-top">
+                <div>
+                  <div class="sc-day">Tag 4 · Di 11.8.</div>
+                  <div class="sc-route">Syros → Paros</div>
+                  <div class="sc-meta">3,5 h · an 14:30</div>
+                </div>
+                <span class="sc-ampel gelb"><span class="dot gelb"></span>Gelb</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">Karte · Mobil · Bottom Sheet angerissen</div>
+  </div>
+
+  <!-- ================= FRAME 2: DESKTOP-SPLIT (~860px) ================= -->
+  <div>
+    <div class="desktop">
+      <div class="desktop-screen">
+        <header class="app-header">
+          <div class="header-row">
+            <div class="wordmark">Sail<span class="accent">Greece</span></div>
+            <div class="avatar">P</div>
+          </div>
+          <div class="tabs-row">
+            <nav class="tabs">
+              <span class="tab">Heute</span>
+              <span class="tab active">Karte</span>
+            </nav>
+            <span class="refresh">⟳</span>
+          </div>
+        </header>
+
+        <div class="desktop-body">
+          <!-- ===== Linke Spalte: Etappenliste ===== -->
+          <aside class="itinerary">
+            <div class="section-title">Etappen</div>
+            <div class="trip-sub"><b>Kykladen-Törn</b> · 8.–19. August · 12 Tage</div>
+
+            <div class="stage-card done">
+              <div class="sc-top">
+                <div>
+                  <div class="sc-day">Tag 1 · Sa 8.8. · gefahren</div>
+                  <div class="sc-route">Alimos → Kythnos</div>
+                  <div class="sc-meta">5,5 h · an 17:30</div>
+                </div>
+                <span class="sc-ampel gruen"><span class="dot gruen"></span>Grün</span>
+              </div>
+            </div>
+
+            <div class="stage-card selected">
+              <div class="sc-top">
+                <div>
+                  <div class="sc-day">Tag 2 · So 9.8.</div>
+                  <div class="sc-route">Kythnos → Syros</div>
+                  <div class="sc-meta">4,0 h · an 15:00</div>
+                </div>
+                <span class="sc-ampel gruen"><span class="dot gruen"></span>Grün</span>
+              </div>
+            </div>
+
+            <div class="harbour-row">
+              <span class="hd">Tag 3</span>
+              <span class="anchor">⚓</span>
+              <span>Hafentag Syros (Ermoupoli)</span>
+            </div>
+
+            <div class="stage-card">
+              <div class="sc-top">
+                <div>
+                  <div class="sc-day">Tag 4 · Di 11.8.</div>
+                  <div class="sc-route">Syros → Paros</div>
+                  <div class="sc-meta">3,5 h · an 14:30</div>
+                </div>
+                <span class="sc-ampel gelb"><span class="dot gelb"></span>Gelb</span>
+              </div>
+            </div>
+
+            <div class="harbour-row">
+              <span class="hd">Tag 5</span>
+              <span class="anchor">⚓</span>
+              <span>Hafentag Paros (Naoussa)</span>
+            </div>
+
+            <div class="stage-card">
+              <div class="sc-top">
+                <div>
+                  <div class="sc-day">Tag 6 · Do 13.8.</div>
+                  <div class="sc-route">Paros → Ios</div>
+                  <div class="sc-meta">3,0 h · an 14:00</div>
+                </div>
+                <span class="sc-ampel gruen"><span class="dot gruen"></span>Grün</span>
+              </div>
+            </div>
+
+            <div class="stage-card">
+              <div class="sc-top">
+                <div>
+                  <div class="sc-day">Tag 7–11</div>
+                  <div class="sc-route">Rückweg → Alimos</div>
+                  <div class="sc-meta">3 Etappen · Puffer Tag 11</div>
+                </div>
+                <span class="sc-ampel grau"><span class="dot grau"></span>Offen</span>
+              </div>
+            </div>
+
+            <div class="assume-row"><span class="i">i</span><span>Ab Tag 7 beruht die Planung auf einer Annahme</span></div>
+
+            <footer class="provenance">
+              Forecast: ECMWF · Lauf 05.08. 09:00 · abgerufen 16:19 <span class="r">⟳</span>
+            </footer>
+          </aside>
+
+          <!-- ===== Rechte Fläche: Karte ===== -->
+          <div class="map">
+            <div class="layer-chips">
+              <span class="chip active"><span class="tick">✓</span>Windfiedern</span>
+              <span class="chip">Alternativen</span>
+            </div>
+
+            <!-- Legende: Popover geöffnet, am Indikator verankert -->
+            <div class="legend-pop">
+              <div class="lg-title">Legende</div>
+              <div class="lg-row"><span class="lg-line solid-gruen"></span>Gefahren</div>
+              <div class="lg-row"><span class="lg-line dash-gruen"></span>Geplant · Grün</div>
+              <div class="lg-row"><span class="lg-line dash-gelb"></span>Geplant · Gelb</div>
+              <div class="lg-row"><span class="lg-line dash-grau"></span>Rückweg (Annahme)</div>
+            </div>
+            <span class="legend-btn">i</span>
+            <div class="zoom"><span>+</span><span>−</span></div>
+
+            <svg class="chart" viewBox="0 0 512 638" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ägäis-Karte mit Törnroute (Desktop)">
+              <defs>
+                <filter id="capShadowD" x="-40%" y="-40%" width="180%" height="180%">
+                  <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#1e1914" flood-opacity="0.22"/>
+                </filter>
+              </defs>
+
+              <!-- Festland Attika -->
+              <path d="M -20 -20 L 186 -20 C 162 20 142 38 135 64 C 128 90 140 110 125 133 C 110 156 80 164 60 185 C 40 206 42 234 22 247 L -20 256 Z"
+                    fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+              <text x="34" y="128" font-size="11" font-weight="700" letter-spacing="1.6" fill="#a5906b">ATTIKA</text>
+
+              <!-- Kythnos -->
+              <path d="M 176 210 C 192 204 208 212 210 228 C 212 244 202 258 186 262 C 170 266 158 256 158 240 C 158 226 162 216 176 210 Z"
+                    fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+              <text x="144" y="282" font-size="11" font-weight="600" fill="#58757f">Kythnos</text>
+              <!-- Serifos (Deko) -->
+              <path d="M 140 358 C 154 352 168 358 169 372 C 170 386 158 394 144 393 C 130 392 126 380 128 371 C 129 364 133 361 140 358 Z"
+                    fill="#d7d4b2" stroke="#c2bf97" stroke-width="1.2"/>
+              <!-- Syros -->
+              <path d="M 308 238 C 326 232 342 240 344 256 C 346 272 336 288 318 290 C 300 292 290 280 291 264 C 292 250 296 242 308 238 Z"
+                    fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+              <text x="292" y="312" font-size="11" font-weight="600" fill="#58757f">Syros</text>
+              <!-- Mykonos (Deko) -->
+              <path d="M 428 182 C 442 176 456 182 457 196 C 458 210 446 218 432 217 C 418 216 414 204 416 195 C 417 188 421 185 428 182 Z"
+                    fill="#d7d4b2" stroke="#c2bf97" stroke-width="1.2"/>
+              <!-- Paros -->
+              <path d="M 356 366 C 378 358 398 368 400 388 C 402 408 388 424 366 426 C 344 428 332 414 334 394 C 336 380 342 371 356 366 Z"
+                    fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+              <text x="338" y="446" font-size="11" font-weight="600" fill="#58757f">Paros</text>
+              <!-- Sifnos (Deko) -->
+              <path d="M 186 462 C 200 456 214 462 215 476 C 216 490 204 498 190 497 C 176 496 172 484 174 475 C 175 468 179 465 186 462 Z"
+                    fill="#d7d4b2" stroke="#c2bf97" stroke-width="1.2"/>
+              <!-- Ios -->
+              <path d="M 292 486 C 310 480 326 488 327 504 C 328 520 316 532 300 533 C 284 534 274 522 275 506 C 276 496 280 490 292 486 Z"
+                    fill="#eadfc4" stroke="#d8c9a6" stroke-width="1.5"/>
+              <text x="284" y="552" font-size="11" font-weight="600" fill="#58757f">Ios</text>
+
+              <!-- Windfiedern (NNE) -->
+              <g stroke="#4e7383" stroke-width="1.6" stroke-linecap="round" opacity="0.55">
+                <g transform="translate(420,120) rotate(22)">
+                  <line x1="0" y1="0" x2="0" y2="-28"/>
+                  <line x1="0" y1="-28" x2="9" y2="-32"/>
+                  <line x1="0" y1="-21" x2="9" y2="-25"/>
+                </g>
+                <g transform="translate(80,420) rotate(22)">
+                  <line x1="0" y1="0" x2="0" y2="-28"/>
+                  <line x1="0" y1="-28" x2="9" y2="-32"/>
+                  <line x1="0" y1="-21" x2="9" y2="-25"/>
+                  <line x1="0" y1="-14" x2="5" y2="-17"/>
+                </g>
+                <g transform="translate(444,498) rotate(22)">
+                  <line x1="0" y1="0" x2="0" y2="-28"/>
+                  <line x1="0" y1="-28" x2="9" y2="-32"/>
+                </g>
+              </g>
+
+              <!-- Route: gefahren -->
+              <polyline points="96,84 140,148 178,214" fill="none"
+                        stroke="#1a9d5c" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- Kythnos → Syros — GEWÄHLT -->
+              <polyline points="202,252 300,262" fill="none"
+                        stroke="#1a9d5c" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 7"/>
+              <!-- Syros → Paros -->
+              <polyline points="324,292 356,364" fill="none"
+                        stroke="#e09112" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6"/>
+              <!-- Paros → Ios -->
+              <polyline points="354,428 312,484" fill="none"
+                        stroke="#1a9d5c" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6"/>
+              <!-- Ios → Alimos (Annahme) -->
+              <polyline points="282,512 178,470 120,320 94,164 96,90" fill="none"
+                        stroke="#b6b1a9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+
+              <!-- Orts-Pins -->
+              <g>
+                <circle cx="96" cy="84" r="4.5" fill="#6f6a62" stroke="#ffffff" stroke-width="2"/>
+                <text x="108" y="80" font-size="11" font-weight="600" fill="#58757f">Alimos</text>
+                <circle cx="324" cy="292" r="4.5" fill="#1a9d5c" stroke="#ffffff" stroke-width="2"/>
+                <circle cx="356" cy="364" r="4.5" fill="#e09112" stroke="#ffffff" stroke-width="2"/>
+                <circle cx="312" cy="484" r="4.5" fill="#1a9d5c" stroke="#ffffff" stroke-width="2"/>
+              </g>
+
+              <!-- Bootsposition: Kythnos (Loutra) -->
+              <circle cx="190" cy="232" r="12" fill="#f2604d" fill-opacity="0.18"/>
+              <circle cx="190" cy="232" r="5.5" fill="#f2604d" stroke="#ffffff" stroke-width="2.5"/>
+
+              <!-- Etappen-Kapseln -->
+              <g filter="url(#capShadowD)" font-size="11" font-weight="700" fill="#23211e" text-anchor="middle">
+                <rect x="126" y="164" width="22" height="18" rx="9" fill="#ffffff"/>
+                <text x="137" y="177">1</text>
+                <rect x="234" y="230" width="34" height="18" rx="9" fill="#ffffff"/>
+                <text x="251" y="243">2·3</text>
+                <rect x="368" y="316" width="34" height="18" rx="9" fill="#ffffff"/>
+                <text x="385" y="329">4·5</text>
+                <rect x="350" y="456" width="22" height="18" rx="9" fill="#ffffff"/>
+                <text x="361" y="469">6</text>
+                <rect x="76" y="312" width="44" height="18" rx="9" fill="#ffffff"/>
+                <text x="98" y="325" fill="#98928a">7–11</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">Karte · Desktop-Split · Liste + Karte · Legende geöffnet</div>
+  </div>
+
+</div>
+
+</body>
+</html>
