@@ -7,6 +7,11 @@
  * von vorne". What these fixtures pin down: the range depends on the COURSE
  * to the destination relative to the wind, unknown wind falls back to the
  * conservative limit, and the whole thing lands per stage in the assessment.
+ *
+ * SECOND rule (bug report 2026-08-05): the leg library must be able to
+ * DELIVER the day — an island in range but without a library path from the
+ * previous island is not offered, because the solver would reject the pin
+ * every time ("Mykonos stand im Dropdown, blieb aber im Kea-State hängen").
  */
 
 import { describe, expect, it } from 'vitest';
@@ -29,22 +34,31 @@ import {
 
 /**
  * Geometry: base "athen" at 37.9 N. One degree of latitude is 60 nm, so
- *   - "nah-sued"  at −1.0°  ≈  60 nm south (inside 100, outside 50)
- *   - "nah-nord"  at +1.0°  ≈  60 nm north
- *   - "fern-sued" at −2.0°  ≈ 120 nm south (outside even the 100 nm range)
- *   - "dicht"     at −0.5°  ≈  30 nm south (inside both limits)
+ *   - "nah-sued"     at −1.0°  ≈  60 nm south (inside 100, outside 50)
+ *   - "nah-nord"     at +1.0°  ≈  60 nm north
+ *   - "fern-sued"    at −2.0°  ≈ 120 nm south (outside even the 100 nm range)
+ *   - "dicht"        at −0.5°  ≈  30 nm south (inside both limits)
+ *   - "ohne-etappe"  at −0.5°, lon +0.1 ≈ 30 nm — in range, but NO leg leads
+ *     there (the Mykonos case)
+ *   - "uebermorgen"  at −1.5°  ≈  90 nm south — in downwind range, reachable
+ *     only via dicht (2 legs: a Doppelschlag day)
+ *   - "dritter-schlag" at −1.6°, lon +0.1 ≈ 97 nm — in downwind range, but
+ *     THREE legs away (athen → dicht → uebermorgen → dritter-schlag)
+ *
+ * Every island except "ohne-etappe" is wired into the leg graph, so the
+ * sm-rule tests keep testing the sm rule and not the library condition.
  */
 function scenario(opts: { windFromDeg?: number | null } = {}) {
-  const mk = (id: string, dLat: number) => ({
+  const mk = (id: string, dLat: number, dLon = 0) => ({
     island: {
       id,
       name: id,
-      coordinates: { lat: 37.9 + dLat, lon: 23.7 },
+      coordinates: { lat: 37.9 + dLat, lon: 23.7 + dLon },
     } as Island,
     place: makePlace({
       id: `${id}-hafen`,
       islandId: id,
-      coordinates: { lat: 37.9 + dLat, lon: 23.7 },
+      coordinates: { lat: 37.9 + dLat, lon: 23.7 + dLon },
     }),
   });
   const athen = mk('athen', 0);
@@ -52,7 +66,10 @@ function scenario(opts: { windFromDeg?: number | null } = {}) {
   const nahSued = mk('nah-sued', -1.0);
   const nahNord = mk('nah-nord', +1.0);
   const fernSued = mk('fern-sued', -2.0);
-  const all = [athen, dicht, nahSued, nahNord, fernSued];
+  const ohneEtappe = mk('ohne-etappe', -0.5, +0.1);
+  const uebermorgen = mk('uebermorgen', -1.5);
+  const dritterSchlag = mk('dritter-schlag', -1.6, +0.1);
+  const all = [athen, dicht, nahSued, nahNord, fernSued, ohneEtappe, uebermorgen, dritterSchlag];
 
   const times = makeTimes(14);
   const fc =
@@ -60,22 +77,31 @@ function scenario(opts: { windFromDeg?: number | null } = {}) {
       ? constantForecast(times.length, null, null, null, null)
       : constantForecast(times.length, 15, opts.windFromDeg ?? 0);
 
-  const legAthenDicht = makeLeg({
-    id: 'athen--dicht',
-    fromIslandId: 'athen',
-    toIslandId: 'dicht',
-    fromPlaceId: athen.place.id,
-    toPlaceId: dicht.place.id,
-    distanceNm: 30,
-  });
-  const legDichtAthen = makeLeg({
-    id: 'dicht--athen',
-    fromIslandId: 'dicht',
-    toIslandId: 'athen',
-    fromPlaceId: dicht.place.id,
-    toPlaceId: athen.place.id,
-    distanceNm: 30,
-  });
+  const connect = (
+    a: ReturnType<typeof mk>,
+    b: ReturnType<typeof mk>,
+    distanceNm: number,
+  ) =>
+    makeLeg({
+      id: `${a.island.id}--${b.island.id}`,
+      fromIslandId: a.island.id,
+      toIslandId: b.island.id,
+      fromPlaceId: a.place.id,
+      toPlaceId: b.place.id,
+      distanceNm,
+    });
+
+  const legAthenDicht = connect(athen, dicht, 30);
+  const legDichtAthen = connect(dicht, athen, 30);
+  // The remaining wiring keeps the sm-rule fixtures on the leg graph:
+  // "ohne-etappe" is deliberately ABSENT from every leg.
+  const furtherLegs = [
+    connect(athen, nahSued, 60),
+    connect(athen, nahNord, 60),
+    connect(dicht, fernSued, 90),
+    connect(dicht, uebermorgen, 60),
+    connect(uebermorgen, dritterSchlag, 8),
+  ];
 
   const snapshot: PlanningSnapshot = makeSnapshot({
     times,
@@ -85,7 +111,7 @@ function scenario(opts: { windFromDeg?: number | null } = {}) {
       islands: all.map((x) => x.island),
       places: all.map((x) => x.place),
       invalidPlaces: [],
-      legs: [legAthenDicht, legDichtAthen],
+      legs: [legAthenDicht, legDichtAthen, ...furtherLegs],
       variants: [
         makeVariant('hin', [legAthenDicht], { escalationRank: 1 }),
         makeVariant(RETURN_CHAIN_ROUTE_ID, [legDichtAthen], {
@@ -142,6 +168,43 @@ describe('reachableIslands', () => {
     expect(reachable).not.toContain('nah-sued'); // 60 nm > 50
   });
 
+  it('an island in range but WITHOUT a library path is not offered (Mykonos-Fall)', () => {
+    // 30 nm away — comfortably in range in any wind. But no leg leads there,
+    // so the solver would reject the pin every single time (Bug 2026-08-05:
+    // offered in the dropdown, snapped back to Kea on selection).
+    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1);
+    expect(reachable).not.toContain('ohne-etappe');
+  });
+
+  it('two library legs (a Doppelschlag day) still count as reachable', () => {
+    // "uebermorgen" has no direct leg from athen, but athen→dicht→uebermorgen
+    // exists and the packer may put two legs on one day (doppelschlag).
+    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1);
+    expect(reachable).toContain('uebermorgen'); // 90 nm downwind, 2 hops
+  });
+
+  it('with the Doppelschlag capped to zero, only ONE leg per day counts', () => {
+    const snapshot = scenario({ windFromDeg: 0 });
+    snapshot.params = { ...snapshot.params, doppelschlagMaxPerTrip: 0 };
+    const reachable = reachableIslands(snapshot, 'athen', 1);
+    expect(reachable).toContain('nah-sued'); // direct leg — still offered
+    expect(reachable).not.toContain('uebermorgen'); // needs 2 legs on one day
+  });
+
+  it('three legs away is no day target, even inside the sm range', () => {
+    // ~97 nm downwind — the sm rule alone would offer it, but no day carries
+    // three legs (ppr.ts LEGS_PER_DAY_POSSIBLE), so no pin could ever hold.
+    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1);
+    expect(reachable).not.toContain('dritter-schlag');
+  });
+
+  it('reversed legs open the way back — the graph is not one-directional', () => {
+    // From "nah-sued" home to athen only the stored leg athen--nah-sued
+    // exists; its reverse must carry the offer (legIndexWithReverses).
+    const reachable = reachableIslands(scenario({ windFromDeg: 180 }), 'nah-sued', 1);
+    expect(reachable).toContain('athen'); // 60 nm downwind via reversed leg
+  });
+
   it('lands per stage in the assessment, measured from the PREVIOUS plan island', () => {
     const snapshot = scenario({ windFromDeg: 0 });
     snapshot.trip = {
@@ -154,7 +217,8 @@ describe('reachableIslands', () => {
     const a = assessPlanning(snapshot);
     const day2 = a.mainRoute!.stages.find((s) => s.day === 2)!;
     // Day 2 starts at "dicht" (37.4 N): "fern-sued" at 35.9 N is ~90 nm off —
-    // inside the 100 nm downwind range from THERE, though not from Athens.
+    // inside the 100 nm downwind range from THERE (and one leg away), though
+    // not from Athens.
     expect(day2.reachableIslandIds).toContain('fern-sued');
     const day1 = a.mainRoute!.stages.find((s) => s.day === 1)!;
     expect(day1.reachableIslandIds).not.toContain('fern-sued');
