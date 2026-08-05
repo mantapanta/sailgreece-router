@@ -698,6 +698,19 @@ function AlternativeRow({
   const { checkIn } = usePlanning();
   const [open, setOpen] = useState(false);
   const stages = alt.stages.filter((s) => s.kind === 'stage');
+  /**
+   * Hafentage NACH der letzten Etappe sind kein Törn, sondern Reserve: der
+   * Packer legt Etappen so früh wie das Wetter erlaubt, und alles bis zum
+   * Stichtag wird Hafentag an der Basis. Drei Zeilen "Hafentag Athen" lasen
+   * sich wie geplante Liegetage (Feedback 2026-08-05) — dabei heisst es nur:
+   * diese Route ist früher zurück. Also EINE Zeile mit genau dieser Aussage.
+   */
+  const lastStageDay = stages[stages.length - 1]?.day ?? null;
+  const shownDays =
+    lastStageDay === null
+      ? alt.stages
+      : alt.stages.filter((s) => s.day <= lastStageDay);
+  const reserveDays = alt.stages.length - shownDays.length;
   return (
     <div className="alt-route" style={{ borderLeftColor: color }}>
       <div className="option-kopf">
@@ -705,16 +718,33 @@ function AlternativeRow({
           <span className="alt-farbe" style={{ background: color }} />
           Wendepunkt {islandName(snapshot, alt.turnIslandId)}
         </span>
-        <span className="beschreibung">{stages.length} Etappen</span>
+        <span className="beschreibung">
+          {stages.length} Etappen
+          {lastStageDay !== null && reserveDays > 0 && (
+            <> · zurück an Tag {lastStageDay} ({reserveDays} Tage Reserve)</>
+          )}
+        </span>
       </div>
-      <span className="legs-inline">
-        {stages.slice(0, 6).map((s) => (
-          <span className="leg-chip" key={s.day}>
-            {islandName(snapshot, s.toIslandId)}
+      {/* Chips: JEDE angelaufene Insel, nicht nur die Tagesziele — an einem
+          Doppelschlag-Tag ist der Zwischenstopp sonst unsichtbar, und genau
+          dort kann der Wendepunkt der Route liegen (Feedback 2026-08-05). */}
+      {(() => {
+        const visited = stages.flatMap((s) =>
+          s.legs.map(
+            (l) => l.sailedLeg?.toIslandId ?? l.legId.split('--')[1] ?? l.legId,
+          ),
+        );
+        return (
+          <span className="legs-inline">
+            {visited.slice(0, 7).map((id, i) => (
+              <span className="leg-chip" key={`${id}-${i}`}>
+                {islandName(snapshot, id)}
+              </span>
+            ))}
+            {visited.length > 7 && <span className="leg-chip">…</span>}
           </span>
-        ))}
-        {stages.length > 6 && <span className="leg-chip">…</span>}
-      </span>
+        );
+      })()}
       <div className="stage-actions">
         <button type="button" className="secondary" onClick={() => setOpen((v) => !v)}>
           {open ? 'Vorschau schließen' : 'Route ansehen'}
@@ -732,7 +762,7 @@ function AlternativeRow({
             </p>
           )}
           <div className="alt-stage-list">
-            {alt.stages.map((s) =>
+            {shownDays.map((s) =>
               s.kind === 'harbour' ? (
                 <div className="alt-stage harbour" key={s.day}>
                   <span className="versal">Tag {s.day} · Hafentag</span>
@@ -743,9 +773,20 @@ function AlternativeRow({
                 <div className="alt-stage" key={s.day}>
                   <span className="versal">
                     Tag {s.day} · Etappe {s.stageNumber ?? '–'}
+                    {s.legs.length > 1 && ' · 2 Schläge'}
                   </span>
                   <span>
                     {stageTitle(snapshot, s)}
+                    {/* Zwischenstopps eines Doppelschlag-Tages: OHNE sie kann
+                        der Wendepunkt der Route unsichtbar sein — "Wendepunkt
+                        Santorin", aber Santorin steckt als Zwischenstopp in
+                        Ios → Santorin → Folegandros (Feedback 2026-08-05). */}
+                    {stageVia(snapshot, s).length > 0 && (
+                      <span className="beschreibung">
+                        {' '}
+                        über {stageVia(snapshot, s).join(' · ')}
+                      </span>
+                    )}
                     {(() => {
                       // Dieselbe Anzeige-Summe wie in der StageCard: die
                       // GESEGELTE Etappe trägt die Distanz, die Bewertung die
@@ -767,6 +808,15 @@ function AlternativeRow({
                   <AmpelBadge ampel={s.ampel} />
                 </div>
               ),
+            )}
+            {reserveDays > 0 && lastStageDay !== null && (
+              <div className="alt-stage harbour">
+                <span className="versal">ab Tag {lastStageDay + 1}</span>
+                <span>
+                  zurück an der Basis — {reserveDays}{' '}
+                  {reserveDays === 1 ? 'Tag' : 'Tage'} Reserve bis zum Stichtag
+                </span>
+              </div>
             )}
           </div>
           <p className="beschreibung">
