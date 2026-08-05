@@ -25,11 +25,11 @@ import { assessLeg, stopHoursForDay } from './scoring.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import {
   completePlan,
-  deriveAlternatives,
   deriveReturnChecks,
   existsValidPlan,
   legLibrary,
   meltemiSafeUntilDay,
+  planKey,
   planTurnDay,
   validatePlan,
   type SolveResult,
@@ -432,14 +432,52 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     : futurePinsEmpty(pins)
       ? witnessOf(solved)
       : existsValidPlan(snapshot, currentIslandId);
-  const alternatives = currentIslandId
-    ? deriveAlternatives(
-        snapshot,
-        currentIslandId,
-        witness,
-        trip.plan ?? undefined,
-      ).map((r) => toPlanAssessment(r, snapshot, bestPlaceByIsland, nightAmpeln))
-    : [];
+
+  /**
+   * VERSCHMELZUNG Optionsraum + Alternativ-Routen: die Alternativen SIND die
+   * konkreten Pläne der Optionen. Vorher standen zwei Listen nebeneinander —
+   * der Optionsraum mit Reichweite/Preis/Frist und daneben solver-eigene
+   * "andere Round-Trips", die dieselben Ziele noch einmal nannten, mit
+   * womöglich anderem Plan. Jetzt zeigt jede Option per `previewIndex` auf
+   * ihren eigenen bewerteten Plan: angesehen (Tagesansicht), eingeblendet
+   * (Karte, gleiche Farbe = gleicher Index) und übernommen wird ein und
+   * dieselbe Route — nie zweierlei Behauptungen (AD-3).
+   *
+   * Dedupliziert über den Plan-INHALT (planKey): zwei Optionen mit identischem
+   * Plan teilen sich den Eintrag, und ein Plan, der der Hauptroute entspricht,
+   * ist keine "andere" Route (previewIndex bleibt null — bei vorhandenem
+   * `plan` heisst das genau: entspricht der Hauptroute). Der FR2-Zeuge wird
+   * angehängt, falls ihn keine Option abdeckt — ein gelbes Licht bleibt
+   * einlösbar (AD-13 Invariante).
+   */
+  const alternatives: PlanAssessment[] = [];
+  const altKeys: string[] = [];
+  const mainKey = trip.plan ? planKey(trip.plan) : null;
+  const routeOptionsMerged = routeOptions.map((opt) => {
+    if (!opt.plan) return opt;
+    const key = planKey(opt.plan);
+    if (key === mainKey) return opt;
+    const existing = altKeys.indexOf(key);
+    if (existing >= 0) return { ...opt, previewIndex: existing };
+    alternatives.push(
+      assessPlan(opt.plan, snapshot, bestPlaceByIsland, nightAmpeln, {
+        variantId: opt.routeId,
+        turnIslandId: opt.turnIslandId,
+        relaxedTo: opt.costLevel ?? 'none',
+      }),
+    );
+    altKeys.push(key);
+    return { ...opt, previewIndex: alternatives.length - 1 };
+  });
+  if (witness) {
+    const key = planKey(witness.plan);
+    if (key !== mainKey && !altKeys.includes(key)) {
+      alternatives.push(
+        toPlanAssessment(witness, snapshot, bestPlaceByIsland, nightAmpeln),
+      );
+      altKeys.push(key);
+    }
+  }
 
   const restTripReasons: string[] = [];
   let restTripAmpel: Ampel;
@@ -488,7 +526,7 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     nightAmpeln,
     bestPlaceByIsland,
     dayOptions,
-    routeOptions,
+    routeOptions: routeOptionsMerged,
     mainRoute,
     proposal,
     alternatives,

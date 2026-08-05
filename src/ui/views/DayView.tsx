@@ -537,38 +537,132 @@ const OPTION_STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
 };
 
 /**
- * FR9/FR18/FR20 — der Optionsraum: wie weit trägt welche Route noch, was
- * kostet sie, und bis wann ist sie zu haben.
- *
- * Das ist der Kern der App und war bisher unsichtbar: `assessRouteOption`
- * rechnete Zustand und Schliesstag für jede kuratierte Route aus, und keine
- * View hat sie je angezeigt. Der Skipper sah nur die EINE Hauptroute und
- * konnte weder erkennen, dass Santorin noch offen ist, noch was es kostet,
- * noch dass es morgen zu ist.
+ * Vorschau einer ansehbaren Route: Routenkarte plus Etappenliste Tag für Tag,
+ * und der Übernehmen-Knopf steht IN der Vorschau — wer übernimmt, hat gesehen,
+ * was (Feedback 2026-08-05: übernehmen ohne ansehen ist keine Entscheidung).
+ * Ein Baustein für Options-Zeilen UND freistehende Alternativen (FR2-Zeuge).
+ */
+function AltPreview({
+  alt,
+  snapshot,
+  color,
+  mapId,
+}: {
+  alt: PlanAssessment;
+  snapshot: PlanningSnapshot;
+  /** Farbe dieser Alternative (altRouteColors.ts) — identisch zur Karte. */
+  color: string;
+  mapId: string | null;
+}) {
+  const { checkIn } = usePlanning();
+  return (
+    <div className="alt-preview">
+      {mapId ? (
+        <RouteMap stages={alt.stages} snapshot={snapshot} color={color} mapId={mapId} />
+      ) : (
+        <p className="beschreibung">
+          Routenkarte nicht verfügbar — kein{' '}
+          <code>VITE_GOOGLE_MAPS_API_KEY</code> gesetzt. Die Etappenliste
+          unten ist davon unberührt.
+        </p>
+      )}
+      <div className="alt-stage-list">
+        {alt.stages.map((s) =>
+          s.kind === 'harbour' ? (
+            <div className="alt-stage harbour" key={s.day}>
+              <span className="versal">Tag {s.day} · Hafentag</span>
+              <span>{islandWithPlace(snapshot, s.toIslandId, s.placeId)}</span>
+              <AmpelBadge ampel={s.ampel} />
+            </div>
+          ) : (
+            <div className="alt-stage" key={s.day}>
+              <span className="versal">
+                Tag {s.day} · Etappe {s.stageNumber ?? '–'}
+              </span>
+              <span>
+                {stageTitle(snapshot, s)}
+                {(() => {
+                  // Dieselbe Anzeige-Summe wie in der StageCard: die
+                  // GESEGELTE Etappe trägt die Distanz, die Bewertung die
+                  // Stunden — hier wird nichts neu gerechnet (AD-2).
+                  const nm = s.legs.reduce(
+                    (sum, l) => sum + (l.sailedLeg?.distanceNm ?? 0),
+                    0,
+                  );
+                  const h = s.legs.reduce((sum, l) => sum + (l.totalHours ?? 0), 0);
+                  return (
+                    <span className="beschreibung">
+                      {' '}
+                      — {nm > 0 ? `${Math.round(nm)} sm · ` : ''}
+                      {formatHours(h || null)}
+                    </span>
+                  );
+                })()}
+              </span>
+              <AmpelBadge ampel={s.ampel} />
+            </div>
+          ),
+        )}
+      </div>
+      <p className="beschreibung">
+        Auf der Karten-Ansicht lässt sich diese Route in derselben Farbe über
+        die Hauptroute legen. Übernehmen macht sie zur neuen Hauptroute —
+        bisherige Festlegungen (📌) werden dabei gelöst.
+      </p>
+      <button type="button" onClick={() => checkIn(alt.plan)}>
+        Als Hauptroute übernehmen
+      </button>
+    </div>
+  );
+}
+
+/**
+ * FR9/FR18/FR20/FR29 — EINE Zeile je Option, verschmolzen mit ihrer
+ * Alternativ-Route (Feedback 2026-08-05: Optionsraum und "Andere Round-Trips"
+ * waren zwei Listen über dieselbe Frage; dieselben Ziele standen doppelt da —
+ * einmal mit Preis und Frist, einmal mit Vorschau).
  *
  * Drei Angaben je Option, und keine davon darf fehlen:
  *   Reichweite — wie weit komme ich damit (die Törnfrage),
  *   Preis      — was nehme ich dafür in Kauf (Doppelschläge, Nachtetappen),
  *   Frist      — bis wann kann ich mich noch dafür entscheiden.
+ *
+ * Dazu die Vorschau: `preview` ist der bewertete Plan HINTER diesen Angaben
+ * (assessment.alternatives[previewIndex] — angesehen wird exakt, was
+ * übernommen würde, AD-3), in der Farbe, in der die Karten-Ansicht dieselbe
+ * Route einblendet. Übernommen wird erst in der Vorschau — der frühere
+ * Knopf "Diese Option verfolgen" ohne Ansehen ist bewusst weg.
  */
 function OptionRow({
   option,
   snapshot,
   today,
+  preview,
+  color,
+  mapId,
 }: {
   option: RouteOptionAssessment;
   snapshot: PlanningSnapshot;
   today: number;
+  /** Null: kein Plan — oder der Plan ist bereits die Hauptroute. */
+  preview: PlanAssessment | null;
+  color: string | null;
+  mapId: string | null;
 }) {
-  const { checkIn } = usePlanning();
+  const [open, setOpen] = useState(false);
   const rest = option.closesOnDay !== null ? option.closesOnDay - today : null;
   const dringend =
     rest !== null && rest >= 0 && rest <= snapshot.params.decisionLookaheadDays;
+  /** previewIndex null TROTZ Plan heisst genau: entspricht der Hauptroute. */
+  const istHauptroute = option.plan !== null && preview === null;
 
   return (
     <div className={`option-row state-${option.state}${dringend ? ' dringend' : ''}`}>
       <div className="option-kopf">
-        <span className="option-name">{option.name}</span>
+        <span className="option-name">
+          {color && <span className="alt-farbe" style={{ background: color }} />}
+          {option.name}
+        </span>
         <span className={`state-chip state-${option.state}`}>
           {OPTION_STATE_LABEL[option.state]}
         </span>
@@ -601,6 +695,7 @@ function OptionRow({
         {option.costNote
           ? `Kostet: ${option.costNote}.`
           : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
+        {istHauptroute && ' Dieser Plan ist bereits die Hauptroute.'}
       </div>
 
       {option.reasons.length > 0 && (
@@ -611,24 +706,30 @@ function OptionRow({
         </ul>
       )}
 
-      {option.plan && (
-        <button type="button" onClick={() => checkIn(option.plan!)}>
-          Diese Option verfolgen
-        </button>
+      {preview && color && (
+        <>
+          <div className="stage-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? 'Vorschau schließen' : 'Route ansehen'}
+            </button>
+          </div>
+          {open && (
+            <AltPreview alt={preview} snapshot={snapshot} color={color} mapId={mapId} />
+          )}
+        </>
       )}
     </div>
   );
 }
 
 /**
- * FR29 — an alternative round trip: erst ansehen, dann übernehmen.
- *
- * FEEDBACK 2026-08-05: die Zeile bot nur den Check-in an — was sich hinter
- * der Alternative verbirgt, war nirgends anzusehen, und übernehmen ohne
- * ansehen ist keine Entscheidung. Deshalb klappt die Zeile jetzt zu einer
- * Vorschau auf (Etappenliste Tag für Tag plus Routenkarte in der Farbe, in
- * der die Karte-Ansicht dieselbe Alternative einblendet), und der
- * Übernehmen-Button steht IN der Vorschau — wer übernimmt, hat gesehen, was.
+ * FR29/AD-13 — eine Alternative, auf die KEINE Option zeigt: der FR2-Zeuge,
+ * wenn sein Plan von keinem Optionsplan abgedeckt ist. Er steht hinter den
+ * Optionen in derselben Sektion — ein gelbes Licht muss einlösbar bleiben.
  */
 function AlternativeRow({
   alt,
@@ -642,7 +743,6 @@ function AlternativeRow({
   color: string;
   mapId: string | null;
 }) {
-  const { checkIn } = usePlanning();
   const [open, setOpen] = useState(false);
   const stages = alt.stages.filter((s) => s.kind === 'stage');
   return (
@@ -667,65 +767,7 @@ function AlternativeRow({
           {open ? 'Vorschau schließen' : 'Route ansehen'}
         </button>
       </div>
-      {open && (
-        <div className="alt-preview">
-          {mapId ? (
-            <RouteMap stages={alt.stages} snapshot={snapshot} color={color} mapId={mapId} />
-          ) : (
-            <p className="beschreibung">
-              Routenkarte nicht verfügbar — kein{' '}
-              <code>VITE_GOOGLE_MAPS_API_KEY</code> gesetzt. Die Etappenliste
-              unten ist davon unberührt.
-            </p>
-          )}
-          <div className="alt-stage-list">
-            {alt.stages.map((s) =>
-              s.kind === 'harbour' ? (
-                <div className="alt-stage harbour" key={s.day}>
-                  <span className="versal">Tag {s.day} · Hafentag</span>
-                  <span>{islandWithPlace(snapshot, s.toIslandId, s.placeId)}</span>
-                  <AmpelBadge ampel={s.ampel} />
-                </div>
-              ) : (
-                <div className="alt-stage" key={s.day}>
-                  <span className="versal">
-                    Tag {s.day} · Etappe {s.stageNumber ?? '–'}
-                  </span>
-                  <span>
-                    {stageTitle(snapshot, s)}
-                    {(() => {
-                      // Dieselbe Anzeige-Summe wie in der StageCard: die
-                      // GESEGELTE Etappe trägt die Distanz, die Bewertung die
-                      // Stunden — hier wird nichts neu gerechnet (AD-2).
-                      const nm = s.legs.reduce(
-                        (sum, l) => sum + (l.sailedLeg?.distanceNm ?? 0),
-                        0,
-                      );
-                      const h = s.legs.reduce((sum, l) => sum + (l.totalHours ?? 0), 0);
-                      return (
-                        <span className="beschreibung">
-                          {' '}
-                          — {nm > 0 ? `${Math.round(nm)} sm · ` : ''}
-                          {formatHours(h || null)}
-                        </span>
-                      );
-                    })()}
-                  </span>
-                  <AmpelBadge ampel={s.ampel} />
-                </div>
-              ),
-            )}
-          </div>
-          <p className="beschreibung">
-            Auf der Karten-Ansicht lässt sich diese Route in derselben Farbe über
-            die Hauptroute legen. Übernehmen macht sie zur neuen Hauptroute —
-            bisherige Festlegungen (📌) werden dabei gelöst.
-          </p>
-          <button type="button" onClick={() => checkIn(alt.plan)}>
-            Als Hauptroute übernehmen
-          </button>
-        </div>
-      )}
+      {open && <AltPreview alt={alt} snapshot={snapshot} color={color} mapId={mapId} />}
     </div>
   );
 }
@@ -763,6 +805,21 @@ export function DayView({
    */
   const atBase = assessment.currentIslandId === params.baseIslandId;
   const pprHinweise = atBase ? [] : assessment.ppr.reasons;
+
+  /**
+   * Alternativen, auf die KEINE Option zeigt — nach Konstruktion der FR2-Zeuge,
+   * wenn sein Plan von keinem Optionsplan abgedeckt ist (AD-13: ein gelbes
+   * Licht muss einlösbar bleiben). Der Index bleibt der in
+   * `assessment.alternatives`, damit die Farbe zur Karten-Ansicht passt.
+   */
+  const referencedAlts = new Set(
+    assessment.routeOptions
+      .map((o) => o.previewIndex)
+      .filter((i): i is number => i !== null),
+  );
+  const extraAlternatives = assessment.alternatives
+    .map((alt, index) => ({ alt, index }))
+    .filter(({ index }) => !referencedAlts.has(index));
 
   // Exactly ONE APIProvider for the whole view: several expanded stage cards
   // then share a single Maps script load instead of each mounting its own.
@@ -942,41 +999,48 @@ export function DayView({
         </section>
       )}
 
-      {/* FR9/FR18/FR20 — der Optionsraum. Steht VOR den Alternativ-Routen,
-          weil er die Frage beantwortet, die zuerst kommt: wie weit kann ich
-          noch, was kostet es, wie lange habe ich dafür Zeit. Er trägt auch
-          die FR20-Fristen: das Frist-Badge je Option ist der Entscheidungs-
+      {/* FR9/FR18/FR20/FR29 — Optionsraum und Alternativ-Routen VERSCHMOLZEN
+          (Feedback 2026-08-05): zwei Sektionen beantworteten dieselbe Frage,
+          und dieselben Ziele standen doppelt da — oben mit Preis und Frist,
+          darunter noch einmal als "anderer Round-Trip" mit Vorschau. Jetzt
+          EINE Liste: jede Option trägt Reichweite, Preis, Frist UND ihre
+          ansehbare Route (previewIndex → assessment.alternatives, gleiche
+          Farbe wie auf der Karten-Ansicht). Die FR20-Fristen stehen
+          weiterhin hier: das Frist-Badge je Option ist der Entscheidungs-
           punkt, dort wo die Entscheidung ansteht. */}
-      {assessment.routeOptions.length > 0 && (
+      {(assessment.routeOptions.length > 0 || extraAlternatives.length > 0) && (
         <section className="section">
-          <span className="versal">Optionsraum</span>
+          <span className="versal">Optionen & Alternativ-Routen</span>
           <h2>Wie weit kommen wir noch?</h2>
           <p className="beschreibung">
-            Reichweite, Preis und Frist je Route. Eine Option schliesst an dem Tag,
-            ab dem kein tragfähiger Restplan mehr existiert.
+            Reichweite, Preis und Frist je Route — eine Option schliesst an dem
+            Tag, ab dem kein tragfähiger Restplan mehr existiert. „Route
+            ansehen“ zeigt Etappen und Karte, bevor etwas passiert; übernommen
+            wird erst per Knopf in der Vorschau. Jede ansehbare Route trägt
+            ihre Farbe, in der Karten-Ansicht lässt sie sich damit über die
+            Hauptroute legen.
           </p>
           {assessment.routeOptions.map((o) => (
-            <OptionRow key={o.routeId} option={o} snapshot={snapshot} today={day} />
+            <OptionRow
+              key={o.routeId}
+              option={o}
+              snapshot={snapshot}
+              today={day}
+              preview={
+                o.previewIndex !== null
+                  ? (assessment.alternatives[o.previewIndex] ?? null)
+                  : null
+              }
+              color={o.previewIndex !== null ? altRouteColor(o.previewIndex) : null}
+              mapId={mapId}
+            />
           ))}
-        </section>
-      )}
-
-      {assessment.alternatives.length > 0 && (
-        <section className="section">
-          <span className="versal">Alternativ-Routen</span>
-          <h2>Andere Round-Trips</h2>
-          <p className="beschreibung">
-            „Route ansehen“ zeigt Etappen und Karte, bevor etwas passiert —
-            übernommen wird erst per Knopf in der Vorschau. Jede Alternative
-            trägt ihre Farbe; in der Karten-Ansicht lässt sie sich damit über
-            die Hauptroute legen.
-          </p>
-          {assessment.alternatives.map((alt, i) => (
+          {extraAlternatives.map(({ alt, index }) => (
             <AlternativeRow
               key={`${alt.variantId}-${alt.turnIslandId}`}
               alt={alt}
               snapshot={snapshot}
-              color={altRouteColor(i)}
+              color={altRouteColor(index)}
               mapId={mapId}
             />
           ))}
@@ -1002,10 +1066,10 @@ export function DayView({
           sie nichts — alles stand dort doppelt. Der spätere Umkehrtag und
           "Meltemi-fest bis" stehen jetzt als Badges im Rest-Trip-Banner oben
           (neben der Rückkehr-Frist, zu der sie gehören), die PPR-Hinweise in
-          dessen Begründungsliste. Die Options-Fristen aus FR20 zeigt der
-          Optionsraum weiterhin je Option (Frist-Badge inkl. Dringlichkeit
-          und Preis); `assessment.decisionPoints` bleibt als Domain-Ergebnis
-          bestehen. */}
+          dessen Begründungsliste. Die Options-Fristen aus FR20 zeigt die
+          Sektion "Optionen & Alternativ-Routen" weiterhin je Option
+          (Frist-Badge inkl. Dringlichkeit und Preis);
+          `assessment.decisionPoints` bleibt als Domain-Ergebnis bestehen. */}
 
       {/* Die frühere Sektion "Platzbibliothek — Alle Plätze mit Nacht-Ampel"
           ist bewusst ENTFERNT (Feedback 2026-08-05): ~60 Plätze des ganzen

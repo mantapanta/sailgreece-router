@@ -234,6 +234,8 @@ export function assessRouteOption(
     costNote: null,
     plan: null,
     turnDay: null,
+    // Vergeben erst in assessPlanning, wo die Alternativen-Liste entsteht.
+    previewIndex: null,
     ...over,
   });
 

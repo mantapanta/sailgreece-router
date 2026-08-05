@@ -4,10 +4,10 @@ import {
   RELAXATION_ORDER,
   buildCandidates,
   completePlan,
-  deriveAlternatives,
   existsValidPlan,
   legLibrary,
   planFromPacking,
+  planKey,
   planMetricsFor,
   planTurnDay,
   preferred,
@@ -460,9 +460,12 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
   });
 
   it('die Alternativen halten sich an dieselbe Vorgabe', () => {
-    const snapshot = roundTripSnapshot();
-    const witness = existsValidPlan(snapshot, 'athen');
-    for (const alt of deriveAlternatives(snapshot, 'athen', witness)) {
+    // Alternativen sind seit der Verschmelzung mit dem Optionsraum die
+    // Options-Pläne selbst — die kommen aus completePlan und tragen dessen
+    // Vorgabe mit.
+    const assessment = assessPlanning(roundTripSnapshot());
+    expect(assessment.alternatives.length).toBeGreaterThan(0);
+    for (const alt of assessment.alternatives) {
       for (const stage of stagesOf(alt.plan)) {
         expect(stage.legIds).toHaveLength(1);
       }
@@ -474,14 +477,12 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
    * Alternative in der Liste. Der "(bleiben)"-Kandidat ist im Suchraum
    * legitim (FR18), aber ein Round-Trip ohne eine einzige Segeletappe ist
    * keine Alternative — dieselbe Regel, die existsValidPlan an den Zeugen
-   * anlegt.
+   * anlegt. Gilt unverändert für die aus den Optionen abgeleitete Liste.
    */
   it('bietet keinen Round-Trip ohne Segeletappen als Alternative an', () => {
-    const snapshot = roundTripSnapshot();
-    const witness = existsValidPlan(snapshot, 'athen');
-    const alts = deriveAlternatives(snapshot, 'athen', witness);
-    expect(alts.length).toBeGreaterThan(0);
-    for (const alt of alts) {
+    const assessment = assessPlanning(roundTripSnapshot());
+    expect(assessment.alternatives.length).toBeGreaterThan(0);
+    for (const alt of assessment.alternatives) {
       expect(stagesOf(alt.plan).length).toBeGreaterThan(0);
     }
   });
@@ -1062,5 +1063,41 @@ describe('solver — planTurnDay (Hin-/Rückweg-Trennlinie)', () => {
     const snapshot = roundTripSnapshot();
     const plan = makePlan([makeHarbourDay(1, 'athen')]);
     expect(planTurnDay(plan, snapshot)).toBe(null);
+  });
+});
+
+/**
+ * Verschmelzung Optionsraum + Alternativ-Routen (Feedback 2026-08-05): die
+ * Alternativen SIND die Pläne der Optionen. `previewIndex` verbindet beide —
+ * angesehen wird exakt der Plan, der übernommen würde (AD-3), und ein Plan,
+ * der der Hauptroute entspricht, wird nicht noch einmal als "andere" Route
+ * angeboten.
+ */
+describe('Verschmelzung: Optionen tragen ihre Alternative', () => {
+  it('jede Option mit Plan zeigt auf eine Alternative mit GENAU diesem Plan', () => {
+    const assessment = assessPlanning(roundTripSnapshot());
+    expect(assessment.routeOptions.some((o) => o.previewIndex !== null)).toBe(true);
+    for (const opt of assessment.routeOptions) {
+      if (opt.previewIndex === null) continue;
+      const alt = assessment.alternatives[opt.previewIndex]!;
+      expect(planKey(alt.plan)).toBe(planKey(opt.plan!));
+    }
+  });
+
+  it('eine Option, deren Plan die Hauptroute IST, bekommt keine Vorschau', () => {
+    const snapshot = roundTripSnapshot();
+    const first = assessPlanning(snapshot);
+    const opt = first.routeOptions.find((o) => o.plan !== null)!;
+    const adopted = assessPlanning({
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: opt.plan! },
+    });
+    const same = adopted.routeOptions.find((o) => o.routeId === opt.routeId)!;
+    expect(same.plan).not.toBeNull();
+    expect(same.previewIndex).toBeNull();
+    // Und keine Alternative behauptet denselben Plan noch einmal.
+    for (const alt of adopted.alternatives) {
+      expect(planKey(alt.plan)).not.toBe(planKey(opt.plan!));
+    }
   });
 });
