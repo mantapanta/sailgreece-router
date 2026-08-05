@@ -133,8 +133,9 @@ unless a task names it.
    preserved in the legend popover (color swatch + "Wendepunkt {Insel} · {n} Etappen" per
    alternative) and per-alternative inspection stays in the Tagesansicht previews. The
    chip renders only when `assessment.alternatives.length > 0` (as the panel section does
-   today). The OpenSeaMap CC-BY-SA attribution moves from the dead panel into the legend
-   popover. **[TAG FOR PHILIPP: per-alternative map toggling is dropped in favor of the
+   today). The OpenSeaMap CC-BY-SA attribution splits: full sentence into the legend
+   popover, plus a persistent on-map micro-attribution while the layer is on
+   (SeamarkLayer's contract — see AC 4). **[TAG FOR PHILIPP: per-alternative map toggling is dropped in favor of the
    spine's single chip — acceptable, or keep per-alt granularity somewhere on the Karte?]**
 4. **Boat-position marker: specified by DESIGN, NOT rendered today.** DESIGN.md Map marker:
    "boat position: `{colors.accent}` with a soft accent halo"; the mock draws it; current
@@ -205,8 +206,9 @@ unless a task names it.
    (AC 4) is the second, in-map carrier.
 
 3. **Floating layer chips replace the route-toggles panel.** On the map surface (both
-   breakpoints), top-left, floating chips: **"Windfiedern"**, **"Seezeichen"**, and —
-   only when `assessment.alternatives.length > 0` — **"Alternativen"**. Each chip is a
+   breakpoints), top-left, floating chips in this order: **"Windfiedern"**, then — only
+   when `assessment.alternatives.length > 0` — **"Alternativen"**, then
+   **"Seezeichen"** (mock order). Each chip is a
    `<button>` with `aria-pressed` mirroring its state; visual: white
    (`rgba(255,255,255,0.92)`) pill with Level-1-like shadow when off, `--accent-tint`
    background + `--accent-text` text when pressed (DESIGN: accent-tint for selected chips;
@@ -245,6 +247,12 @@ unless a task names it.
    (vii) the OpenSeaMap attribution row (verbatim from the current panel: "Tonnen,
    Leuchtfeuer, Häfen ab Zoomstufe 8 — © OpenSeaMap-Mitwirkende (CC-BY-SA). Keine
    verlässlichen Tiefen — Pilotage nach Revierführer." with the link).
+   **Attribution visibility (required):** while the Seezeichen chip is ON, a persistent
+   micro-attribution `© OpenSeaMap (CC-BY-SA)` (linked to openseamap.org, caption size,
+   `.map-attrib`, bottom-left above Google's own attribution) renders on the map surface
+   — `SeamarkLayer.tsx`'s contract says the embedding view must show the attribution
+   (the tile overlay brings none), and CC-BY-SA attribution may not live ONLY behind a
+   closed popover. The full sentence stays in the legend popover (vii).
    **Direction line colors themselves are UNTOUCHED** — the mock's gray "Annahme" leg and
    Ampel-hue planned legs are explicitly superseded (DESIGN § Map & routes); no line color
    changes in this story.
@@ -287,16 +295,21 @@ unless a task names it.
    (the white gap carries the signal on imagery). The old `title` attributes on pin
    markers die (meaning never in tooltips).
 
-7. **Stage-number capsules restyled + operable.** Stage-end markers render as **white
-   `--radius-sm` capsules** with 11px/700 `font-variant-numeric: tabular-nums` figures in
-   `--ink-primary` and a soft drop shadow (replacing the navy circle recipe). All-past
-   capsules render their figures in `--ink-secondary` (NOT tertiary — ink rule). Hover
-   keeps the existing highlight/hoverDay sync. Keyboard/click: `role="button"`,
-   `tabIndex={0}`, `aria-label` = the current title text ("{Insel} — Etappe {n}
-   (Tag {d})[, heute], …"), Enter/Space/click opens Platzdetail for the marker's
-   `endPlaceId` (new field, VERIFY 5); when `endPlaceId` is null the capsule is
-   non-interactive (no role, no tabIndex). The `title` prop dies. ≥44px hit area via
-   wrapper padding.
+7. **Stage-number capsules restyled + operable.** MapView's stage-end markers render as
+   **white `--radius-sm` capsules** with 11px/700 `font-variant-numeric: tabular-nums`
+   figures in `--ink-primary` and a soft drop shadow, under a **NEW class
+   `.stage-capsule`** — the old `.stage-number` recipe (navy circle + `.mehrfach`/
+   `.past`/`.highlight` rules) is **KEPT UNTOUCHED in styles.css** because
+   `RouteMap.tsx:125` (AltPreview in the frozen Tagesansicht) consumes `.stage-number` +
+   `.mehrfach` with an inline alt-color background and light text; migrating that
+   surface is a later story. MapView stops emitting `stage-number`/`mehrfach`
+   entirely. All-past capsules render their figures in `--ink-secondary` (NOT
+   tertiary — ink rule). Hover keeps the existing highlight/hoverDay sync. Keyboard/
+   click: `role="button"`, `tabIndex={0}`, `aria-label` = the current title text
+   ("{Insel} — Etappe {n} (Tag {d})[, heute], …"), Enter/Space/click opens Platzdetail
+   for the marker's `endPlaceId` (new field, VERIFY 5); when `endPlaceId` is null the
+   capsule is non-interactive (no role, no tabIndex). The `title` prop dies. ≥44px hit
+   area via wrapper padding.
 
 8. **Boat-position marker.** When `snapshot.trip.position` is non-null, an
    `AdvancedMarker` at that position renders the accent boat dot: coral core
@@ -374,7 +387,8 @@ unless a task names it.
     the toggles must also delete now-unused imports); (c) all DoD greps in Dev Notes come
     back clean; (d) manual smoke via `npm run dev` at 390px and ≥861px: full-bleed map +
     sheet collapse/expand → status line expander on the Karte → chips toggle wind/
-    seamarks/alternatives → legend popover (Esc/backdrop/focus-return, truncation count
+    seamarks/alternatives (Seezeichen ON shows the "© OpenSeaMap" micro-attribution,
+    OFF hides it) → legend popover (Esc/backdrop/focus-return, truncation count
     changes on zoom) → card tap/focus highlights line + capsule → pin keyboard activation
     opens Platzdetail and "← Zurück" returns → touch two-step with mini chip (device
     emulation) → boat marker at the GPS/manual position → missing-env state (unset both
@@ -407,20 +421,22 @@ unless a task names it.
         weekday formatter); append format test cases.
 - [ ] **Task 4 — CSS: Karte redesign blocks + deletions** (AC: 1, 3, 4, 5, 6, 7, 8, 10, 12)
   - [ ] 4.1 Add the reference blocks (Dev Notes): `.map-view` full-bleed layout + sheet
-        (`.sheet`, `.drag-handle`, `.sheet-head`, snap states), `.layer-chips`/
-        `.layer-chip`, `.legend-btn`/`.legend-pop`/`.lg-*`, `.itin-card`/`.itin-*`/
-        `.harbour-row`, `.marker-hit`/`.marker-pin` restyle/`.marker-chip`,
-        `.boat-marker`, `.stage-number` capsule restyle, `.map-skeleton-caption`.
+        (`.map-itinerary` collapsed/`.open` states, `.drag-handle`, `.sheet-head`),
+        `.layer-chips`/`.layer-chip`, `.legend-btn`/`.legend-pop`/`.lg-*`, `.map-attrib`,
+        `.itin-card`/`.itin-*`/`.harbour-row`, `.marker-hit`/`.marker-pin` restyle/
+        `.marker-chip`, `.boat-marker`, NEW `.stage-capsule` (AC 7), `.map-skeleton-caption`.
   - [ ] 4.2 Restyle `.map-sticky` (radius-lg card, shadow-2, overflow hidden, border
         dropped); keep the `top` offset; keep `.map-container` 100%.
   - [ ] 4.3 Delete: `.route-toggles` (2 rules), `.route-swatch`, `.wind-toggle`,
         `.wind-legende` (3 rules), `.legend` (2 rules), `.legend-line` (3 rules),
         `.itinerary-card` (4 rules incl. `.past`/`.harbour`/`.active`), `.alt-toggles`
-        (grep first), old `.marker-pin.highlight` if unused after the rebuild, and the
+        (2 rules), `.marker-pin.highlight` (already dead — no JSX emits it), and the
         ≤860px `.map-split`/`.map-sticky` stacking rules (replaced by the sheet layout).
-        Grep every deletion against `.tsx` consumers first (StageMap's
-        `.stage-map-legende` and PlaceDetail's `.place-hero-legende` are DIFFERENT
-        classes — keep).
+        Grep every deletion against `.tsx` consumers first. **Do NOT delete or restyle
+        `.stage-number`/`.mehrfach`/`.stage-number.past`/`.stage-number.highlight`
+        (4 rules, lines ~1229–1260): `RouteMap.tsx:125` consumes them** (AC 7 — the
+        Karte capsule is the new `.stage-capsule`). StageMap's `.stage-map-legende` and
+        PlaceDetail's `.place-hero-legende` are DIFFERENT classes — keep.
 - [ ] **Task 5 — MapView restructure: layout scaffold, h1, sheet state** (AC: 1, 2, 11, 12)
   - [ ] 5.1 Root becomes `.map-view` (sr-only `h1` "Karte" first): one itinerary DOM used
         by both breakpoints (sheet chrome inert on desktop), map area with overlay slots
@@ -436,6 +452,8 @@ unless a task names it.
         mechanics (backdrop, Esc, focus in/out, trigger toggles), content rows per AC 4
         incl. `WindBarb` scale, `aria-live` truncation count, AmpelBadge verdict row,
         alt swatch rows, OpenSeaMap attribution + link.
+  - [ ] 6.3 Persistent `.map-attrib` micro-attribution "© OpenSeaMap (CC-BY-SA)"
+        (link) on the map while `showSeamarks` is on (AC 4 attribution-visibility rule).
 - [ ] **Task 7 — Itinerary cards + sync + 📌 removal** (AC: 5, 2)
   - [ ] 7.1 Rebuild the card/harbour-row markup (button rows, day tag via
         `formatTripDayShort`, route from→to via first-leg island, meta via
@@ -449,8 +467,9 @@ unless a task names it.
         `tabIndex`, `aria-label` "{Ort} — {Ampel-Wort}" (`AMPEL_LABEL`), Enter/Space +
         mouse click open; touch two-step via `onPointerDown` pointer-type tracking;
         armed mini chip; `title` props deleted.
-  - [ ] 8.2 Capsules: white radius-sm restyle, past = ink-secondary text, `aria-label`
-        from the ex-title string, activation opens `endPlaceId`, hover sync kept.
+  - [ ] 8.2 Capsules: new `.stage-capsule` class (white radius-sm; `.stage-number`
+        stays RouteMap's, AC 7), past = ink-secondary text, `aria-label` from the
+        ex-title string, activation opens `endPlaceId`, hover sync kept.
   - [ ] 8.3 Boat marker from `snapshot.trip.position` (accent dot + halo,
         "Bootsposition").
 - [ ] **Task 9 — `MapViewSkeleton` + App.tsx branch** (AC: 10)
@@ -510,6 +529,7 @@ unless a task names it.
 | Wind truncation (aria-live) | `{shown} von {shown+hidden} Inseln — hineinzoomen zeigt die übrigen.` |
 | Legend alt rows | `Wendepunkt {Insel} · {n} Etappen` + caption `Zum Vergleich über die Hauptroute gelegt — übernommen wird in der Tagesansicht.` |
 | Legend seamark row | current panel text verbatim (OpenSeaMap CC-BY-SA + Pilotage note + link) |
+| On-map attribution (Seezeichen an) | `© OpenSeaMap (CC-BY-SA)` — link auf openseamap.org, immer sichtbar solange die Ebene an ist |
 | Card day tag | `Tag {d} · {formatTripDayShort}` + ` · heute` / ` · gefahren` |
 | Card route | `{Start-Insel} → {Ziel-Insel}` |
 | Card meta | `{formatHours(h)} · an {formatAthensTime(eta)}` (eta part omitted when null) |
@@ -567,7 +587,7 @@ hard-coding the API key. PlaceDetailView: same one-line derivation swap.
 
 ### `TripStatusLine` extraction — exact move
 
-Move DayView.tsx lines 928–1065 (doc comment + function) into
+Move DayView.tsx lines 936–1065 (doc comment starting `/** FR2/FR19/FR20 …` + function) into
 `src/ui/components/TripStatusLine.tsx`:
 
 ```ts
@@ -664,8 +684,18 @@ resolves no final platz yields null. Do not modify existing cases.
   background: var(--surface-track);
 }
 .map-sticky .map-container { width: 100%; height: 100%; }
-.map-overlays { position: absolute; inset: 0; pointer-events: none; }
-.map-overlays > * { pointer-events: auto; }
+.sheet-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-3); padding: var(--space-1) 0 var(--space-2);
+}
+.trip-caption { font: 400 11.5px/1.4 var(--font-sans); color: var(--ink-secondary); }
+.map-attrib {  /* CC-BY-SA attribution — visible whenever the seamark layer is on */
+  position: absolute; left: var(--space-3); bottom: var(--space-3); z-index: 4;
+  font: 400 10.5px/1.3 var(--font-sans);
+  background: rgba(255, 255, 255, 0.85); border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+.map-attrib a { color: var(--ink-secondary); }
 
 /* ---- floating layer chips ---- */
 .layer-chips {
@@ -769,7 +799,7 @@ resolves no final platz yields null. Do not modify existing cases.
   position: absolute; inset: 9px; border-radius: var(--radius-full);
   background: var(--accent); border: 2.5px solid var(--map-line-casing, #fff);
 }
-.stage-number {   /* replaces the navy circle recipe entirely */
+.stage-capsule {  /* Karte-only; .stage-number stays untouched for RouteMap (AC 7) */
   min-width: 22px; height: 18px; padding: 0 6px;
   border-radius: var(--radius-sm);
   background: var(--surface-card); color: var(--ink-primary);
@@ -778,8 +808,8 @@ resolves no final platz yields null. Do not modify existing cases.
   box-shadow: 0 1.5px 4px rgba(30, 25, 20, 0.3);
   letter-spacing: 0.02em; cursor: pointer;
 }
-.stage-number.past { color: var(--ink-secondary); }   /* NOT tertiary — ink rule */
-.stage-number.highlight { transform: scale(1.25); }
+.stage-capsule.past { color: var(--ink-secondary); }   /* NOT tertiary — ink rule */
+.stage-capsule.highlight { transform: scale(1.25); }
 
 /* ---- mobile: full-bleed map + bottom sheet ---- */
 @media (max-width: 860px) {
@@ -814,6 +844,7 @@ resolves no final platz yields null. Do not modify existing cases.
   .drag-handle .bar { width: 40px; height: 5px; border-radius: 3px; background: var(--ampel-unbewertet); }
   .itin-list { overflow-y: auto; flex: 1; padding-bottom: var(--space-4); }
   .legend-btn { bottom: 244px; }   /* clear of the collapsed sheet peek */
+  .map-attrib { bottom: 244px; }   /* ditto — attribution must stay visible (AC 4) */
 }
 @media (min-width: 861px) {
   .drag-handle { display: none; }
@@ -830,6 +861,7 @@ it; the `main.content` padding rule in that media query stays (other views use i
 
 ```tsx
 const maps = resolveMapsEnv(/* env */);
+const { params } = snapshot;   // tripStartDate / tripLengthDays / baseIslandId reads
 const [sheetOpen, setSheetOpen] = useState(false);
 const [hoverDay, setHoverDay] = useState<number | null>(null);
 const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -882,6 +914,11 @@ return (
           <button type="button" className="layer-chip" aria-pressed={showSeamarks}
                   onClick={() => setShowSeamarks(v => !v)}>Seezeichen</button>
         </div>
+        {showSeamarks && (
+          <span className="map-attrib">
+            © <a href="https://www.openseamap.org" target="_blank" rel="noreferrer">OpenSeaMap</a> (CC-BY-SA)
+          </span>
+        )}
         <LegendPopover … />   {/* .legend-btn + .legend-pop, PositionPopover mechanics */}
       </div>
     </div>
@@ -942,7 +979,9 @@ to `activeDay`.
 Place pin:
 
 ```tsx
-<AdvancedMarker key={place.id} position={…} zIndex={relevant ? 50 : 30}>
+<AdvancedMarker key={place.id} position={…}
+                zIndex={armedPlaceId === place.id ? 100 : relevant ? 50 : 30}>
+  {/* armed pin lifts above the boat marker (90) so its mini chip is never occluded (AC 8) */}
   <div className="marker-hit" role="button" tabIndex={0}
        aria-label={`${place.name} — ${AMPEL_LABEL[ampel]}`}
        onPointerDown={(e) => { lastPointerType.current = e.pointerType; }}
@@ -979,7 +1018,7 @@ Capsule:
 
 ```tsx
 <AdvancedMarker key={marker.key} position={marker.position} zIndex={active ? 120 : 70}>
-  <div className={`stage-number${active ? ' highlight' : ''}${allPast ? ' past' : ''}`}
+  <div className={`stage-capsule${active ? ' highlight' : ''}${allPast ? ' past' : ''}`}
        {...(marker.endPlaceId ? {
          role: 'button', tabIndex: 0, 'aria-label': label /* ex-title string */,
          onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenPlace(marker.endPlaceId!); } },
@@ -994,8 +1033,9 @@ Capsule:
 </AdvancedMarker>
 ```
 
-(The `.mehrfach` class dies — the capsule is always a capsule now; the label logic in
-`mapPath.ts` is unchanged.)
+(MapView emits neither `stage-number` nor `mehrfach` anymore — the `.stage-capsule` is
+always a capsule; both old classes and their CSS stay for RouteMap.tsx (AC 7). The label
+logic in `mapPath.ts` is unchanged.)
 
 Boat marker:
 
@@ -1070,15 +1110,16 @@ That matches the DayViewSkeleton pattern.)
   `.wind-toggle`, `.wind-legende` ×3); ≤860px media query (map stack + `main.content`
   padding); `.stage-number` ×4 + `.marker-pin.muted` + `.legend` ×2 + `.legend-line` ×3 +
   `.itinerary-card.past/.harbour` (lines ~1229–1300).
-- CHANGES: Task 4 — add the redesign blocks; restyle `.map-sticky`/`.stage-number`/
-  `.marker-pin`; delete the classes in Task 4.3; replace the ≤860px map rules with the
-  sheet layout (KEEP the `main.content` padding rule in that query).
-- PRESERVE: `.wind-barb` halo rules (WindBarb legibility), `.stage-map*` (FR30 panel),
+- CHANGES: Task 4 — add the redesign blocks (incl. NEW `.stage-capsule`); restyle
+  `.map-sticky`/`.marker-pin`; delete the classes in Task 4.3; replace the ≤860px map
+  rules with the sheet layout (KEEP the `main.content` padding rule in that query).
+- PRESERVE: `.stage-number` ×4 incl. `.mehrfach` (RouteMap.tsx consumes them — AC 7),
+  `.wind-barb` halo rules (WindBarb legibility), `.stage-map*` (FR30 panel),
   `.place-hero*`, everything DayView/PlaceDetail/SignIn reference, the ≤700px query,
   `.hint-panel`/`.error-panel`, `.chip`/`.popover`/`.skeleton`/`.section-title`/
   `.trip-status*` (1.2 blocks — the Karte now consumes them).
 
-**`src/ui/views/DayView.tsx` (~1400 lines)**
+**`src/ui/views/DayView.tsx` (1502 lines)**
 - CHANGES: (i) `TripStatusLine` function + doc comment moved out (import from
   `../components/TripStatusLine.tsx`); (ii) `mapId` derivation via `resolveMapsEnv` and
   the two "kein VITE_GOOGLE_MAPS_API_KEY" hint texts name the missing var(s). NOTHING
@@ -1155,6 +1196,8 @@ grep -rn '📌' src/
 grep -n 'versal' src/ui/views/MapView.tsx
 grep -n 'legend-line\|"legend"' src/ui/views/MapView.tsx
 grep -n 'shownAlts\|altKey\|toggleAlt' src/ui/views/MapView.tsx
+# the Karte capsule is .stage-capsule; .stage-number/.mehrfach belong to RouteMap only:
+grep -n 'stage-number\|mehrfach' src/ui/views/MapView.tsx
 # single TS color source (unchanged 1.1 rule):
 grep -rniE "#[0-9a-f]{6}\b" src --include='*.ts' --include='*.tsx' | grep -v 'ui/tokens.ts' | grep -v 'SignInView'
 ```
@@ -1163,7 +1206,7 @@ These checks must print OK:
 
 ```bash
 # exactly ONE title= survives in MapView (the documented wind-barb tooltip):
-test "$(grep -c 'title=' src/ui/views/MapView.tsx)" -le 1 && echo OK
+test "$(grep -c 'title=' src/ui/views/MapView.tsx)" -eq 1 && echo OK
 # TripStatusLine exists once, as a component file:
 test -f src/ui/components/TripStatusLine.tsx && ! grep -q 'function TripStatusLine' src/ui/views/DayView.tsx && echo OK
 # App's generic loading hint serves ONLY the platz branch now (karte → MapViewSkeleton):
