@@ -27,6 +27,10 @@ import {
   type Feasibility,
 } from './ppr.ts';
 import { legsOfVariant } from './legs.ts';
+import { completePlan } from './solver.ts';
+import { stagesOf, type RelaxationLevel } from './schema/plan.ts';
+import type { Plan } from './schema/plan.ts';
+import { distanceNm } from './geo.ts';
 
 /** Legs of a variant still ahead of the given island (null = not on it). */
 export function remainingRouteLegs(
@@ -89,6 +93,56 @@ function packLegsFeasibleByDeadline(
   return packLegsFeasible(legs, startDay, deadlineDay, snapshot);
 }
 
+/**
+ * WAS DIE OPTION KOSTET — die mildeste Stufe der Leiter, auf der ein gültiger
+ * Plan für dieses Ziel existiert, samt dem Plan selbst.
+ *
+ * Ohne diese Angabe ist eine offene Option eine Behauptung ohne Preisschild:
+ * "Santorin offen" sagt nichts darüber, dass dafür zwei Nachtetappen fällig
+ * wären. Genau diese Folge soll der Skipper sehen, BEVOR er sich entscheidet —
+ * nicht erst, wenn er mitten drin steckt.
+ *
+ * Gerechnet wird über dieselbe Maschinerie wie die Hauptroute (`completePlan`
+ * mit Filter auf den Wendepunkt), damit ein hier gezeigter Preis und ein
+ * später tatsächlich gebauter Plan nicht auseinanderlaufen können (AD-3).
+ */
+function optionCost(
+  turnIslandId: string,
+  currentIslandId: string,
+  snapshot: PlanningSnapshot,
+): { level: RelaxationLevel; note: string; plan: Plan; turnDay: number | null } | null {
+  const solved = completePlan(snapshot, currentIslandId, [], {
+    turnIslandId,
+    stopAtFirstValid: true,
+  });
+  if (!solved || !solved.validity.valid) return null;
+
+  const stages = stagesOf(solved.plan);
+  const doubleDays = stages.filter((s) => s.legIds.length > 1).length;
+  const turnStage = stages.find((s) => s.toIslandId === turnIslandId) ?? null;
+
+  const teile: string[] = [];
+  if (doubleDays > 0) {
+    teile.push(
+      doubleDays === 1
+        ? 'einen Tag mit zwei Verbindungen'
+        : `${doubleDays} Tage mit zwei Verbindungen`,
+    );
+  }
+  if (solved.relaxedTo === 'hardMax') teile.push('Tage am harten Stundenmaximum');
+  if (solved.relaxedTo === 'nightLeg') teile.push('mindestens eine Nachtetappe');
+
+  return {
+    level: solved.relaxedTo,
+    note:
+      teile.length === 0
+        ? 'ohne Zugeständnis — eine Verbindung pro Tag im Zielbudget'
+        : `nur mit ${teile.join(' und ')}`,
+    plan: solved.plan,
+    turnDay: turnStage?.day ?? null,
+  };
+}
+
 /** FR18: offen / offen-horizont / schliesst am Tag X / zu — per route option. */
 export function assessRouteOption(
   variant: Variant,
@@ -99,16 +153,48 @@ export function assessRouteOption(
   const today = snapshot.trip.currentDay;
   const deadline = effectiveDeadlineDay(snapshot);
   const reasons: string[] = [];
+  /**
+   * Der Wendepunkt ist die FERNSTE Insel der Route, nicht die letzte.
+   *
+   * Eine Rundkurs-Variante endet wieder an der Basis; ihre letzte Insel als
+   * Wendepunkt zu lesen ergäbe Reichweite 0 und die Aussage "diese Route führt
+   * nirgendwohin" — für die Westkykladen-Runde genau verkehrt.
+   */
+  const base = snapshot.library.islands.find(
+    (i) => i.id === snapshot.params.baseIslandId,
+  );
+  const reachOf = (islandId: string): number => {
+    const island = snapshot.library.islands.find((i) => i.id === islandId);
+    return base && island ? distanceNm(base.coordinates, island.coordinates) : 0;
+  };
+  const seq = routeIslandSequence(vLegs);
+  const turnIslandId =
+    seq.length > 0
+      ? seq.reduce((far, id) => (reachOf(id) > reachOf(far) ? id : far), seq[0]!)
+      : snapshot.params.baseIslandId;
+  const reachNm = base ? reachOf(turnIslandId) : null;
+
+  const leer = (
+    over: Partial<RouteOptionAssessment>,
+  ): RouteOptionAssessment => ({
+    routeId: variant.id,
+    name: variant.name,
+    state: 'zu',
+    closesOnDay: null,
+    ampel: 'unbewertet',
+    legAssessments: [],
+    reasons,
+    turnIslandId,
+    reachNm,
+    costLevel: null,
+    costNote: null,
+    plan: null,
+    turnDay: null,
+    ...over,
+  });
 
   if (!currentIslandId) {
-    return {
-      routeId: variant.id,
-      state: 'zu',
-      closesOnDay: null,
-      ampel: 'unbewertet',
-      legAssessments: [],
-      reasons: ['Keine Position gesetzt'],
-    };
+    return leer({ reasons: ['Keine Position gesetzt'] });
   }
 
   // Display assessment: remaining legs on the earliest plan (one per day).
@@ -124,25 +210,23 @@ export function assessRouteOption(
   const now = restPlanFeasible(vLegs, currentIslandId, today, snapshot);
   if (now === 'infeasible') {
     reasons.push('Kein zulässiger Restplan mit aktuellem Forecast (FR18)');
-    return {
-      routeId: variant.id,
-      state: 'zu',
-      closesOnDay: null,
-      ampel,
-      legAssessments,
-      reasons,
-    };
+    return leer({ state: 'zu', ampel, legAssessments });
   }
+
+  // Der Preis wird nur für Optionen gerechnet, die überhaupt noch offen sind —
+  // für eine geschlossene gibt es nichts zu bezahlen, und der Lauf über die
+  // Leiter ist nicht umsonst.
+  const cost = optionCost(turnIslandId, currentIslandId, snapshot);
+  const preis = {
+    costLevel: cost?.level ?? null,
+    costNote: cost?.note ?? null,
+    plan: cost?.plan ?? null,
+    turnDay: cost?.turnDay ?? null,
+  };
+
   if (now === 'horizon') {
     reasons.push('Machbarkeit reicht über den Forecast-Horizont hinaus — offen mit Vorbehalt');
-    return {
-      routeId: variant.id,
-      state: 'offen-horizont',
-      closesOnDay: null,
-      ampel,
-      legAssessments,
-      reasons,
-    };
+    return leer({ state: 'offen-horizont', ampel, legAssessments, ...preis });
   }
 
   // Open today: does it close? Latest start day D with a feasible rest plan.
@@ -163,34 +247,13 @@ export function assessRouteOption(
   }
   if (closesOnDay !== null && closesOnDay <= deadline) {
     reasons.push(`Ab Tag ${closesOnDay + 1} existiert kein zulässiger Restplan mehr`);
-    return {
-      routeId: variant.id,
-      state: 'schliesst',
-      closesOnDay,
-      ampel,
-      legAssessments,
-      reasons,
-    };
+    return leer({ state: 'schliesst', closesOnDay, ampel, legAssessments, ...preis });
   }
   if (closingScanHitHorizon) {
     reasons.push('Schließtag jenseits des Forecast-Horizonts nicht bestimmbar (Vorbehalt)');
-    return {
-      routeId: variant.id,
-      state: 'offen-horizont',
-      closesOnDay: null,
-      ampel,
-      legAssessments,
-      reasons,
-    };
+    return leer({ state: 'offen-horizont', ampel, legAssessments, ...preis });
   }
-  return {
-    routeId: variant.id,
-    state: 'offen',
-    closesOnDay: null,
-    ampel,
-    legAssessments,
-    reasons,
-  };
+  return leer({ state: 'offen', ampel, legAssessments, ...preis });
 }
 
 /**
@@ -265,14 +328,41 @@ export function deriveDecisionPoints(
   routeOptions: RouteOptionAssessment[],
   ppr: PprResult,
   routes: { id: string; name: string }[],
+  /**
+   * Heutiger Törntag und Vorwarnzeit. Ohne beides bleibt es beim reinen
+   * Terminkalender — die Vorwarnung ist der Unterschied zwischen "du hättest
+   * gestern abbiegen müssen" und einer Entscheidung, die man noch treffen kann.
+   */
+  today?: number,
+  lookaheadDays?: number,
 ): DecisionPoint[] {
   const points: DecisionPoint[] = [];
   for (const opt of routeOptions) {
     if (opt.state === 'schliesst' && opt.closesOnDay !== null) {
       const route = routes.find((r) => r.id === opt.routeId);
+      const name = route?.name ?? opt.routeId;
+      const rest =
+        today !== undefined ? opt.closesOnDay - today : null;
+      /**
+       * Die Vorwarnung ist der eigentliche Zweck von FR20: eine Option, die
+       * heute schliesst, ist keine Entscheidung mehr, sondern eine Mitteilung.
+       * Innerhalb der Vorwarnzeit wird sie deshalb dringlich formuliert UND
+       * nennt den Preis — wer sie jetzt noch ziehen will, soll gleich sehen,
+       * was er dafür in Kauf nimmt.
+       */
+      const dringend =
+        rest !== null &&
+        lookaheadDays !== undefined &&
+        rest >= 0 &&
+        rest <= lookaheadDays;
+      const preis = opt.costNote ? ` (${opt.costNote})` : '';
       points.push({
         day: opt.closesOnDay,
-        text: `Bis Tag ${opt.closesOnDay} entscheiden: ${route?.name ?? opt.routeId} — danach verfällt die Option.`,
+        text: dringend
+          ? rest === 0
+            ? `HEUTE entscheiden: ${name} — ab morgen ist diese Option zu${preis}.`
+            : `Noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'}: ${name} schliesst am Tag ${opt.closesOnDay}${preis}.`
+          : `Bis Tag ${opt.closesOnDay} entscheiden: ${name} — danach verfällt die Option${preis}.`,
       });
     }
   }

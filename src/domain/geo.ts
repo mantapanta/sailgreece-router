@@ -53,6 +53,36 @@ export function angleDiffDeg(a: number, b: number): number {
 }
 
 /**
+ * Umlaufsinn eines geschlossenen Kurses: negativ = IM UHRZEIGERSINN.
+ *
+ * Gauss'sche Trapezformel über (lon, lat) — auf einer Karte mit Norden oben
+ * und Osten rechts ist das die übliche mathematische Orientierung, also
+ * positiv für den Gegenuhrzeigersinn. Über ein Revier von der Grösse der
+ * Kykladen ist die Verzerrung der Plattkarte für die Frage "in welche Richtung
+ * läuft die Runde" bedeutungslos; es geht um das Vorzeichen, nicht um die
+ * Fläche.
+ *
+ * Warum das überhaupt zählt: in den Kykladen wird empfohlen, im Uhrzeigersinn
+ * zu routen — man kommt mit dem Meltemi im Rücken nach Süden und arbeitet sich
+ * an der Westseite zurück, statt sich am Ende gegenan nach Norden zu quälen.
+ */
+export function signedAreaDeg2(points: Coordinates[]): number {
+  if (points.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i]!;
+    const b = points[(i + 1) % points.length]!;
+    sum += a.lon * b.lat - b.lon * a.lat;
+  }
+  return sum / 2;
+}
+
+/** Läuft dieser geschlossene Kurs im Uhrzeigersinn? */
+export function isClockwise(points: Coordinates[]): boolean {
+  return signedAreaDeg2(points) < 0;
+}
+
+/**
  * True wind angle of the boat: angle between course-over-ground and the
  * direction the wind is COMING FROM (AD-6), folded to 0-180.
  * 0 = dead upwind, 180 = dead downwind.

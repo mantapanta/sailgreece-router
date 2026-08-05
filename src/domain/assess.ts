@@ -182,6 +182,19 @@ const toPlanAssessment = (
     relaxedTo: r.relaxedTo,
   });
 
+const futurePinsEmpty = (pins: { day: number }[]): boolean => pins.length === 0;
+
+/**
+ * Dieselbe Prüfung, die `existsValidPlan` an sein Ergebnis anlegt: der Zeuge
+ * muss sicher sein UND tatsächlich segeln. "Zwölf Tage im Hafen liegen" ist
+ * kein Round-Trip und darf ein Gelb nicht tragen.
+ */
+const witnessOf = (r: SolveResult | null): SolveResult | null => {
+  if (!r) return null;
+  const sails = stagesOf(r.plan).length > 0;
+  return sails && r.validity.safetyViolations.length === 0 ? r : null;
+};
+
 export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   // FIRST step, before anything is judged: extend the hour axis over the whole
   // trip and fill the gaps with the persistence assumption. A forecast that
@@ -239,14 +252,22 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   // --- option space, PPR, decision points, day options ---------------------
   // Ordering by escalation rank is a domain criterion (AD-2): the assessment
   // delivers routeOptions ORDERED (conservative first); views only consume.
-  const routesByRank = [...library.variants].sort(
-    (a, b) => a.escalationRank - b.escalationRank,
-  );
+  // Die Rückfallkette ist der Heimweg, kein Ziel — sie als Option zu listen
+  // hiesse, dem Skipper "nach Hause fahren" als Alternative anzubieten.
+  const routesByRank = [...library.variants]
+    .filter((v) => !v.isReturnChain)
+    .sort((a, b) => a.escalationRank - b.escalationRank);
   const routeOptions = routesByRank.map((route) =>
     assessRouteOption(route, currentIslandId, snapshot),
   );
   const ppr = predictedPointOfReturn(snapshot, currentIslandId);
-  const decisionPoints = deriveDecisionPoints(routeOptions, ppr, library.variants);
+  const decisionPoints = deriveDecisionPoints(
+    routeOptions,
+    ppr,
+    library.variants,
+    trip.currentDay,
+    params.decisionLookaheadDays,
+  );
   const dayOptions = deriveDayOptions(
     snapshot,
     currentIslandId,
@@ -298,7 +319,17 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
 
   // FR2 existence predicate: pins deliberately NOT binding, because the way
   // to cash a yellow in is the check-in — and that releases pins (AD-13).
-  const witness = currentIslandId ? existsValidPlan(snapshot, currentIslandId) : null;
+  /**
+   * FR2-Existenznachweis. Ohne Pins ist das buchstäblich derselbe Aufruf wie
+   * `solved` oben — und der Solver ist der teuerste Schritt der ganzen
+   * Bewertung. Ihn zweimal zu rechnen kostete die Hälfte der Ladezeit für ein
+   * Ergebnis, das schon dasteht.
+   */
+  const witness = !currentIslandId
+    ? null
+    : futurePinsEmpty(pins)
+      ? witnessOf(solved)
+      : existsValidPlan(snapshot, currentIslandId);
   const alternatives = currentIslandId
     ? deriveAlternatives(
         snapshot,

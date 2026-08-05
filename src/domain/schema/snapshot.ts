@@ -2,7 +2,7 @@ import type { Ampel } from './common.ts';
 import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
-import type { Plan, PlanValidity } from './plan.ts';
+import type { Plan, PlanValidity, RelaxationLevel } from './plan.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
 
@@ -258,6 +258,8 @@ export type OptionState = 'offen' | 'offen-horizont' | 'schliesst' | 'zu';
 
 export interface RouteOptionAssessment {
   routeId: string;
+  /** Kuratierter Name der Route — die View soll keine Ids anzeigen müssen. */
+  name: string;
   state: OptionState;
   /** Set when state === 'schliesst': last day the option can still be started. */
   closesOnDay: number | null;
@@ -265,6 +267,29 @@ export interface RouteOptionAssessment {
   ampel: Ampel;
   legAssessments: LegAssessment[];
   reasons: string[];
+  /** Insel am fernen Ende dieser Route — das eigentliche Ziel der Option. */
+  turnIslandId: string;
+  /** Entfernung Basis → Wendepunkt. Das Mass für "wie weit kommen wir". */
+  reachNm: number | null;
+  /**
+   * WAS DIE OPTION KOSTET — die mildeste Stufe der Eskalationsleiter, auf der
+   * ein gültiger Plan für sie existiert (`null`, wenn keiner existiert).
+   *
+   * Das ist die Antwort auf "ich will doch dahin, was heisst das dann?".
+   * 'none' = ohne Zugeständnis; 'doppelschlag' = Tage mit zwei Verbindungen;
+   * 'nightLeg' = Nachtetappen. Ohne diese Angabe ist eine offene Option eine
+   * Behauptung ohne Preisschild.
+   */
+  costLevel: RelaxationLevel | null;
+  /** Der Preis in einem Satz, für die Anzeige. */
+  costNote: string | null;
+  /**
+   * Der konkrete Plan zu dieser Option — damit "verfolgen" nicht heisst, dass
+   * der Skipper ihn sich selbst zusammensucht. Null, wenn es keinen gibt.
+   */
+  plan: Plan | null;
+  /** Tag, an dem dieser Plan den Wendepunkt erreicht (früher = mehr Luft). */
+  turnDay: number | null;
 }
 
 export interface DayOption {

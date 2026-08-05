@@ -17,6 +17,7 @@ import type {
   LegAssessment,
   PlanAssessment,
   PlanningSnapshot,
+  RouteOptionAssessment,
   StageAssessment,
   LegHourBreakdown,
   PointPassage,
@@ -146,15 +147,15 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
           </div>
         </dl>
       </div>
-      <p className="beschreibung">
+      <details className="beschreibung lesehilfe">
+        <summary>Wie sind die Werte zu lesen?</summary>
         Windrichtung rechtweisend und <strong>kommend aus</strong> (AD-6). TWA ist
-        der Winkel zwischen anliegendem Kurs und Wind: 0° genau von vorn, 180°
-        genau von achtern. Die Mittelwerte fassen die Stundenzeilen zusammen —
-        maßgeblich für die Ampel ist die jeweils schlechteste Stunde, nicht der
+        der Winkel zwischen anliegendem Kurs und Wind: 0° von vorn, 180° von
+        achtern. Maßgeblich für die Ampel ist die schlechteste Stunde, nicht der
         Durchschnitt.
         {worstCase &&
-          ' Stunden jenseits des Horizonts rechnen gegen den Meltemi-Worst-Case statt gegen den Forecast.'}
-      </p>
+          ' Stunden jenseits des Horizonts rechnen gegen den Meltemi-Worst-Case.'}
+      </details>
     </div>
   );
 }
@@ -531,6 +532,97 @@ function StageCard({
   );
 }
 
+const OPTION_STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
+  offen: 'offen',
+  'offen-horizont': 'offen · Vorbehalt',
+  schliesst: 'schliesst',
+  zu: 'zu',
+};
+
+/**
+ * FR9/FR18/FR20 — der Optionsraum: wie weit trägt welche Route noch, was
+ * kostet sie, und bis wann ist sie zu haben.
+ *
+ * Das ist der Kern der App und war bisher unsichtbar: `assessRouteOption`
+ * rechnete Zustand und Schliesstag für jede kuratierte Route aus, und keine
+ * View hat sie je angezeigt. Der Skipper sah nur die EINE Hauptroute und
+ * konnte weder erkennen, dass Santorin noch offen ist, noch was es kostet,
+ * noch dass es morgen zu ist.
+ *
+ * Drei Angaben je Option, und keine davon darf fehlen:
+ *   Reichweite — wie weit komme ich damit (die Törnfrage),
+ *   Preis      — was nehme ich dafür in Kauf (Doppelschläge, Nachtetappen),
+ *   Frist      — bis wann kann ich mich noch dafür entscheiden.
+ */
+function OptionRow({
+  option,
+  snapshot,
+  today,
+}: {
+  option: RouteOptionAssessment;
+  snapshot: PlanningSnapshot;
+  today: number;
+}) {
+  const { checkIn } = usePlanning();
+  const rest = option.closesOnDay !== null ? option.closesOnDay - today : null;
+  const dringend =
+    rest !== null && rest >= 0 && rest <= snapshot.params.decisionLookaheadDays;
+
+  return (
+    <div className={`option-row state-${option.state}${dringend ? ' dringend' : ''}`}>
+      <div className="option-kopf">
+        <span className="option-name">{option.name}</span>
+        <span className={`state-chip state-${option.state}`}>
+          {OPTION_STATE_LABEL[option.state]}
+        </span>
+      </div>
+
+      <div className="badges">
+        <span className="badge" title="Entfernung von der Basis zum Wendepunkt">
+          bis {islandName(snapshot, option.turnIslandId)}
+          {option.reachNm !== null && ` · ${Math.round(option.reachNm)} sm`}
+        </span>
+        {option.turnDay !== null && (
+          <span className="badge" title="Tag, an dem der Plan den Wendepunkt erreicht">
+            Wende an Tag {option.turnDay}
+          </span>
+        )}
+        {option.closesOnDay !== null && (
+          <span className={`badge${dringend ? ' badge-frist' : ''}`}>
+            {rest !== null && rest <= 0
+              ? 'letzte Entscheidung heute'
+              : `noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'} · bis Tag ${option.closesOnDay}`}
+          </span>
+        )}
+        <AmpelBadge ampel={option.ampel} />
+      </div>
+
+      {/* Der Preis. Eine offene Option ohne ihn wäre eine Behauptung ohne
+          Preisschild — genau die Information, die fehlte, wenn man wissen
+          wollte, was ein weiter gestecktes Ziel eigentlich bedeutet. */}
+      <div className="beschreibung">
+        {option.costNote
+          ? `Kostet: ${option.costNote}.`
+          : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
+      </div>
+
+      {option.reasons.length > 0 && (
+        <ul className="reasons">
+          {option.reasons.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      )}
+
+      {option.plan && (
+        <button type="button" onClick={() => checkIn(option.plan!)}>
+          Diese Option verfolgen
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** FR29 — an alternative round trip the skipper can check in. */
 function AlternativeRow({
   alt,
@@ -614,11 +706,15 @@ export function DayView({
           the extent of the assumption for the whole plan; the per-day cards
           only carry the short marker. */}
       {assessment.assumedFromDay !== null && (
-        <div className="hint-panel hint-annahme">
-          <strong>
-            Ab Tag {assessment.assumedFromDay} beruht die Planung auf einer Annahme.
-          </strong>{' '}
-          {assessment.assumptionNote}
+        /* Eingeklappt statt ausgebreitet: die AUSSAGE ist ein Satz — ab
+           welchem Tag die Planung auf einer Annahme beruht. Alles andere ist
+           Beleg, und Belege gehören dorthin, wo man sie sucht, nicht an den
+           Anfang der Seite. Verloren geht nichts: ein Klick, und es steht da. */
+        <details className="hint-panel hint-annahme">
+          <summary>
+            <strong>Ab Tag {assessment.assumedFromDay} beruht die Planung auf einer Annahme.</strong>
+          </summary>
+          <p className="beschreibung">{assessment.assumptionNote}</p>
           <ul className="reasons">
             <li>
               Windvorhersage ({assessment.model}) verlässlich bis Tag{' '}
@@ -626,17 +722,16 @@ export function DayView({
               bis {formatStamp(assessment.forecastHorizonIso)}.
             </li>
             <li>
-              Wellenvorhersage bis {formatStamp(assessment.waveHorizonIso)} — sie endet
-              in der Regel früher als der Wind, zieht die Nacht-Ampeln aber nicht mit
-              hinunter: Wellenwerte gelten für die offene See und bewerten keinen
-              Liegeplatz.
+              Wellenvorhersage bis {formatStamp(assessment.waveHorizonIso)} — endet
+              früher als der Wind, zieht die Nacht-Ampeln aber nicht mit: Wellenwerte
+              gelten für die offene See.
             </li>
             <li>
               Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:
               sie warnt, sie verurteilt nicht.
             </li>
           </ul>
-        </div>
+        </details>
       )}
 
       {/* FR2 — the rest-trip light governs the whole view. */}
@@ -706,6 +801,24 @@ export function DayView({
               />
             ))}
           </div>
+        </section>
+      )}
+
+      {/* FR9/FR18/FR20 — der Optionsraum. Steht VOR den Alternativ-Routen und
+          vor den Entscheidungspunkten, weil er die Frage beantwortet, die
+          zuerst kommt: wie weit kann ich noch, was kostet es, wie lange habe
+          ich dafür Zeit. */}
+      {assessment.routeOptions.length > 0 && (
+        <section className="section">
+          <span className="versal">Optionsraum (FR9/FR18)</span>
+          <h2>Wie weit kommen wir noch?</h2>
+          <p className="beschreibung">
+            Reichweite, Preis und Frist je Route. Eine Option schliesst an dem Tag,
+            ab dem kein tragfähiger Restplan mehr existiert.
+          </p>
+          {assessment.routeOptions.map((o) => (
+            <OptionRow key={o.routeId} option={o} snapshot={snapshot} today={day} />
+          ))}
         </section>
       )}
 

@@ -73,6 +73,16 @@ const ParamsObjectSchema = z.object({
    */
   maxLegsPerDay: z.number().int().min(1).max(2).default(1),
 
+  /**
+   * Wie viele Tage VORHER eine Option gemeldet wird, die zu verfallen droht.
+   *
+   * Eine Option, die heute schliesst, ist keine Entscheidung mehr, sondern eine
+   * Mitteilung. Der Skipper will sie kommen sehen, solange er noch abbiegen
+   * kann — vier Tage sind ungefähr die Spanne, über die eine Meltemi-Lage
+   * einigermassen belastbar vorhersagbar ist.
+   */
+  decisionLookaheadDays: z.number().int().min(1).max(14).default(4),
+
   // --- place ampel (FR8) ----------------------------------------------------
   /** Unprotected ("Luv") direction: yellow up to this wind, red above. */
   openSectorMaxKn: z.number().positive().default(10),

@@ -114,9 +114,8 @@ export function StageMap({
       </Map>
       <p className="beschreibung stage-map-legende">
         {points.length} Punkte, davon {wegpunkte}{' '}
-        {wegpunkte === 1 ? 'Wegpunkt' : 'Wegpunkte'} — die Stützstellen, für die der
-        Forecast abgerufen wird. Die Spalte <strong>Punkt</strong> in der Rechnung
-        nennt für jede Stunde dieselbe Nummer. Linienfarbe = Etappen-Ampel.
+        {wegpunkte === 1 ? 'Wegpunkt' : 'Wegpunkte'} — dieselben Nummern wie in der
+        Spalte <strong>Punkt</strong> der Rechnung.
       </p>
     </div>
   );
