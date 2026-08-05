@@ -1462,6 +1462,46 @@ export function planKey(plan: Plan): string {
     .join('|');
 }
 
+/**
+ * FR28 — den Zwischenstopp eines Doppelschlag-Tages löschen: derselbe Tag,
+ * dasselbe Tagesziel, aber als EINE direkte Etappe gesegelt.
+ *
+ * Geroutet wird nur über kuratierte Etappen, nie frei (AD-13) — gesucht wird
+ * deshalb im Bibliotheks-Index inklusive Gegenrichtungen (legLibrary). Null,
+ * wenn der Tag keinen Zwischenstopp trägt oder keine direkte Verbindung vom
+ * Startpunkt des Tages zum Tagesziel existiert: dann gibt es nichts zu
+ * löschen bzw. nichts, womit sich der Tag direkt segeln liesse — ein
+ * Datenlimit, kein Urteil (wie editStage).
+ *
+ * Der Tag wird als Skipper-Entscheidung gestempelt (Pin, AD-12), damit eine
+ * spätere Neuberechnung das Tagesziel nicht wieder verwirft. Alle anderen
+ * Tage bleiben unberührt — Start- und Zielinsel des Tages ändern sich nicht,
+ * die Kette bleibt geschlossen.
+ */
+export function planWithoutStopover(
+  plan: Plan,
+  day: number,
+  snapshot: PlanningSnapshot,
+): Plan | null {
+  const entry = planDay(plan, day);
+  if (!entry || entry.kind !== 'stage' || entry.legIds.length < 2) return null;
+  const legs = legLibrary(snapshot);
+  const first = legs.get(entry.legIds[0]!);
+  if (!first) return null;
+  const direct = [...legs.values()].find(
+    (l) => l.fromIslandId === first.fromIslandId && l.toIslandId === entry.toIslandId,
+  );
+  if (!direct) return null;
+  return {
+    ...plan,
+    days: plan.days.map((d) =>
+      d.day === day && d.kind === 'stage'
+        ? { ...d, legIds: [direct.id], source: 'skipper' as const }
+        : d,
+    ),
+  };
+}
+
 /** Stages of a plan that could not be assessed — for display (AD-12). */
 export function unassessableStages(plan: Plan, snapshot: PlanningSnapshot): Stage[] {
   const legs = legLibrary(snapshot);

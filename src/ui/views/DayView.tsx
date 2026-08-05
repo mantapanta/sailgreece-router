@@ -24,6 +24,7 @@ import type {
 } from '../../domain/schema/snapshot.ts';
 import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
 import { planKey } from '../../domain/solver.ts';
+import { departureHourForDay } from '../../domain/scoring.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
@@ -231,7 +232,7 @@ function StageEditor({
   nightAmpeln: Assessment['nightAmpeln'];
   onClose: () => void;
 }) {
-  const { editStage, releasePin, setStopHours } = usePlanning();
+  const { editStage, releasePin, setStopHours, removeStopover } = usePlanning();
   const [error, setError] = useState<string | null>(null);
   const placesOnIsland = snapshot.library.places.filter(
     (p) => p.islandId === stage.toIslandId,
@@ -329,6 +330,31 @@ function StageEditor({
           Mittag fällt der zweite Schlag in den aufgebauten Nachmittags-Meltemi.
           Sie zählt nicht ins Fahrt-Budget.
         </p>
+      )}
+      {stage.legs.length > 1 && (
+        <>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setError(null);
+              if (removeStopover(stage.day)) {
+                onClose();
+              } else {
+                setError(
+                  `Der Zwischenstopp lässt sich nicht löschen — die Bibliothek kennt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}.`,
+                );
+              }
+            }}
+          >
+            Zwischenstopp löschen ({stageVia(snapshot, stage).join(' · ')})
+          </button>
+          <p className="beschreibung">
+            Der Tag wird zu EINER direkten Etappe auf dasselbe Tagesziel — ohne
+            den Anlauf von {stageVia(snapshot, stage).join(' und ')}. Der Tag
+            gilt danach als festgelegt (📌).
+          </p>
+        </>
       )}
       <div className="editor-actions">
         {stage.pinned && (
@@ -837,9 +863,7 @@ export function DayView({
         Aktuelle Position: <strong>{hereName}</strong>
         {snapshot.trip.position?.source === 'manual' && ' (manuell gesetzt)'}
         {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
-        {' · '}Abfahrt{' '}
-        {snapshot.trip.departureHourOverride ?? params.departureHourAthens}:00 Uhr
-        (Athen)
+        {' · '}Abfahrt {departureHourForDay(snapshot, day)}:00 Uhr (Athen)
       </p>
       {assessment.positionNote && (
         <div className="hint-panel">{assessment.positionNote}</div>

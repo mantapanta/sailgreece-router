@@ -14,7 +14,13 @@ import { useQuery } from '@tanstack/react-query';
 import { loadLibraryBundle } from '../adapters/firestore.ts';
 import { collectLocations, fetchForecastBundle } from '../adapters/openMeteo.ts';
 import { assessPlanning } from '../domain/assess.ts';
-import { completePlan, planKey, type Pin } from '../domain/solver.ts';
+import { isLateDeparture } from '../domain/scoring.ts';
+import {
+  completePlan,
+  planKey,
+  planWithoutStopover,
+  type Pin,
+} from '../domain/solver.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
 import { planOutdated, type Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
@@ -149,6 +155,23 @@ export function usePlanningEngine() {
   }, [trip.plan, currentDay, pins, assessment?.proposal, dispatch]);
 
   /**
+   * Späte Abfahrt (Übernahme-Fenster 14–17 Uhr) gilt nur an Törntag 1
+   * (scoring.departureHourForDay). Die Rechnung ignoriert einen späten
+   * Override an anderen Tagen ohnehin — hier wird zusätzlich der PERSISTIERTE
+   * Wert gelöst, sobald der Törn Tag 1 verlässt, damit Auswahl und Zustand
+   * nicht auseinanderlaufen (das Abfahrt-Select kennt 14–17 nur an Tag 1).
+   */
+  useEffect(() => {
+    if (
+      trip.departureHourOverride !== null &&
+      isLateDeparture(trip.departureHourOverride) &&
+      currentDay !== 1
+    ) {
+      dispatch({ type: 'SET_DEPARTURE_HOUR', hour: null });
+    }
+  }, [trip.departureHourOverride, currentDay, dispatch]);
+
+  /**
    * FR28 — the skipper sets a day's target; the rest of the trip is recomputed
    * SYNCHRONOUSLY here and dispatched as one finished plan, so pin and
    * completion always come from the same snapshot (AD-12, one mutation path).
@@ -168,6 +191,24 @@ export function usePlanningEngine() {
       return true;
     },
     [snapshot, assessment?.currentIslandId, pins, dispatch],
+  );
+
+  /**
+   * FR28 — den Zwischenstopp eines Doppelschlag-Tages löschen: der Tag wird
+   * zur EINEN direkten Etappe auf dasselbe Tagesziel (solver.planWithoutStopover).
+   * Wie editStage geht ein fertiger Plan durch den einen Mutationspfad
+   * (AD-12); false, wenn die Bibliothek keine direkte Verbindung kennt —
+   * ein Datenlimit, keine Bewertung.
+   */
+  const removeStopover = useCallback(
+    (day: number): boolean => {
+      if (!snapshot || !trip.plan) return false;
+      const next = planWithoutStopover(trip.plan, day, snapshot);
+      if (!next) return false;
+      dispatch({ type: 'EDIT_STAGE', plan: next });
+      return true;
+    },
+    [snapshot, trip.plan, dispatch],
   );
 
   /** FR29 — adopt a proposal or alternative as the new main route. */
@@ -203,6 +244,7 @@ export function usePlanningEngine() {
     currentDay,
     pins,
     editStage,
+    removeStopover,
     checkIn,
     releasePin,
     setStopHours,
