@@ -44,61 +44,7 @@ import {
   formatWindFrom,
   pointOfSail,
 } from '../format.ts';
-
-function islandName(snapshot: PlanningSnapshot, islandId: string): string {
-  return snapshot.library.islands.find((i) => i.id === islandId)?.name ?? islandId;
-}
-
-function placeName(snapshot: PlanningSnapshot, placeId: string | null): string {
-  if (!placeId) return '–';
-  return snapshot.library.places.find((p) => p.id === placeId)?.name ?? placeId;
-}
-
-/**
- * "Kea (Vourkari)" — eine Insel ist kein Ziel, ein Liegeplatz ist eins.
- *
- * Trägt der Inselname selbst schon eine Klammer ("Athen (Basis)"), wird sie
- * beim Anhängen des Platzes weggelassen: "Athen (Basis) (Marina Alimos)" wäre
- * doppelt geklammert, und der Zusatz ist ohnehin redundant, sobald der
- * konkrete Liegeplatz dasteht.
- */
-function islandWithPlace(
-  snapshot: PlanningSnapshot,
-  islandId: string,
-  placeId: string | null,
-): string {
-  const island = islandName(snapshot, islandId);
-  if (!placeId) return island;
-  return `${island.replace(/\s*\([^)]*\)\s*$/, '')} (${placeName(snapshot, placeId)})`;
-}
-
-/**
- * Etappenname von Liegeplatz zu Liegeplatz: "Kea (Vourkari) → Kythnos (Kolona)".
- *
- * Der Startplatz kommt aus der ERSTEN Etappe des Tages, das Ziel ist der
- * tatsächlich gewählte Nachtplatz (`stage.placeId`) — nicht der nominelle
- * Zielplatz der letzten Etappe. Sonst würde die Überschrift einen anderen
- * Hafen nennen als die Platz-Zeile darunter.
- */
-function stageTitle(snapshot: PlanningSnapshot, stage: StageAssessment): string {
-  const to = islandWithPlace(snapshot, stage.toIslandId, stage.placeId);
-  const firstLegId = stage.legs[0]?.legId;
-  const firstLeg = firstLegId
-    ? snapshot.library.legs.find((l) => l.id === firstLegId)
-    : undefined;
-  if (!firstLeg) return to;
-  return `${islandWithPlace(snapshot, firstLeg.fromIslandId, firstLeg.fromPlaceId)} → ${to}`;
-}
-
-/** Zwischenstopps eines Mehr-Etappen-Tages, ebenfalls mit Liegeplatz. */
-function stageVia(snapshot: PlanningSnapshot, stage: StageAssessment): string[] {
-  return stage.legs.slice(0, -1).map((la) => {
-    const leg = snapshot.library.legs.find((l) => l.id === la.legId);
-    return leg
-      ? islandWithPlace(snapshot, leg.toIslandId, leg.toPlaceId)
-      : la.legId.replace('--', ' → ');
-  });
-}
+import { islandName, islandWithPlace, placeName, stageTitle, stageVia } from '../stageText.ts';
 
 /**
  * Die Annahme in einem Satz: mit WELCHEM Wind, WELCHEM Kurs zum Wind und
