@@ -15,6 +15,7 @@
 import type { Leg } from '../domain/schema/route.ts';
 import type { PlanningSnapshot, StageAssessment } from '../domain/schema/snapshot.ts';
 import { legWaypointKey } from '../domain/scoring.ts';
+import { reverseLeg } from '../domain/legs.ts';
 
 export interface StagePoint {
   /** Stable React key; a place can occur twice in a stage (out and back). */
@@ -37,10 +38,19 @@ export interface StagePoint {
  * Record instead of a JS Map: in the map view the identifier `Map` is taken by
  * @vis.gl/react-google-maps. First occurrence wins — leg ids are unique by
  * import cross-check, so a duplicate would be a data error, not a choice.
+ *
+ * Enthält AUCH die Gegenrichtungen (domain/legs.ts): der Heimweg besteht teils
+ * aus umgedrehten Etappen, und die stehen unter einer Id, die die Bibliothek
+ * nicht speichert. Ohne sie fände die Karte für genau diese Tage keine
+ * Geometrie und liesse den Rückweg als Lücke stehen.
  */
 export function buildLegsById(legs: Leg[]): Record<string, Leg> {
   const byId: Record<string, Leg> = {};
   for (const leg of legs) byId[leg.id] ??= leg;
+  for (const leg of legs) {
+    const reversed = reverseLeg(leg);
+    byId[reversed.id] ??= reversed;
+  }
   return byId;
 }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { SolveResult } from '../solver.ts';
 import {
   RELAXATION_ORDER,
   buildCandidates,
@@ -7,6 +8,8 @@ import {
   existsValidPlan,
   legLibrary,
   planFromPacking,
+  preferred,
+  reachNmFor,
   relaxParams,
   validatePlan,
 } from '../solver.ts';
@@ -511,5 +514,198 @@ describe('solver — Kapazitätsfragen rechnen weiter mit dem Doppelschlag', () 
     const legs = legLibrary(snapshot);
     const heim = [legs.get('sued--mitte')!, legs.get('mitte--athen')!];
     expect(packLegsFeasible(heim, 5, 5, snapshot)).not.toBe('infeasible');
+  });
+});
+
+/**
+ * Der Heimweg besteht teils aus UMGEDREHTEN Etappen (ppr.ts): von einer Insel
+ * abseits der Rückfallkette führt oft keine gespeicherte Etappe zurück, wohl
+ * aber die Gegenrichtung einer gespeicherten. Ein Plan speichert nur IDs — und
+ * `fern--mitte` stand in keinem Index, solange `legIndex` nur die Bibliothek
+ * las. Jede Prüfung meldete "Etappe nicht mehr in der Bibliothek", der Tag galt
+ * als unbewertbar, und der Plan konnte nie gültig werden.
+ *
+ * Praktische Folge an der echten Bibliothek: Santorin, Amorgos und Ios waren
+ * strukturell ungültig — nicht wegen Wetter oder Zeit, sondern weil die Etappe
+ * beim Nachschlagen fehlte.
+ */
+describe('solver — umgedrehte Heimweg-Etappen sind auflösbar', () => {
+  function reverseConnectorSnapshot(): PlanningSnapshot {
+    const athen = makePlace({ id: 'athen-alimos', islandId: 'athen', coordinates: { lat: 37.9, lon: 23.7 } });
+    const mitte = makePlace({ id: 'mitte-bucht', islandId: 'mitte', coordinates: { lat: 37.6, lon: 24.2 } });
+    const fern = makePlace({ id: 'fern-hafen', islandId: 'fern', coordinates: { lat: 37.3, lon: 24.6 } });
+    const leg = (f: typeof athen, t: typeof athen) =>
+      makeLeg({
+        id: `${f.islandId}--${t.islandId}`,
+        fromIslandId: f.islandId, toIslandId: t.islandId,
+        fromPlaceId: f.id, toPlaceId: t.id, distanceNm: 18,
+      });
+    // Die Gegenrichtung von 'mitte--fern' ist NICHT gespeichert — der Heimweg
+    // von 'fern' muss sie erzeugen.
+    const legs = [leg(athen, mitte), leg(mitte, fern), leg(mitte, athen)];
+    const variants = [
+      makeVariant('sued', [legs[0]!, legs[1]!], { escalationRank: 1 }),
+      makeVariant('rueckfallkette-west', [legs[2]!], {
+        escalationRank: 0, isReturnChain: true,
+      }),
+    ];
+    const islands: Island[] = [
+      { id: 'athen', name: 'athen', coordinates: athen.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'fixture' } },
+      { id: 'mitte', name: 'mitte', coordinates: mitte.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'fixture' } },
+      { id: 'fern', name: 'fern', coordinates: fern.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'fixture' } },
+    ];
+    const times = makeTimes(14);
+    const fc = constantForecast(times.length, 10, 90);
+    const snap = makeSnapshot({
+      times, polar: TEST_POLAR,
+      forecast: { [athen.id]: fc, [mitte.id]: fc, [fern.id]: fc },
+      library: { islands, places: [athen, mitte, fern], invalidPlaces: [], legs, variants },
+      trip: {
+        currentDay: 1,
+        position: { source: 'manual', lat: athen.coordinates.lat, lon: athen.coordinates.lon, placeId: athen.id },
+        plan: null, departureHourOverride: null, stopHoursByDay: {},
+      },
+    });
+    snap.params = {
+      ...snap.params, tripStartDate: TRIP_START, tripLengthDays: 5,
+      returnDeadlineDate: '2026-08-12', pickupDate: '2026-08-11',
+      reliableHorizonDays: 14,
+    };
+    return snap;
+  }
+
+  it('der Index kennt die Gegenrichtung jeder gespeicherten Etappe', () => {
+    const snapshot = reverseConnectorSnapshot();
+    const index = legLibrary(snapshot);
+    expect(index.has('mitte--fern')).toBe(true);
+    expect(index.has('fern--mitte')).toBe(true);
+    const reversed = index.get('fern--mitte')!;
+    expect(reversed.fromIslandId).toBe('fern');
+    expect(reversed.toIslandId).toBe('mitte');
+  });
+
+  it('eine gespeicherte Richtung schlägt die erzeugte Spiegelung', () => {
+    const snapshot = reverseConnectorSnapshot();
+    // 'mitte--athen' IST kuratiert — der Index darf nicht die Spiegelung von
+    // 'athen--mitte' liefern, die andere Plätze und Wegpunkte hätte.
+    const stored = snapshot.library.legs.find((l) => l.id === 'mitte--athen')!;
+    expect(legLibrary(snapshot).get('mitte--athen')).toBe(stored);
+  });
+
+  it('der Plan bis zur fernen Insel meldet keine fehlende Etappe mehr', () => {
+    const snapshot = reverseConnectorSnapshot();
+    const solved = completePlan(snapshot, 'athen')!;
+    const fehlend = solved.validity.violations.filter((v) =>
+      v.text.includes('nicht mehr in der Bibliothek'),
+    );
+    expect(fehlend).toEqual([]);
+    expect(solved.turnIslandId).toBe('fern');
+  });
+});
+
+/**
+ * SKIPPER-VORGABE 2026-08-05 — "so weit wie möglich nach Süden".
+ *
+ * Die alte Kennzahl war die ZAHL der Etappen. Das ist etwas anderes als
+ * Reichweite: ein Plan, der zwölf Tage zwischen zwei Nachbarinseln pendelt,
+ * hat genauso viele Etappen wie einer, der durchzieht — und gewann sogar, weil
+ * er leichter gültig wird. Dazu brach die Schleife beim ersten gültigen Plan
+ * ab, sodass eine weitere Wende gar nicht mehr geprüft wurde.
+ */
+describe('solver — die Reichweite ist das Ziel, nicht die Etappenzahl', () => {
+  it('wendet an der entferntesten erreichbaren Insel', () => {
+    const solved = completePlan(roundTripSnapshot(), 'athen')!;
+    expect(solved.turnIslandId).toBe('sued');
+  });
+
+  /**
+   * Die Vergleichsregel selbst — sie IST die Entscheidung, deshalb steht sie
+   * hier Kriterium für Kriterium und nicht nur als Ergebnis eines Szenarios.
+   */
+  describe('preferred — die Rangfolge der Kriterien', () => {
+    const snapshot = roundTripSnapshot();
+    const reach = reachNmFor(snapshot);
+    const result = (
+      over: Partial<SolveResult> & { turnIslandId: string },
+    ): SolveResult => ({
+      plan: makePlan([makeStage(1, ['athen--mitte'], 'mitte')]),
+      validity: { valid: true, horizonDependent: false, violations: [], safetyViolations: [] },
+      relaxedTo: 'none',
+      variantId: 'a',
+      ...over,
+    });
+
+    it('gültig schlägt ungültig, auch wenn der ungültige weiter käme', () => {
+      const nah = result({ turnIslandId: 'mitte' });
+      const weit = result({
+        turnIslandId: 'sued',
+        validity: { valid: false, horizonDependent: false, violations: [{ kind: 'deadline', day: 5, text: 'zu spät' }], safetyViolations: [] },
+      });
+      expect(preferred(nah, weit, reach)).toBe(nah);
+      expect(preferred(weit, nah, reach)).toBe(nah);
+    });
+
+    it('weiter schlägt näher', () => {
+      const nah = result({ turnIslandId: 'mitte' });
+      const weit = result({ turnIslandId: 'sued' });
+      expect(preferred(nah, weit, reach)).toBe(weit);
+      expect(preferred(weit, nah, reach)).toBe(weit);
+    });
+
+    it('eine Eskalationsstufe ist hinnehmbar, wenn sie WEITER trägt', () => {
+      const nahOhne = result({ turnIslandId: 'mitte', relaxedTo: 'none' });
+      const weitMit = result({ turnIslandId: 'sued', relaxedTo: 'doppelschlag' });
+      expect(preferred(nahOhne, weitMit, reach)).toBe(weitMit);
+    });
+
+    it('bei gleicher Reichweite gewinnt die Stufe, die weniger nachgibt', () => {
+      const ohne = result({ turnIslandId: 'sued', relaxedTo: 'none' });
+      const mit = result({ turnIslandId: 'sued', relaxedTo: 'doppelschlag' });
+      expect(preferred(mit, ohne, reach)).toBe(ohne);
+    });
+
+    it('bei gleicher Reichweite und Stufe gewinnt der Plan mit weniger Hafentagen', () => {
+      const viel = result({
+        turnIslandId: 'sued',
+        plan: makePlan([makeHarbourDay(1, 'athen'), makeHarbourDay(2, 'athen'), makeStage(3, ['athen--mitte'], 'mitte')]),
+      });
+      const wenig = result({
+        turnIslandId: 'sued',
+        plan: makePlan([makeStage(1, ['athen--mitte'], 'mitte'), makeStage(2, ['mitte--sued'], 'sued')]),
+      });
+      expect(preferred(viel, wenig, reach)).toBe(wenig);
+    });
+
+    it('weniger Sicherheitsverletzungen schlagen alles andere', () => {
+      const unsicher = result({
+        turnIslandId: 'sued',
+        validity: { valid: false, horizonDependent: false,
+          violations: [{ kind: 'upwind', day: 2, text: 'gegenan' }],
+          safetyViolations: [{ kind: 'upwind', day: 2, text: 'gegenan' }] },
+      });
+      const sicherer = result({
+        turnIslandId: 'mitte',
+        validity: { valid: false, horizonDependent: false,
+          violations: [{ kind: 'incomplete', day: null, text: 'Hafentage' }], safetyViolations: [] },
+      });
+      expect(preferred(unsicher, sicherer, reach)).toBe(sicherer);
+    });
+  });
+
+  it('nimmt sie NICHT in Kauf, wenn sie nichts einbringt', () => {
+    // Gleiche Reichweite ohne Nachgeben erreichbar — dann bleibt es dabei.
+    const solved = completePlan(roundTripSnapshot({ legNm: 8 }), 'athen')!;
+    expect(solved.turnIslandId).toBe('sued');
+    expect(solved.relaxedTo).toBe('none');
+    for (const stage of stagesOf(solved.plan)) expect(stage.legIds).toHaveLength(1);
+  });
+
+  it('liefert bei gleicher Lage zweimal dasselbe (deterministisch)', () => {
+    const snapshot = roundTripSnapshot();
+    const a = completePlan(snapshot, 'athen')!;
+    const b = completePlan(snapshot, 'athen')!;
+    expect(JSON.stringify(a.plan)).toBe(JSON.stringify(b.plan));
+    expect(a.turnIslandId).toBe(b.turnIslandId);
+    expect(a.relaxedTo).toBe(b.relaxedTo);
   });
 });

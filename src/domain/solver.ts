@@ -50,8 +50,9 @@ import {
   type Feasibility,
   type PackedLeg,
 } from './ppr.ts';
-import { legIndex, legsOfVariant } from './legs.ts';
+import { legIndexWithReverses, legsOfVariant } from './legs.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
+import { distanceNm } from './geo.ts';
 
 // ---------------------------------------------------------------------------
 // Relaxation
@@ -134,7 +135,7 @@ export function relaxParams(params: Params, level: RelaxationLevel): Params {
  * first-writer-wins keeps it deterministic.
  */
 export function legLibrary(snapshot: PlanningSnapshot): Map<string, Leg> {
-  return legIndex(snapshot.library);
+  return legIndexWithReverses(snapshot.library);
 }
 
 /** Outbound variants (everything that is not the fallback chain), conservative first. */
@@ -598,6 +599,78 @@ export interface SolveResult {
   turnIslandId: string;
 }
 
+/**
+ * Reichweite eines Round-Trips: die Distanz von der Basis zum Wendepunkt.
+ *
+ * Das IST die Törnfrage — "wie weit kommen wir?" (AD-13). Die alte Kennzahl
+ * war die Zahl der Etappen, und das ist etwas anderes: ein Plan, der zwölf Tage
+ * lang zwischen Paros und Naxos pendelt, hat genauso viele Etappen wie einer,
+ * der bis Santorin durchzieht, und gewann sogar, weil er leichter gültig wird.
+ * Genau das Bild bekam der Skipper: kurze Schläge, das Tagesbudget zu zwei
+ * Dritteln ungenutzt, und die Wende weit nördlich vom eigentlichen Ziel.
+ *
+ * Gemessen wird zur Insel, nicht über die gefahrene Strecke: die Umwege des
+ * Rückwegs sollen die Ambition nicht aufblähen.
+ */
+export function reachNmFor(snapshot: PlanningSnapshot): (islandId: string) => number {
+  const base = snapshot.library.islands.find(
+    (i) => i.id === snapshot.params.baseIslandId,
+  );
+  if (!base) return () => 0;
+  return (islandId: string) => {
+    const island = snapshot.library.islands.find((i) => i.id === islandId);
+    return island ? distanceNm(base.coordinates, island.coordinates) : 0;
+  };
+}
+
+const RELAXATION_STEP: Record<RelaxationLevel, number> = {
+  none: 0,
+  hardMax: 1,
+  doppelschlag: 2,
+  nightLeg: 3,
+};
+
+/**
+ * Welcher von zwei Plänen der bessere ist — lexikografisch, nicht als
+ * gewichtete Summe.
+ *
+ * Die Reihenfolge IST die Entscheidung, und sie soll ablesbar sein statt aus
+ * Gewichten hervorzugehen, die sich gegenseitig aufheben können:
+ *
+ *   1. gültig vor ungültig, und unter den ungültigen zuerst weniger
+ *      Sicherheitsverletzungen, dann weniger Verletzungen überhaupt. Die App
+ *      muss auch im Meltemi antworten (FR18) — aber nie mit etwas Unsicherem.
+ *   2. WEITER vor näher. Das ist die Törnfrage.
+ *   3. Erst danach die Bequemlichkeit: weniger Nachgeben auf der
+ *      Eskalationsleiter. Ein Doppelschlag, der Santorin erreichbar macht, ist
+ *      also willkommen; einer, der nichts einbringt, wird nicht genommen.
+ *   4. Weniger Hafentage — ein Törn, der am Ende vier Tage im Hafen liegt, hat
+ *      seine Zeit nicht genutzt.
+ *   5. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt.
+ *   6. Zum Schluss die Variante alphabetisch: gleiche Lage, gleiche Antwort.
+ */
+export function preferred(
+  a: SolveResult | null,
+  b: SolveResult,
+  reach: (islandId: string) => number,
+): SolveResult {
+  if (!a) return b;
+  const cmp: [number, number][] = [
+    [a.validity.valid ? 1 : 0, b.validity.valid ? 1 : 0],
+    [-a.validity.safetyViolations.length, -b.validity.safetyViolations.length],
+    [-a.validity.violations.length, -b.validity.violations.length],
+    [Math.round(reach(a.turnIslandId)), Math.round(reach(b.turnIslandId))],
+    [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
+    [
+      -a.plan.days.filter((d) => d.kind === 'harbour').length,
+      -b.plan.days.filter((d) => d.kind === 'harbour').length,
+    ],
+    [stagesOf(a.plan).length, stagesOf(b.plan).length],
+  ];
+  for (const [x, y] of cmp) if (x !== y) return x > y ? a : b;
+  return a.variantId <= b.variantId ? a : b;
+}
+
 /** A pin the skipper has set: this day is fixed (AD-12). */
 export interface Pin {
   day: number;
@@ -715,30 +788,48 @@ export function completePlan(
   if (candidates.length === 0) return null;
   const constraint = dayConstraintFor(snapshot, futurePins);
 
-  const score = (r: SolveResult): number => {
-    // Validity before preference (AD-13), and safety before structure: a plan
-    // that is unsafe or misses a commitment loses hardest. Sailing more stages
-    // is the soft southern-reach preference — it also makes "stay in port"
-    // rank last, so that answer only surfaces when nothing else works.
-    const stages = stagesOf(r.plan).length;
-    return (
-      (r.validity.valid ? 10_000 : 0) -
-      r.validity.safetyViolations.length * 1_000 -
-      r.validity.violations.length * 50 +
-      stages
-    );
-  };
+  const reach = reachNmFor(snapshot);
 
-  let leastViolating: SolveResult | null = null;
+  let best: SolveResult | null = null;
 
-  for (const level of RELAXATION_ORDER) {
+  /**
+   * ALLE Stufen werden durchgerechnet, nicht nur bis die erste etwas Gültiges
+   * liefert.
+   *
+   * Vorher brach die Schleife beim ersten gültigen Plan ab — und weil ein
+   * kurzer Törn früher gültig wird als ein weiter, gewann systematisch der
+   * kürzere. Die Leiter war damit keine Eskalation, sondern eine Bremse: dass
+   * Santorin mit einem Doppelschlag erreichbar gewesen wäre, hat der Solver nie
+   * geprüft, sobald Milos ohne einen auskam. Jetzt entscheidet der Vergleich
+   * (`preferred`), und der stellt die Reichweite vor die Bequemlichkeit —
+   * die Stufe zählt erst als Kriterium, wenn zwei Pläne gleich weit kommen.
+   */
+  for (const [levelIdx, level] of RELAXATION_ORDER.entries()) {
     const relaxed: PlanningSnapshot = {
       ...snapshot,
       params: relaxParams(snapshot.params, level),
     };
-    let bestThisLevel: SolveResult | null = null;
 
     for (const candidate of candidates) {
+      /**
+       * Beschneidung, die das Ergebnis nicht verändert: steht bereits ein
+       * GÜLTIGER Plan, kann eine höhere Eskalationsstufe nur noch gewinnen,
+       * wenn sie WEITER kommt. Bei gleicher Reichweite verliert sie an der
+       * Stufe selbst, die in `preferred` vor Hafentagen und Etappenzahl steht.
+       *
+       * Ohne das kostete das Durchrechnen aller vier Stufen an der echten
+       * Bibliothek ein Vielfaches — und zwar bei jeder Forecast-Aktualisierung,
+       * auf dem Telefon.
+       */
+      if (
+        levelIdx > 0 &&
+        best?.validity.valid &&
+        Math.round(reach(candidate.turnIslandId)) <=
+          Math.round(reach(best.turnIslandId))
+      ) {
+        continue;
+      }
+
       // Idle days needed to span the frame with THIS candidate's legs. The
       // target is params.harbourDays, but capping the packer there would make
       // a plan unbuildable whenever the library holds fewer legs than the trip
@@ -774,14 +865,11 @@ export function completePlan(
         variantId: candidate.variantId,
         turnIslandId: candidate.turnIslandId,
       };
-      if (!bestThisLevel || score(result) > score(bestThisLevel)) bestThisLevel = result;
-      if (!leastViolating || score(result) > score(leastViolating)) leastViolating = result;
+      best = preferred(best, result, reach);
     }
-
-    if (bestThisLevel?.validity.valid) return bestThisLevel;
   }
 
-  return leastViolating;
+  return best;
 }
 
 /**

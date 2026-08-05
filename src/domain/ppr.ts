@@ -12,8 +12,8 @@
 import type { Leg } from './schema/route.ts';
 import type { PlanningSnapshot, PprResult } from './schema/snapshot.ts';
 import { RETURN_CHAIN_ROUTE_ID } from './schema/route.ts';
-import { islandSequence, legsOfVariant } from './legs.ts';
-import { assessLeg, legWaypointKey, type LegScenario } from './scoring.ts';
+import { islandSequence, legsOfVariant, reverseLeg } from './legs.ts';
+import { assessLeg, type LegScenario } from './scoring.ts';
 import { deadlineFrame } from './time.ts';
 
 export type Feasibility = 'feasible' | 'infeasible' | 'horizon';
@@ -336,25 +336,6 @@ export function remainingReturnLegs(
   return null;
 }
 
-function reverseLeg(leg: Leg): Leg {
-  // The snapshot only fetches forecast keys of the STORED direction
-  // (collectLocations, AD-3). A reversed leg therefore keeps the original
-  // leg's waypoint keys, mirrored — otherwise every waypoint lookup misses
-  // and the whole return leg degrades to 'unbewertet' despite full coverage.
-  const lastIdx = leg.waypoints.length - 1;
-  const originalKeyOf = (n: number): string =>
-    leg.waypointKeys?.[n] ?? legWaypointKey(leg.id, n);
-  return {
-    ...leg,
-    id: `${leg.toIslandId}--${leg.fromIslandId}`,
-    fromIslandId: leg.toIslandId,
-    toIslandId: leg.fromIslandId,
-    fromPlaceId: leg.toPlaceId,
-    toPlaceId: leg.fromPlaceId,
-    waypoints: [...leg.waypoints].reverse(),
-    waypointKeys: leg.waypoints.map((_, n) => originalKeyOf(lastIdx - n)),
-  };
-}
 
 /**
  * AD-13 condition (2') — THE return check, shared by the solver and the PoR.
