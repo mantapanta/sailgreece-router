@@ -180,6 +180,18 @@ hr.hairline,
   white-space: nowrap;
 }
 
+/* Ein Badge, das eine Herleitung aufklappt (Feedback 2026-08-05: die Zahl IST
+   der Link). Unterstrichen, damit es als antippbar erkennbar ist — Hover gibt
+   es auf dem Telefon nicht. */
+button.badge-link {
+  font-family: inherit;
+  color: var(--navy);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 .ampel {
   display: inline-flex;
   align-items: center;

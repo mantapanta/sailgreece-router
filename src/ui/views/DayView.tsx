@@ -466,9 +466,19 @@ function StageCard({
       {stage.kind === 'stage' && (
         <div className="badges">
           {distance > 0 && <span className="badge">{Math.round(distance)} sm</span>}
-          <span className="badge" title="Stunden unter Segeln und Motor">
-            {formatHours(totalHours || null)} Fahrt
-          </span>
+          {/* Die Zeit IST der Link zu ihrer Herleitung (Feedback 2026-08-05):
+              statisch angezeigte Zahl plus separater "Wie kommt die Zeit
+              zustande?"-Button war ein Umweg — wer der Zahl nicht traut,
+              tippt die Zahl an. */}
+          <button
+            type="button"
+            className="badge badge-link"
+            title="Antippen zeigt die Rechnung: Tageskarte und Stunde für Stunde"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {formatHours(totalHours || null)} Fahrt {expanded ? '▴' : '▾'}
+          </button>
           {stage.stopHoursTotal > 0 && (
             <span
               className="badge"
@@ -536,11 +546,6 @@ function StageCard({
         <button type="button" className="secondary" onClick={() => setEditing((v) => !v)}>
           {editing ? 'Bearbeiten abbrechen' : 'Etappe ändern'}
         </button>
-        {stage.kind === 'stage' && (
-          <button type="button" className="secondary" onClick={() => setExpanded((v) => !v)}>
-            {expanded ? 'Rechnung ausblenden' : 'Wie kommt die Zeit zustande?'}
-          </button>
-        )}
       </div>
 
       {editing && (

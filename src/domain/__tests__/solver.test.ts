@@ -484,7 +484,82 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
       expect(stagesOf(alt.plan).length).toBeGreaterThan(0);
     }
   });
+});
 
+/**
+ * FEEDBACK 2026-08-05 — Resttage gehören in den Törn, nicht an sein Ende:
+ * der Packer sprintete hin und zurück, und alle Überschusstage wurden
+ * Hafentage an der Basis ("zurück an Tag 4, dann 4 Tage Alimos"). Jetzt wird
+ * der Rückweg an den PoR-Tag geschoben (Stichtag minus Puffertag — der Puffer
+ * bleibt frei, sonst kostete das Strecken das Grün über Bedingung 2') und die
+ * Überschusstage werden am Wendepunkt verbracht — ausser das Wetter erzwingt
+ * den frühen Heimweg.
+ */
+describe('solver — Resttage werden am Wendepunkt verbracht (stretchPacking)', () => {
+  // Vier Etappen in einem Acht-Tage-Rahmen (Stichtag Tag 8, PoR Tag 7):
+  // drei Tage Überschuss vor dem PoR-Tag.
+  const wideFrame = () => roundTripSnapshot({ returnDeadlineDate: '2026-08-15' });
+
+  it('schiebt den Rückweg an den PoR-Tag, Liegetage liegen am Wendepunkt', () => {
+    const snapshot = wideFrame();
+    const solved = completePlan(snapshot, 'athen')!;
+    const stages = stagesOf(solved.plan);
+    // Ankunft am PoR-Tag (Tag 7) — der Puffertag (Tag 8) bleibt frei.
+    expect(Math.max(...stages.map((s) => s.day))).toBe(7);
+    // Der Hinweg bleibt früh: die Wende fällt nicht später.
+    const turn = stages.find((s) => s.toIslandId === solved.turnIslandId)!;
+    expect(turn.day).toBe(2);
+    // Die Liegetage (3-5) liegen am Wendepunkt; an der Basis liegt nur noch
+    // der Puffertag nach der Ankunft.
+    const atTurn = solved.plan.days.filter(
+      (d) => d.kind === 'harbour' && d.islandId === solved.turnIslandId,
+    );
+    const atBase = solved.plan.days.filter(
+      (d) => d.kind === 'harbour' && d.islandId === 'athen',
+    );
+    expect(atTurn.map((d) => d.day)).toEqual([3, 4, 5]);
+    expect(atBase.map((d) => d.day)).toEqual([8]);
+    expect(solved.validity.safetyViolations).toHaveLength(0);
+    // Das Strecken darf das Grün nicht kosten: gültig und ohne Vorbehalt.
+    expect(solved.validity.valid).toBe(true);
+    expect(solved.validity.horizonDependent).toBe(false);
+  });
+
+  it('bleibt beim frühen Rückweg, wenn das Wetter die späten Tage sperrt', () => {
+    const snapshot = wideFrame();
+    // Ab Tag 5 (Stunde 96) bläst es mit 30 kn aus NW — genau die Richtung des
+    // Heimwegs (Kurs ~310°): jeder verschobene Rückweg-Tag wäre Aufkreuzen
+    // über 25 kn, also rot, also darf nicht geschoben werden.
+    for (const fc of Object.values(snapshot.forecast)) {
+      for (let h = 96; h < fc.windKn.length; h++) {
+        fc.windKn[h] = 30;
+        fc.windDirDeg[h] = 315;
+      }
+    }
+    const solved = completePlan(snapshot, 'athen')!;
+    const stages = stagesOf(solved.plan);
+    expect(Math.max(...stages.map((s) => s.day))).toBe(4);
+    // Die Resttage liegen dann ehrlich an der Basis — früh zurück ist hier
+    // vom Wetter erzwungen, nicht vom Tie-Break.
+    for (const d of solved.plan.days.filter((x) => x.day > 4)) {
+      if (d.kind === 'harbour') expect(d.islandId).toBe('athen');
+    }
+    expect(solved.validity.safetyViolations).toHaveLength(0);
+  });
+
+  it('auch die Alternativen nutzen den Zeitrahmen bis zum PoR-Tag aus', () => {
+    const snapshot = wideFrame();
+    const witness = existsValidPlan(snapshot, 'athen');
+    const alts = deriveAlternatives(snapshot, 'athen', witness);
+    expect(alts.length).toBeGreaterThan(0);
+    for (const alt of alts) {
+      const last = Math.max(...stagesOf(alt.plan).map((s) => s.day));
+      expect(last).toBe(7);
+    }
+  });
+});
+
+describe('solver — ein Tag, eine Verbindung: erzwungene Ausnahmen', () => {
   /**
    * Die Vorgabe ist eine Vorgabe, keine Mauer: passt der Törn mit einem Tag je
    * Verbindung nicht mehr in den Rahmen, darf der Planer nicht schweigend

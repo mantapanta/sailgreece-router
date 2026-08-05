@@ -344,6 +344,148 @@ export function planFromPacking(
   return days;
 }
 
+/**
+ * FEEDBACK 2026-08-05 — Resttage gehören in den Törn, nicht an sein Ende.
+ *
+ * Der Packer legt Etappen so früh wie das Wetter erlaubt (Tie-Break "früher
+ * fertig"), und planFromPacking macht aus allen Resttagen Hafentage an der
+ * Basis: die Santorin-Runde sprintete hin und zurück und "lag" dann drei Tage
+ * in Alimos. Das ist kein Urlaub, das ist ein früher abgebrochener Törn.
+ *
+ * Deshalb wird der RÜCKWEG nach hinten geschoben: die Überschusstage werden
+ * am WENDEPUNKT verbracht (Badetage am fernsten Punkt), die Ankunft rückt an
+ * den Stichtag. Der Hinweg bleibt früh — die Reserve, den fernsten Punkt zu
+ * erreichen, wird nicht angetastet, und der Wendetag (preferred, Kriterium 8)
+ * ändert sich nicht.
+ *
+ * Geschoben wird nur, was dieselben Maßstäbe hält wie das Packing selbst:
+ *  - höchstens bis zum PoR-Tag (Stichtag MINUS Puffertage): eine Ankunft am
+ *    Stichtag selbst verbraucht den Puffer, und genau das stuft Bedingung (2')
+ *    in validatePlan bewusst auf Gelb herab — die Liegetage sind ein Gewinn,
+ *    der das Grün nicht kosten darf,
+ *  - jede verschobene Etappe ist an ihrem neuen Tag nicht rot (Forecast bzw.
+ *    zulässig-unbestätigt jenseits des Horizonts, wie im Packer),
+ *  - kein Verschieben IN eine Nachtetappe hinein,
+ *  - alle Tages-Constraints (Pins, FR31-Zustieg) gelten an den neuen Tagen,
+ *  - eine Ankunft AM Stichtag hält auch die Stichtags-STUNDE (AD-9).
+ * Hält kein Versatz alle Bedingungen, bleibt das Packing unverändert — früh
+ * zurück ist dann keine Bequemlichkeit, sondern vom Wetter erzwungen.
+ * Zusätzlich vergleichen die Aufrufer die Gültigkeit beider Fassungen und
+ * fallen auf die ungeschobene zurück, wenn das Schieben etwas verschlechtert.
+ */
+export function stretchPacking(
+  packed: PackedLeg[],
+  turnIslandId: string,
+  deadlineDay: number,
+  snapshot: PlanningSnapshot,
+  ok: (day: number, endIslandId: string) => boolean = () => true,
+): PackedLeg[] {
+  if (packed.length === 0) return packed;
+  const ordered = [...packed].sort((a, b) => a.day - b.day || a.legIdx - b.legIdx);
+  const lastDay = ordered[ordered.length - 1]!.day;
+  // Ziel ist der PoR-Tag, nicht der Stichtag: der Puffertag bleibt frei.
+  const targetDay = Math.max(1, deadlineDay - snapshot.params.bufferDays);
+  const surplus = targetDay - lastDay;
+  if (surplus <= 0) return packed;
+
+  // Erste Ankunft am Wendepunkt — dahinter beginnt der Rückweg. Kandidaten,
+  // die "hier" wenden (Direkt-Rückkehr), haben keinen Hinweg und werden nicht
+  // gestreckt: sie sind der Notausgang, kein Urlaubsplan.
+  const turnEntry = ordered.find((p) => p.leg.toIslandId === turnIslandId);
+  if (!turnEntry) return packed;
+  const turnDay = turnEntry.day;
+  const head = ordered.filter((p) => p.day <= turnDay);
+  const tail = ordered.filter((p) => p.day > turnDay);
+  if (tail.length === 0) return packed;
+
+  // Rückweg-Tage gruppieren: ein Doppelschlag-Tag bleibt ein Doppelschlag-Tag.
+  const tailDays: number[] = [];
+  const byDay = new Map<number, PackedLeg[]>();
+  for (const p of tail) {
+    if (!byDay.has(p.day)) {
+      byDay.set(p.day, []);
+      tailDays.push(p.day);
+    }
+    byDay.get(p.day)!.push(p);
+  }
+
+  // Wo das Schiff nach dem Wendetag liegt: die END-Insel des Wendetags. An
+  // einem Doppelschlag-Tag ist das NICHT der Wendepunkt selbst (Ios → Santorin
+  // → Folegandros endet auf Folegandros) — die Liegetage-Constraints müssen
+  // gegen die Insel geprüft werden, auf der das Schiff wirklich liegt.
+  const turnDayGroup = ordered.filter((p) => p.day === turnDay);
+  const restIslandId = turnDayGroup[turnDayGroup.length - 1]!.leg.toIslandId;
+
+  const { params } = snapshot;
+  for (let shift = surplus; shift >= 1; shift--) {
+    let feasible = true;
+    let island = restIslandId;
+    let cursor = turnDay + 1;
+    for (const oldDay of tailDays) {
+      const newDay = oldDay + shift;
+      // Liegetage vor dieser Etappe (am Wendepunkt bzw. an der Insel des
+      // vorigen Rückweg-Tags) müssen die Tages-Constraints erfüllen.
+      for (; cursor < newDay && feasible; cursor++) {
+        if (!ok(cursor, island)) feasible = false;
+      }
+      if (!feasible) break;
+      const group = byDay.get(oldDay)!;
+      const stopHours = stopHoursForDay(snapshot, newDay);
+      let offset = 0;
+      let arrivalHour: number | null = null;
+      for (const p of group) {
+        const a = assessLegCached(p.leg, newDay, snapshot, {
+          departureOffsetHours: offset || undefined,
+        });
+        if (a.ampel === 'rot' || a.nightLeg === true) {
+          feasible = false;
+          break;
+        }
+        offset += (a.totalHours ?? 0) + stopHours;
+        arrivalHour = a.arrivalHourAthens;
+      }
+      if (!feasible) break;
+      const endIsland = group[group.length - 1]!.leg.toIslandId;
+      if (!ok(newDay, endIsland)) {
+        feasible = false;
+        break;
+      }
+      // Der Stichtag ist eine ZEIT, nicht nur ein Tag (AD-9): eine Ankunft an
+      // der Basis am Stichtag selbst muss vor der Übergabestunde liegen —
+      // sonst würde das Strecken genau die Verletzung erzeugen, die
+      // validatePlan hinterher meldet.
+      if (
+        newDay === deadlineDay &&
+        endIsland === params.baseIslandId &&
+        (arrivalHour === null || arrivalHour > params.returnDeadlineHourAthens)
+      ) {
+        feasible = false;
+        break;
+      }
+      island = endIsland;
+      cursor = newDay + 1;
+    }
+    // Bei shift < surplus bleiben Tage nach der Ankunft — auch die müssen die
+    // Constraints halten (der Packer prüft das für seine Resttage genauso).
+    for (; cursor <= deadlineDay && feasible; cursor++) {
+      if (!ok(cursor, island)) feasible = false;
+    }
+    if (!feasible) continue;
+    return [...head, ...tail.map((p) => ({ ...p, day: p.day + shift }))];
+  }
+  return packed;
+}
+
+/** Ist Gültigkeit `a` echt schlechter als `b`? (Gate für stretchPacking.) */
+function worseValidity(a: PlanValidity, b: PlanValidity): boolean {
+  if (b.valid && !a.valid) return true;
+  if (a.safetyViolations.length > b.safetyViolations.length) return true;
+  if (a.violations.length > b.violations.length) return true;
+  // Ein Strecken, das den Plan an die Annahme oder den Puffertag hängt
+  // (validatePlan 2'), kostete das Grün — dann lieber früh zurück.
+  return a.horizonDependent && !b.horizonDependent;
+}
+
 // ---------------------------------------------------------------------------
 // Validity (AD-13)
 // ---------------------------------------------------------------------------
@@ -1208,24 +1350,45 @@ export function completePlan(
       });
       if (packing.packed.length === 0 && candidate.legs.length > 0) continue;
 
-      const future = applyPins(
-        planFromPacking(packing.packed, startDay, frame.deadlineDay, startIslandId),
-        futurePins,
-      );
-      if (!candidateHonoursPins(future, futurePins)) continue;
-      const days = [...pastDays, ...future];
-
-      const plan: Plan = { schemaVersion: PLAN_SCHEMA_VERSION, days };
-      // Validity is always judged against the ORIGINAL params — relaxation
-      // may guide the search, never redefine what counts as valid.
-      const validity = validatePlan(plan, snapshot);
-      const result: SolveResult = {
-        plan,
-        validity,
-        relaxedTo: level,
-        variantId: candidate.variantId,
-        turnIslandId: candidate.turnIslandId,
+      const buildResult = (packed: PackedLeg[]): SolveResult | null => {
+        const future = applyPins(
+          planFromPacking(packed, startDay, frame.deadlineDay, startIslandId),
+          futurePins,
+        );
+        if (!candidateHonoursPins(future, futurePins)) return null;
+        const plan: Plan = {
+          schemaVersion: PLAN_SCHEMA_VERSION,
+          days: [...pastDays, ...future],
+        };
+        // Validity is always judged against the ORIGINAL params — relaxation
+        // may guide the search, never redefine what counts as valid.
+        return {
+          plan,
+          validity: validatePlan(plan, snapshot),
+          relaxedTo: level,
+          variantId: candidate.variantId,
+          turnIslandId: candidate.turnIslandId,
+        };
       };
+
+      let result = buildResult(packing.packed);
+      if (!result) continue;
+      // Resttage an den Wendepunkt statt ans Ende (Feedback 2026-08-05) — mit
+      // Gültigkeits-Gate: verschlechtert das Strecken den Plan, bleibt es beim
+      // frühen Rückweg (das Wetter hat ihn dann erzwungen).
+      const stretched = stretchPacking(
+        packing.packed,
+        candidate.turnIslandId,
+        frame.deadlineDay,
+        relaxed,
+        constraint,
+      );
+      if (stretched !== packing.packed) {
+        const stretchedResult = buildResult(stretched);
+        if (stretchedResult && !worseValidity(stretchedResult.validity, result.validity)) {
+          result = stretchedResult;
+        }
+      }
       best = preferred(best, result, metrics);
     }
 
@@ -1313,13 +1476,28 @@ export function deriveAlternatives(
     const pastDays: PlanDay[] = (snapshot.trip.plan?.days ?? []).filter(
       (d) => d.day < startDay,
     );
-    const plan: Plan = {
+    const mkPlan = (packed: PackedLeg[]): Plan => ({
       schemaVersion: PLAN_SCHEMA_VERSION,
       days: [
         ...pastDays,
-        ...planFromPacking(packing.packed, startDay, frame.deadlineDay, startIslandId),
+        ...planFromPacking(packed, startDay, frame.deadlineDay, startIslandId),
       ],
-    };
+    });
+    // Resttage an den Wendepunkt statt ans Ende (Feedback 2026-08-05).
+    // Macht das Strecken den Plan unsicher, gilt die ungestreckte Fassung.
+    const stretched = stretchPacking(
+      packing.packed,
+      candidate.turnIslandId,
+      frame.deadlineDay,
+      snapshot,
+      constraint,
+    );
+    let plan = mkPlan(stretched);
+    let validity = validatePlan(plan, snapshot);
+    if (stretched !== packing.packed && validity.safetyViolations.length > 0) {
+      plan = mkPlan(packing.packed);
+      validity = validatePlan(plan, snapshot);
+    }
     const key = planKey(plan);
     if (seen.has(key)) continue;
     // Ein Round-Trip, der nicht segelt, ist keiner — dieselbe Regel, die
@@ -1328,7 +1506,6 @@ export function deriveAlternatives(
     // Meltemi alles sperrt), aber "Wendepunkt Basis · 0 Etappen" ist keine
     // Alternative, die man einem Skipper zur Übernahme anbietet.
     if (stagesOf(plan).length === 0) continue;
-    const validity = validatePlan(plan, snapshot);
     // Only offer alternatives that are actually safe and on time; structural
     // shortfalls (extra harbour days) are tolerable in an alternative.
     if (validity.safetyViolations.length > 0) continue;
