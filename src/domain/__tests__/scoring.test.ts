@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   assessLeg,
   budgetVerdict,
+  departureHourChoices,
+  departureHourForDay,
   legWaypointKey,
   stopHoursForDay,
   upwindWindVerdict,
@@ -154,6 +156,63 @@ describe('assessLeg — integration against a synthetic snapshot (AD-3)', () => 
     expect(assessLeg(leg, 1, snapshot).ampel).toBe('rot');
     // Tomorrow the default 09:00 departure applies (06:00 UTC) => not rot.
     expect(assessLeg(leg, 2, snapshot).ampel).not.toBe('rot');
+  });
+
+  /**
+   * Übernahme-Fenster: am ERSTEN Törntag ist eine Abfahrt 14–17 Uhr möglich
+   * (Boots-Übergabe am Nachmittag) — und NUR dort. An jedem anderen Tag fällt
+   * ein später Override auf den Standard zurück, statt den Tag in die Nacht
+   * zu rechnen.
+   */
+  it('späte Abfahrt (14–17 Uhr) gilt an Törntag 1 — die Rechnung startet dann nachmittags', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 0,
+      southbound: false, // northbound = beating against the northerly
+    });
+    // 28 kn from N only between 12:00 and 14:59 UTC (15:00–17:59 Athens) —
+    // only a late-afternoon departure runs into the blast.
+    for (const key of Object.keys(snapshot.forecast)) {
+      const fc = snapshot.forecast[key]!;
+      for (let i = 0; i < snapshot.times.length; i++) {
+        fc.windKn[i] = i % 24 >= 12 && i % 24 < 15 ? 28 : 12;
+        fc.windDirDeg[i] = 0;
+      }
+    }
+    snapshot.trip.currentDay = 1;
+    snapshot.trip.departureHourOverride = 15; // 15:00 Athens = 12:00 UTC
+    expect(departureHourForDay(snapshot, 1)).toBe(15);
+    expect(assessLeg(leg, 1, snapshot).ampel).toBe('rot');
+  });
+
+  it('späte Abfahrt an jedem anderen Törntag => Standard-Abfahrt statt Override', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 0,
+      southbound: false,
+    });
+    for (const key of Object.keys(snapshot.forecast)) {
+      const fc = snapshot.forecast[key]!;
+      for (let i = 0; i < snapshot.times.length; i++) {
+        fc.windKn[i] = i % 24 >= 12 && i % 24 < 15 ? 28 : 12;
+        fc.windDirDeg[i] = 0;
+      }
+    }
+    snapshot.trip.currentDay = 2;
+    snapshot.trip.departureHourOverride = 15;
+    // Nicht Tag 1: der späte Override greift nicht — Standard 09:00 (Athen).
+    expect(departureHourForDay(snapshot, 2)).toBe(
+      snapshot.params.departureHourAthens,
+    );
+    expect(assessLeg(leg, 2, snapshot).ampel).not.toBe('rot');
+    // Ein Vormittags-Override bleibt dagegen auch an Tag 2 wirksam.
+    snapshot.trip.departureHourOverride = 10;
+    expect(departureHourForDay(snapshot, 2)).toBe(10);
+  });
+
+  it('departureHourChoices: das Übernahme-Fenster 14–17 gibt es nur an Tag 1', () => {
+    expect(departureHourChoices(1)).toEqual([6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17]);
+    expect(departureHourChoices(2)).toEqual([6, 7, 8, 9, 10, 11, 12]);
   });
 
   it('without a polar the flat fallback speeds are used (FR26)', () => {

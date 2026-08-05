@@ -1,20 +1,106 @@
-/* Y.CO-inspired: calm creme/navy palette, uppercase letterspaced labels,
-   serif headlines, hairline dividers, lots of whitespace (NFR1). */
+/* Consumer-Warm design foundation. Visual contract: DESIGN.md in
+   _bmad-output/planning-artifacts/ux-designs/ (2026-08-05 UX spine, BINDING).
+
+   Token sync: the TS mirror lives in src/ui/tokens.ts (Google Maps / SVG
+   consumers). Values change in DESIGN.md first, then in BOTH files together. */
 
 :root {
-  --creme: #f7f3ea;
-  --creme-card: #fffdf7;
-  --navy: #1b2a41;
-  --navy-soft: #2d4059;
-  --ink: #24303f;
-  --muted: #6b7684;
-  --hairline: #ddd6c7;
-  --gruen: #3a7d44;
-  --gelb: #d9a441;
-  --rot: #b0413e;
-  --grau: #9aa5b1;
-  --serif: Georgia, 'Times New Roman', serif;
-  --sans: 'Helvetica Neue', Arial, sans-serif;
+  /* surfaces */
+  --surface-page: #faf9f7;
+  --surface-card: #ffffff;
+  --surface-inset: #faf9f7;
+  --surface-track: #f0eeea;
+
+  /* ink — secondary carries ALL informational meta; tertiary is restricted to
+     disabled states and decorative glyphs (never information). */
+  --ink-primary: #23211e;
+  --ink-secondary: #6f6a62;
+  --ink-tertiary: #98928a;
+  --border-hairline: #ecebe7;
+
+  /* accent (coral) */
+  --accent: #f2604d;
+  --accent-deep: #d94c3a;
+  --accent-text: #c23a28;
+  --accent-tint: #fdeeec;
+  --accent-gradient-end: #e5893c;
+  --on-accent: #ffffff;
+  --focus-ring: #f2604d;
+
+  /* Ampel — gelb has a graphic variant for bare dots/lines on light ground. */
+  --ampel-gruen: #1a9d5c;
+  --ampel-gruen-tint: #e4f5ec;
+  --ampel-gruen-text: #147a47;
+  --ampel-gelb: #e09112;
+  --ampel-gelb-graphic: #b8770c;
+  --ampel-gelb-tint: #fcf3e0;
+  --ampel-gelb-text: #7a5306;
+  --ampel-rot: #d93636;
+  --ampel-rot-tint: #fbe9e9;
+  --ampel-rot-text: #a72020;
+  --ampel-unbewertet: #b6b1a9;
+  --ampel-unbewertet-tint: #f0eeea;
+  --ampel-unbewertet-text: #6f6a62;
+
+  /* map & alternative routes */
+  --alt-route-1: #6f4a9c;
+  --alt-route-2: #1f7a8c;
+  --alt-route-3: #b05f2c;
+  --map-line-sailed: #1a9d5c;
+  --map-line-casing: #ffffff;
+
+  /* typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+
+  /* radius — actions are pills */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* spacing (4-based) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-page-margin: 16px;
+  --space-card-padding: 20px;
+  --content-max: 1280px;
+
+  /* elevation — the ONLY four shadows + one glow (warm-tinted, never black) */
+  --shadow-1: 0 1px 2px rgba(30, 25, 20, 0.08), 0 2px 8px rgba(30, 25, 20, 0.06);
+  --shadow-2: 0 1px 2px rgba(30, 25, 20, 0.06), 0 10px 30px rgba(30, 25, 20, 0.08);
+  --shadow-3: 0 2px 6px rgba(30, 25, 20, 0.1), 0 16px 40px rgba(30, 25, 20, 0.16);
+  --shadow-accent-glow: 0 4px 14px rgba(242, 96, 77, 0.35);
+
+  /* layout — keep ≥ rendered header height at 390px viewport:
+     8px pad + 34px line1 + 12px gap + 50px tabs track + 12px pad ≈ 116px */
+  --header-h: 120px;
+}
+
+/* ---- transitional aliases — legacy sections only; new code uses the real
+       tokens. Each alias dies when its consuming section is restyled
+       (Stories 1.2+). Do not use in new code. ---- */
+:root {
+  --creme: var(--surface-page);        /* legacy page canvas */
+  --creme-card: var(--surface-card);   /* legacy card creme — cards go pure white */
+  --navy: var(--ink-primary);          /* legacy chrome/headline ink */
+  --navy-soft: var(--ink-secondary);   /* legacy supporting ink */
+  --ink: var(--ink-primary);
+  --muted: var(--ink-secondary);
+  --hairline: var(--border-hairline);
+  --gruen: var(--ampel-gruen);
+  --gelb: var(--ampel-gelb-graphic);   /* dots/borders on light ground take the
+                                          GRAPHIC variant per DESIGN.md */
+  --rot: var(--ampel-rot);
+  --grau: var(--ampel-unbewertet);
+  --serif: var(--font-sans);           /* serif is eliminated — no serif anywhere */
+  --sans: var(--font-sans);
 }
 
 * {
@@ -30,11 +116,11 @@ body,
 }
 
 body {
-  background: var(--creme);
-  color: var(--ink);
-  font-family: var(--sans);
+  background: var(--surface-page);
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .shell {
@@ -43,74 +129,289 @@ body {
   min-height: 100vh;
 }
 
-/* ---- header -------------------------------------------------------------- */
+/* ---- focus & motion (global, DESIGN.md binding) --------------------------- */
 
-.topbar {
-  background: var(--navy);
-  color: var(--creme);
-  padding: 0.9rem 1.4rem;
+/* Two-layer focus indicator: 2px coral ring + 2px white gap. On coral fills
+   the white gap carries the signal. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px; /* the 2px gap … */
+  box-shadow: 0 0 0 2px var(--on-accent); /* … painted white: part of the indicator */
+}
+
+/* SC 2.4.11 — keyboard focus never hides under the sticky header. */
+a,
+button,
+input,
+select,
+textarea,
+summary,
+[tabindex] {
+  scroll-margin-top: calc(var(--header-h) + 8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---- header (two-line, sticky) -------------------------------------------- */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface-page);
+  padding: calc(var(--space-2) + env(safe-area-inset-top)) var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.header-line1 {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 1rem 2rem;
-}
-
-.brand {
-  font-family: var(--serif);
-  font-size: 1.25rem;
-  letter-spacing: 0.02em;
-}
-
-.brand small {
-  display: block;
-  font-family: var(--sans);
-  font-size: 0.65rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: #b9c2cf;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.4rem;
-  margin-left: auto;
-}
-
-.tabs button {
-  background: transparent;
-  border: 1px solid rgba(247, 243, 234, 0.35);
-  color: var(--creme);
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 0.45rem 0.9rem;
-  cursor: pointer;
-}
-
-.tabs button.active {
-  background: var(--creme);
-  color: var(--navy);
-}
-
-.notice-bar {
-  background: var(--navy-soft);
-  color: #dfe6ee;
-  font-size: 0.75rem;
-  padding: 0.4rem 1.4rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 2rem;
+  align-items: center;
   justify-content: space-between;
 }
 
-.datenstand button {
-  margin-left: 0.6rem;
+.header-line2 {
+  display: flex;
+  align-items: center;
+  margin-top: var(--space-3);
+}
+
+.wordmark {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--ink-primary);
+}
+
+.wordmark-accent {
+  color: var(--accent);
+}
+
+/* ---- segmented tabs -------------------------------------------------------- */
+
+.segmented-tabs {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--surface-track);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  width: max-content;
+}
+
+.segmented-tabs button {
+  border: 0;
   background: transparent;
-  border: 1px solid rgba(247, 243, 234, 0.4);
-  color: inherit;
-  font-size: 0.7rem;
-  padding: 0.1rem 0.5rem;
   cursor: pointer;
+  padding: 10px var(--space-5);
+  border-radius: var(--radius-full);
+  font: 600 14px/1.3 var(--font-sans);
+  color: var(--ink-secondary);
+  min-height: 44px;
+}
+
+.segmented-tabs button[aria-current='page'] {
+  background: var(--surface-card);
+  color: var(--ink-primary);
+  box-shadow: var(--shadow-1);
+}
+
+/* ---- icon button (refresh, ≥44px hit area) --------------------------------- */
+
+.icon-button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-text);
+  font-size: 18px;
+}
+
+.header-line2 .icon-button {
+  margin-left: auto;
+}
+
+.icon-button:disabled {
+  color: var(--ink-tertiary);
+  cursor: default;
+}
+
+.icon-button .spin {
+  animation: refresh-spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Visually hidden pending text (reduced-motion refresh state). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- button system ---------------------------------------------------------- */
+
+.btn-primary {
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 19px/1.2 var(--font-sans); /* cta — size is load-bearing (contrast) */
+  min-height: 48px;
+  padding: 0 var(--space-6);
+  box-shadow: var(--shadow-accent-glow);
+}
+
+.btn-primary:hover,
+.btn-primary:active {
+  background: var(--accent-deep);
+}
+
+.btn-primary:disabled {
+  background: var(--surface-track);
+  color: var(--ink-tertiary);
+  box-shadow: none;
+  cursor: default;
+}
+
+.btn-secondary {
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  background: var(--surface-card);
+  color: var(--ink-primary);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-1);
+  font: 600 14px/1.3 var(--font-sans);
+  min-height: 44px;
+  padding: 0 var(--space-5);
+}
+
+.btn-ghost {
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  border-radius: var(--radius-full);
+  color: var(--accent-text);
+  font: 600 14px/1.3 var(--font-sans);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+}
+
+.btn-text {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  color: var(--ink-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: 400 15px/1.5 var(--font-sans);
+}
+
+/* ---- avatar + menu ----------------------------------------------------------- */
+
+.avatar-wrap {
+  position: relative;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  border: 0;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-gradient-end) 100%);
+  color: var(--on-accent);
+  font: 700 14px/1 var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* 44px hit area around the 34px visual (invisible, still clickable). */
+.avatar::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: var(--radius-full);
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.avatar-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 120;
+  min-width: 220px;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-2) 0;
+}
+
+.avatar-menu-identity {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.avatar-menu-name {
+  display: block;
+  font: 600 14px/1.3 var(--font-sans);
+  color: var(--ink-primary);
+}
+
+.avatar-menu-email {
+  display: block;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: 2px;
+}
+
+.avatar-menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 var(--space-4);
+  font: 400 15px/1.5 var(--font-sans);
+  color: var(--ink-primary);
+  text-align: left;
+}
+
+.avatar-menu button:hover {
+  background: var(--surface-inset);
 }
 
 /* ---- generic ------------------------------------------------------------- */
@@ -266,10 +567,10 @@ hr.hairline,
   white-space: nowrap;
 }
 
-.state-offen { background: #e5efe2; color: var(--gruen); border-color: #bcd3bf; }
+.state-offen { background: var(--ampel-gruen-tint); color: var(--gruen); border-color: #bcd3bf; }
 .state-offen-horizont { background: #eef; color: var(--navy-soft); }
-.state-schliesst { background: #f7ecd7; color: #8a6414; border-color: #e4cf9f; }
-.state-zu { background: #f3dedd; color: var(--rot); border-color: #ddb3b1; }
+.state-schliesst { background: var(--ampel-gelb-tint); color: var(--ampel-gelb-text); border-color: #e4cf9f; }
+.state-zu { background: var(--ampel-rot-tint); color: var(--rot); border-color: #ddb3b1; }
 
 .legs-inline {
   grid-column: 1 / -1;
@@ -339,7 +640,7 @@ hr.hairline,
 }
 
 .error-panel {
-  background: #f3dedd;
+  background: var(--ampel-rot-tint);
   border: 1px solid #ddb3b1;
   color: var(--rot);
   padding: 0.8rem 1rem;
@@ -437,37 +738,6 @@ hr.hairline,
   word-break: break-all;
 }
 
-.account-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.72rem;
-  color: #dfe6ee;
-  max-width: 100%;
-}
-
-.account-chip img {
-  border-radius: 50%;
-}
-
-.account-chip > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 16ch;
-}
-
-.account-chip button {
-  background: transparent;
-  border: 1px solid rgba(247, 243, 234, 0.35);
-  color: var(--creme);
-  font-size: 0.66rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  padding: 0.3rem 0.6rem;
-  cursor: pointer;
-}
-
 /* ---- map view (sticky split, stacked on mobile) --------------------------- */
 
 .map-split {
@@ -485,7 +755,8 @@ hr.hairline,
 
 .map-sticky {
   position: sticky;
-  top: 1rem;
+  /* Below the sticky header, not under it. */
+  top: calc(var(--header-h) + 1rem);
   height: min(78vh, 720px);
   border: 1px solid var(--hairline);
   background: var(--creme-card);
@@ -748,8 +1019,8 @@ table.shelter-table tr.sektor-inaktiv td {
    keine Warnung: erzwungen und zulässig, nur eben nicht der Normalfall. */
 .badge-doppelschlag {
   border-style: dashed;
-  background: #f7ecd7;
-  color: #8a6414;
+  background: var(--ampel-gelb-tint);
+  color: var(--ampel-gelb-text);
   border-color: #e4cf9f;
   cursor: help;
   white-space: normal;
@@ -770,13 +1041,13 @@ table.shelter-table tr.sektor-inaktiv td {
   border-style: dashed;
 }
 .rueckweg-zeile.status-wetterfenster {
-  background: #f7ecd7;
-  color: #8a6414;
+  background: var(--ampel-gelb-tint);
+  color: var(--ampel-gelb-text);
   border-color: #e4cf9f;
 }
 .rueckweg-zeile.status-kritisch {
-  background: #f6e2df;
-  color: #8c2f24;
+  background: var(--ampel-rot-tint);
+  color: var(--ampel-rot-text);
   border-color: #e3b6af;
 }
 
@@ -826,9 +1097,9 @@ table.shelter-table tr.sektor-inaktiv td {
 }
 
 .warnung {
-  background: #f7ecd7;
+  background: var(--ampel-gelb-tint);
   border: 1px solid #e4cf9f;
-  color: #8a6414;
+  color: var(--ampel-gelb-text);
   padding: 0.5rem 0.8rem;
   font-size: 0.83rem;
   margin: 0.4rem 0;
@@ -845,21 +1116,58 @@ table.shelter-table tr.sektor-inaktiv td {
   margin-bottom: 0.8rem;
 }
 
-/* ---- footer ----------------------------------------------------------------- */
+/* ---- footer (provenance, contentinfo) ---------------------------------------- */
 
-footer.attribution {
-  background: var(--navy);
-  color: #b9c2cf;
-  font-size: 0.72rem;
-  padding: 0.8rem 1.4rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 2rem;
-  justify-content: space-between;
+.app-footer {
+  padding: var(--space-6) var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom));
+  text-align: center;
 }
 
-footer.attribution a {
-  color: var(--creme);
+.provenance {
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.provenance-text {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: var(--space-2);
+  min-height: 44px;
+  font: inherit;
+  color: inherit;
+}
+
+.provenance-detail {
+  margin: var(--space-2) auto 0;
+  max-width: 320px;
+  text-align: left;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-3) var(--space-4);
+  font: 400 12.5px/1.5 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.provenance-detail p {
+  margin: 0 0 var(--space-1);
+}
+
+.app-footer .footnote {
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin: var(--space-2) 0 0;
+}
+
+.app-footer a {
+  color: var(--ink-secondary);
 }
 
 /* ---- responsive: stacked on mobile (NFR2) ------------------------------------ */
@@ -874,17 +1182,6 @@ footer.attribution a {
     top: 0;
     height: 60vh;
     order: -1;
-  }
-
-  .topbar {
-    padding: 0.7rem 1rem;
-  }
-
-  /* On narrow screens the tabs already claim the row — the account chip wraps
-     onto its own line instead of squeezing the navigation. */
-  .account-chip {
-    width: 100%;
-    justify-content: flex-end;
   }
 
   main.content {
@@ -1144,7 +1441,7 @@ footer.attribution a {
 
 .badge-annahme {
   border-style: dashed;
-  background: #e9eef4;
+  background: var(--surface-track);
   color: var(--navy-soft);
   cursor: help;
 }
@@ -1225,7 +1522,7 @@ footer.attribution a {
 
 .option-row.dringend {
   border-left-color: var(--gelb);
-  background: #fdf8ee;
+  background: var(--ampel-gelb-tint);
 }
 
 .option-kopf {
@@ -1243,8 +1540,8 @@ footer.attribution a {
 }
 
 .badge-frist {
-  background: #f7ecd7;
-  color: #8a6414;
+  background: var(--ampel-gelb-tint);
+  color: var(--ampel-gelb-text);
   border-color: #e4cf9f;
   font-weight: 600;
 }

@@ -197,6 +197,7 @@ describe('preferred — das Konzept überschreibt die Reichweite', () => {
     harbourDev: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
+    maxHarbourRun: 1,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),

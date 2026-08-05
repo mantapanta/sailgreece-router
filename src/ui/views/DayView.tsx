@@ -22,8 +22,10 @@ import type {
   LegHourBreakdown,
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
-import type { DayReturnCheck } from '../../domain/schema/plan.ts';
+import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
 import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
+import { planKey } from '../../domain/solver.ts';
+import { departureHourForDay } from '../../domain/scoring.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
@@ -232,7 +234,7 @@ function StageEditor({
   nightAmpeln: Assessment['nightAmpeln'];
   onClose: () => void;
 }) {
-  const { editStage, releasePin, setStopHours } = usePlanning();
+  const { editStage, releasePin, setStopHours, removeStopover } = usePlanning();
   const [error, setError] = useState<string | null>(null);
   const placesOnIsland = snapshot.library.places.filter(
     (p) => p.islandId === stage.toIslandId,
@@ -279,7 +281,7 @@ function StageEditor({
       <p className="beschreibung">
         Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
         raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
-        Vortagsziel.
+        Vortagsziel, die die Etappen-Bibliothek an einem Tag erreicht.
       </p>
       {placesOnIsland.length > 0 && (
         <label>
@@ -331,6 +333,33 @@ function StageEditor({
           Sie zählt nicht ins Fahrt-Budget.
         </p>
       )}
+      {stage.legs.length > 1 && (
+        <>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setError(null);
+              if (removeStopover(stage.day)) {
+                onClose();
+              } else {
+                setError(
+                  `Der Zwischenstopp lässt sich nicht löschen — es gibt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}, und ein landfreier Direktkurs liess sich nicht berechnen.`,
+                );
+              }
+            }}
+          >
+            Zwischenstopp löschen ({stageVia(snapshot, stage).join(' · ')})
+          </button>
+          <p className="beschreibung">
+            Der Tag wird zu EINER direkten Etappe auf dasselbe Tagesziel — ohne
+            den Anlauf von {stageVia(snapshot, stage).join(' und ')}. Kennt die
+            Bibliothek keine direkte Verbindung, berechnet die App den
+            kürzesten landfreien Kurs selbst (Distanz aus der Geometrie, nicht
+            kuratiert). Der Tag gilt danach als festgelegt (📌).
+          </p>
+        </>
+      )}
       <div className="editor-actions">
         {stage.pinned && (
           <button
@@ -376,9 +405,9 @@ function StageCard({
   const [editing, setEditing] = useState(false);
   const { params } = snapshot;
   const { setDepartureHour } = usePlanning();
-  /** Die heute WIRKSAME Abfahrt — für den Übernehmen-Knopf der Empfehlung. */
-  const heutigeAbfahrt =
-    snapshot.trip.departureHourOverride ?? params.departureHourAthens;
+  /** Die heute WIRKSAME Abfahrt (eine Quelle: scoring.departureHourForDay) —
+      für den Übernehmen-Knopf der Empfehlung. */
+  const heutigeAbfahrt = departureHourForDay(snapshot, stage.day);
   // EINE Punktliste für Karte und Rechnung — daraus die Nummern für beide.
   const points = useMemo(
     () => stagePoints(stage, buildLegsById(snapshot.library.legs), snapshot),
@@ -990,9 +1019,8 @@ export function DayView({
         Aktuelle Position: <strong>{hereName}</strong>
         {snapshot.trip.position?.source === 'manual' && ' (manuell gesetzt)'}
         {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
-        {' · '}Abfahrt{' '}
-        {snapshot.trip.departureHourOverride ?? params.departureHourAthens}:00 Uhr
-        (Athen) · Ankerziel {params.zielAnkunftHourAthens}:00
+        {' · '}Abfahrt {departureHourForDay(snapshot, day)}:00 Uhr (Athen)
+        {' · '}Ankerziel {params.zielAnkunftHourAthens}:00
       </p>
       {assessment.positionNote && (
         <div className="hint-panel">{assessment.positionNote}</div>
@@ -1101,6 +1129,24 @@ export function DayView({
           </button>
         </div>
       )}
+
+      {/* Veralteter Solver-Stand: die Fälle, die der Auto-Refresh (usePlanning)
+          bewusst NICHT anfasst — Törn läuft schon oder Pins gesetzt. Die
+          Neuberechnung bleibt dann eine sichtbare Skipper-Entscheidung. */}
+      {main &&
+        planOutdated(main.plan) &&
+        assessment.proposal &&
+        planKey(assessment.proposal.plan) !== planKey(main.plan) && (
+          <div className="hint-panel">
+            Der Planer wurde verbessert — die gespeicherte Hauptroute stammt aus
+            einer älteren Version und würde so nicht mehr vorgeschlagen.
+            Übernehmen ersetzt sie durch den aktuellen Vorschlag; bisherige
+            Festlegungen (📌) werden dabei gelöst.{' '}
+            <button type="button" onClick={() => checkIn(assessment.proposal!.plan)}>
+              Route neu berechnen
+            </button>
+          </div>
+        )}
 
       {todayStage && (
         <section className="section">

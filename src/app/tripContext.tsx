@@ -26,6 +26,8 @@ import { z } from 'zod';
 import type { TripPosition } from '../domain/schema/snapshot.ts';
 import type { Plan } from '../domain/schema/plan.ts';
 import { PlanSchema } from '../domain/schema/plan.ts';
+import type { Leg } from '../domain/schema/route.ts';
+import { LegSchema } from '../domain/schema/route.ts';
 import { DEFAULT_PARAMS } from '../domain/schema/params.ts';
 import { athensToUtcMs } from '../domain/time.ts';
 
@@ -49,6 +51,15 @@ export interface TripState {
    * ist und keine Ansichtssache.
    */
   stopHoursByDay: Record<number, number>;
+  /**
+   * Vom Skipper ERZEUGTE Direktrouten (FR28 Zwischenstopp löschen): landfrei
+   * gerechnete Etappen, die die Bibliothek nicht kennt. Persistiert, weil der
+   * Plan sie per Id referenziert — ohne sie wäre er nach einem Neustart
+   * unauflösbar ("Etappe nicht mehr in der Bibliothek"). usePlanning injiziert
+   * sie in die Snapshot-Bibliothek; kuratierte Etappen gewinnen bei gleicher
+   * Id (first-writer-wins in legIndex).
+   */
+  customLegs: Leg[];
 }
 
 export type TripAction =
@@ -63,6 +74,22 @@ export type TripAction =
   | { type: 'CHECK_IN'; plan: Plan }
   /** FR28: the skipper edited a day; payload is the fully recomputed plan. */
   | { type: 'EDIT_STAGE'; plan: Plan }
+  /**
+   * FR28: Zwischenstopp gelöscht — der Tag wird zur EINEN direkten Etappe.
+   * `customLeg` trägt die dabei erzeugte Direktroute (null, wenn die
+   * Bibliothek sie schon kannte); Plan und Etappe kommen als EIN Payload,
+   * damit nie ein Plan gespeichert wird, dessen Etappe fehlt.
+   */
+  | { type: 'DELETE_STOPOVER'; plan: Plan; customLeg: Leg | null }
+  /**
+   * Ein gespeicherter Plan stammt von einem älteren Solver-Stand
+   * (planOutdated) und wird durch den aktuellen Vorschlag ersetzt — nur
+   * solange der Skipper nichts investiert hat: trägt der Plan Pins
+   * (source 'skipper'), bleibt er stehen und die Neuberechnung läuft über den
+   * sichtbaren Weg (Banner → CHECK_IN). Ob der Törn schon läuft, prüft der
+   * Effekt in usePlanning (der Reducer kennt den Törntag nicht).
+   */
+  | { type: 'REFRESH_OUTDATED'; plan: Plan }
   /** Release a pin so the solver may plan that day again. */
   | { type: 'RELEASE_PIN'; day: number }
   /** The skipper acknowledged an unreadable plan; a fresh one may be adopted. */
@@ -79,6 +106,7 @@ const INITIAL: TripState = {
   planUnreadable: false,
   departureHourOverride: null,
   stopHoursByDay: {},
+  customLegs: [],
 };
 
 /** Release every skipper pin — the plan stays, only its ownership resets. */
@@ -121,6 +149,24 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
       return { ...state, plan: releaseAllPins(action.plan), planUnreadable: false };
     case 'EDIT_STAGE':
       return { ...state, plan: action.plan, planUnreadable: false };
+    case 'DELETE_STOPOVER': {
+      // Dedupe per Id: dieselbe Direktroute zweimal zu erzeugen (Stopp löschen,
+      // zurückbauen, wieder löschen) darf die Bibliothek nicht doppelt füllen.
+      const customLegs =
+        action.customLeg && !state.customLegs.some((l) => l.id === action.customLeg!.id)
+          ? [...state.customLegs, action.customLeg]
+          : state.customLegs;
+      return { ...state, plan: action.plan, customLegs, planUnreadable: false };
+    }
+    case 'REFRESH_OUTDATED':
+      // Nur ersetzen, was der Solver selbst gelegt hat: ein Pin ist eine
+      // Skipper-Entscheidung, und die wird nie stillschweigend verworfen
+      // (AD-12). Der Guard steht IM Reducer, nicht nur im Effekt — kein
+      // Aufrufer kann ihn vergessen.
+      if (!state.plan || state.plan.days.some((d) => d.source === 'skipper')) {
+        return state;
+      }
+      return { ...state, plan: action.plan };
     case 'RELEASE_PIN': {
       if (!state.plan) return state;
       return {
@@ -173,6 +219,9 @@ const TripStateSchema = z.object({
   // Aus aelterem Storage fehlt das Feld — Default statt Reset des ganzen
   // Zustands, sonst kostet ein Schema-Zuwachs die Position des Skippers.
   stopHoursByDay: z.record(z.coerce.number().int(), z.number().min(0).max(12)).default({}),
+  // Erzeugte Direktrouten (FR28) — dasselbe Zod-Schema wie kuratierte Etappen:
+  // was hier nicht parst, darf auch nie eine Plan-Referenz tragen.
+  customLegs: z.array(LegSchema).default([]),
 });
 
 function loadPersisted(): TripState {

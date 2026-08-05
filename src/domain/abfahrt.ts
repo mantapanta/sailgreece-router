@@ -21,16 +21,7 @@
 
 import type { Leg } from './schema/route.ts';
 import type { AbfahrtsEmpfehlung, PlanningSnapshot } from './schema/snapshot.ts';
-import { assessLeg } from './scoring.ts';
-import { stopHoursForDay } from './scoring.ts';
-
-/** Abfahrtsbasis eines Tages — dieselbe Regel wie assessLeg (AD-11/FR15). */
-function basisAbfahrt(snapshot: PlanningSnapshot, day: number): number {
-  return (
-    (day === snapshot.trip.currentDay ? snapshot.trip.departureHourOverride : null) ??
-    snapshot.params.departureHourAthens
-  );
-}
+import { assessLeg, departureHourForDay, stopHoursForDay } from './scoring.ts';
 
 /**
  * Ankunft (Athen-Dezimalstunden ab Mitternacht des Abfahrtstags) der
@@ -46,7 +37,9 @@ function ankunftBeiAbfahrt(
   abfahrtHour: number,
   snapshot: PlanningSnapshot,
 ): number | null {
-  const basis = basisAbfahrt(snapshot, day);
+  // Dieselbe Abfahrtsbasis wie assessLeg (scoring.departureHourForDay,
+  // eine Quelle) — der Offset rechnet die Wunsch-Abfahrt darauf um.
+  const basis = departureHourForDay(snapshot, day);
   const stopHours = stopHoursForDay(snapshot, day);
   let offset = abfahrtHour - basis;
   let arrival: number | null = null;

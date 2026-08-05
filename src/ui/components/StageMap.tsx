@@ -14,7 +14,7 @@
 import { useEffect, useMemo } from 'react';
 import { AdvancedMarker, Map, useMap } from '@vis.gl/react-google-maps';
 import type { Ampel } from '../../domain/schema/common.ts';
-import { AMPEL_CSS_COLOR } from './AmpelBadge.tsx';
+import { AMPEL_GRAPHIC_HEX } from '../tokens.ts';
 import { Polyline } from './Polyline.tsx';
 import { SeamarkLayer } from './SeamarkLayer.tsx';
 import type { StagePoint } from '../mapPath.ts';
@@ -68,7 +68,7 @@ export function StageMap({
     );
   }
 
-  const lineColor = AMPEL_CSS_COLOR[ampel];
+  const lineColor = AMPEL_GRAPHIC_HEX[ampel];
   const wegpunkte = points.filter((p) => p.kind === 'wegpunkt').length;
 
   return (

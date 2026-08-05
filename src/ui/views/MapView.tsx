@@ -20,7 +20,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-maps';
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
-import { AMPEL_CSS_COLOR, AmpelBadge } from '../components/AmpelBadge.tsx';
+import { AmpelBadge } from '../components/AmpelBadge.tsx';
+import { AMPEL_GRAPHIC_HEX, HIN_LINE_COLOR, RUECK_LINE_COLOR } from '../tokens.ts';
 import { Polyline } from '../components/Polyline.tsx';
 import { SeamarkLayer } from '../components/SeamarkLayer.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
@@ -44,11 +45,9 @@ const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
  * (altRouteColors.ts) — eine Richtung, die aussieht wie ein Urteil oder wie
  * eine Alternative, wäre nicht mehr als Richtung lesbar. Weil Blau/Magenta
  * für Farbfehlsichtige zusammenfallen können, tragen die Linien zusätzlich
- * Fahrtrichtungspfeile (Polyline.tsx).
+ * Fahrtrichtungspfeile (Polyline.tsx). Die Farbwerte leben in tokens.ts
+ * (einzige TS-Farbquelle).
  */
-const HIN_LINE_COLOR = '#2f6fd0';
-const RUECK_LINE_COLOR = '#c2418f';
-
 /**
  * Abstand, um den eine Windfieder gegen die Windrichtung vom Platz weggesetzt
  * wird (in Breitengrad, ca. 3,5 sm). Die Fieder sitzt damit LUVSEITIG des
@@ -601,7 +600,7 @@ export function MapView({
                 >
                   <div
                     className={relevant ? 'marker-pin' : 'marker-pin muted'}
-                    style={relevant ? { background: AMPEL_CSS_COLOR[ampel] } : undefined}
+                    style={relevant ? { background: AMPEL_GRAPHIC_HEX[ampel] } : undefined}
                   />
                 </AdvancedMarker>
               );
