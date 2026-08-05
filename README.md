@@ -321,6 +321,11 @@ Wegpunkt an Land, kein gespeicherter Kurs über Land, keine Route mit Sprung.
 ## Attribution
 
 - Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0)
+- Seezeichen-Overlay von [OpenSeaMap](https://www.openseamap.org)
+  (`tiles.openseamap.org`, CC-BY-SA), Daten © OpenStreetMap-Mitwirkende,
+  [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — rein visuelle
+  Ebene, geht nicht in Scoring oder Routing ein; keine verlässlichen
+  Tiefenangaben
 - Küstenlinien aus [@geo-maps](https://github.com/simonepri/geo-maps)
   (`earth-coastlines-250m`), abgeleitet aus OpenStreetMap-Daten —
   © OpenStreetMap-Mitwirkende, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/)

@@ -20,6 +20,7 @@ import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.
 import { hourIndexAt } from '../../domain/time.ts';
 import { AMPEL_CSS_COLOR, AmpelBadge } from '../components/AmpelBadge.tsx';
 import { Polyline } from '../components/Polyline.tsx';
+import { SeamarkLayer } from '../components/SeamarkLayer.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
 import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
 import { type BarbPoint, windFieldFor } from '../windField.ts';
@@ -151,6 +152,12 @@ export function MapView({
    * ist eine Blickentscheidung, keine Törnentscheidung.
    */
   const [showWind, setShowWind] = useState(true);
+  /**
+   * Seezeichen-Overlay (OpenSeaMap). Transienter View-State wie die
+   * Windfiedern — Standard AN, weil die Ebene transparent ist und erst beim
+   * Hineinzoomen sichtbar wird; sie kostet das Besprechungsbild nichts.
+   */
+  const [showSeamarks, setShowSeamarks] = useState(true);
   /**
    * FEEDBACK 2026-08-05: die Alternativ-Routen waren auf der Karte unsichtbar.
    * Jetzt sind sie EINBLENDBAR — gestrichelt, jede in ihrer Farbe (dieselbe
@@ -318,6 +325,24 @@ export function MapView({
             </span>
           </div>
         )}
+        <label className="wind-toggle">
+          <input
+            type="checkbox"
+            checked={showSeamarks}
+            onChange={(e) => setShowSeamarks(e.target.checked)}
+          />
+          Seezeichen (OpenSeaMap)
+        </label>
+        {showSeamarks && (
+          <span className="beschreibung">
+            Tonnen, Leuchtfeuer, Häfen ab Zoomstufe&nbsp;8 — ©{' '}
+            <a href="https://www.openseamap.org" target="_blank" rel="noreferrer">
+              OpenSeaMap
+            </a>
+            -Mitwirkende (CC-BY-SA). Keine verlässlichen Tiefen — Pilotage nach
+            Revierführer.
+          </span>
+        )}
         {assessment.alternatives.length > 0 && (
           <div className="alt-toggles">
             <span className="versal">Alternativ-Routen</span>
@@ -433,6 +458,11 @@ export function MapView({
             mapTypeId="hybrid"
             gestureHandling="greedy"
           >
+            {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
+                Google-Maps-Architektur immer unter Markern und Polylinien —
+                die Ebene kann Route und Ampeln nie zudecken. */}
+            {showSeamarks && <SeamarkLayer />}
+
             {/* Eingeblendete Alternativ-Routen: gestrichelt in ihrer Farbe,
                 UNTER der Hauptroute (zIndex) — sie sind Vergleichsbild, nicht
                 Plan. Wo Alternative und Hauptroute dieselbe Etappe nutzen,
