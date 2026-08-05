@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TripProvider, useTrip } from './tripContext.tsx';
 import { AuthProvider, useAuth } from './authContext.tsx';
@@ -10,6 +10,8 @@ import { MapView } from '../ui/views/MapView.tsx';
 import { PlaceDetailView } from '../ui/views/PlaceDetailView.tsx';
 import { SignInView } from '../ui/views/SignInView.tsx';
 import { AvatarMenu } from '../ui/components/AvatarMenu.tsx';
+import { DayViewSkeleton } from '../ui/components/DayViewSkeleton.tsx';
+import { staleForecastLabel } from '../ui/dayViewModel.ts';
 import { formatStamp } from '../ui/format.ts';
 import '../ui/styles.css';
 
@@ -28,119 +30,21 @@ type View =
   | { kind: 'karte' }
   | { kind: 'platz'; placeId: string; returnTo: 'tag' | 'karte' };
 
-function ControlsBar() {
-  const { state, dispatch } = useTrip();
-  const { bundle, currentDay } = usePlanning();
-  const [gpsError, setGpsError] = useState<string | null>(null);
-
-  const params = bundle?.params;
-  const places = bundle?.library.places ?? [];
-
-  const requestGps = async () => {
-    setGpsError(null);
-    try {
-      const pos = await getCurrentGpsPosition();
-      dispatch({ type: 'GPS_FIX', position: pos });
-    } catch (e) {
-      setGpsError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  return (
-    <div className="controls">
-      <label>
-        Törntag
-        <select
-          value={currentDay}
-          onChange={(e) => dispatch({ type: 'SET_DAY', day: Number(e.target.value) })}
-        >
-          {Array.from({ length: params?.tripLengthDays ?? 12 }, (_, i) => i + 1).map(
-            (d) => (
-              <option key={d} value={d}>
-                Tag {d}
-              </option>
-            ),
-          )}
-        </select>
-      </label>
-      <label>
-        Position
-        <select
-          value={state.position?.source === 'manual' ? (state.position.placeId ?? '') : ''}
-          onChange={(e) => {
-            const place = places.find((p) => p.id === e.target.value);
-            if (place) {
-              dispatch({
-                type: 'SET_MANUAL_PLACE',
-                placeId: place.id,
-                lat: place.coordinates.lat,
-                lon: place.coordinates.lon,
-              });
-            }
-          }}
-        >
-          <option value="">
-            {state.position?.source === 'gps' ? 'GPS-Fix aktiv' : 'Platz wählen …'}
-          </option>
-          {places.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button type="button" onClick={requestGps}>
-        GPS abfragen
-      </button>
-      {state.position?.source === 'manual' && (
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => dispatch({ type: 'RELEASE_MANUAL' })}
-        >
-          Manuelle Position lösen
-        </button>
-      )}
-      {/* FR21: no header select for route options — there is ONE main route,
-          edited through the day cards (FR28) or checked in from the
-          alternatives (FR29). */}
-      <label>
-        Abfahrt
-        <select
-          value={state.departureHourOverride ?? ''}
-          onChange={(e) =>
-            dispatch({
-              type: 'SET_DEPARTURE_HOUR',
-              hour: e.target.value === '' ? null : Number(e.target.value),
-            })
-          }
-        >
-          <option value="">Standard ({params?.departureHourAthens ?? 9}:00)</option>
-          {[6, 7, 8, 9, 10, 11, 12].map((h) => (
-            <option key={h} value={h}>
-              {h}:00
-            </option>
-          ))}
-        </select>
-      </label>
-      {gpsError && <span style={{ color: 'var(--rot)' }}>{gpsError}</span>}
-    </div>
-  );
-}
-
 /**
  * Ghost refresh glyph (FR13) — used in the header and the footer provenance
  * line. The ⟳ is a glyph, not an emoji: it is aria-hidden inside a button
  * with a German accessible name. While fetching, the glyph spins; under
  * prefers-reduced-motion the global CSS kills the spin and a visually hidden
- * pending text carries the state instead.
+ * pending text carries the state instead. `stale` renders the glyph
+ * primary-toned while the forecast is older than the TTL (footer instance
+ * only, AC 2 of Story 1.2).
  */
-function RefreshButton() {
+function RefreshButton({ stale = false }: { stale?: boolean }) {
   const { forecastQuery } = usePlanning();
   return (
     <button
       type="button"
-      className="icon-button"
+      className={stale ? 'icon-button stale' : 'icon-button'}
       aria-label="Forecast aktualisieren"
       onClick={() => forecastQuery.refetch()}
       disabled={forecastQuery.isFetching}
@@ -161,6 +65,35 @@ function Shell() {
   const [detailOpen, setDetailOpen] = useState(false);
   const planning = usePlanning();
   const { libraryQuery, forecastQuery, snapshot, assessment } = planning;
+  const { state: tripState, dispatch } = useTrip();
+
+  useEffect(() => {
+    // FR27: position resolves automatically at app start; failures are silent —
+    // the position popover ("GPS erneut abfragen") is the visible recovery path.
+    if (tripState.position?.source === 'manual') return; // reducer guards anyway
+    let cancelled = false;
+    getCurrentGpsPosition()
+      .then((pos) => {
+        if (!cancelled) dispatch({ type: 'GPS_FIX', position: pos });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // Mount-only by design: one query at app start, never a reactive loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Stale check re-runs at most once per minute (AC 2) — the label itself is
+  // the tested pure helper; the tick only injects fresh wall-clock time.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const staleLabel = assessment
+    ? staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS)
+    : null;
 
   const openPlace = (placeId: string) =>
     setView((v) => ({
@@ -204,7 +137,7 @@ function Shell() {
 
       <main className="content">
         {libraryQuery.isError && (
-          <div className="error-panel">
+          <div className="error-panel" role="alert">
             Bibliothek konnte nicht geladen werden:{' '}
             {libraryQuery.error instanceof Error
               ? libraryQuery.error.message
@@ -212,7 +145,7 @@ function Shell() {
           </div>
         )}
         {forecastQuery.isError && (
-          <div className="error-panel">
+          <div className="error-panel" role="alert">
             Open-Meteo nicht erreichbar — angezeigt wird der letzte Datenstand
             {assessment ? ` (abgerufen ${formatStamp(assessment.fetchedAtIso)})` : ''}.
             Fehler:{' '}
@@ -222,11 +155,13 @@ function Shell() {
           </div>
         )}
 
-        {view.kind !== 'platz' && <ControlsBar />}
-
         {!snapshot || !assessment ? (
           !libraryQuery.isError && !forecastQuery.isError ? (
-            <div className="hint-panel">Lade Bibliothek und Forecast …</div>
+            view.kind === 'tag' ? (
+              <DayViewSkeleton />
+            ) : (
+              <div className="hint-panel">Lade Daten …</div>
+            )
           ) : null
         ) : view.kind === 'tag' ? (
           <DayView snapshot={snapshot} assessment={assessment} onOpenPlace={openPlace} />
@@ -252,11 +187,12 @@ function Shell() {
             aria-expanded={detailOpen}
             onClick={() => setDetailOpen((o) => !o)}
           >
+            {staleLabel && <span className="stale">{staleLabel} · </span>}
             Forecast: {assessment?.model ?? '…'} · Lauf{' '}
             {formatStamp(assessment?.modelRunIso ?? null)} · abgerufen{' '}
             {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}
           </button>
-          <RefreshButton />
+          <RefreshButton stale={staleLabel !== null} />
         </p>
         {detailOpen && (
           <div className="provenance-detail">

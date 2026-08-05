@@ -22,6 +22,21 @@ export function formatTripDayDate(tripStartDate: string, day: number): string {
   return dayFmt.format(new Date(`${dateForTripDay(tripStartDate, day)}T12:00:00Z`));
 }
 
+const weekdayShortFmt = new Intl.DateTimeFormat('de-DE', {
+  weekday: 'short',
+  timeZone: 'Europe/Athens',
+});
+
+/** Kurzer Wochentag eines Törntags ("Mi") — für die Hafentag-Weiterfahrt-Zeile. */
+export function formatTripDayWeekdayShort(
+  tripStartDate: string,
+  day: number,
+): string {
+  return weekdayShortFmt.format(
+    new Date(`${dateForTripDay(tripStartDate, day)}T12:00:00Z`),
+  );
+}
+
 const rangeFmt = new Intl.DateTimeFormat('de-DE', {
   day: 'numeric',
   month: 'long',

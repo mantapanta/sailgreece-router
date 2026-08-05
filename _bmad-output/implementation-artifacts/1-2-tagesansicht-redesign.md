@@ -4,7 +4,7 @@ baseline_commit: 10a3bdff0d9aea2901f342ed54e624494a5764be
 
 # Story 1.2: Tagesansicht redesign
 
-Status: in-progress
+Status: review
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
@@ -359,87 +359,87 @@ stepper); the Karte story decides whether Karte needs its own affordance.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — `src/ui/dayViewModel.ts` + tests (write first)** (AC: 14, 2, 8, 9, 10)
-  - [ ] 1.1 Implement `staleForecastLabel`, `dayViewStages`, `optionsSummary`, `pickupDay`,
+- [x] **Task 1 — `src/ui/dayViewModel.ts` + tests (write first)** (AC: 14, 2, 8, 9, 10)
+  - [x] 1.1 Implement `staleForecastLabel`, `dayViewStages`, `optionsSummary`, `pickupDay`,
         `restTripVerdictLabel` per the reference implementation in Dev Notes.
-  - [ ] 1.2 `stageFrom(snapshot, stage)` in `stageText.ts` (mirror `stageTitle`'s
+  - [x] 1.2 `stageFrom(snapshot, stage)` in `stageText.ts` (mirror `stageTitle`'s
         sailedLeg-first logic; null when no first leg resolves).
-  - [ ] 1.3 `src/ui/__tests__/dayViewModel.test.ts`: fresh vs stale (boundary exactly at
+  - [x] 1.3 `src/ui/__tests__/dayViewModel.test.ts`: fresh vs stale (boundary exactly at
         TTL → fresh), hero-switch on/off/harbour/last-day, list split when switched,
         options summary incl. all-zu and empty, pickup-day mapping. Append `stageFrom`
         cases to `stageText.test.ts` — do not modify existing cases.
-  - [ ] 1.4 `formatTripDayWeekdayShort(tripStartDate, day)` in `format.ts` (weekday 'short',
+  - [x] 1.4 `formatTripDayWeekdayShort(tripStartDate, day)` in `format.ts` (weekday 'short',
         Europe/Athens — same pattern as `formatTripDayDate`).
-- [ ] **Task 2 — CSS: new Tagesansicht sections + primitive additions** (AC: 13, and the
+- [x] **Task 2 — CSS: new Tagesansicht sections + primitive additions** (AC: 13, and the
       styling half of 1, 4, 6, 7, 9, 10, 11, 12, 15)
-  - [ ] 2.1 Add the reference CSS blocks (Dev Notes): trip status, day context, popover,
+  - [x] 2.1 Add the reference CSS blocks (Dev Notes): trip status, day context, popover,
         select/stepper, hero card (stat grid, berth line, warn-note, cta column), list card
         + rows + chips, info chip, summary row, skeleton, section titles.
-  - [ ] 2.2 Restyle `.ampel` to the pill spec; restyle `.error-panel`/`.hint-panel`; add the
+  - [x] 2.2 Restyle `.ampel` to the pill spec; restyle `.error-panel`/`.hint-panel`; add the
         global 16px input floor.
-  - [ ] 2.3 Delete `.controls` (5 rules), `.resttrip-banner` (+4 modifiers),
+  - [x] 2.3 Delete `.controls` (5 rules), `.resttrip-banner` (+4 modifiers),
         `.resttrip-head`, `.hint-annahme`. Check `.options-grid` and `.stage-card.today`
         usage by grep — delete if no `.tsx` references them after Task 4/5.
-- [ ] **Task 3 — App.tsx: ControlsBar out, auto-GPS + skeleton + alert roles in** (AC: 4, 5,
+- [x] **Task 3 — App.tsx: ControlsBar out, auto-GPS + skeleton + alert roles in** (AC: 4, 5,
       15, 13ii, 2)
-  - [ ] 3.1 Delete the `ControlsBar` component and its render (`view.kind !== 'platz' && …`);
+  - [x] 3.1 Delete the `ControlsBar` component and its render (`view.kind !== 'platz' && …`);
         remove now-unused imports (`useTrip`? — stays if the GPS effect lives in Shell;
         `getCurrentGpsPosition` stays for the effect).
-  - [ ] 3.2 Add the one-shot GPS effect in `Shell` (reference in Dev Notes).
-  - [ ] 3.3 Loading branch: `view.kind === 'tag'` → `<DayViewSkeleton />`; else hint panel
+  - [x] 3.2 Add the one-shot GPS effect in `Shell` (reference in Dev Notes).
+  - [x] 3.3 Loading branch: `view.kind === 'tag'` → `<DayViewSkeleton />`; else hint panel
         "Lade Daten …". Retire the old string.
-  - [ ] 3.4 `role="alert"` on the two Shell error panels; footer provenance gains the stale
+  - [x] 3.4 `role="alert"` on the two Shell error panels; footer provenance gains the stale
         "Stand vor {h} h ·" prefix in `--ampel-gelb-text` via `staleForecastLabel` +
         `STALE_TIME_MS`; while stale the footer `RefreshButton` instance renders
         primary-toned (`stale` prop → `--accent-text` glyph, AC 2).
-- [ ] **Task 4 — TripStatusLine (+ expander) in DayView** (AC: 1, 2, 3)
-  - [ ] 4.1 Component (local to DayView.tsx is fine): live wrapper, trigger button with dot +
+- [x] **Task 4 — TripStatusLine (+ expander) in DayView** (AC: 1, 2, 3)
+  - [x] 4.1 Component (local to DayView.tsx is fine): live wrapper, trigger button with dot +
         verdict + facts, stale leading segment, detail region (reasons incl. suppressed-at-
         base PPR logic moved over from the banner, Umkehrtag, Meltemi-fest, decision points).
-  - [ ] 4.2 Minute tick for staleness; Esc-inside-closes with focus return.
-  - [ ] 4.3 Focus effect on `planKey(main.plan)`/`restTripAmpel` change (skip first render).
-  - [ ] 4.4 Delete the banner JSX; verify nothing else consumed `.resttrip-*`.
-- [ ] **Task 5 — Day context + PositionPopover** (AC: 4)
-  - [ ] 5.1 New `src/ui/components/PositionPopover.tsx` (AvatarMenu is the pattern: backdrop,
+  - [x] 4.2 Minute tick for staleness; Esc-inside-closes with focus return.
+  - [x] 4.3 Focus effect on `planKey(main.plan)`/`restTripAmpel` change (skip first render).
+  - [x] 4.4 Delete the banner JSX; verify nothing else consumed `.resttrip-*`.
+- [x] **Task 5 — Day context + PositionPopover** (AC: 4)
+  - [x] 5.1 New `src/ui/components/PositionPopover.tsx` (AvatarMenu is the pattern: backdrop,
         Esc, focus in/out, `aria-expanded` on the trigger). Uses `useTrip()` + `usePlanning()`
         (`bundle.library.places`) + `getCurrentGpsPosition`.
-  - [ ] 5.2 Day-context block in DayView (kicker, position line, edit affordance,
+  - [x] 5.2 Day-context block in DayView (kicker, position line, edit affordance,
         positionNote hint). Tag the OQ5 assumption in a comment.
-  - [ ] 5.3 Törntag dev select inside the popover (SET_DAY / CLEAR_DAY_OVERRIDE), commented
+  - [x] 5.3 Törntag dev select inside the popover (SET_DAY / CLEAR_DAY_OVERRIDE), commented
         as a dev affordance.
-- [ ] **Task 6 — Hero StageCard + Hafentag variant + hero switch** (AC: 6, 7, 8)
-  - [ ] 6.1 Rebuild `StageCard` into the new composition with a `hero` flag (display h1 +
+- [x] **Task 6 — Hero StageCard + Hafentag variant + hero switch** (AC: 6, 7, 8)
+  - [x] 6.1 Rebuild `StageCard` into the new composition with a `hero` flag (display h1 +
         stat grid + stepper only for hero; headline variant for expanded rows). Keep
         StageEditor and the calc panel (StageMap/WindBasis/Breakdown) mounted exactly as
         today inside it.
-  - [ ] 6.2 Warn-note vs quiet reasons; returnCheck line de-emojified; "Festgelegt" pin chip;
+  - [x] 6.2 Warn-note vs quiet reasons; returnCheck line de-emojified; "Festgelegt" pin chip;
         berth-line row button; badges → chips.
-  - [ ] 6.3 Hafentag variant (no tiles/CTA, next-sailing-day pointer).
-  - [ ] 6.4 Wire `dayViewStages` for hero/rest/past; overline day tag "Heute · …" vs
+  - [x] 6.3 Hafentag variant (no tiles/CTA, next-sailing-day pointer).
+  - [x] 6.4 Wire `dayViewStages` for hero/rest/past; overline day tag "Heute · …" vs
         "Als Nächstes · …".
-  - [ ] 6.5 Abfahrt stepper (bounds 6–12, reset while override set) — today's hero only.
-- [ ] **Task 7 — Rest-Trip list card** (AC: 9)
-  - [ ] 7.1 Row buttons (day tag · destination · dot + verdict word · chevron), first 3 +
+  - [x] 6.5 Abfahrt stepper (bounds 6–12, reset while override set) — today's hero only.
+- [x] **Task 7 — Rest-Trip list card** (AC: 9)
+  - [x] 7.1 Row buttons (day tag · destination · dot + verdict word · chevron), first 3 +
         "Alle {N} Tage anzeigen"/"Weniger anzeigen", single-expanded state, expanded body =
         full StageCard (non-hero).
-  - [ ] 7.2 Pickup chip on `pickupDay(params)`'s row.
-- [ ] **Task 8 — Optionsraum summary + empty state** (AC: 10)
-  - [ ] 8.1 Summary row (counts from `optionsSummary`), expander region wrapping the existing
+  - [x] 7.2 Pickup chip on `pickupDay(params)`'s row.
+- [x] **Task 8 — Optionsraum summary + empty state** (AC: 10)
+  - [x] 8.1 Summary row (counts from `optionsSummary`), expander region wrapping the existing
         OptionRow/AlternativeRow list unchanged; explicit empty state.
-  - [ ] 8.2 SHOULD: swap `className="secondary"` buttons in OptionRow/AlternativeRow/
+  - [x] 8.2 SHOULD: swap `className="secondary"` buttons in OptionRow/AlternativeRow/
         AltPreview to `.btn-secondary`, the AltPreview check-in button to `.btn-secondary`,
         and the 📌 copy to "Festlegungen" — content untouched.
-- [ ] **Task 9 — Info chip, check-in prompt, outdated panel, Bereits gefahren** (AC: 11, 12)
-- [ ] **Task 10 — StageEditor minimal pass** (AC: 13, scope boundary)
-  - [ ] 10.1 Replace `AMPEL_SYMBOL` emoji in `<option>`s with "{Name} — {Grün}" text; delete
+- [x] **Task 9 — Info chip, check-in prompt, outdated panel, Bereits gefahren** (AC: 11, 12)
+- [x] **Task 10 — StageEditor minimal pass** (AC: 13, scope boundary)
+  - [x] 10.1 Replace `AMPEL_SYMBOL` emoji in `<option>`s with "{Name} — {Grün}" text; delete
         the const.
-  - [ ] 10.2 Confirm labels remain visible/associated; 16px floor applies via the global
+  - [x] 10.2 Confirm labels remain visible/associated; 16px floor applies via the global
         rule. Editor error panel gets `role="alert"`. NOTHING else.
-- [ ] **Task 11 — DayViewSkeleton** (AC: 15) — new `src/ui/components/DayViewSkeleton.tsx`,
+- [x] **Task 11 — DayViewSkeleton** (AC: 15) — new `src/ui/components/DayViewSkeleton.tsx`,
       rendered from App.tsx.
-- [ ] **Task 12 — Verify DoD** (AC: 16)
-  - [ ] 12.1 Run every DoD grep; `npm test`; `npm run build`.
-  - [ ] 12.2 Manual smoke per AC 16(d) — if headless, substitute build + greps and hand the
+- [x] **Task 12 — Verify DoD** (AC: 16)
+  - [x] 12.1 Run every DoD grep; `npm test`; `npm run build`.
+  - [x] 12.2 Manual smoke per AC 16(d) — if headless, substitute build + greps and hand the
         browser smoke list to the reviewer (as story 1.1 did).
 
 ## Dev Notes
@@ -1118,10 +1118,128 @@ day tags inside the preview list are sanctioned (calc/preview content is out of 
 
 ### Agent Model Used
 
+claude-fable-5 (BMad dev-story)
+
 ### Debug Log References
+
+- Baseline before Task 1: `npm test` 25 files / 405 tests green.
+- TDD red run for Task 1 (helpers missing): 2 test files failed as expected,
+  then green after implementing `dayViewModel.ts` + `stageFrom`.
+- Final: `npm test` 26 files / 423 tests green; `npm run build`
+  (`tsc --noEmit && vite build`) green (pre-existing >500 kB chunk warning
+  unchanged); all DoD greps clean; versal check prints OK (count = 2,
+  AltPreview's two sanctioned day tags).
 
 ### Completion Notes List
 
+- All 16 ACs implemented. Deviations / judgment calls, each keeping the AC's
+  intent:
+  1. **Helper signatures narrowed for testability:** `dayViewStages` takes
+     `Pick<PlanAssessment, 'stages'> | null` and `optionsSummary` takes
+     `Pick<RouteOptionAssessment, 'state' | 'closesOnDay'>[]` instead of the
+     full interfaces, so test fixtures stay plain typed object literals
+     (testing rule) without casts. DayView passes the full assessment objects,
+     which satisfy the Picks structurally.
+  2. **`past` filter simplified:** the reference expression
+     `s.day < currentDay || (s.day >= currentDay && s.day < heroDay)` is
+     equivalent to `s.day < heroDay` (heroDay ≥ currentDay by construction);
+     the simplified form is used and covered by the hero-switch tests.
+  3. **Non-hero harbour rows keep "Etappe ändern" (`.btn-secondary`):** AC 7's
+     no-CTA rule binds the HERO Hafentag variant only; the rest-trip rows'
+     editors are the sanctioned re-planning path (AC 7 sentence 3), and a
+     harbour row without its editor would orphan FR28 for that day.
+  4. **Departure stat tile shows the trip default for non-today days:**
+     `departureHourOverride` applies only to TODAY (FR15, TripFrame contract),
+     so only today's hero shows the override and carries the stepper
+     [ASSUMPTION: OQ5].
+  5. **Optionsraum empty state:** with zero OPEN options but existing closed
+     options/alternatives, the empty-state sentence itself is the expandable
+     summary row (closed options stay listed, dimmed, inside the region); with
+     no options at all it renders as static card content. Section never hidden.
+  6. **`.badge-annahme` kept** per story instruction although grep shows no
+     current `.tsx` consumer (per-day assumption markers are a later story).
+  7. **StageEditor untouched beyond Task 10:** its internal buttons keep
+     `className="secondary"` (unstyled default, as before this story); only
+     the emoji option labels ("{Name} — {Grün|…}" via `AMPEL_LABEL`), the
+     apply-error panel (`.error-panel` + `role="alert"`) and the inherited
+     16px input floor changed.
+  8. **Small CSS additions beyond the reference blocks** (same vocabulary):
+     `.card-overline`, `.route-dest-sm` (row-variant headline), `.chip-list`,
+     `.return-note` (+status modifiers), `.next-sailing`, `.trip-caption`,
+     `.berth-line .role`, `.summary-row` helpers, `.optionsraum-body`,
+     `.provenance .stale`, and a `.list-card` last-child border fix for
+     wrapped rows.
+  9. **GPS auto-query (FR27 delta)** implemented as specified: one effect on
+     Shell mount, silent on failure, manual position respected (plus the
+     reducer guard); the popover's "GPS erneut abfragen" is the visible
+     recovery path and renders the denial HINT.
+  10. **Manual browser smoke (AC 16d) not possible headless** — substituted
+      build + full DoD greps (as story 1.1 did). Smoke list for the reviewer:
+      cold-load skeleton → status line + expander (Esc returns focus) →
+      position popover (place set/release, GPS button, Törntag dev select,
+      "Automatisch (aus dem Datum)") → hero with Abfahrt stepper (6–12,
+      "Standard (9:00)" reset) → "Etappe ändern" round-trip (focus lands on
+      the status line) → calc panel unchanged (StageMap/WindBasis/Breakdown)
+      → rest-trip row expand/collapse incl. Pickup chip day + "Alle N Tage
+      anzeigen" → Optionsraum expand + check-in an alternative → Karte +
+      Platzdetail still work → footer stale prefix + primary-toned refresh
+      after >1 h without refetch.
+- FR20 decision points render again (status-line detail); the Umkehrtag/
+  Meltemi-fest badge tooltips died with their badges — their texts are now
+  visible caption copy in the detail, verbatim.
+- The `.ampel` pill restyle intentionally reaches MapView/PlaceDetail badges
+  (same component, inherited improvement per AC 13i).
+
 ### File List
 
+New:
+- src/ui/dayViewModel.ts
+- src/ui/__tests__/dayViewModel.test.ts
+- src/ui/components/PositionPopover.tsx
+- src/ui/components/DayViewSkeleton.tsx
+
+Modified:
+- src/ui/views/DayView.tsx (rebuilt per Tasks 4–10; WindBasis/Breakdown/
+  AltPreview/OptionRow/AlternativeRow internals preserved)
+- src/app/App.tsx (ControlsBar deleted; GPS auto-effect; skeleton branch;
+  role="alert"; stale footer prefix + RefreshButton `stale` prop)
+- src/ui/styles.css (redesign blocks added; .ampel/.error-panel/.hint-panel
+  restyled; .controls/.resttrip-*/.hint-annahme/.options-grid/.stage-card.today/
+  .stage-head/.stage-list/.past-list/.pin-chip/.suggestion-chip deleted;
+  16px input floor)
+- src/ui/stageText.ts (+ stageFrom)
+- src/ui/__tests__/stageText.test.ts (append-only: stageFrom cases)
+- src/ui/format.ts (+ formatTripDayWeekdayShort)
+- src/ui/components/AmpelBadge.tsx (LABELS exported as AMPEL_LABEL; markup
+  unchanged, `title` kept)
+
+Untouched (verified by diff): src/domain/, src/adapters/, tripContext,
+usePlanning, planningContext, authContext, MapView, PlaceDetailView,
+SignInView, StageMap/RouteMap/WindBarb/Polyline/AvatarMenu/SeamarkLayer,
+tokens.ts, mapPath.ts, index.html, configs, all existing tests (stageText
+test appended only).
+
 ## Change Log
+
+Story 1.2 rebuilt the Tagesansicht to the Consumer-Warm spine: the fat
+rest-trip banner became a one-line trip status with an expandable detail
+(reasons, Rückkehr-Frist, Spätester Umkehrtag, Meltemi-fest with their
+ex-tooltip explanations as visible text, and the re-surfaced FR20 decision
+points), escalated by a gelb "Stand vor {h} h" segment when the forecast
+outlives STALE_TIME_MS (footer provenance and refresh glyph escalate with
+it). The ControlsBar died: position/GPS/Törntag moved into a day-context
+position popover (with GPS-denial hint and the dev-only Törntag select incl.
+"Automatisch (aus dem Datum)"), the Abfahrt select became a stepper in the
+hero's Abfahrt tile [ASSUMPTION: OQ5], and GPS is now queried automatically
+at app start (FR27 delta, silent on failure). Today's stage is a hero card —
+display destination as the view's h1, ampel pill, warn-note on Gelb/Rot,
+stat tiles (Abfahrt/Fahrtzeit/Ankunft/Wind), tappable berth row, coral
+"Etappe ändern" — with a calm Hafentag variant and the hero-switch rule
+(arrival confirmed → Tag N+1), all split by the new tested pure helpers in
+dayViewModel.ts. The rest trip collapsed into a list card (3 rows + "Alle N
+Tage anzeigen", one row expanded at a time, FR31 Pickup chip), the merged
+Optionsraum sits behind a summary row with an explicit empty state, the
+assumption block became an info chip, "Bereits gefahren" a collapsed chip
+list, and cold load renders a skeleton. Emoji semantics (🟢📌⚓⚠⛔) were
+replaced by words, error/hint panels split (role="alert" vs quiet track),
+and the 16px input floor landed globally.

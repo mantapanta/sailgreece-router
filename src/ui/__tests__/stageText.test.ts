@@ -23,7 +23,7 @@ import {
   makeTimes,
   makeVariant,
 } from '../../domain/__tests__/fixtures.ts';
-import { stageTitle } from '../stageText.ts';
+import { stageFrom, stageTitle } from '../stageText.ts';
 
 /**
  * Tag 1 endet am GEWÄHLTEN Platz Naoussa (Nordseite von Paros); die Etappe
@@ -129,5 +129,24 @@ describe('stageTitle — die Überschrift der Kette', () => {
       const departure = stageTitle(snapshot, stages[i]!).split(' → ')[0];
       expect(departure).toBe(arrival);
     }
+  });
+});
+
+describe('stageFrom — die Hero-Herkunftszeile (Story 1.2)', () => {
+  const snapshot = snapshotWithJump();
+  const assessment = assessPlanning(snapshot);
+  const allStages = assessment.mainRoute!.stages
+    .slice()
+    .sort((a, b) => a.day - b.day);
+
+  it('nennt den Startplatz der gesegelten Kette, nicht den Bibliothekshafen', () => {
+    const [day1, day2] = allStages.filter((s) => s.kind === 'stage');
+    expect(stageFrom(snapshot, day1!)).toBe('Mykonos (Ornos)');
+    expect(stageFrom(snapshot, day2!)).toBe('Paros (Naoussa)');
+  });
+
+  it('liefert null, wenn keine erste Etappe auflösbar ist (Hafentag)', () => {
+    const harbour = allStages.find((s) => s.kind === 'harbour')!;
+    expect(stageFrom(snapshot, harbour)).toBeNull();
   });
 });

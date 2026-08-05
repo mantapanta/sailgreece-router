@@ -477,20 +477,31 @@ hr.hairline,
   white-space: nowrap;
 }
 
+/* Ampel-Badge-Pille (DESIGN components.ampel-badge): Zustands-Tint als Grund,
+   9px-Punkt in der Grafik-Farbe, Wort in der Zustands-Textfarbe. Punkt und
+   deutsches Wort stehen IMMER zusammen — kein Bare-Dot-Modus. */
 .ampel {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font: 700 13px/1.3 var(--font-sans); /* = typography.overline */
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
+.ampel-gruen { background: var(--ampel-gruen-tint); color: var(--ampel-gruen-text); }
+.ampel-gelb { background: var(--ampel-gelb-tint); color: var(--ampel-gelb-text); }
+.ampel-rot { background: var(--ampel-rot-tint); color: var(--ampel-rot-text); }
+.ampel-unbewertet { background: var(--ampel-unbewertet-tint); color: var(--ampel-unbewertet-text); }
+
 .ampel .dot {
-  width: 0.72rem;
-  height: 0.72rem;
-  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
   display: inline-block;
+  flex: none;
 }
 
 .ampel-gruen .dot { background: var(--gruen); }
@@ -499,13 +510,6 @@ hr.hairline,
 .ampel-unbewertet .dot { background: var(--grau); }
 
 /* ---- day view ------------------------------------------------------------ */
-
-.options-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
-  align-items: stretch;
-}
 
 .card {
   background: var(--creme-card);
@@ -596,64 +600,25 @@ hr.hairline,
   border-radius: 50%;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem 1.2rem;
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  padding: 0.7rem 1rem;
-  margin-bottom: 1.4rem;
-  font-size: 0.85rem;
-}
-
-.controls label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.controls select,
-.controls input {
-  font-size: 0.85rem;
-  padding: 0.2rem 0.35rem;
-  border: 1px solid var(--hairline);
-  background: #fff;
-}
-
-.controls button {
-  background: var(--navy);
-  color: var(--creme);
-  border: none;
-  padding: 0.35rem 0.8rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.controls button.secondary {
-  background: transparent;
-  color: var(--navy);
-  border: 1px solid var(--navy-soft);
-}
-
+/* ---- error / hint split (DESIGN State Patterns): errors are rot-tinted and
+        carry role="alert" in the markup; hints sit on the track and never do. */
 .error-panel {
   background: var(--ampel-rot-tint);
-  border: 1px solid #ddb3b1;
-  color: var(--rot);
-  padding: 0.8rem 1rem;
-  margin-bottom: 1.2rem;
-  font-size: 0.85rem;
+  color: var(--ampel-rot-text);
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font: 400 14px/1.45 var(--font-sans);
+  margin-bottom: var(--space-4);
 }
 
 .hint-panel {
-  background: var(--creme-card);
-  border: 1px dashed var(--hairline);
-  padding: 1.2rem;
-  color: var(--muted);
-  font-size: 0.9rem;
+  background: var(--surface-track);
+  color: var(--ink-secondary);
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font: 400 14px/1.45 var(--font-sans);
 }
 
 /* ---- auth (login gate + account chip) ------------------------------------ */
@@ -1153,62 +1118,8 @@ table.shelter-table tr.sektor-inaktiv td {
 }
 
 /* ===================================================================== */
-/* Round-Trip-Umbau: Rest-Trip-Banner, Etappen-Cards, FR30-Rechnung      */
+/* Round-Trip-Umbau: Etappen-Cards, FR30-Rechnung                        */
 /* ===================================================================== */
-
-.resttrip-banner {
-  border: 1px solid var(--hairline);
-  border-left-width: 4px;
-  border-radius: 4px;
-  background: var(--creme-card);
-  padding: 0.8rem 1rem;
-  margin: 1rem 0 1.5rem;
-}
-.resttrip-banner.ampel-gruen { border-left-color: var(--gruen); }
-.resttrip-banner.ampel-gelb { border-left-color: var(--gelb); }
-.resttrip-banner.ampel-rot { border-left-color: var(--rot); }
-.resttrip-banner.ampel-unbewertet { border-left-color: var(--grau); }
-
-.resttrip-head {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-}
-
-/* --- Etappen-Cards ---------------------------------------------------- */
-
-.stage-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.stage-card.today {
-  border-color: var(--navy);
-  box-shadow: 0 1px 0 var(--navy);
-}
-
-.stage-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.pin-chip,
-.suggestion-chip {
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border: 1px solid var(--hairline);
-  border-radius: 2px;
-  padding: 0.1rem 0.35rem;
-  margin-left: 0.5rem;
-  white-space: nowrap;
-  color: var(--navy-soft);
-}
 
 .stage-actions,
 .editor-actions {
@@ -1313,13 +1224,6 @@ table.shelter-table tr.sektor-inaktiv td {
   font-size: 0.75rem;
 }
 
-.past-list {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  opacity: 0.7;
-}
-
 /* --- Karte: Etappen-Nummern und Legende ------------------------------- */
 
 .stage-number {
@@ -1397,10 +1301,6 @@ table.shelter-table tr.sektor-inaktiv td {
 /* ---- Persistenz-Annahme (AD-13 revised) ------------------------------------
    Gestrichelt und zurückhaltend: die Annahme ist eine Einschränkung der
    Aussage, keine Warnung — sie darf das Ampelbild nicht überschreien. */
-
-.hint-annahme {
-  border-left: 3px solid var(--navy-soft);
-}
 
 .badge-annahme {
   border-style: dashed;
@@ -1666,4 +1566,427 @@ details.lesehilfe {
 details.lesehilfe > summary {
   font-style: normal;
   letter-spacing: 0.03em;
+}
+
+/* ===================================================================== */
+/* ---- day view (redesign, Story 1.2) --------------------------------- */
+/* ===================================================================== */
+
+/* ---- trip status line ---- */
+.trip-status { margin: var(--space-3) 0 0; }
+.trip-status-trigger {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  padding: var(--space-2) 0;
+  min-height: 44px;
+  width: 100%;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.trip-status-trigger strong { color: var(--ink-primary); font-weight: 600; }
+.trip-status-trigger .chev {
+  margin-left: auto;
+  color: var(--ink-secondary);
+  transition: transform 0.15s;
+}
+.trip-status-trigger[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.status-dot {
+  flex: none;
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  margin-top: 4px;
+}
+.status-dot.gruen { background: var(--ampel-gruen); }
+.status-dot.gelb { background: var(--ampel-gelb-graphic); }
+.status-dot.rot { background: var(--ampel-rot); }
+.status-dot.unbewertet { background: var(--ampel-unbewertet); }
+.trip-status .stale { color: var(--ampel-gelb-text); font-weight: 600; }
+/* footer refresh + provenance while the forecast is stale (AC 2) */
+.icon-button.stale { color: var(--accent-text); }
+.provenance .stale { color: var(--ampel-gelb-text); font-weight: 600; }
+.trip-status-detail {
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-4);
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-2);
+}
+.trip-status-detail h3 {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  margin: var(--space-3) 0 var(--space-1);
+}
+.trip-status-detail .caption {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+/* ---- day context ---- */
+.day-context { margin: var(--space-5) 0 var(--space-2); }
+.day-kicker {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.day-where {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+/* ---- popover (position control) ---- */
+.popover-wrap { position: relative; display: inline-flex; }
+.popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 120;
+  width: min(320px, calc(100vw - 2 * var(--space-page-margin)));
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.popover label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font: 600 14px/1.3 var(--font-sans);
+  color: var(--ink-primary);
+}
+
+/* ---- form primitives ---- */
+/* iOS zoom floor (deferred from Story 1.1). */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
+}
+.select {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  font: 400 16px/1.4 var(--font-sans);
+  color: var(--ink-primary);
+}
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.stepper button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  font: 700 19px/1 var(--font-sans);
+  color: var(--ink-primary);
+  cursor: pointer;
+}
+.stepper button:disabled {
+  color: var(--ink-tertiary);
+  cursor: default;
+}
+
+/* ---- hero / row stage card ---- */
+.hero-card { margin-top: var(--space-2); }
+/* New card recipe — the legacy .card keeps serving the old views. */
+.card-surface {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-card-padding);
+}
+.card-overline {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.route-from {
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-2);
+}
+.route-dest {
+  font: 800 30px/1.05 var(--font-sans);
+  letter-spacing: -0.03em;
+  color: var(--ink-primary);
+  margin: 2px 0 0;
+}
+/* Zeilen-Variante (Rest-Trip): Headline statt Display — ein Display-Element
+   pro Screen, und das gehört dem Hero. */
+.route-dest-sm {
+  font: 700 19px/1.2 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--ink-primary);
+  margin: 2px 0 0;
+}
+.route-sub {
+  font: 500 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-1);
+}
+.warn-note {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font: 400 14px/1.45 var(--font-sans);
+}
+.warn-note.gelb { background: var(--ampel-gelb-tint); color: var(--ampel-gelb-text); }
+.warn-note.rot { background: var(--ampel-rot-tint); color: var(--ampel-rot-text); }
+.warn-note ul { margin: 0; padding-left: 1.1em; }
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-hairline);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-top: var(--space-4);
+}
+.stat-tile {
+  background: var(--surface-inset);
+  padding: var(--space-3) var(--space-4);
+}
+.stat-tile .label {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+.stat-tile .value {
+  font: 700 19px/1.2 var(--font-sans);
+  letter-spacing: -0.01em;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-primary);
+}
+.stat-tile .btn-text { font-size: 12.5px; }
+.berth-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-height: 44px;
+  background: var(--surface-inset);
+  border: 0;
+  border-radius: var(--radius-md);
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-primary);
+  cursor: pointer;
+  text-align: left;
+}
+.berth-line .name {
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.berth-line .role { color: var(--ink-secondary); }
+.berth-line .ampel { margin-left: auto; }
+/* Hafentag-Hero: Zeiger auf den nächsten Segeltag (Caption). */
+.next-sailing {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-3);
+}
+.cta-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+/* Zielmodell v2 — Heimweg-Status als Caption-Zeile (ohne Emoji). */
+.return-note {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-2);
+}
+.return-note.status-wetterfenster { color: var(--ampel-gelb-text); }
+.return-note.status-kritisch { color: var(--ampel-rot-text); }
+
+/* ---- chips ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--surface-track);
+  color: var(--ink-secondary);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  font: 400 12.5px/1.35 var(--font-sans);
+  white-space: nowrap;
+}
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ---- section titles + list card ---- */
+.section-title {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  margin: var(--space-6) 0 var(--space-2);
+}
+.section-title > button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: var(--space-2) 0;
+  min-height: 44px;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.section-title .chev {
+  color: var(--ink-secondary);
+  transition: transform 0.15s;
+}
+.section-title button[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.list-card {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.trip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--border-hairline);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: 400 14.5px/1.45 var(--font-sans);
+  color: var(--ink-primary);
+}
+.list-card > :last-child,
+.list-card > :last-child > :last-child {
+  border-bottom: 0;
+}
+.trip-row .tag {
+  flex: none;
+  width: 48px;
+  font-size: 13px;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.trip-row .place { font-weight: 600; }
+.trip-row .verdict {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+.trip-row .verdict .status-dot { margin-top: 0; }
+.trip-row .chev { color: var(--ink-secondary); transition: transform 0.15s; }
+.trip-row[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.trip-row.more {
+  justify-content: center;
+  color: var(--accent-text);
+  font: 600 13.5px/1.3 var(--font-sans);
+}
+.trip-row-body {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+.summary-row > span:first-child { flex: 1; }
+.summary-row .meta {
+  display: block;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+.optionsraum-body { padding: var(--space-3) var(--space-4); }
+.trip-caption {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin: var(--space-1) 0 0;
+}
+
+/* ---- info chip ---- */
+.info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  text-align: left;
+}
+.info-chip .i {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--surface-track);
+  color: var(--ink-secondary);
+  font: 700 10.5px/1 var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.info-chip u {
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+/* ---- skeleton (pulse killed by the global reduced-motion rule) ---- */
+.skeleton {
+  border-radius: var(--radius-md);
+  background: var(--surface-track);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  50% { opacity: 0.55; }
 }
