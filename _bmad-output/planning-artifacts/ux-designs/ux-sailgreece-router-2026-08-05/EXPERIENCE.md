@@ -1,6 +1,6 @@
 ---
 name: SailGreece Router
-status: draft
+status: final
 updated: 2026-08-05
 sources:
   - _bmad-output/planning-artifacts/prds/prd-sailgreece-router-2026-07-30/prd.md
@@ -11,7 +11,7 @@ sources:
 
 # SailGreece Router — Experience Spine
 
-> Brownfield UI redesign of the implemented German-language planning app. Paired with `DESIGN.md` (same folder). Current-state ground truth: `.working/ui-inventory-ist-zustand.md` and `imports/screenshot-mobile-tagesansicht-ist-zustand.png`; chosen visual direction: `.working/direction-consumer-warm.html`. Spine wins on conflict with any of these.
+> Brownfield UI redesign of the implemented German-language planning app. Paired with `DESIGN.md` (same folder). Current-state ground truth: `.working/ui-inventory-ist-zustand.md` and `imports/screenshot-mobile-tagesansicht-ist-zustand.png`; chosen visual direction: `mockups/direction-consumer-warm.html`. Spine wins on conflict with any of these.
 
 ## Foundation
 
@@ -41,8 +41,8 @@ The app is "PWA-ish" only in hygiene: `theme-color` matching {colors.surface-pag
 
 **Tagesansicht section order** (today dominates; FR21):
 
-1. {components.status-line} — compact round-trip status (verdict + return deadline + Meltemi-fest day), subordinate by size, superior by position. Tap opens the detailed rest-trip verdict (reasons, "Spätester Umkehrtag", FR19/FR20) as a sheet/expander.
-2. Day context — "Tag 1 · Samstag, 8. August" kicker + "Position: Marina Alimos" with edit affordance ([ASSUMPTION] position override + "GPS erneut abfragen" live behind this affordance as a popover/sheet, replacing the ControlsBar).
+1. {components.status-line} — compact round-trip status (verdict + return deadline + Meltemi-fest day), subordinate by size, superior by position. Tap opens the detailed rest-trip verdict (reasons, "Spätester Umkehrtag", FR19/FR20) as an expander.
+2. Day context — "Tag 1 · Samstag, 8. August" kicker + "Position: Marina Alimos" with edit affordance ([ASSUMPTION] position override + "GPS erneut abfragen" live behind this affordance as a popover, replacing the ControlsBar).
 3. **Hero StageCard (Heute)** — destination in {typography.display}, {components.ampel-badge}, warn note when Gelb/Rot, stat grid (Abfahrt · Fahrtzeit · Ankunft · Wind), berth line, primary CTA "Etappe ändern" + ghost "Wie kommt die Zeit zustande?" (FR30). On a **Hafentag** the hero switches to the calm Hafentag variant (see Component Patterns) — never empty stat tiles.
 4. Forecast-assumption info chip (only when the horizon is exceeded).
 5. **Rest-Trip** — list card, first 2–3 days as rows (day · destination · Ampel dot + verdict word · chevron, e.g. "Tag 4 · Serifos · Gelb ›"), then "Alle 12 Tage anzeigen" expander. Collapsed by default. The Gäste-Pickup day (FR31) carries a "Pickup" text chip on its row, naming the proposed pickup harbor in the expanded card.
@@ -53,7 +53,7 @@ The app is "PWA-ish" only in hygiene: `theme-color` matching {colors.surface-pag
 
 **Hero-switch rule:** the hero shows today's stage until the confirmed position equals today's destination (after a check-in or the evening refresh); from then on it shows Tag N+1 — tomorrow's decision is the open one.
 
-**Karte layout** (adopted reference: `.working/keyscreen-karte-consumer-warm.html` — this mock is binding for the Karte composition): on mobile (≤860px) the map is **full-bleed** and the itinerary rides on it as a **bottom sheet** — drag handle, ~1.5 stage cards peeking, pull up for the full list. Layer controls are two floating chips on the map ("Windfiedern", "Alternativen") instead of a toggle panel; the legend lives in a popover behind a small "i" affordance (content: solid green = gefahren, dashed Ampel color = geplant per verdict, gray dashed = Rückweg (Annahme), plus the wind-barb scale). The beyond-horizon return leg is drawn gray dashed as "Annahme" — never in an Ampel hue. The trip status line (one-line verdict) renders at the head of the itinerary — sheet head on mobile, list head on desktop — so the round-trip verdict is never color-only on the map surface. ≥861px: sticky split (itinerary list left, map right), bidirectionally synced per FR4, same chips + legend popover on the map.
+**Karte layout** (adopted reference: `mockups/keyscreen-karte-consumer-warm.html` — this mock is binding for the Karte composition): on mobile (≤860px) the map is **full-bleed** and the itinerary rides on it as a **bottom sheet** — drag handle, ~1.5 stage cards peeking, pull up for the full list. Layer controls are two floating chips on the map ("Windfiedern", "Alternativen") instead of a toggle panel; the legend lives in a popover behind a small "i" affordance (content: solid green = gefahren, dashed Ampel color = geplant per verdict, gray dashed = Rückweg (Annahme), plus the wind-barb scale). The beyond-horizon return leg is drawn gray dashed as "Annahme" — never in an Ampel hue. The trip status line (one-line verdict) renders at the head of the itinerary — sheet head on mobile, list head on desktop — so the round-trip verdict is never color-only on the map surface. ≥861px: sticky split (itinerary list left, map right), bidirectionally synced per FR4, same chips + legend popover on the map.
 
 ## Voice and Tone
 
@@ -78,9 +78,9 @@ Behavioral. Visual specs live in `DESIGN.md.Components`.
 
 | Component | Use | Behavioral rules |
 |---|---|---|
-| Two-line header | Shell | Sticky on scroll — resolved: sticky, **with** `scroll-margin-top` ≥ header height on every focusable element so keyboard focus is never obscured (SC 2.4.11). Tabs are plain buttons with `aria-current="page"` on the active view (not a `tablist`); they switch views instantly (in-memory, AD-11). Refresh glyph triggers forecast refetch; spins while pending (static glyph swap under reduced motion); disabled state per DESIGN.md while a fetch runs. |
-| Avatar menu | Shell | Tap avatar → Level-3 menu (name, e-mail, "Abmelden"). Esc/backdrop-tap closes. Full name lives here — never truncated in the header. |
-| Trip status line | Tagesansicht top + Karte itinerary head | Always present once a plan exists. Tap → rest-trip detail (reasons list, Spätester Umkehrtag, Meltemi-fest bis) as an **expander** (decided — fits the no-router rule; contract in Interaction Primitives). Never grows into a banner. After any whole-plan re-render, focus lands here and the new verdict is announced (`aria-live`). |
+| Two-line header | Shell | Sticky, with `scroll-margin-top` ≥ header height on every focusable element so keyboard focus is never obscured (SC 2.4.11). Tabs are plain buttons with `aria-current="page"` on the active view (not a `tablist`); they switch views instantly (in-memory, AD-11). Refresh glyph triggers forecast refetch; spins while pending (static glyph swap under reduced motion); disabled state per DESIGN.md while a fetch runs. |
+| Avatar menu | Shell | Tap avatar → menu on Level-3 elevation (name, e-mail, "Abmelden"). Esc/backdrop-tap closes. Full name lives here — never truncated in the header. |
+| Trip status line | Tagesansicht top + Karte itinerary head | Always present once a plan exists. Tap → rest-trip detail (reasons list, Spätester Umkehrtag, Meltemi-fest bis) as an **expander** (contract in Interaction Primitives). Never grows into a banner. After any whole-plan re-render, focus lands here and the new verdict is announced (`aria-live`). |
 | StageCard (hero) | Tagesansicht §3 | Today's stage, always expanded. "Etappe ändern" opens StageEditor in place; ghost button expands the calc panel (StageMap + wind basis + breakdown, FR30) — collapsed by default. |
 | StageCard (hero, Hafentag) | Tagesansicht §3 on harbour days | Calm variant: "Hafentag in ⟨Ort⟩" headline, berth line + Nacht-Ampel badge, pointer to the next sailing day ("Weiter am Mi: Syros → Paros"). No Abfahrt/Wind stat tiles, no "Etappe ändern" CTA — the day has no leg to edit. Visual spec in DESIGN.md composed surfaces. |
 | StageCard (row) | Rest-Trip list | Collapsed row: day, destination, Ampel dot **+ verdict word** ("Tag 4 · Serifos · Gelb ›"), chevron. Pickup day carries a "Pickup" chip (FR31). Tap expands to the full card (berth line, badges, actions); tap again collapses. Only one expanded at a time. |
@@ -94,7 +94,7 @@ Behavioral. Visual specs live in `DESIGN.md.Components`.
 | Refresh + provenance | Footer | Refresh re-fetches forecast (FR13); provenance text updates via `aria-live="polite"`. Tap on the provenance text opens popover with model, run, fetch time, cache TTL. |
 | Map↔list sync | Karte | Hover (desktop), tap (touch), *and keyboard focus* on an itinerary card highlight the corresponding stage/pin; first tap on a map pin highlights its card (scroll-into-view) **and reveals a mini label chip with the verdict word**, second tap opens Platzdetail. For keyboard/AT a **single activation** (Enter/Space) opens Platzdetail directly — the two-step dance is a fat-finger guard, touch-only; focus alone triggers the highlight. Highlight = thicker line + Level-1 lift, plus non-color cue (weight). |
 | Map marker | Karte, StageMap | Visual anatomy in DESIGN.md (Ampel dot + white casing ring, {rounded.sm} stage-number capsules). Keyboard-operable (`role="button"`, `tabIndex=0`); accessible name is always "Ort + Ampel-Wort" ("Loutra — Grün"); focus renders the two-layer ring around the marker. |
-| Platzdetail | From berth lines, map pins, rest-trip rows | Visual reference: `.working/keyscreen-ortsdetail-consumer-warm.html` (adopted); spec in DESIGN.md composed surfaces. Hero ladder degrades photo → satellite fallback → gradient fallback + "Kein Foto verfügbar" chip — never a broken-image hole. Qualitäten are 5-dot ink meters with text value ("4 von 5") and `aria-label` ("Schutz: 4 von 5") — never Ampel/coral. Schutzprofil sector grid: Ampel tint + sector word per sector; wave values de-emphasized as non-scoring; source footnote required. "← Zurück" returns to the exact prior scroll state (AD-11). |
+| Platzdetail | From berth lines, map pins, rest-trip rows | Visual reference: `mockups/keyscreen-ortsdetail-consumer-warm.html` (adopted); spec in DESIGN.md composed surfaces. Hero ladder degrades photo → satellite fallback → gradient fallback + "Kein Foto verfügbar" chip — never a broken-image hole. Qualitäten are 5-dot ink meters with text value ("4 von 5") and `aria-label` ("Schutz: 4 von 5") — never Ampel/coral. Schutzprofil sector grid: Ampel tint + sector word per sector; wave values de-emphasized as non-scoring; source footnote required. "← Zurück" returns to the exact prior scroll state (AD-11). |
 | Breakdown table | StageCard calc panel | 9-column table ≥701px with `overflow-x: auto` inside the card; stacked label/value rows ≤700px. Header row in {colors.ink-secondary}. Column semantics (TWA, Kurs …) explained via one info chip above the table, not per-cell tooltips. |
 | Skeleton | All surfaces | Per-section skeletons in final layout (status line, hero card, 3 list rows; map surface gets a flat {colors.surface-track} block with centered caption "Karte lädt …"). |
 
@@ -123,7 +123,7 @@ Behavioral. Visual specs live in `DESIGN.md.Components`.
 ## Interaction Primitives
 
 - Tap targets ≥44×44px everywhere — including list rows, chevrons, the refresh glyph, stepper buttons, map pins.
-- `:focus-visible` two-layer indicator on every interactive element: 2px {colors.focus-ring} outer ring + 2px white inner gap, per DESIGN.md.Colors — the ring must contrast with both control fill and surrounding surface; on coral fills the white gap carries the signal. Zero focus styling exists today; this is a floor, not polish.
+- `:focus-visible` two-layer indicator on every interactive element, exactly as specified in DESIGN.md.Colors ("Focus indicator"). Zero focus styling exists today; this is a floor, not polish.
 - **No hover-only meaning.** Every current `title` tooltip (Doppelschlag, "Meltemi-fest bis", "Spätester Umkehrtag", breakdown column semantics) gets a touch path: info chip, popover, or expander. Hover may *preview* (map sync), tap *and keyboard focus* must *reach*.
 - Expanders: **every expander trigger carries `aria-expanded`** (+`aria-controls` where the region is not adjacent in the DOM); the chevron rotation is the visual mirror of that attribute. Region animates ≤200ms; expanded state is per-item; today's hero never collapses. The rest-trip detail behind the trip status line follows this same contract: it is an expander (not a sheet) — trigger toggles `aria-expanded`, the region grows in place below the status line, Esc while focus is inside closes it and returns focus to the status line, no focus trap, no backdrop.
 - Popovers: one at a time; Esc, backdrop tap, and toggle close; focus returns to the trigger.
