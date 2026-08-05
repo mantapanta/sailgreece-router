@@ -38,6 +38,9 @@ import type {
 import {
   PLAN_SCHEMA_VERSION,
   RELAXATION_ORDER,
+  SOLVER_ALGORITHM_VERSION,
+  assumedViolations,
+  firmViolations,
   isSafetyViolation,
   planDay,
   stagesOf,
@@ -53,6 +56,7 @@ import {
   type PackedLeg,
 } from './ppr.ts';
 import { legIndexWithReverses, legsOfVariant } from './legs.ts';
+import { sailedLegsByDay } from './legGeometry.ts';
 import { enumerateRoundTrips } from './roundTrips.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
 import { distanceNm, isClockwise } from './geo.ts';
@@ -344,6 +348,20 @@ export function planFromPacking(
   return days;
 }
 
+/**
+ * Der EINE Plan-Konstruktor des Solvers: stempelt neben der Schema- auch die
+ * Algorithmus-Version. Der Stempel ist, was einen persistierten Plan später
+ * als veraltet erkennbar macht (planOutdated) — ohne ihn überlebte ein Plan
+ * des alten Solvers jeden Redeploy, und kein Fix würde je sichtbar.
+ */
+function mkPlan(days: PlanDay[]): Plan {
+  return {
+    schemaVersion: PLAN_SCHEMA_VERSION,
+    algorithmVersion: SOLVER_ALGORITHM_VERSION,
+    days,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Validity (AD-13)
 // ---------------------------------------------------------------------------
@@ -449,6 +467,32 @@ export function validatePlan(
       day: null,
       text: `${harbourCount} Hafentage im Plan — mehr als die Notgrenze von ${params.harbourDaysMax} (Ziel: ${params.harbourDays})`,
     });
+  }
+
+  // (1b') Die LAGE der Hafentage, nicht nur ihre Zahl: ein Plan, der früh
+  // heimkommt und die letzten Tage an der Basis liegt, nutzt den Rahmen nicht —
+  // genau 5 Trailing-Hafentage waren vorher exakt KEIN Befund (nicht > Notgrenze),
+  // und die Rangfolge belohnte das noch (schema/plan.ts, firmViolations).
+  // Erlaubt bleibt das Zielband harbourDaysTargetMax (Puffer-/Ruhetag am Ende
+  // ist legitim, und der Packer schliesst früh ab, wenn die Etappen kurz sind).
+  // STRUKTURELL wie (1b), nie Safety: im Meltemi bleibt "früh heim" die am
+  // wenigsten verletzende Antwort (FR18) — sie verliert nur gegen jeden Plan,
+  // der den Rahmen wirklich segelt.
+  {
+    const ordered = [...plan.days].sort((a, b) => a.day - b.day);
+    let trailing = 0;
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const d = ordered[i]!;
+      if (d.kind === 'harbour' && d.islandId === params.baseIslandId) trailing++;
+      else break;
+    }
+    if (trailing > params.harbourDaysTargetMax) {
+      violations.push({
+        kind: 'incomplete',
+        day: null,
+        text: `Plan liegt die letzten ${trailing} Tage an der Basis — der Törnrahmen bis Tag ${frame.deadlineDay} wird nicht genutzt (Ziel: höchstens ${params.harbourDaysTargetMax} Hafentage am Ende)`,
+      });
+    }
   }
 
   // (1c) FR16 night-leg quota. The params existed but nothing enforced them:
@@ -888,6 +932,14 @@ export interface PlanMetrics {
   bandDevTenths: number;
   /** Abstand der Hafentagszahl vom Zielband [harbourDays, harbourDaysTargetMax]. */
   harbourDev: number;
+  /**
+   * Längster ZUSAMMENHÄNGENDER Hafentage-Lauf ab dem aktuellen Törntag —
+   * die Verteilungs-Kennzahl, die harbourDev nicht hat: fünf Hafentage am
+   * Stück (egal ob am Ende oder mitten im Törn) sind ein anderer Törn als
+   * fünf verteilte. Auch an der Basis gezählt — das Rumliegen in Alimos ist
+   * genau der beanstandete Fall.
+   */
+  maxHarbourRun: number;
 }
 
 export function planMetricsFor(
@@ -952,6 +1004,18 @@ export function planMetricsFor(
     const hi = snapshot.params.harbourDaysTargetMax;
     const harbourDev = harbourDays < lo ? lo - harbourDays : harbourDays > hi ? harbourDays - hi : 0;
 
+    // Nur ab dem aktuellen Tag: vergangene Hafentage sind gesegelte
+    // Geschichte (AD-12) und keine Qualität des Restplans.
+    let maxHarbourRun = 0;
+    {
+      let run = 0;
+      for (const d of [...r.plan.days].sort((a, b) => a.day - b.day)) {
+        if (d.day < snapshot.trip.currentDay) continue;
+        run = d.kind === 'harbour' ? run + 1 : 0;
+        if (run > maxHarbourRun) maxHarbourRun = run;
+      }
+    }
+
     const m: PlanMetrics = {
       reachNm: reach(r.turnIslandId),
       distinctIslands: new Set(islands).size,
@@ -961,6 +1025,7 @@ export function planMetricsFor(
       stages: stages.length,
       bandDevTenths,
       harbourDev,
+      maxHarbourRun,
     };
     memo.set(r, m);
     return m;
@@ -994,27 +1059,46 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  * und sie soll ablesbar sein statt aus Gewichten hervorzugehen, die sich
  * gegenseitig aufheben können:
  *
- *   1. gültig vor ungültig, und unter den ungültigen zuerst weniger
- *      Sicherheitsverletzungen, dann weniger Verletzungen überhaupt. Die App
+ *   1. FEST gültig vor ungültig, und unter den ungültigen zuerst weniger
+ *      Sicherheitsverletzungen, dann weniger FESTE Verletzungen. Die App
  *      muss auch im Meltemi antworten (FR18) — aber nie mit etwas Unsicherem.
+ *      FEST heisst: ohne die Annahme-Befunde (`Violation.assumed`). Die
+ *      zählten hier früher mit — und weil jeder Segeltag jenseits des
+ *      verlässlichen Horizonts Annahme-Befunde trägt, Tage an der Basis aber
+ *      keine, gewann "an Tag 7 heim und fünf Tage liegen" gegen jeden Törn,
+ *      der die zweite Woche nutzt, bevor Reichweite oder Inseln je verglichen
+ *      wurden. Die Annahme warnt, sie verurteilt nicht (schema/plan.ts) —
+ *      als Rangkriterium steht sie deshalb NACHRANGIG (Kriterium 6), nicht
+ *      im Gültigkeits-Tor.
  *   2. WEITER vor näher. Das ist die Törnfrage.
- *   3. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
+ *   3. Weniger Nachgeben auf der Eskalationsleiter — VOR der Inselvielfalt
+ *      und dem Wegstunden-Band, mit Absicht: der Doppelschlag ist eine
+ *      NACHGABE (Skipper 2026-08-05, "ein Tag, eine Verbindung") und darf
+ *      weder zum Normalfall werden, weil er die Stunden hübscher verteilt,
+ *      NOCH weil er mehr Inseln in die erste Woche stopft. Genau über die
+ *      Inselvielfalt hatte er sich zurückgekämpft: sechs Doppelschlag-Tage
+ *      hintereinander erreichten mehr Inseln und gewannen — die Ausnahme als
+ *      Serie. Ein Doppelschlag, der WEITER trägt, gewinnt weiterhin
+ *      (Kriterium 2); zusätzlich deckelt params.doppelschlagMaxPerTrip die
+ *      Zahl der Doppelschlag-Tage im Packer selbst.
+ *   4. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
  *      Törn, der zwölf Tage dieselbe Kette auf und ab fährt, genauso gut wie
  *      eine Runde — er erreicht denselben Wendepunkt und ist leichter gültig.
- *   4. Weniger Nachgeben auf der Eskalationsleiter — VOR dem Wegstunden-Band,
- *      mit Absicht: zwei kurze Schläge an einem Tag füllen das Band besser als
- *      einer, aber der Doppelschlag ist eine NACHGABE (Skipper 2026-08-05,
- *      "ein Tag, eine Verbindung") und darf nicht zum Normalfall werden, nur
- *      weil er die Stunden hübscher verteilt. Ein Doppelschlag, der WEITER
- *      trägt oder mehr Inseln erschliesst, gewinnt weiterhin (Kriterien 2-3).
- *   5. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
+ *      (Runde vor Pendeln bleibt erhalten: beide lösen ohne Eskalation, also
+ *      entscheidet weiterhin die Vielfalt.)
+ *   5. Weniger Annahme-Befunde: der abgestufte Rest des alten Kriteriums 1.
+ *      Bei gleicher Reichweite und Vielfalt ist der Plan vorzuziehen, der
+ *      weniger auf der Persistenz-Annahme ruht.
+ *   6. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
  *      verschenken oder zu überziehen.
- *   6. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
+ *   7. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
  *      ohne Ruhetag ist der Törn so wenig gewollt wie mit vier.
- *   7. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
+ *   8. Kürzester Hafentage-LAUF: verteilte Ruhetage vor der Halde — fünf am
+ *      Stück sind ein anderer Törn als fünf verteilte (maxHarbourRun).
+ *   9. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
  *      Westseite zurück — die Empfehlung fürs Revier.
- *   8. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
- *   9. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
+ *  10. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
+ *  11. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
  *      die Variante alphabetisch — gleiche Lage, gleiche Antwort.
  */
 export function preferred(
@@ -1025,16 +1109,20 @@ export function preferred(
   if (!a) return b;
   const ma = metrics(a);
   const mb = metrics(b);
+  const firmA = firmViolations(a.validity).length;
+  const firmB = firmViolations(b.validity).length;
   const cmp: [number, number][] = [
-    [a.validity.valid ? 1 : 0, b.validity.valid ? 1 : 0],
+    [firmA === 0 ? 1 : 0, firmB === 0 ? 1 : 0],
     [-a.validity.safetyViolations.length, -b.validity.safetyViolations.length],
-    [-a.validity.violations.length, -b.validity.violations.length],
+    [-firmA, -firmB],
     // Wie weit kommen wir — die Törnfrage.
     [Math.round(ma.reachNm), Math.round(mb.reachNm)],
-    [ma.distinctIslands, mb.distinctIslands],
     [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
+    [ma.distinctIslands, mb.distinctIslands],
+    [-assumedViolations(a.validity).length, -assumedViolations(b.validity).length],
     [-ma.bandDevTenths, -mb.bandDevTenths],
     [-ma.harbourDev, -mb.harbourDev],
+    [-ma.maxHarbourRun, -mb.maxHarbourRun],
     [ma.clockwise ? 1 : 0, mb.clockwise ? 1 : 0],
     [-ma.turnDay, -mb.turnDay],
     [ma.stages, mb.stages],
@@ -1168,7 +1256,7 @@ export function completePlan(
 
   // Nothing left to plan: the trip is over.
   if (startDay > frame.deadlineDay) {
-    const plan: Plan = { schemaVersion: PLAN_SCHEMA_VERSION, days: pastDays };
+    const plan: Plan = mkPlan(pastDays);
     if (pastDays.length === 0) return null;
     return {
       plan,
@@ -1189,6 +1277,23 @@ export function completePlan(
   const reach = reachNmFor(snapshot);
 
   let best: SolveResult | null = null;
+  /** Ohne feste Verletzungen — das Tor, das `preferred` als Kriterium 1 prüft. */
+  const firmValid = (r: SolveResult): boolean =>
+    firmViolations(r.validity).length === 0;
+
+  /**
+   * Die besten N Kandidaten für die Nachvalidierung gegen die GESEGELTE Kette
+   * (unten). N klein, weil jede Nachvalidierung die Kette neu verankert und
+   * landfrei legt (legGeometry.ts) — für jeden Kandidaten × Stufe wäre das
+   * unbezahlbar, für die Spitzengruppe ist es billig.
+   */
+  const FINALISTS_MAX = 5;
+  const finalists: SolveResult[] = [];
+  const noteFinalist = (r: SolveResult) => {
+    finalists.push(r);
+    finalists.sort((x, y) => (preferred(x, y, metrics) === x ? -1 : 1));
+    if (finalists.length > FINALISTS_MAX) finalists.pop();
+  };
 
   /**
    * ALLE Stufen werden durchgerechnet, nicht nur bis die erste etwas Gültiges
@@ -1208,19 +1313,21 @@ export function completePlan(
     for (const candidate of candidates) {
       /**
        * Beschneidung, die das Ergebnis nicht verändert: steht bereits ein
-       * GÜLTIGER Plan, kann eine höhere Eskalationsstufe nur noch gewinnen,
-       * wenn sie mindestens GLEICH WEIT kommt — bei ECHT geringerer Reichweite
-       * verliert sie an Kriterium 2, egal was sonst passiert.
+       * FEST-GÜLTIGER Plan (Kriterium 1: keine festen Verletzungen), kann eine
+       * höhere Eskalationsstufe nur noch gewinnen, wenn sie mindestens GLEICH
+       * WEIT kommt — bei ECHT geringerer Reichweite verliert sie an Kriterium
+       * 2, egal was sonst passiert. (Fest-gültig, nicht voll-gültig: seit die
+       * Annahme-Befunde nachrangig ranken, ist das das Tor, das preferred
+       * selbst prüft — die Beschneidung muss dasselbe Tor benutzen.)
        *
-       * Nur strikt kleiner, nicht kleiner-gleich: seit dem Zielmodell v2
-       * stehen Inselvielfalt und Wegstunden-Band VOR der Eskalationsstufe —
-       * bei gleicher Reichweite kann eine höhere Stufe also durchaus noch
-       * gewinnen (etwa ein Doppelschlag, der eine vielfältigere Runde packbar
-       * macht) und muss durchgerechnet werden.
+       * Nur strikt kleiner, nicht kleiner-gleich: bei gleicher Reichweite kann
+       * eine höhere Stufe durchaus noch gewinnen (etwa ein Doppelschlag, der
+       * eine vielfältigere Runde packbar macht) und muss durchgerechnet werden.
        */
       if (
         levelIdx > 0 &&
-        best?.validity.valid &&
+        best &&
+        firmValid(best) &&
         Math.round(reach(candidate.turnIslandId)) <
           Math.round(reach(best.turnIslandId))
       ) {
@@ -1251,7 +1358,7 @@ export function completePlan(
       if (!candidateHonoursPins(future, futurePins)) continue;
       const days = [...pastDays, ...future];
 
-      const plan: Plan = { schemaVersion: PLAN_SCHEMA_VERSION, days };
+      const plan: Plan = mkPlan(days);
       // Validity is always judged against the ORIGINAL params — relaxation
       // may guide the search, never redefine what counts as valid.
       const validity = validatePlan(plan, snapshot);
@@ -1263,9 +1370,55 @@ export function completePlan(
         turnIslandId: candidate.turnIslandId,
       };
       best = preferred(best, result, metrics);
+      noteFinalist(result);
     }
 
-    if (opts.stopAtFirstValid && best?.validity.valid) break;
+    // Fest-gültig statt voll-gültig — dasselbe Tor wie preferred/Beschneidung.
+    if (opts.stopAtFirstValid && best && firmValid(best)) break;
+  }
+
+  if (!best) return null;
+
+  /**
+   * Nachvalidierung der Spitzengruppe gegen die GESEGELTE Kette.
+   *
+   * Die Suche rechnet mit kuratierten Bibliotheks-Etappen (deterministischer
+   * Suchraum, siehe validatePlan-Kopf), die Anzeige aber mit der real
+   * verankerten, landfrei gelegten Kette (legGeometry.ts) — und dazwischen
+   * liegen echte Stunden: aus 7,5 h/gelb kuratiert wurde in der Anzeige
+   * 9,0 h/rot, und der Solver KONNTE das beim Wählen nicht sehen. Deshalb
+   * werden die besten Kandidaten hier noch einmal gegen ihre gesegelte Kette
+   * geprüft und der Sieger nach DIESER Gültigkeit bestimmt: ein Plan, der nur
+   * kuratiert grün war, verliert gegen einen, der es auch gesegelt ist.
+   *
+   * Nur für die Hauptrouten-Frage (ohne turnIslandId): die Options-Preise
+   * (options.ts) vergleichen Kandidaten untereinander, und dafür ist die
+   * kuratierte Rechnung konsistent genug — sechs Options-Aufrufe × fünf
+   * Ketten-Verankerungen wären der teuerste Schritt der ganzen Bewertung.
+   */
+  if (opts.turnIslandId === undefined && finalists.length > 1) {
+    const legsById = legLibrary(snapshot);
+    let winner: SolveResult | null = null;
+    for (const r of finalists) {
+      const sailed = sailedLegsByDay(
+        r.plan.days.map((d) => ({
+          day: d.day,
+          legIds: d.kind === 'stage' ? d.legIds : [],
+          // Der Solver legt keine Plätze fest (AD-12) — verankert wird an den
+          // kuratierten Häfen, aber VERKETTET: jeder Tag startet, wo der
+          // vorige endete. Genau die Verkettung ist, was Stunden kostet.
+          placeId: null,
+        })),
+        legsById,
+        snapshot.library.places,
+      );
+      const revalidated: SolveResult = {
+        ...r,
+        validity: validatePlan(r.plan, snapshot, { sailedLegsByDay: sailed }),
+      };
+      winner = preferred(winner, revalidated, metrics);
+    }
+    return winner ?? best;
   }
 
   return best;

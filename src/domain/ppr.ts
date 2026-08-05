@@ -108,6 +108,13 @@ export function packLegs(
      * Geplanten, setzt sie bewusst hoch (siehe packLegsFeasible).
      */
     maxLegsPerDay?: number;
+    /**
+     * Obergrenze für Doppelschlag-TAGE über den ganzen Zeitraum. Ohne Angabe
+     * gilt `params.doppelschlagMaxPerTrip` (Standard 1: die Ausnahme bleibt
+     * eine). Kapazitätsfragen setzen sie bewusst auf unbegrenzt — siehe
+     * packLegsFeasible.
+     */
+    maxDoubleLegDays?: number;
   } = {},
 ): PackResult {
   const memo = new Map<string, PackResult>();
@@ -125,6 +132,7 @@ export function packLegs(
   // growing it. Callers that only ask about feasibility (PoR) leave it open.
   const maxWaitDays = opts.maxWaitDays ?? Number.POSITIVE_INFINITY;
   const maxLegsPerDay = opts.maxLegsPerDay ?? params.maxLegsPerDay;
+  const maxDoubleLegDays = opts.maxDoubleLegDays ?? params.doppelschlagMaxPerTrip;
 
   const combine = (rest: Feasibility, unconfirmed: boolean): Feasibility =>
     rest === 'infeasible'
@@ -145,7 +153,12 @@ export function packLegs(
     return lastA <= lastB ? a : b;
   };
 
-  const search = (legIdx: number, day: number, waitsUsed: number): PackResult => {
+  const search = (
+    legIdx: number,
+    day: number,
+    waitsUsed: number,
+    doublesUsed: number,
+  ): PackResult => {
     if (legIdx >= legs.length) {
       // All legs placed: the boat lies at the last island for every remaining
       // day. Those days still have to satisfy the day constraints — otherwise
@@ -158,7 +171,7 @@ export function packLegs(
       return { verdict: 'feasible', packed: [] };
     }
     if (day > deadlineDay) return { verdict: 'infeasible', packed: [] };
-    const key = `${legIdx}:${day}:${waitsUsed}`;
+    const key = `${legIdx}:${day}:${waitsUsed}:${doublesUsed}`;
     const cached = memo.get(key);
     if (cached) return cached;
 
@@ -169,7 +182,7 @@ export function packLegs(
     if (a.ampel !== 'rot') {
       // One leg today — the day constraint asks about the island we END at.
       if (ok(day, legs[legIdx]!.toIslandId)) {
-        const rest = search(legIdx + 1, day + 1, waitsUsed);
+        const rest = search(legIdx + 1, day + 1, waitsUsed, doublesUsed);
         best = {
           // AD-13 REVISED — the far range is now COMPUTED under the persistence
           // assumption (scoring.ts) instead of being left 'unbewertet', so the
@@ -195,6 +208,10 @@ export function packLegs(
       // single-leg destination failing the constraint.
       if (
         maxLegsPerDay >= 2 &&
+        // Törn-Deckel: die Ausnahme "zwei Verbindungen an einem Tag" steht
+        // nur so oft zur Verfügung, wie params.doppelschlagMaxPerTrip erlaubt
+        // (Standard 1) — sonst macht die Eskalationsstufe sie zur Serie.
+        doublesUsed < maxDoubleLegDays &&
         best.verdict !== 'feasible' &&
         legIdx + 1 < legs.length &&
         a.totalHours !== null
@@ -215,7 +232,7 @@ export function packLegs(
           combinedMotor <= params.maxMotorHours &&
           ok(day, legs[legIdx + 1]!.toIslandId)
         ) {
-          const rest2 = search(legIdx + 2, day + 1, waitsUsed);
+          const rest2 = search(legIdx + 2, day + 1, waitsUsed, doublesUsed + 1);
           best = better(best, {
             // Same reasoning as the single-leg move: if either leg of the
             // double-leg day rests on the persistence assumption, the day is
@@ -240,7 +257,7 @@ export function packLegs(
     ) {
       // Waiting a day is always allowed (costs a day) — that day becomes the
       // harbour day when the caller builds a plan from this packing.
-      const rest = search(legIdx, day + 1, waitsUsed + 1);
+      const rest = search(legIdx, day + 1, waitsUsed + 1, doublesUsed);
       best = better(best, {
         verdict: combine(rest.verdict, false),
         packed: rest.packed,
@@ -250,7 +267,7 @@ export function packLegs(
     return best;
   };
 
-  return search(0, startDay, 0);
+  return search(0, startDay, 0, 0);
 }
 
 /**
@@ -275,6 +292,10 @@ export function packLegsFeasible(
   return packLegs(legs, startDay, deadlineDay, snapshot, {
     ...opts,
     maxLegsPerDay: LEGS_PER_DAY_POSSIBLE,
+    // Auch der Törn-Deckel ist eine Stilvorgabe des PLANS: ob das Boot noch
+    // heimkommt, darf nicht daran scheitern, dass der Heimweg zwei
+    // Doppelschlag-Tage bräuchte.
+    maxDoubleLegDays: Number.POSITIVE_INFINITY,
   }).verdict;
 }
 

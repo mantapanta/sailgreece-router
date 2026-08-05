@@ -22,7 +22,8 @@ import type {
   LegHourBreakdown,
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
-import type { DayReturnCheck } from '../../domain/schema/plan.ts';
+import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
+import { planKey } from '../../domain/solver.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
@@ -943,6 +944,24 @@ export function DayView({
           </button>
         </div>
       )}
+
+      {/* Veralteter Solver-Stand: die Fälle, die der Auto-Refresh (usePlanning)
+          bewusst NICHT anfasst — Törn läuft schon oder Pins gesetzt. Die
+          Neuberechnung bleibt dann eine sichtbare Skipper-Entscheidung. */}
+      {main &&
+        planOutdated(main.plan) &&
+        assessment.proposal &&
+        planKey(assessment.proposal.plan) !== planKey(main.plan) && (
+          <div className="hint-panel">
+            Der Planer wurde verbessert — die gespeicherte Hauptroute stammt aus
+            einer älteren Version und würde so nicht mehr vorgeschlagen.
+            Übernehmen ersetzt sie durch den aktuellen Vorschlag; bisherige
+            Festlegungen (📌) werden dabei gelöst.{' '}
+            <button type="button" onClick={() => checkIn(assessment.proposal!.plan)}>
+              Route neu berechnen
+            </button>
+          </div>
+        )}
 
       {todayStage && (
         <section className="section">

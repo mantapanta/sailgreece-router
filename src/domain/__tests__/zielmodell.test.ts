@@ -282,6 +282,7 @@ describe('preferred — die Rangfolge des Zielmodells v2', () => {
     stages: 4,
     bandDevTenths: 0,
     harbourDev: 0,
+    maxHarbourRun: 1,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),
@@ -344,6 +345,74 @@ describe('preferred — die Rangfolge des Zielmodells v2', () => {
       nah: { reachNm: 40, distinctIslands: 5, bandDevTenths: 0 },
     });
     expect(preferred(nah, weit, metrics)).toBe(weit);
+  });
+
+  it('Inselvielfalt kauft keinen Doppelschlag — die Stufe rangiert davor', () => {
+    // Genau der Fehler des alten Rankings: sechs Doppelschlag-Tage erreichten
+    // mehr Inseln und gewannen. Bei gleicher Reichweite muss jetzt die
+    // mildere Stufe gewinnen, egal wie viele Inseln der Doppelschlag stopft.
+    const ohne = mkResult('ohne');
+    const doppel: SolveResult = { ...mkResult('doppel'), relaxedTo: 'doppelschlag' };
+    const metrics = withMetrics({
+      ohne: { distinctIslands: 3 },
+      doppel: { distinctIslands: 6 },
+    });
+    expect(preferred(doppel, ohne, metrics)).toBe(ohne);
+    expect(preferred(ohne, doppel, metrics)).toBe(ohne);
+  });
+
+  it('Annahme-Befunde verurteilen nicht — der weite Plan schlägt den Daheim-Plan', () => {
+    // "An Tag 7 heim und fünf Tage liegen" hatte null Verletzungen, jeder
+    // Segeltag jenseits des Horizonts trug Annahme-Befunde — und gewann
+    // deshalb. Jetzt zählen nur FESTE Verletzungen ins Gültigkeits-Tor; die
+    // Annahme rangiert nachrangig, und die Reichweite entscheidet.
+    const daheim = mkResult('daheim');
+    const weit: SolveResult = {
+      ...mkResult('weit'),
+      validity: {
+        valid: false,
+        horizonDependent: true,
+        violations: [
+          { kind: 'budget', day: 9, text: 'Annahme-Tag über Budget', assumed: true },
+          { kind: 'return', day: 10, text: 'Rückweg nur unter Annahme', assumed: true },
+        ],
+        safetyViolations: [],
+      },
+    };
+    const metrics = withMetrics({
+      daheim: { reachNm: 0, distinctIslands: 1, stages: 2, harbourDays: 5, maxHarbourRun: 5 },
+      weit: { reachNm: 60, distinctIslands: 5, stages: 10 },
+    });
+    expect(preferred(daheim, weit, metrics)).toBe(weit);
+    expect(preferred(weit, daheim, metrics)).toBe(weit);
+  });
+
+  it('eine FESTE Verletzung bleibt ein Ausschluss — sie ist keine Annahme', () => {
+    const sauber = mkResult('sauber');
+    const rot: SolveResult = {
+      ...mkResult('rot'),
+      validity: {
+        valid: false,
+        horizonDependent: false,
+        violations: [{ kind: 'budget', day: 3, text: '9-h-Tag über dem Hartmaximum' }],
+        safetyViolations: [],
+      },
+    };
+    const metrics = withMetrics({
+      sauber: { reachNm: 40 },
+      rot: { reachNm: 60 }, // selbst mit mehr Reichweite: Kriterium 1 sperrt
+    });
+    expect(preferred(rot, sauber, metrics)).toBe(sauber);
+  });
+
+  it('bei sonst gleicher Lage gewinnt der kürzere Hafentage-Lauf', () => {
+    const verteilt = mkResult('verteilt');
+    const halde = mkResult('halde');
+    const metrics = withMetrics({
+      verteilt: { harbourDays: 2, harbourDev: 0, maxHarbourRun: 1 },
+      halde: { harbourDays: 2, harbourDev: 0, maxHarbourRun: 2 },
+    });
+    expect(preferred(halde, verteilt, metrics)).toBe(verteilt);
   });
 });
 

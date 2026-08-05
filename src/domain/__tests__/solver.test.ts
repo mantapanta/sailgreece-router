@@ -527,6 +527,182 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
     expect(relaxParams(base, 'doppelschlag').maxLegsPerDay).toBe(2);
     expect(relaxParams(base, 'nightLeg').maxLegsPerDay).toBe(2);
   });
+
+  it('der Törn-Deckel überlebt jede Stufe der Leiter', () => {
+    const base = roundTripSnapshot().params;
+    expect(base.doppelschlagMaxPerTrip).toBe(1);
+    for (const level of RELAXATION_ORDER) {
+      expect(relaxParams(base, level).doppelschlagMaxPerTrip).toBe(1);
+    }
+  });
+
+  /**
+   * SKIPPER 2026-08-05 — die Ausnahme ist keine Serie: auch wenn die Leiter
+   * den Doppelschlag freigibt, trägt ein Törn höchstens
+   * params.doppelschlagMaxPerTrip Doppelschlag-TAGE. Vorher hob die Stufe
+   * maxLegsPerDay auf 2 und die Rangfolge belohnte die Serie (mehr Inseln vor
+   * dem Horizont) — heraus kamen sechs Doppelschlag-Tage hintereinander.
+   */
+  it('höchstens EIN Doppelschlag-Tag pro Törn, auch auf jeder Stufe der Leiter', () => {
+    // Kurze Etappen und ein zu enger Rahmen: der Packer DÜRFTE beliebig
+    // doppeln, der Deckel lässt genau einen Tag zu.
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    for (const level of RELAXATION_ORDER) {
+      const relaxed = { ...snapshot, params: relaxParams(snapshot.params, level) };
+      const legs = legLibrary(snapshot);
+      const chain = [
+        legs.get('athen--mitte')!,
+        legs.get('mitte--sued')!,
+        legs.get('sued--mitte')!,
+        legs.get('mitte--athen')!,
+      ];
+      // Vier Etappen in zwei Tagen bräuchten ZWEI Doppelschlag-Tage.
+      const two = packLegs(chain, 1, 2, relaxed, { startIslandId: 'athen' });
+      expect(two.verdict).toBe('infeasible');
+      // In drei Tagen reicht EIN Doppelschlag-Tag — den erlaubt der Deckel
+      // (nur auf Stufen, deren maxLegsPerDay ihn überhaupt freigibt).
+      if (relaxed.params.maxLegsPerDay >= 2) {
+        const three = packLegs(chain, 1, 3, relaxed, { startIslandId: 'athen' });
+        expect(three.verdict).not.toBe('infeasible');
+        const byDay = new Map<number, number>();
+        for (const p of three.packed) {
+          byDay.set(p.day, (byDay.get(p.day) ?? 0) + 1);
+        }
+        const doubleDays = [...byDay.values()].filter((n) => n > 1).length;
+        expect(doubleDays).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('Kapazitätsfragen bleiben ungedeckelt — der Heimweg darf doppeln', () => {
+    // Dieselben vier kurzen Etappen in zwei Tagen: als PLAN unzulässig (ein
+    // Doppelschlag-Tag reicht nicht), als KAPAZITÄTSFRAGE machbar.
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    const legs = legLibrary(snapshot);
+    const chain = [
+      legs.get('athen--mitte')!,
+      legs.get('mitte--sued')!,
+      legs.get('sued--mitte')!,
+      legs.get('mitte--athen')!,
+    ];
+    expect(packLegsFeasible(chain, 1, 2, snapshot)).not.toBe('infeasible');
+  });
+});
+
+/**
+ * ZIELMODELL v2, Nachtrag 2026-08-05 — der Rahmen wird genutzt: ein Plan, der
+ * früh heimkommt und die letzten Tage an der Basis liegt, ist nicht der Törn,
+ * der gewollt ist. Fünf Trailing-Hafentage waren vorher exakt KEIN Befund
+ * (nicht über der Notgrenze 5), und die Rangfolge belohnte sie noch, weil
+ * Basistage keine Annahme-Befunde tragen.
+ */
+describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
+  it('mehr als harbourDaysTargetMax Trailing-Hafentage an der Basis sind ein Befund', () => {
+    const snapshot = roundTripSnapshot({ days: 14 });
+    snapshot.params = {
+      ...snapshot.params,
+      tripLengthDays: 8,
+      returnDeadlineDate: '2026-08-15', // Törntag 8
+      pickupDate: '2026-08-10', // Törntag 3, auf 'sued' erreichbar
+    };
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeStage(3, ['sued--mitte'], 'mitte'),
+      makeStage(4, ['mitte--athen'], 'athen'),
+      makeHarbourDay(5, 'athen'),
+      makeHarbourDay(6, 'athen'),
+      makeHarbourDay(7, 'athen'),
+      makeHarbourDay(8, 'athen'),
+    ]);
+    const validity = validatePlan(plan, snapshot);
+    expect(
+      validity.violations.some(
+        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
+      ),
+    ).toBe(true);
+    // Strukturell, nie Safety: liegen bleiben ist sicher (FR18).
+    expect(validity.safetyViolations).toHaveLength(0);
+  });
+
+  it('bis zu harbourDaysTargetMax Tage am Ende bleiben legitim (Puffer + Ruhetag)', () => {
+    const snapshot = roundTripSnapshot({ days: 14 });
+    snapshot.params = {
+      ...snapshot.params,
+      tripLengthDays: 6,
+      returnDeadlineDate: '2026-08-13', // Törntag 6
+      pickupDate: '2026-08-10',
+    };
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeStage(3, ['sued--mitte'], 'mitte'),
+      makeStage(4, ['mitte--athen'], 'athen'),
+      makeHarbourDay(5, 'athen'),
+      makeHarbourDay(6, 'athen'),
+    ]);
+    const validity = validatePlan(plan, snapshot);
+    expect(
+      validity.violations.some(
+        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
+      ),
+    ).toBe(false);
+  });
+
+  it('Hafentage unterwegs zählen nicht als Trailing-Halde', () => {
+    const snapshot = roundTripSnapshot({ days: 14 });
+    snapshot.params = {
+      ...snapshot.params,
+      tripLengthDays: 7,
+      returnDeadlineDate: '2026-08-14', // Törntag 7
+      pickupDate: '2026-08-10',
+    };
+    // Drei Hafentage MITTEN im Törn (Wetter abwarten ist legitim), nur einer
+    // am Ende: kein Trailing-Befund.
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeHarbourDay(3, 'sued'),
+      makeHarbourDay(4, 'sued'),
+      makeStage(5, ['sued--mitte'], 'mitte'),
+      makeStage(6, ['mitte--athen'], 'athen'),
+      makeHarbourDay(7, 'athen'),
+    ]);
+    const validity = validatePlan(plan, snapshot);
+    expect(
+      validity.violations.some(
+        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
+      ),
+    ).toBe(false);
+  });
+
+  it('planMetricsFor misst den längsten Hafentage-Lauf ab dem aktuellen Tag', () => {
+    const snapshot = roundTripSnapshot();
+    const metrics = planMetricsFor(snapshot);
+    const mk = (days: ReturnType<typeof makeStage>[]): SolveResult => ({
+      plan: makePlan(days),
+      validity: { valid: true, horizonDependent: false, violations: [], safetyViolations: [] },
+      relaxedTo: 'none',
+      variantId: 'test',
+      turnIslandId: 'sued',
+    });
+    const halde = mk([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--athen'], 'athen'),
+      makeHarbourDay(3, 'athen'),
+      makeHarbourDay(4, 'athen'),
+      makeHarbourDay(5, 'athen'),
+    ]);
+    expect(metrics(halde).maxHarbourRun).toBe(3);
+    const verteilt = mk([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeHarbourDay(2, 'mitte'),
+      makeStage(3, ['mitte--sued'], 'sued'),
+      makeStage(4, ['sued--mitte'], 'mitte'),
+      makeStage(5, ['mitte--athen'], 'athen'),
+    ]);
+    expect(metrics(verteilt).maxHarbourRun).toBe(1);
+  });
 });
 
 /**
