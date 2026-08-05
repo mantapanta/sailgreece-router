@@ -4,7 +4,7 @@ baseline_commit: d0bfb0cfd5f2ba67d192fa607ef160cf4193fd3c
 
 # Story 1.3: Karte redesign
 
-Status: ready-for-dev
+Status: in-progress
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
