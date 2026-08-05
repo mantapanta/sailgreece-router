@@ -97,6 +97,20 @@ const ParamsObjectSchema = z.object({
   // --- time windows (AD-9) --------------------------------------------------
   /** Default departure, Athens local hour (FR15 assumption 09:00). */
   departureHourAthens: z.number().int().min(0).max(23).default(9),
+  /**
+   * CROWD-STRATEGIE (Törnanalyse/Breezada 2026-08-05): "leave earlier and
+   * arrive earlier" — um `zielAnkunftHourAthens` soll das Boot VOR ANKER
+   * liegen (entspanntes Anlegen um 14:30 statt Drei-Versuche-Anlegen um 17:00
+   * in Böen; der Meltemi hat sein Maximum 13–17 Uhr). Die App empfiehlt je
+   * Etappentag die SPÄTESTE Abfahrt, deren simulierte Ankunft das Ziel noch
+   * hält (domain/abfahrt.ts) — nie früher als `fruehesteAbfahrtHourAthens`.
+   *
+   * `fruehesteAbfahrtHourAthens` ist zugleich die Grenze der Nachtetappen-
+   * Erkennung (scoring.ts): eine 06:00-Abfahrt ist gewollte Taktik im
+   * Morgen-Windminimum, keine Nachtfahrt — erst davor beginnt die Nacht.
+   */
+  zielAnkunftHourAthens: z.number().int().min(0).max(23).default(15),
+  fruehesteAbfahrtHourAthens: z.number().int().min(0).max(23).default(6),
   /** Overnight window [N 18:00, N+1 09:00) Athens (FR8 assumption). */
   nightStartHourAthens: z.number().int().min(0).max(23).default(18),
   nightEndHourAthens: z.number().int().min(0).max(23).default(9),
@@ -169,6 +183,14 @@ const ParamsObjectSchema = z.object({
    */
   konzeptKlassikMaxKn: z.number().positive().default(28),
   konzeptKlassikDauerTage: z.number().int().min(1).default(3),
+  /**
+   * ENTSCHEIDUNGSTORE (Törnanalyse/Breezada 2026-08-05): an natürlichen
+   * Knoten (Paros/Naxos; Syros für den Ost-Abzweig) steigt die Exposition,
+   * sobald man sich DAHINTER festlegt. Regel: nur weiter vorstoßen mit einem
+   * Forecast-Fenster von mindestens dieser Länge, das einen machbaren
+   * Rückweg einschließt. Die Tore selbst stehen in domain/konzept.ts.
+   */
+  torFensterStunden: z.number().int().min(24).default(48),
 
   // --- forecast horizon & worst case (AD-13) --------------------------------
   /**
@@ -324,6 +346,14 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
     ctx.issues.push({
       code: 'custom',
       message: 'pickupDate muss innerhalb des Törnfensters liegen (FR31 ist harte Bedingung)',
+      input: p,
+    });
+  }
+  if (p.fruehesteAbfahrtHourAthens >= p.zielAnkunftHourAthens) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'fruehesteAbfahrtHourAthens muss vor zielAnkunftHourAthens liegen — sonst gibt es kein Abfahrtsfenster',
       input: p,
     });
   }

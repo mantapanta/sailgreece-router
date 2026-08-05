@@ -38,6 +38,7 @@ import { usePlanning } from '../../app/planningContext.tsx';
 import {
   formatAthensTime,
   formatDeg,
+  formatHourOfDay,
   formatHours,
   formatKn,
   formatStamp,
@@ -374,6 +375,10 @@ function StageCard({
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const { params } = snapshot;
+  const { setDepartureHour } = usePlanning();
+  /** Die heute WIRKSAME Abfahrt — für den Übernehmen-Knopf der Empfehlung. */
+  const heutigeAbfahrt =
+    snapshot.trip.departureHourOverride ?? params.departureHourAthens;
   // EINE Punktliste für Karte und Rechnung — daraus die Nummern für beide.
   const points = useMemo(
     () => stagePoints(stage, buildLegsById(snapshot.library.legs), snapshot),
@@ -457,6 +462,51 @@ function StageCard({
         </span>
         <AmpelBadge ampel={stage.placeAmpel} />
       </div>
+
+      {/* "Früh los, 15:00 vor Anker" (Crowd-Strategie): die späteste Abfahrt,
+          deren simulierte Ankunft das Ankerziel noch hält — gerechnet gegen
+          denselben Stunden-Forecast wie die Ampel. Heute mit einem Klick als
+          Abfahrtszeit übernehmbar (FR15-Override). */}
+      {stage.kind === 'stage' && stage.abfahrtsEmpfehlung && (
+        <div
+          className={`abfahrt-zeile${stage.abfahrtsEmpfehlung.zielErreicht ? '' : ' verfehlt'}`}
+        >
+          {'⏰ '}
+          Empfohlene Abfahrt{' '}
+          <strong>{formatHourOfDay(stage.abfahrtsEmpfehlung.abfahrtHourAthens)}</strong>
+          {' → vor Anker ca. '}
+          <strong>{formatHourOfDay(stage.abfahrtsEmpfehlung.ankunftHourAthens)}</strong>
+          {stage.abfahrtsEmpfehlung.zielErreicht
+            ? ` (Ziel: ${params.zielAnkunftHourAthens}:00)`
+            : ''}
+          {stage.abfahrtsEmpfehlung.hinweis && (
+            <div className="beschreibung">{stage.abfahrtsEmpfehlung.hinweis}</div>
+          )}
+          {isToday &&
+            stage.abfahrtsEmpfehlung.abfahrtHourAthens !== heutigeAbfahrt && (
+              <button
+                type="button"
+                className="secondary"
+                title="Setzt die heutige Abfahrtszeit (FR15) auf die Empfehlung — die Bewertung rechnet dann ab dieser Stunde."
+                onClick={() =>
+                  setDepartureHour(stage.abfahrtsEmpfehlung!.abfahrtHourAthens)
+                }
+              >
+                Für heute übernehmen
+              </button>
+            )}
+        </div>
+      )}
+
+      {/* ENTSCHEIDUNGSTOR (Törnanalyse): legt sich der Plan an diesem Tag
+          hinter ein Tor fest, steht hier, ob 48-h-Fenster und Rückweg die
+          Festlegung decken — die Entscheidung am Tag der Entscheidung. */}
+      {stage.torCheck && (
+        <div className={`tor-zeile${stage.torCheck.erfuellt ? ' ok' : ' offen'}`}>
+          {stage.torCheck.erfuellt ? '🚪 ' : '⛔ '}
+          {stage.torCheck.note}
+        </div>
+      )}
 
       {/* Zielmodell v2 — die Abbruch-Notation: geplant wird auf das
           Wetterfenster, abgesichert wird täglich. Diese Zeile sagt für DIESEN
@@ -942,7 +992,7 @@ export function DayView({
         {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
         {' · '}Abfahrt{' '}
         {snapshot.trip.departureHourOverride ?? params.departureHourAthens}:00 Uhr
-        (Athen)
+        (Athen) · Ankerziel {params.zielAnkunftHourAthens}:00
       </p>
       {assessment.positionNote && (
         <div className="hint-panel">{assessment.positionNote}</div>

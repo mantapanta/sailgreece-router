@@ -71,6 +71,19 @@ export function formatHours(h: number | null): string {
   return `${h.toFixed(1).replace('.', ',')} h`;
 }
 
+/**
+ * Athen-Dezimalstunde (14,5) als Uhrzeit "14:30". Werte über 24 sind der
+ * Folgetag (Nachtetappe) und werden auf die Tagesuhr gefaltet — der Kontext
+ * (Nachtetappen-Kennzeichnung) sagt dann, dass es der nächste Morgen ist.
+ */
+export function formatHourOfDay(h: number | null): string {
+  if (h === null) return '–';
+  const total = Math.round(h * 60);
+  const hh = Math.floor(total / 60) % 24;
+  const mm = total % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
 export function formatKn(v: number | null): string {
   if (v === null) return '–';
   return `${Math.round(v)} kn`;

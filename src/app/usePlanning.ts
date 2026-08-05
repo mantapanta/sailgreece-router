@@ -171,6 +171,19 @@ export function usePlanningEngine() {
     [dispatch],
   );
 
+  /**
+   * FR15 — Abfahrtszeit für HEUTE setzen (null = zurück auf den Standard).
+   * Hier verdrahtet, damit die Tagesansicht die Abfahrtsempfehlung
+   * ("früh los, 15:00 vor Anker") mit einem Klick übernehmen kann.
+   */
+  const setDepartureHour = useCallback(
+    (hour: number | null) => {
+      if (hour !== null && (!Number.isInteger(hour) || hour < 0 || hour > 23)) return;
+      dispatch({ type: 'SET_DEPARTURE_HOUR', hour });
+    },
+    [dispatch],
+  );
+
   return {
     libraryQuery,
     forecastQuery,
@@ -183,6 +196,7 @@ export function usePlanningEngine() {
     checkIn,
     releasePin,
     setStopHours,
+    setDepartureHour,
   };
 }
 

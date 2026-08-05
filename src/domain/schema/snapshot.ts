@@ -3,7 +3,7 @@ import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
 import type { DayReturnCheck, Plan, PlanValidity, RelaxationLevel } from './plan.ts';
-import type { KonzeptEntscheid, KonzeptId } from './konzept.ts';
+import type { KonzeptEntscheid, KonzeptId, TorCheck } from './konzept.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
 
@@ -354,6 +354,23 @@ export interface DecisionPoint {
   text: string;
 }
 
+/**
+ * ABFAHRTSEMPFEHLUNG eines Etappentags (domain/abfahrt.ts) — "früh los,
+ * früh ankommen": die späteste volle Abfahrtsstunde, deren simulierte
+ * Ankunft das Ankerziel (params.zielAnkunftHourAthens, 15:00) noch hält.
+ * Gerechnet mit derselben Stundensimulation wie die Bewertung (AD-3).
+ */
+export interface AbfahrtsEmpfehlung {
+  /** Empfohlene Abfahrt, Athen, volle Stunde. */
+  abfahrtHourAthens: number;
+  /** Erwartete Ankunft bei dieser Abfahrt (Athen-Dezimalstunden). */
+  ankunftHourAthens: number;
+  /** True = Ankunft liegt vor dem Ankerziel. */
+  zielErreicht: boolean;
+  /** Warnsatz, wenn das Ziel auch mit der frühesten Abfahrt fällt. */
+  hinweis: string | null;
+}
+
 /** One assessed day of a plan — what the day card and the map render. */
 export interface StageAssessment {
   day: number;
@@ -388,6 +405,18 @@ export interface StageAssessment {
    * kein Tagesziel (Feedback 2026-08-05).
    */
   reachableIslandIds: string[];
+  /**
+   * "Früh los, 15:00 vor Anker" — die empfohlene Abfahrt dieses Tages
+   * (domain/abfahrt.ts). Null an Hafentagen, für vergangene Tage und wenn
+   * keine Abfahrtsstunde simulierbar ist.
+   */
+  abfahrtsEmpfehlung: AbfahrtsEmpfehlung | null;
+  /**
+   * Entscheidungstor, hinter das sich der Plan AN DIESEM TAG festlegt —
+   * samt 48-h-Fenster- und Rückweg-Prüfung (domain/konzept.ts). Null an
+   * Tagen ohne Tor-Durchfahrt.
+   */
+  torCheck: TorCheck | null;
 }
 
 /**
@@ -426,6 +455,12 @@ export interface PlanAssessment {
    * schon der erste geprüfte Tag am Forecast hängt oder nichts zu prüfen ist.
    */
   meltemiSafeUntilDay: number | null;
+  /**
+   * ENTSCHEIDUNGSTORE dieses Plans (domain/konzept.ts): je natürlichem
+   * Knoten, hinter den sich der Plan festlegt, die 48-h-Fenster- und
+   * Rückweg-Prüfung. Leer, wenn der Plan kein Tor durchfährt.
+   */
+  torChecks: TorCheck[];
 }
 
 export interface Assessment {

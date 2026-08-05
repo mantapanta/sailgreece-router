@@ -11,6 +11,14 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Forecast (`domain/konzept.ts`), überschreibt im Solver die Reichweite,
   erzeugt den Konzeptwechsel-Entscheid („Vorstoß nach Osten streichen") und
   trägt die Rückweg-Empfehlung der Törnanalyse.
+- **Früh los, 15:00 vor Anker:** Je Etappentag empfiehlt die App die späteste
+  Abfahrtsstunde, deren simulierte Ankunft das Ankerziel 15:00 noch hält
+  (`domain/abfahrt.ts`; heute per Klick als Abfahrtszeit übernehmbar) —
+  Crowd-Strategie: entspannt anlegen, bevor der Nachmittags-Meltemi steht.
+- **Entscheidungstore:** An natürlichen Knoten (Paros/Naxos, Syros) prüft die
+  App am Tag der Festlegung, ob ein 48-h-Forecast-Fenster samt machbarem
+  Rückweg den Vorstoß dahinter deckt (`domain/konzept.ts`,
+  `deriveTorChecks`).
 - **Tagesansicht:** „Was machen wir heute?" — Tagesoptionen mit Etappen-Score,
   bester Platz je Ziel-Insel mit Nacht-Ampel, Zustand des Mittelfristplans
   (offen / schließt am Tag X / geschlossen), Predicted Point of Return,

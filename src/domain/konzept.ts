@@ -44,9 +44,10 @@ import type {
   KonzeptEignung,
   KonzeptEntscheid,
   KonzeptId,
+  TorCheck,
 } from './schema/konzept.ts';
 import { stagesOf } from './schema/plan.ts';
-import { routeIslandSequence } from './ppr.ts';
+import { returnFeasibleStarting, routeIslandSequence } from './ppr.ts';
 import { legsOfVariant } from './legs.ts';
 import { deadlineFrame, dateForTripDay, athensToUtcMs, hourIndices } from './time.ts';
 
@@ -55,6 +56,7 @@ export type {
   KonzeptEignung,
   KonzeptEntscheid,
   KonzeptId,
+  TorCheck,
 } from './schema/konzept.ts';
 
 /** Kuratierte Anzeige-Namen — die Views sollen keine Ids formatieren müssen. */
@@ -404,6 +406,131 @@ export function rueckwegEmpfehlungFor(
     );
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Entscheidungstore: Festlegung dahinter nur mit gedecktem Fenster
+// ---------------------------------------------------------------------------
+
+/**
+ * Die ENTSCHEIDUNGSTORE des Reviers (Törnanalyse/Breezada: "decision gates
+ * at natural junctions — Paros/Naxos is one; the moment you commit beyond
+ * that, you're increasing exposure"). Hinter jedem Tor liegt die Zone, in
+ * der der Rückweg lang, exponiert und gegenan wird:
+ *
+ *   - Paros/Naxos: der Süd- und Ost-Rand (Ios, Santorin, Amorgos, Kleine
+ *     Kykladen) — dahinter steht die volle Am-Wind-Strecke heim.
+ *   - Syros: der Ost-Abzweig zur Mykonos-Gruppe — dahinter die Mykonos-Düse
+ *     und der freie Ägäis-Schwell.
+ *
+ * Der westliche Lee-Korridor (Milos-Gruppe) hat bewusst KEIN Tor: er IST
+ * der Rückweg — eine Festlegung dorthin erhöht die Exposition nicht.
+ */
+export const ENTSCHEIDUNGSTORE: ReadonlyArray<{
+  id: string;
+  name: string;
+  dahinter: ReadonlySet<string>;
+}> = [
+  {
+    id: 'tor-paros-naxos',
+    name: 'Paros/Naxos',
+    dahinter: new Set([
+      'ios',
+      'santorin',
+      'thirasia',
+      'anafi',
+      'amorgos',
+      'donousa',
+      'koufonisia',
+      'schinoussa',
+      'iraklia',
+      'keros',
+    ]),
+  },
+  {
+    id: 'tor-syros',
+    name: 'Syros (Ost-Abzweig)',
+    dahinter: new Set(['mykonos', 'tinos', 'delos-rinia', 'andros']),
+  },
+];
+
+/**
+ * Die Tor-Prüfungen eines Plans: für jedes Tor der Tag, an dem sich der Plan
+ * ERSTMALS dahinter festlegt — mit den beiden Bedingungen der Törnanalyse:
+ *
+ *   Fenster:  ab dem Festlegungstag müssen `torFensterStunden` (48 h) im
+ *             VERLÄSSLICHEN Forecast liegen (reliableHorizonDays) — jenseits
+ *             davon trägt nur die Persistenz-Annahme, und auf einer Annahme
+ *             legt man sich nicht hinter ein Tor.
+ *   Rückweg:  von der ersten Insel hinter dem Tor muss die Rückkehr nach
+ *             aktuellem Forecast machbar sein (dieselbe Maschine wie
+ *             Gültigkeitsbedingung 2' und PoR, AD-3).
+ *
+ * Nur zukünftige Festlegungen (Tag ≥ heute): eine durchfahrene ist keine
+ * Entscheidung mehr. Die Prüfung ist eine EMPFEHLUNGS-Ebene wie die
+ * Konzept-Eignung — sie macht keinen Plan ungültig, sie steht sichtbar am
+ * Tag der Entscheidung (StageAssessment.torCheck, Entscheidungspunkte).
+ */
+export function deriveTorChecks(
+  plan: Plan,
+  snapshot: PlanningSnapshot,
+): TorCheck[] {
+  const { params, trip } = snapshot;
+  const frame = deadlineFrame(params);
+  const fensterTage = Math.ceil(params.torFensterStunden / 24);
+  const checks: TorCheck[] = [];
+  const stages = stagesOf(plan).sort((a, b) => a.day - b.day);
+
+  for (const tor of ENTSCHEIDUNGSTORE) {
+    const commit = stages.find(
+      (s) => s.day >= trip.currentDay && tor.dahinter.has(s.toIslandId),
+    );
+    if (!commit) continue;
+
+    // Fenster: letzter Tag, den das 48-h-Fenster ab Festlegung abdeckt, muss
+    // im verlässlichen Horizont liegen.
+    const letzterFensterTag = commit.day + fensterTage - 1;
+    const fensterOk =
+      letzterFensterTag - trip.currentDay <= params.reliableHorizonDays;
+
+    // Rückweg: von der ersten Insel hinter dem Tor, ab dem Folgetag.
+    const rueckweg = returnFeasibleStarting(
+      commit.toIslandId,
+      commit.day + 1,
+      snapshot,
+      'forecast',
+      frame.deadlineDay,
+    );
+    const rueckwegOk = rueckweg !== 'infeasible';
+
+    const erfuellt = fensterOk && rueckwegOk;
+    const gruende: string[] = [];
+    if (!fensterOk) {
+      gruende.push(
+        `das ${params.torFensterStunden}-h-Fenster ab Tag ${commit.day} reicht über den verlässlichen Forecast-Horizont hinaus`,
+      );
+    }
+    if (!rueckwegOk) {
+      gruende.push(
+        `der Rückweg von ${commit.toIslandId} ist nach aktuellem Forecast nicht darstellbar`,
+      );
+    }
+    checks.push({
+      torId: tor.id,
+      name: tor.name,
+      day: commit.day,
+      islandId: commit.toIslandId,
+      fensterOk,
+      rueckwegOk,
+      erfuellt,
+      note: erfuellt
+        ? `Entscheidungstor ${tor.name}: Festlegung hinter das Tor (Tag ${commit.day}, ${commit.toIslandId}) ist gedeckt — ` +
+          `${params.torFensterStunden}-h-Forecast-Fenster steht, Rückweg nach Forecast machbar. Ab hier steigt die Exposition.`
+        : `Entscheidungstor ${tor.name}: Festlegung hinter das Tor (Tag ${commit.day}, ${commit.toIslandId}) ist NICHT gedeckt — ` +
+          `${gruende.join('; ')}. Empfehlung: vor dem Tor bleiben oder umplanen.`,
+    });
+  }
+  return checks.sort((a, b) => a.day - b.day);
 }
 
 // ---------------------------------------------------------------------------

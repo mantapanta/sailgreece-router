@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme) | Routen-Konzept-Schwellen (Törnanalyse Kykladen, Skipper 2026-08-05) ergänzt.",
+  "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme) | Routen-Konzept-Schwellen (Törnanalyse Kykladen, Skipper 2026-08-05) ergänzt. | Ankerziel 15:00, frueheste Abfahrt 06:00, Entscheidungstor-Fenster 48 h (Crowd-/Gate-Strategie 2026-08-05).",
   "parameters": {
     "polarOffsetKn": 0.5,
     "motorSpeedKn": 8,
@@ -18,6 +18,7 @@
     "konzeptOstDauerTage": 2,
     "konzeptKlassikMaxKn": 28,
     "konzeptKlassikDauerTage": 3,
+    "torFensterStunden": 48,
     "targetDayHours": 6,
     "targetMotorHours": 1,
     "maxSailHours": 6,
@@ -27,6 +28,8 @@
     "openSectorMaxKn": 10,
     "openSectorMaxWaveM": 0.5,
     "departureHourAthens": 9,
+    "zielAnkunftHourAthens": 15,
+    "fruehesteAbfahrtHourAthens": 6,
     "nightStartHourAthens": 18,
     "nightEndHourAthens": 9,
     "tripStartDate": "2026-08-08",

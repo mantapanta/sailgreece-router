@@ -780,6 +780,43 @@ table.shelter-table tr.sektor-inaktiv td {
   border-color: #e3b6af;
 }
 
+/* "Früh los, 15:00 vor Anker" — die Abfahrtsempfehlung des Etappentags. */
+.abfahrt-zeile {
+  font-size: 0.85rem;
+  border-radius: 4px;
+  padding: 0.45rem 0.7rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--hairline);
+  background: #eef3ee;
+}
+.abfahrt-zeile.verfehlt {
+  background: #f7ecd7;
+  color: #8a6414;
+  border-color: #e4cf9f;
+}
+.abfahrt-zeile button {
+  margin-left: 0.6rem;
+  margin-top: 0.3rem;
+}
+
+/* Entscheidungstor: Festlegung dahinter — gedeckt oder nicht. */
+.tor-zeile {
+  font-size: 0.85rem;
+  border-radius: 4px;
+  padding: 0.45rem 0.7rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--hairline);
+}
+.tor-zeile.ok {
+  border-left: 4px solid var(--gruen);
+}
+.tor-zeile.offen {
+  background: #f6e2df;
+  color: #8c2f24;
+  border-color: #e3b6af;
+  border-left: 4px solid var(--rot);
+}
+
 /* Ein Wert, der informiert statt zu bewerten. */
 .badge-info {
   border-style: dashed;

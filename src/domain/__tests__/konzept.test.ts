@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   deriveKonzeptEntscheid,
+  deriveTorChecks,
   konzeptLageFor,
   konzeptOfIslands,
   konzeptOfPlan,
@@ -364,6 +365,56 @@ describe('Ende-zu-Ende: das Konzept überschreibt die Solver-Wahl', () => {
     expect(solved).not.toBeNull();
     expect(stagesOf(solved.plan).some((s) => s.toIslandId === 'mykonos')).toBe(true);
   });
+
+  describe('Entscheidungstore — Festlegung dahinter nur mit gedecktem Fenster', () => {
+    it('eine frühe Festlegung hinter das Syros-Tor ist bei ruhiger Lage gedeckt', () => {
+      const snapshot = zweiZielSnapshot(15);
+      const plan = makePlan([
+        makeStage(1, ['athen--mykonos'], 'mykonos'),
+        makeStage(2, ['mykonos--sifnos'], 'sifnos'),
+        makeStage(3, ['sifnos--athen'], 'athen'),
+      ]);
+      const checks = deriveTorChecks(plan, snapshot);
+      expect(checks).toHaveLength(1);
+      expect(checks[0]!.torId).toBe('tor-syros');
+      expect(checks[0]!.day).toBe(1);
+      expect(checks[0]!.islandId).toBe('mykonos');
+      expect(checks[0]!.fensterOk).toBe(true);
+      expect(checks[0]!.erfuellt).toBe(true);
+      expect(checks[0]!.note).toContain('gedeckt');
+    });
+
+    it('eine Festlegung jenseits des verlässlichen Horizonts ist NICHT gedeckt', () => {
+      const snapshot = zweiZielSnapshot(15);
+      const plan = makePlan([
+        makeStage(10, ['athen--mykonos'], 'mykonos'),
+        makeStage(11, ['mykonos--sifnos'], 'sifnos'),
+        makeStage(12, ['sifnos--athen'], 'athen'),
+      ]);
+      const checks = deriveTorChecks(plan, snapshot);
+      expect(checks).toHaveLength(1);
+      expect(checks[0]!.fensterOk).toBe(false);
+      expect(checks[0]!.erfuellt).toBe(false);
+      expect(checks[0]!.note).toContain('NICHT gedeckt');
+    });
+
+    it('ohne Tor-Durchfahrt gibt es keine Prüfung, vergangene zählen nicht', () => {
+      const snapshot = zweiZielSnapshot(15);
+      const nurWest = makePlan([
+        makeStage(1, ['athen--sifnos'], 'sifnos'),
+        makeStage(2, ['sifnos--athen'], 'athen'),
+      ]);
+      expect(deriveTorChecks(nurWest, snapshot)).toHaveLength(0);
+
+      const schonDurch = makePlan([
+        makeStage(1, ['athen--mykonos'], 'mykonos'),
+        makeStage(2, ['mykonos--sifnos'], 'sifnos'),
+        makeStage(3, ['sifnos--athen'], 'athen'),
+      ]);
+      snapshot.trip.currentDay = 2;
+      expect(deriveTorChecks(schonDurch, snapshot)).toHaveLength(0);
+    });
+  });
 });
 
 describe('Rückweg-Empfehlung — Sätze für die Hauptroute', () => {
@@ -377,6 +428,7 @@ describe('Rückweg-Empfehlung — Sätze für die Hauptroute', () => {
     relaxedTo: 'none',
     returnChecks: [],
     meltemiSafeUntilDay: null,
+    torChecks: [],
     ...over,
   });
 

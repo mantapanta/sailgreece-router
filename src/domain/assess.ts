@@ -22,10 +22,12 @@ import { applyPersistenceAssumption } from './persistence.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
 import {
   deriveKonzeptEntscheid,
+  deriveTorChecks,
   konzeptLageFor,
   konzeptOfPlan,
   rueckwegEmpfehlungFor,
 } from './konzept.ts';
+import { empfehleAbfahrt } from './abfahrt.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { assessLeg, stopHoursForDay } from './scoring.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
@@ -183,6 +185,9 @@ function assessPlan(
     snapshot.library.places,
   );
 
+  // Entscheidungstore dieses Plans — einmal je Plan, dann je Tag zugeordnet.
+  const torChecks = deriveTorChecks(plan, snapshot);
+
   const stages: StageAssessment[] = ordered.map((entry) => {
     const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
     const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
@@ -234,6 +239,23 @@ function assessPlan(
     // Für den ersten Plantag gibt es keinen Vortag — dann die Basis.
     const fromIslandId =
       islandAtEndOfDay(plan, entry.day - 1) ?? snapshot.params.baseIslandId;
+
+    /**
+     * "Früh los, 15:00 vor Anker" — die Abfahrtsempfehlung des Tages,
+     * gerechnet gegen die GESEGELTE Kette (dieselben Etappen wie Anzeige
+     * und Gültigkeit, AD-3). Nur für zukünftige Etappentage, deren Kette
+     * vollständig auflösbar ist — für einen halben Tag empfiehlt man nichts.
+     */
+    const abfahrtsEmpfehlung = (() => {
+      if (entry.kind !== 'stage' || entry.day < snapshot.trip.currentDay) {
+        return null;
+      }
+      const dayLegs = sailed.get(entry.day) ?? [];
+      const resolved = dayLegs.filter((l): l is NonNullable<typeof l> => !!l);
+      if (resolved.length !== entry.legIds.length) return null;
+      return empfehleAbfahrt(resolved, entry.day, snapshot);
+    })();
+
     return {
       day: entry.day,
       stageNumber: stageNumber(plan, entry.day),
@@ -254,6 +276,8 @@ function assessPlan(
       stopHoursTotal:
         Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
       reachableIslandIds: reachableIslands(snapshot, fromIslandId, entry.day),
+      abfahrtsEmpfehlung,
+      torCheck: torChecks.find((c) => c.day === entry.day) ?? null,
     };
   });
 
@@ -275,6 +299,7 @@ function assessPlan(
     relaxedTo: meta.relaxedTo,
     returnChecks,
     meltemiSafeUntilDay: meltemiSafeUntilDay(returnChecks),
+    torChecks,
   };
 }
 
@@ -461,8 +486,14 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
       day: trip.currentDay,
       text: `HEUTE entscheiden — ${konzeptEntscheid.wechselHinweis}`,
     });
-    decisionPoints.sort((a, b) => a.day - b.day);
   }
+  // Entscheidungstore der gefahrenen Route: die Festlegung hinter ein Tor
+  // ist ein Entscheidungspunkt AN ihrem Tag — gedeckt oder nicht, er steht
+  // im Kalender, nicht nur an der Etappen-Karte.
+  for (const tor of (mainRoute ?? proposal)?.torChecks ?? []) {
+    decisionPoints.push({ day: tor.day, text: tor.note });
+  }
+  decisionPoints.sort((a, b) => a.day - b.day);
   const rueckwegEmpfehlung = mainRoute
     ? rueckwegEmpfehlungFor(mainRoute, snapshot)
     : proposal

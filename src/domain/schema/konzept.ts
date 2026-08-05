@@ -25,6 +25,32 @@ export interface KonzeptAssessment {
   aktiv: boolean;
 }
 
+/**
+ * ENTSCHEIDUNGSTOR-PRÜFUNG eines Plans (domain/konzept.ts): an natürlichen
+ * Knoten (Paros/Naxos; Syros für den Ost-Abzweig) steigt die Exposition,
+ * sobald der Törn sich DAHINTER festlegt. Die Regel der Törnanalyse: nur
+ * weiter vorstoßen mit einem Forecast-Fenster von ≥ `torFensterStunden`
+ * (48 h), das einen machbaren Rückweg einschließt. Je Tor, das der Plan
+ * durchfährt, eine Prüfung — am Tag der Festlegung.
+ */
+export interface TorCheck {
+  torId: string;
+  /** Anzeige-Name des Tors, z. B. "Paros/Naxos". */
+  name: string;
+  /** Törntag, an dem der Plan sich hinter das Tor festlegt. */
+  day: number;
+  /** Erste Insel HINTER dem Tor, die der Plan anläuft. */
+  islandId: string;
+  /** Das 48-h-Fenster ab Festlegung liegt im verlässlichen Forecast. */
+  fensterOk: boolean;
+  /** Rückweg von hinter dem Tor nach aktuellem Forecast machbar. */
+  rueckwegOk: boolean;
+  /** Beide Bedingungen erfüllt — der Vorstoß ist gedeckt. */
+  erfuellt: boolean;
+  /** Satz für die Anzeige. */
+  note: string;
+}
+
 export interface KonzeptEntscheid {
   konzepte: KonzeptAssessment[];
   /** Id des empfohlenen Konzepts — Redundanz zur Liste, für direkte Leser. */
