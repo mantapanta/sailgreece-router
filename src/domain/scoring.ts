@@ -534,15 +534,22 @@ export function assessLeg(
     });
   }
 
-  // FR16 night leg (AD-9 window bounds): the passage starts before the night
-  // window ends or reaches past its start, i.e. it sails into darkness. Athens
-  // hours from midnight of the departure day; an arrival past 24 is the next
-  // morning and therefore always a night leg.
+  // FR16 night leg: the passage reaches past the night-window start or
+  // departs before the earliest normal departure, i.e. it sails in darkness.
+  // Athens hours from midnight of the departure day; an arrival past 24 is
+  // the next morning and therefore always a night leg.
+  //
+  // Die UNTERE Grenze ist bewusst `fruehesteAbfahrtHourAthens` (06:00), nicht
+  // das Ende des Nachtfensters (09:00): das Nachtfenster bewertet LIEGEPLÄTZE
+  // (FR8, die Familie schläft bis 9), aber eine 06:00-Abfahrt ist die
+  // empfohlene Crowd-/Meltemi-Taktik (früh los, 15:00 vor Anker) und darf
+  // nicht als Nachtetappe in die FR16-Quote fallen — sonst bestrafte die
+  // Gültigkeit genau das Verhalten, das die App selbst vorschlägt.
   const departureAthens = departureHour + (opts.departureOffsetHours ?? 0);
   const arrivalAthens = departureAthens + sailHours + motorHours;
   const nightLeg =
     arrivalAthens > params.nightStartHourAthens ||
-    departureAthens < params.nightEndHourAthens;
+    departureAthens < params.fruehesteAbfahrtHourAthens;
 
   const avgTwsKn = samples > 0 ? twsSum / samples : null;
   const avgTwaDeg = samples > 0 ? twaSum / samples : null;

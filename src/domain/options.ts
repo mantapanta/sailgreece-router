@@ -32,6 +32,7 @@ import {
 } from './ppr.ts';
 import { deadlineFrame } from './time.ts';
 import { legsOfVariant } from './legs.ts';
+import { KONZEPT_NAME, konzeptLageFor, konzeptOfIslands } from './konzept.ts';
 import { completePlan, reachNmFor } from './solver.ts';
 import { stagesOf, type RelaxationLevel } from './schema/plan.ts';
 import type { Plan } from './schema/plan.ts';
@@ -218,11 +219,26 @@ export function assessRouteOption(
       : snapshot.params.baseIslandId;
   const reachNm = base ? distOf(turnIslandId) : null;
 
+  /**
+   * ROUTEN-KONZEPT der Option (konzept.ts) — die zentrale Logik, sichtbar am
+   * einzelnen Ziel: trägt die Lage das Konzept dieser Route nicht, steht die
+   * Revier-Warnung an der Option, ohne die Machbarkeits-Antwort des Solvers
+   * zu verfälschen (Empfehlung über der Maschine, kein zweites Urteil).
+   */
+  const konzeptId = konzeptOfIslands(seq);
+  const lage = konzeptLageFor(snapshot);
+  const konzeptWarnung =
+    lage.eignung[konzeptId] === 'ungeeignet'
+      ? `${KONZEPT_NAME[konzeptId]} trägt die aktuelle Wetterlage nicht: ${lage.gruende[konzeptId].join(' ')}`
+      : null;
+
   const leer = (
     over: Partial<RouteOptionAssessment>,
   ): RouteOptionAssessment => ({
     routeId: variant.id,
     name: variant.name,
+    konzeptId,
+    konzeptWarnung,
     state: 'zu',
     closesOnDay: null,
     ampel: 'unbewertet',

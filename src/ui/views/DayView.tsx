@@ -23,6 +23,7 @@ import type {
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
 import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
+import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
 import { planKey } from '../../domain/solver.ts';
 import { departureHourForDay } from '../../domain/scoring.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
@@ -39,6 +40,7 @@ import { usePlanning } from '../../app/planningContext.tsx';
 import {
   formatAthensTime,
   formatDeg,
+  formatHourOfDay,
   formatHours,
   formatKn,
   formatStamp,
@@ -402,6 +404,10 @@ function StageCard({
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const { params } = snapshot;
+  const { setDepartureHour } = usePlanning();
+  /** Die heute WIRKSAME Abfahrt (eine Quelle: scoring.departureHourForDay) —
+      für den Übernehmen-Knopf der Empfehlung. */
+  const heutigeAbfahrt = departureHourForDay(snapshot, stage.day);
   // EINE Punktliste für Karte und Rechnung — daraus die Nummern für beide.
   const points = useMemo(
     () => stagePoints(stage, buildLegsById(snapshot.library.legs), snapshot),
@@ -486,6 +492,51 @@ function StageCard({
         <AmpelBadge ampel={stage.placeAmpel} />
       </div>
 
+      {/* "Früh los, 15:00 vor Anker" (Crowd-Strategie): die späteste Abfahrt,
+          deren simulierte Ankunft das Ankerziel noch hält — gerechnet gegen
+          denselben Stunden-Forecast wie die Ampel. Heute mit einem Klick als
+          Abfahrtszeit übernehmbar (FR15-Override). */}
+      {stage.kind === 'stage' && stage.abfahrtsEmpfehlung && (
+        <div
+          className={`abfahrt-zeile${stage.abfahrtsEmpfehlung.zielErreicht ? '' : ' verfehlt'}`}
+        >
+          {'⏰ '}
+          Empfohlene Abfahrt{' '}
+          <strong>{formatHourOfDay(stage.abfahrtsEmpfehlung.abfahrtHourAthens)}</strong>
+          {' → vor Anker ca. '}
+          <strong>{formatHourOfDay(stage.abfahrtsEmpfehlung.ankunftHourAthens)}</strong>
+          {stage.abfahrtsEmpfehlung.zielErreicht
+            ? ` (Ziel: ${params.zielAnkunftHourAthens}:00)`
+            : ''}
+          {stage.abfahrtsEmpfehlung.hinweis && (
+            <div className="beschreibung">{stage.abfahrtsEmpfehlung.hinweis}</div>
+          )}
+          {isToday &&
+            stage.abfahrtsEmpfehlung.abfahrtHourAthens !== heutigeAbfahrt && (
+              <button
+                type="button"
+                className="secondary"
+                title="Setzt die heutige Abfahrtszeit (FR15) auf die Empfehlung — die Bewertung rechnet dann ab dieser Stunde."
+                onClick={() =>
+                  setDepartureHour(stage.abfahrtsEmpfehlung!.abfahrtHourAthens)
+                }
+              >
+                Für heute übernehmen
+              </button>
+            )}
+        </div>
+      )}
+
+      {/* ENTSCHEIDUNGSTOR (Törnanalyse): legt sich der Plan an diesem Tag
+          hinter ein Tor fest, steht hier, ob 48-h-Fenster und Rückweg die
+          Festlegung decken — die Entscheidung am Tag der Entscheidung. */}
+      {stage.torCheck && (
+        <div className={`tor-zeile${stage.torCheck.erfuellt ? ' ok' : ' offen'}`}>
+          {stage.torCheck.erfuellt ? '🚪 ' : '⛔ '}
+          {stage.torCheck.note}
+        </div>
+      )}
+
       {/* Zielmodell v2 — die Abbruch-Notation: geplant wird auf das
           Wetterfenster, abgesichert wird täglich. Diese Zeile sagt für DIESEN
           Tag, ob der Heimweg auch im Worst-Case hält oder woran der Skipper
@@ -563,6 +614,96 @@ const OPTION_STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
   schliesst: 'schliesst',
   zu: 'zu',
 };
+
+/** Kurzform des Routen-Konzepts fürs Options-Badge (Langform im Panel). */
+const KONZEPT_KURZ: Record<KonzeptId, string> = {
+  klassik: 'Route 1 · West/Zentral',
+  ost: 'Route 2 · Ost',
+};
+
+const EIGNUNG_LABEL: Record<KonzeptEignung, string> = {
+  geeignet: 'trägt',
+  grenzwertig: 'grenzwertig',
+  ungeeignet: 'trägt nicht',
+};
+
+/**
+ * ROUTEN-KONZEPT — die zentrale, alles überschreibende Logik der App
+ * (Skipper 2026-08-05, domain/konzept.ts): NACH WELCHEM der beiden
+ * Revier-Konzepte segeln wir? Das Panel steht direkt unter dem
+ * Rest-Trip-Banner, weil diese Entscheidung über allem anderen liegt:
+ * der Solver hat sie beim Ranking bereits angewendet, die Options-Liste
+ * trägt sie je Ziel — hier steht sie als EINE Aussage mit Begründung,
+ * Wechsel-Hinweis und der Rückweg-Empfehlung der Törnanalyse.
+ */
+function KonzeptPanel({ assessment }: { assessment: Assessment }) {
+  const entscheid = assessment.konzeptEntscheid;
+  return (
+    <section className="section konzept-panel">
+      <span className="versal">Routen-Konzept</span>
+      <h2>Nach welchem Konzept segeln wir?</h2>
+      <p className="beschreibung">
+        Die übergeordnete Törn-Entscheidung: Route 1 (klassische Runde, Rückweg
+        im westlichen Lee-Korridor) oder Route 2 (Ost-Kykladen, nur bei
+        moderatem Meltemi). Vorschlag und Rangfolge der App folgen dieser
+        Beurteilung — kippt das aktive Konzept, wird umgeschwenkt.
+      </p>
+      {entscheid.wechselHinweis && (
+        <div className="hint-panel konzept-wechsel">
+          <strong>{entscheid.wechselHinweis}</strong>
+        </div>
+      )}
+      <div className="konzept-karten">
+        {entscheid.konzepte.map((k) => (
+          <div
+            key={k.id}
+            className={`konzept-karte eignung-${k.eignung}${k.empfohlen ? ' empfohlen' : ''}`}
+          >
+            <div className="option-kopf">
+              <span className="option-name">{k.name}</span>
+              <span className={`state-chip eignung-${k.eignung}`}>
+                {EIGNUNG_LABEL[k.eignung]}
+              </span>
+            </div>
+            <p className="beschreibung">{k.beschreibung}</p>
+            <div className="badges">
+              {k.aktiv && (
+                <span className="badge" title="Die aktuelle Haupt- bzw. Vorschlagsroute folgt diesem Konzept.">
+                  aktives Konzept
+                </span>
+              )}
+              {k.empfohlen && (
+                <span className="badge badge-empfohlen">Empfehlung der App</span>
+              )}
+            </div>
+            <ul className="reasons">
+              {k.gruende.map((g) => (
+                <li key={g}>{g}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {entscheid.basisAnnahme && (
+        <p className="beschreibung">
+          Die Konzept-Beurteilung stützt sich teilweise auf die
+          Persistenz-Annahme jenseits des Forecast-Horizonts — Vorbehalt, kein
+          Urteil.
+        </p>
+      )}
+      {assessment.rueckwegEmpfehlung.length > 0 && (
+        <div className="rueckweg-empfehlung">
+          <span className="versal">Rückweg-Empfehlung</span>
+          <ul className="reasons">
+            {assessment.rueckwegEmpfehlung.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
 
 /**
  * Vorschau einer ansehbaren Route: Routenkarte plus Etappenliste Tag für Tag,
@@ -697,6 +838,12 @@ function OptionRow({
       </div>
 
       <div className="badges">
+        <span
+          className={`badge badge-konzept${option.konzeptWarnung ? ' badge-konzept-warnung' : ''}`}
+          title="Routen-Konzept dieser Option (siehe Panel „Routen-Konzept“)."
+        >
+          {KONZEPT_KURZ[option.konzeptId]}
+        </span>
         <span className="badge" title="Entfernung von der Basis zum Wendepunkt">
           bis {islandName(snapshot, option.turnIslandId)}
           {option.reachNm !== null && ` · ${Math.round(option.reachNm)} sm`}
@@ -725,6 +872,13 @@ function OptionRow({
           : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
         {istHauptroute && ' Dieser Plan ist bereits die Hauptroute.'}
       </div>
+
+      {/* Die Konzept-Warnung steht AN der Option, nicht nur im Panel oben:
+          wer hier "Verlängerung Amorgos · offen" liest, soll im selben
+          Blick sehen, dass das Ost-Konzept die Lage gerade nicht trägt. */}
+      {option.konzeptWarnung && (
+        <div className="konzept-warnung">{option.konzeptWarnung}</div>
+      )}
 
       {option.reasons.length > 0 && (
         <ul className="reasons">
@@ -866,6 +1020,7 @@ export function DayView({
         {snapshot.trip.position?.source === 'manual' && ' (manuell gesetzt)'}
         {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
         {' · '}Abfahrt {departureHourForDay(snapshot, day)}:00 Uhr (Athen)
+        {' · '}Ankerziel {params.zielAnkunftHourAthens}:00
       </p>
       {assessment.positionNote && (
         <div className="hint-panel">{assessment.positionNote}</div>
@@ -961,6 +1116,10 @@ export function DayView({
           </ul>
         )}
       </div>
+
+      {/* ROUTEN-KONZEPT — die zentrale Logik, direkt unter dem Rest-Trip-
+          Banner: erst das Konzept, dann die Etappen und Optionen darunter. */}
+      <KonzeptPanel assessment={assessment} />
 
       {!main && assessment.proposal && (
         <div className="hint-panel">
