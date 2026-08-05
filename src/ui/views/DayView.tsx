@@ -278,7 +278,7 @@ function StageEditor({
       <p className="beschreibung">
         Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
         raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
-        Vortagsziel.
+        Vortagsziel, die die Etappen-Bibliothek an einem Tag erreicht.
       </p>
       {placesOnIsland.length > 0 && (
         <label>

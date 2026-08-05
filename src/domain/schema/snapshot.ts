@@ -371,9 +371,11 @@ export interface StageAssessment {
   stopHoursTotal: number;
   /**
    * Inseln, die von der VORHERIGEN Plan-Insel aus als Tagesziel in Frage
-   * kommen (domain/reach.ts): 100 sm raumschots, 50 sm gegenan. Das
+   * kommen (domain/reach.ts): 100 sm raumschots, 50 sm gegenan — UND von
+   * dort mit Etappen der Bibliothek an einem Tag erreichbar. Das
    * Ziel-Dropdown zeigt NUR diese — eine Insel drei Tagesreisen entfernt ist
-   * kein Tagesziel (Feedback 2026-08-05).
+   * kein Tagesziel (Feedback 2026-08-05), und eine ohne Bibliotheks-Weg
+   * würde die Übernahme immer ablehnen (Bug-Report 2026-08-05).
    */
   reachableIslandIds: string[];
 }
