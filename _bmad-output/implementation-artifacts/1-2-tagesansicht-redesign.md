@@ -4,7 +4,7 @@ baseline_commit: 10a3bdff0d9aea2901f342ed54e624494a5764be
 
 # Story 1.2: Tagesansicht redesign
 
-Status: ready-for-dev
+Status: in-progress
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
