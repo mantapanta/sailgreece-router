@@ -22,6 +22,7 @@ import type {
   LegHourBreakdown,
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
+import type { DayReturnCheck } from '../../domain/schema/plan.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { StageMap } from '../components/StageMap.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
@@ -409,6 +410,7 @@ function StageCard({
   isToday,
   onOpenPlace,
   mapId,
+  returnCheck,
 }: {
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
@@ -417,6 +419,8 @@ function StageCard({
   onOpenPlace: (placeId: string) => void;
   /** Null when no Maps key is configured — the panel then stays text-only. */
   mapId: string | null;
+  /** Zielmodell v2 — der Heimweg-Status dieses Tages (Abbruch-Notation). */
+  returnCheck?: DayReturnCheck | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -504,6 +508,19 @@ function StageCard({
         </span>
         <AmpelBadge ampel={stage.placeAmpel} />
       </div>
+
+      {/* Zielmodell v2 — die Abbruch-Notation: geplant wird auf das
+          Wetterfenster, abgesichert wird täglich. Diese Zeile sagt für DIESEN
+          Tag, ob der Heimweg auch im Worst-Case hält oder woran der Skipper
+          den Abbruch erkennt. Neu gerechnet mit jedem Forecast. */}
+      {returnCheck && (
+        <div className={`rueckweg-zeile status-${returnCheck.status}`}>
+          {returnCheck.status === 'meltemi-fest' && '⚓ '}
+          {returnCheck.status === 'wetterfenster' && '⚠ '}
+          {returnCheck.status === 'kritisch' && '⛔ '}
+          {returnCheck.note}
+        </div>
+      )}
 
       {stage.legs.some((l) => l.reasons.length > 0) && (
         <ul className="reasons">
@@ -706,6 +723,10 @@ export function DayView({
   const todayStage = main?.stages.find((s) => s.day === day) ?? null;
   const restStages = main?.stages.filter((s) => s.day > day) ?? [];
   const pastStages = main?.stages.filter((s) => s.day < day) ?? [];
+  /** Abbruch-Notation je Tag (Zielmodell v2) — für die Etappen-Cards. */
+  const returnCheckByDay = new Map(
+    (main?.returnChecks ?? []).map((c) => [c.day, c]),
+  );
 
   // Exactly ONE APIProvider for the whole view: several expanded stage cards
   // then share a single Maps script load instead of each mounting its own.
@@ -813,6 +834,7 @@ export function DayView({
             isToday
             onOpenPlace={onOpenPlace}
             mapId={mapId}
+            returnCheck={returnCheckByDay.get(todayStage.day) ?? null}
           />
         </section>
       )}
@@ -831,6 +853,7 @@ export function DayView({
                 isToday={false}
                 onOpenPlace={onOpenPlace}
                 mapId={mapId}
+                returnCheck={returnCheckByDay.get(s.day) ?? null}
               />
             ))}
           </div>
@@ -905,7 +928,30 @@ export function DayView({
               ? `${Math.round(assessment.ppr.remainingDistanceNm)} sm`
               : '–'}
           </span>
+          {/* Zielmodell v2 — die Kurzfassung der Abbruch-Notation: bis zu
+              diesem Tag hält der Heimweg auch unter dem vollen Meltemi. */}
+          {main && main.returnChecks.length > 0 && (
+            <span
+              className="badge"
+              title="Bis zu diesem Törntag ist die Umkehr auch unter dem Meltemi-Worst-Case jederzeit möglich. Danach trägt der aktuelle Forecast den Heimweg — die Tageskarten sagen, woran der Abbruch zu erkennen ist."
+            >
+              Meltemi-fest bis:{' '}
+              <strong>
+                {main.meltemiSafeUntilDay !== null
+                  ? `Tag ${main.meltemiSafeUntilDay}`
+                  : 'heute nicht'}
+              </strong>
+            </span>
+          )}
         </div>
+        {main && main.returnChecks.some((c) => c.status === 'wetterfenster') && (
+          <p className="beschreibung">
+            Die Route ist auf das Wetterfenster geplant, nicht auf den Worst
+            Case — die Absicherung passiert täglich: jede Etappen-Karte trägt
+            ihren Heimweg-Status, und mit jedem neuen Forecast wird neu
+            beurteilt, ob weitergefahren oder abgebrochen wird.
+          </p>
+        )}
         {assessment.ppr.reasons.length > 0 && (
           <ul className="reasons">
             {assessment.ppr.reasons.map((r) => (

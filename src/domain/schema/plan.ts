@@ -104,7 +104,14 @@ export type ViolationKind =
   | 'deadline'
   | 'return'
   | 'pickup'
-  | 'incomplete';
+  | 'incomplete'
+  /**
+   * Zielmodell v2 — die Liegeplatz-Regel: kein Übernachtungsplatz zweimal
+   * (Basis ausgenommen). Hart im Sinne der Gültigkeit, aber STRUKTURELL wie
+   * 'incomplete': ein wiederholter Liegeplatz ist nicht gefährlich, er ist
+   * nur nicht der Törn, der gewollt ist — die Ampel bleibt davon unberührt.
+   */
+  | 'wiederholung';
 
 export interface Violation {
   kind: ViolationKind;
@@ -224,3 +231,38 @@ export const RELAXATION_ORDER = [
   'nightLeg',
 ] as const;
 export type RelaxationLevel = (typeof RELAXATION_ORDER)[number];
+
+// ---------------------------------------------------------------------------
+// Zielmodell v2 — die tägliche Abbruch-Notation
+// ---------------------------------------------------------------------------
+
+/**
+ * Status des Heimwegs von einem Plantag aus. Das ist die ABSICHERUNG, die aus
+ * der Planung herausgelöst wurde: geplant wird optimistisch (Forecast +
+ * Annahme), abgesichert wird täglich — dieser Status sagt dem Skipper pro Tag,
+ * ob er weiterfahren kann oder woran er den Abbruch erkennt.
+ *
+ *  - 'meltemi-fest':  der Heimweg hält auch unter dem vollen Meltemi-Worst-Case.
+ *  - 'wetterfenster': der Heimweg trägt nur nach aktuellem Forecast — dreht der
+ *                     Wind auf starken Nord, ist HIER der Punkt, an dem
+ *                     abgebrochen und der Rückweg eingeleitet wird.
+ *  - 'kritisch':      schon nach Forecast keine Rückkehr mehr darstellbar
+ *                     (deckt sich mit der harten Verletzung 'return').
+ */
+export type ReturnCheckStatus = 'meltemi-fest' | 'wetterfenster' | 'kritisch';
+
+/** Machbarkeits-Urteil, strukturgleich zu ppr.Feasibility (Schema-Schicht). */
+export type ReturnFeasibility = 'feasible' | 'infeasible' | 'horizon';
+
+export interface DayReturnCheck {
+  day: number;
+  /** Insel, an der der Plan das Boot am Ende dieses Tages hat. */
+  islandId: string;
+  /** Rückkehr ab dem Folgetag nach aktuellem Forecast, bis zum Stichtag. */
+  byForecast: ReturnFeasibility;
+  /** Rückkehr ab dem Folgetag unter dem Meltemi-Worst-Case, bis zum PoR-Tag. */
+  underWorstCase: ReturnFeasibility;
+  status: ReturnCheckStatus;
+  /** Die Anweisung für den Tag, ausformuliert für die Anzeige. */
+  note: string;
+}

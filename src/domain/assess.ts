@@ -26,8 +26,10 @@ import { sailedLegsByDay } from './legGeometry.ts';
 import {
   completePlan,
   deriveAlternatives,
+  deriveReturnChecks,
   existsValidPlan,
   legLibrary,
+  meltemiSafeUntilDay,
   validatePlan,
   type SolveResult,
 } from './solver.ts';
@@ -93,11 +95,62 @@ function assessPlan(
   const legs = legLibrary(snapshot);
   const ordered = plan.days.slice().sort((a, b) => a.day - b.day);
 
+  /**
+   * Aufenthalts-bewusste Platzvorschläge (Zielmodell v2 — nie derselbe
+   * Liegeplatz zweimal): läuft die Route eine Insel ein zweites Mal an, wird
+   * für den zweiten Aufenthalt der beste noch UNBENUTZTE Platz vorgeschlagen
+   * statt wieder derselbe. Innerhalb EINES Aufenthalts (aufeinanderfolgende
+   * Nächte) bleibt der Vorschlag stehen — das Boot verholt nicht, nur weil
+   * der Forecast über Nacht einen anderen Platz nach vorn sortiert. Die Basis
+   * ist ausgenommen (Start, Ziel, Puffertage liegen dort mehrfach).
+   */
+  const suggestionByDay = new Map<number, string | null>();
+  {
+    const usedByIsland = new Map<string, Set<string>>();
+    let prevIsland: string | null = null;
+    let staySuggestion: string | null = null;
+    for (const entry of ordered) {
+      const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+      const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
+      if (islandId !== prevIsland) {
+        prevIsland = islandId;
+        const used = usedByIsland.get(islandId) ?? new Set<string>();
+        usedByIsland.set(islandId, used);
+        if (chosen) {
+          staySuggestion = chosen;
+        } else if (islandId === snapshot.params.baseIslandId) {
+          staySuggestion = bestPlaceByIsland[islandId]?.[entry.day] ?? null;
+        } else {
+          const islandPlaces = snapshot.library.places.filter(
+            (p) => p.islandId === islandId,
+          );
+          const ampelByPlace: Record<string, Ampel> = {};
+          for (const p of islandPlaces) {
+            ampelByPlace[p.id] = nightAmpeln[p.id]?.[entry.day]?.ampel ?? 'unbewertet';
+          }
+          const ranked = rankPlacesForNight(islandPlaces, ampelByPlace);
+          const pick = ranked.find((p) => !used.has(p.id)) ?? ranked[0] ?? null;
+          staySuggestion = pick?.id ?? null;
+        }
+        if (staySuggestion) used.add(staySuggestion);
+      } else if (chosen) {
+        usedByIsland.get(islandId)?.add(chosen);
+        staySuggestion = chosen;
+      }
+      suggestionByDay.set(entry.day, staySuggestion);
+    }
+  }
+
   /** Der Platz, an dem ein Tag endet: gewählt (AD-12) oder vorgeschlagen. */
   const placeIdOf = (entry: (typeof ordered)[number]): string | null => {
     const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
     const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
-    return chosen ?? bestPlaceByIsland[islandId]?.[entry.day] ?? null;
+    return (
+      chosen ??
+      suggestionByDay.get(entry.day) ??
+      bestPlaceByIsland[islandId]?.[entry.day] ??
+      null
+    );
   };
 
   /**
@@ -197,6 +250,10 @@ function assessPlan(
     };
   });
 
+  // Zielmodell v2 — die tägliche Abbruch-Notation: für jeden zukünftigen
+  // Plantag der Heimweg-Status (meltemi-fest / wetterfenster / kritisch).
+  const returnChecks = deriveReturnChecks(plan, snapshot);
+
   return {
     plan,
     // Geprüft wird die gesegelte Kette, nicht die kuratierte: sonst könnte die
@@ -206,6 +263,8 @@ function assessPlan(
     variantId: meta.variantId,
     turnIslandId: meta.turnIslandId,
     relaxedTo: meta.relaxedTo,
+    returnChecks,
+    meltemiSafeUntilDay: meltemiSafeUntilDay(returnChecks),
   };
 }
 

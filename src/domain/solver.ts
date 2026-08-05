@@ -43,7 +43,7 @@ import {
   stagesOf,
 } from './schema/plan.ts';
 import type { RelaxationLevel } from './schema/plan.ts';
-import { assessLeg, stopHoursForDay } from './scoring.ts';
+import { assessLeg, assessLegCached, stopHoursForDay } from './scoring.ts';
 import {
   packLegs,
   remainingReturnLegs,
@@ -53,9 +53,11 @@ import {
   type PackedLeg,
 } from './ppr.ts';
 import { legIndexWithReverses, legsOfVariant } from './legs.ts';
+import { enumerateRoundTrips } from './roundTrips.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
 import { distanceNm, isClockwise } from './geo.ts';
 import type { Coordinates } from './schema/common.ts';
+import type { DayReturnCheck } from './schema/plan.ts';
 
 // ---------------------------------------------------------------------------
 // Relaxation
@@ -122,6 +124,36 @@ export function relaxParams(params: Params, level: RelaxationLevel): Params {
   }
 }
 
+/**
+ * Relaxierte Snapshots je Basis-Snapshot GECACHT — nicht aus Sparsamkeit beim
+ * Objektbau, sondern wegen der OBJEKTIDENTITÄT: scoring.assessLegCached memoisiert
+ * je Snapshot-Objekt. Baute jeder completePlan-Aufruf (Hauptroute, Zeuge, sechs
+ * Options-Preise) seine relaxierten Snapshots neu, hätte jeder Aufruf einen
+ * kalten Cache und die teuerste Rechnung der App liefe vielfach doppelt.
+ */
+const relaxedSnapshots = new WeakMap<
+  PlanningSnapshot,
+  Map<RelaxationLevel, PlanningSnapshot>
+>();
+
+function relaxedSnapshot(
+  snapshot: PlanningSnapshot,
+  level: RelaxationLevel,
+): PlanningSnapshot {
+  if (level === 'none') return snapshot;
+  let byLevel = relaxedSnapshots.get(snapshot);
+  if (!byLevel) {
+    byLevel = new Map();
+    relaxedSnapshots.set(snapshot, byLevel);
+  }
+  let relaxed = byLevel.get(level);
+  if (!relaxed) {
+    relaxed = { ...snapshot, params: relaxParams(snapshot.params, level) };
+    byLevel.set(level, relaxed);
+  }
+  return relaxed;
+}
+
 // ---------------------------------------------------------------------------
 // Leg library & candidates
 // ---------------------------------------------------------------------------
@@ -167,25 +199,38 @@ export interface Candidate {
  * Rundkurse enthält, die jede Insel genau einmal anlaufen.
  */
 function makeCandidate(
-  variant: Variant,
+  variantId: string,
+  escalationRank: number,
   legs: Leg[],
   snapshot: PlanningSnapshot,
 ): Candidate {
+  // Der Wendepunkt ist die SÜDLICHSTE Insel der Kette (reachNmFor) — dieselbe
+  // Kennzahl, nach der preferred die Törnfrage entscheidet. Bei Gleichstand
+  // (etwa alles nördlich der Basis) entscheidet die Distanz, damit "gar nicht
+  // erst losfahren" nicht als Wende gilt.
+  const reachOf = reachNmFor(snapshot);
   const base = snapshot.library.islands.find(
     (i) => i.id === snapshot.params.baseIslandId,
   );
-  const reachOf = (islandId: string): number => {
+  const distOf = (islandId: string): number => {
     const island = snapshot.library.islands.find((i) => i.id === islandId);
     return base && island ? distanceNm(base.coordinates, island.coordinates) : 0;
   };
   const seq = routeIslandSequence(legs);
   const turnIslandId =
     seq.length > 0
-      ? seq.reduce((far, id) => (reachOf(id) > reachOf(far) ? id : far), seq[0]!)
+      ? seq.reduce(
+          (far, id) =>
+            reachOf(id) > reachOf(far) ||
+            (reachOf(id) === reachOf(far) && distOf(id) > distOf(far))
+              ? id
+              : far,
+          seq[0]!,
+        )
       : snapshot.params.baseIslandId;
   return {
-    variantId: variant.id,
-    escalationRank: variant.escalationRank,
+    variantId,
+    escalationRank,
     turnIslandId,
     legs,
   };
@@ -210,6 +255,8 @@ export function buildCandidates(
     }
   };
 
+  // Kuratierte Varianten ZUERST: eine Graph-Runde, die einer Variante gleicht,
+  // behält so deren Namen und Rang (first-writer-wins im Dedup).
   for (const variant of outboundVariants(snapshot)) {
     const vLegs = legsOfVariant(variant, snapshot.library);
     const seq = routeIslandSequence(vLegs);
@@ -219,8 +266,24 @@ export function buildCandidates(
       const outbound = vLegs.slice(startIdx, turnIdx);
       const ret = remainingReturnLegs(seq[turnIdx]!, snapshot);
       if (!ret) continue;
-      push(makeCandidate(variant, [...outbound, ...ret], snapshot));
+      push(makeCandidate(variant.id, variant.escalationRank, [...outbound, ...ret], snapshot));
     }
+  }
+
+  /**
+   * Zielmodell v2 — Rundkurse über den Etappen-Graphen (roundTrips.ts).
+   *
+   * Das ist der Suchraum, in dem echte Runden mit Inselvielfalt überhaupt
+   * existieren: der alte Raum (Variante hin, Rückfallkette heim) bestand fast
+   * nur aus Pendel-Formen, weil die Kette die Umkehrung der Varianten ist.
+   * Begrenzt auf die verfügbaren Törntage — eine Runde mit mehr Etappen als
+   * Tagen kann kein Packing tragen.
+   */
+  const frame = deadlineFrame(snapshot.params);
+  const daysAvailable = frame.deadlineDay - snapshot.trip.currentDay + 1;
+  for (const legs of enumerateRoundTrips(snapshot, startIslandId, daysAvailable)) {
+    const c = makeCandidate('runde', 100, legs, snapshot);
+    push({ ...c, variantId: `runde-${c.turnIslandId}` });
   }
 
   // Turning around right here is always a candidate, even when no variant
@@ -312,6 +375,14 @@ export function validatePlan(
   const legOfStage = (day: number, index: number, legId: string): Leg | undefined =>
     opts.sailedLegsByDay?.get(day)?.[index] ?? legs.get(legId);
 
+  /**
+   * Gecacht nur ohne gesegelte Ketten: die tragen dieselbe Id mit anderer
+   * Verankerung (legGeometry.ts) und würden den Memo-Schlüssel vergiften.
+   * Der Solver-Pfad (Kandidat × Stufe, immer Bibliotheks-Etappen) ist der,
+   * der die Wiederholung hat — und genau der läuft über den Cache.
+   */
+  const assess = opts.sailedLegsByDay ? assessLeg : assessLegCached;
+
   // (1) every stage inside the reliable horizon holds the FR16 thresholds.
   for (const stage of stagesOf(plan)) {
     let offset = 0;
@@ -329,7 +400,7 @@ export function validatePlan(
         });
         continue;
       }
-      const a = assessLeg(leg, stage.day, snapshot, {
+      const a = assess(leg, stage.day, snapshot, {
         departureOffsetHours: offset || undefined,
       });
       // Liegezeit des Zwischenstopps schiebt die Folge-Etappe (AD-3).
@@ -388,7 +459,7 @@ export function validatePlan(
     s.legIds.some((legId, legIdx) => {
       const leg = legOfStage(s.day, legIdx, legId);
       if (!leg) return false;
-      return assessLeg(leg, s.day, snapshot).nightLeg === true;
+      return assess(leg, s.day, snapshot).nightLeg === true;
     }),
   );
   if (nightStages.length > params.nightLegMaxPerTrip) {
@@ -409,7 +480,7 @@ export function validatePlan(
     for (const [legIdx, legId] of s.legIds.entries()) {
       const leg = legOfStage(s.day, legIdx, legId);
       if (!leg) continue;
-      const a = assessLeg(leg, s.day, snapshot);
+      const a = assess(leg, s.day, snapshot);
       if (a.nightLeg !== true || a.avgTwsKn === null) continue;
       if (a.avgTwsKn > params.nightLegMaxTwsKn) {
         violations.push({
@@ -435,6 +506,68 @@ export function validatePlan(
         day: entry.day,
         text: `Tag ${entry.day}: Platz ${place.name} liegt auf ${place.islandId}, nicht auf ${islandId}`,
       });
+    }
+  }
+
+  // (1e) Zielmodell v2 — die Liegeplatz-Regel: kein Übernachtungsplatz zweimal.
+  // Gezählt werden AUFENTHALTE: aufeinanderfolgende Nächte auf derselben Insel
+  // sind EIN Aufenthalt (ein Hafentag nach der Ankunft wechselt den Platz
+  // nicht). Eine Insel darf mehrfach angelaufen werden, solange sie genug
+  // kuratierte Plätze hat, dass jeder Aufenthalt einen eigenen bekommt — der
+  // Solver legt keine Plätze fest (AD-12), also prüft die Regel die KAPAZITÄT;
+  // explizit gewählte Plätze prüft sie direkt. Die Basis ist ausgenommen:
+  // Start, Ziel und Puffertage liegen dort naturgemäß mehrfach.
+  {
+    const ordered = [...plan.days].sort((a, b) => a.day - b.day);
+    interface Stay {
+      islandId: string;
+      placeIds: Set<string>;
+    }
+    const stays: Stay[] = [];
+    for (const entry of ordered) {
+      const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+      const placeId = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
+      const last = stays[stays.length - 1];
+      if (last && last.islandId === islandId) {
+        if (placeId) last.placeIds.add(placeId);
+      } else {
+        stays.push({ islandId, placeIds: new Set(placeId ? [placeId] : []) });
+      }
+    }
+    const staysByIsland = new Map<string, Stay[]>();
+    for (const stay of stays) {
+      if (stay.islandId === params.baseIslandId) continue;
+      const list = staysByIsland.get(stay.islandId) ?? [];
+      list.push(stay);
+      staysByIsland.set(stay.islandId, list);
+    }
+    for (const [islandId, islandStays] of staysByIsland) {
+      if (islandStays.length < 2) continue;
+      const placesAvailable = library.places.filter(
+        (p) => p.islandId === islandId,
+      ).length;
+      if (islandStays.length > placesAvailable) {
+        violations.push({
+          kind: 'wiederholung',
+          day: null,
+          text: `${islandId} wird ${islandStays.length}× angelaufen, hat aber nur ${placesAvailable} ${placesAvailable === 1 ? 'Liegeplatz' : 'Liegeplätze'} — ein Platz würde sich wiederholen`,
+        });
+      }
+      // Explizit gewählte Plätze: derselbe Platz in zwei Aufenthalten ist die
+      // direkte Verletzung, unabhängig von der Kapazität.
+      const seenPlaces = new Set<string>();
+      for (const stay of islandStays) {
+        for (const placeId of stay.placeIds) {
+          if (seenPlaces.has(placeId)) {
+            violations.push({
+              kind: 'wiederholung',
+              day: null,
+              text: `Liegeplatz ${placeId} ist für zwei getrennte Aufenthalte gewählt — nie derselbe Platz zweimal`,
+            });
+          }
+          seenPlaces.add(placeId);
+        }
+      }
     }
   }
 
@@ -475,7 +608,7 @@ export function validatePlan(
           arrival = null;
           break;
         }
-        const a = assessLeg(leg, arrivingStage.day, snapshot, {
+        const a = assess(leg, arrivingStage.day, snapshot, {
           departureOffsetHours: offset || undefined,
         });
         if (a.arrivalHourAthens === null) {
@@ -616,7 +749,7 @@ export function validatePlan(
       let pickupAssumed = false;
       for (const [legIdx, legId] of pickupEntry.legIds.entries()) {
         const leg = legOfStage(pickupDay, legIdx, legId);
-        const a = leg ? assessLeg(leg, pickupDay, snapshot) : null;
+        const a = leg ? assess(leg, pickupDay, snapshot) : null;
         if (a?.basis === 'annahme') pickupAssumed = true;
         // An unassessable leg (beyond the horizon, or a dead reference) must
         // not be silently counted as zero hours — that would let the arrival
@@ -663,17 +796,21 @@ export interface SolveResult {
 }
 
 /**
- * Reichweite eines Round-Trips: die Distanz von der Basis zum Wendepunkt.
+ * Reichweite eines Round-Trips: wie weit SÜDLICH der Basis der Wendepunkt
+ * liegt, in Seemeilen (Breitengrad-Differenz; nördlich der Basis zählt 0).
  *
- * Das IST die Törnfrage — "wie weit kommen wir?" (AD-13). Die alte Kennzahl
- * war die Zahl der Etappen, und das ist etwas anderes: ein Plan, der zwölf Tage
- * lang zwischen Paros und Naxos pendelt, hat genauso viele Etappen wie einer,
- * der bis Santorin durchzieht, und gewann sogar, weil er leichter gültig wird.
- * Genau das Bild bekam der Skipper: kurze Schläge, das Tagesbudget zu zwei
- * Dritteln ungenutzt, und die Wende weit nördlich vom eigentlichen Ziel.
+ * Das IST die Törnfrage — "wie weit kommen wir nach Süden?" (Zielmodell v2,
+ * Skipper 2026-08-05: mit dem Meltemi im Rücken runter). Die Luftlinien-
+ * Distanz hat etwas anderes gemessen: Amorgos liegt von Athen aus WEITER
+ * (123 sm, weit im Osten), aber weniger SÜDLICH als Santorin — und gewann
+ * deshalb gegen jede Santorin-Runde, obwohl die Runde der eigentlichen Frage
+ * näher kommt. Die frühere Kennzahl war die Zahl der Etappen; auch die mass
+ * etwas anderes (Pendeln zählte wie Durchziehen).
  *
  * Gemessen wird zur Insel, nicht über die gefahrene Strecke: die Umwege des
- * Rückwegs sollen die Ambition nicht aufblähen.
+ * Rückwegs sollen die Ambition nicht aufblähen. Für die ANZEIGE ("bis X ·
+ * N sm") bleibt die Distanz Basis→Wendepunkt die richtige Zahl — hier geht
+ * es um die Rangfolge.
  */
 export function reachNmFor(snapshot: PlanningSnapshot): (islandId: string) => number {
   const base = snapshot.library.islands.find(
@@ -682,7 +819,8 @@ export function reachNmFor(snapshot: PlanningSnapshot): (islandId: string) => nu
   if (!base) return () => 0;
   return (islandId: string) => {
     const island = snapshot.library.islands.find((i) => i.id === islandId);
-    return island ? distanceNm(base.coordinates, island.coordinates) : 0;
+    if (!island) return 0;
+    return Math.max(0, (base.coordinates.lat - island.coordinates.lat) * 60);
   };
 }
 
@@ -704,6 +842,16 @@ export interface PlanMetrics {
   turnDay: number;
   harbourDays: number;
   stages: number;
+  /**
+   * Zielmodell v2 — Summe der Abweichungen der Etappentage vom Wegstunden-Band
+   * [stageHoursBandMinH, stageHoursBandMaxH], in Zehntelstunden (ganzzahlig,
+   * damit der lexikografische Vergleich nicht an Float-Rauschen hängt).
+   * Ein 2-h-Tag bei Band 5–7 trägt 30 bei, ein 8-h-Tag 10. Unbewertbare Tage
+   * tragen 0 — eine Annahme-Lücke ist kein Qualitätsurteil.
+   */
+  bandDevTenths: number;
+  /** Abstand der Hafentagszahl vom Zielband [harbourDays, harbourDaysTargetMax]. */
+  harbourDev: number;
 }
 
 export function planMetricsFor(
@@ -712,8 +860,15 @@ export function planMetricsFor(
   const reach = reachNmFor(snapshot);
   const coordsOf = (islandId: string): Coordinates | null =>
     snapshot.library.islands.find((i) => i.id === islandId)?.coordinates ?? null;
+  const legs = legLibrary(snapshot);
+  const { stageHoursBandMinH, stageHoursBandMaxH } = snapshot.params;
+  // preferred vergleicht jeden Kandidaten gegen den bisherigen Besten — der
+  // Beste würde ohne Memo bei jedem Vergleich neu durchgerechnet.
+  const memo = new WeakMap<SolveResult, PlanMetrics>();
 
   return (r) => {
+    const cached = memo.get(r);
+    if (cached) return cached;
     const stages = stagesOf(r.plan);
     const islands = stages.map((s) => s.toIslandId);
     // Der geschlossene Kurs für den Umlaufsinn: Basis, dann die Tagesziele.
@@ -722,14 +877,57 @@ export function planMetricsFor(
     const ring = [snapshot.params.baseIslandId, ...islands]
       .map(coordsOf)
       .filter((c): c is Coordinates => c !== null);
-    return {
+
+    // Wegstunden je Etappentag, mit derselben Offset-Verkettung wie Bewertung
+    // und Gültigkeit (AD-3): die Folge-Etappe eines Doppelschlags startet nach
+    // Ankunft plus Liegezeit, nicht wieder um 09:00.
+    let bandDevTenths = 0;
+    for (const stage of stages) {
+      let offset = 0;
+      let hours = 0;
+      let known = true;
+      const stopHours = stopHoursForDay(snapshot, stage.day);
+      for (const legId of stage.legIds) {
+        const leg = legs.get(legId);
+        const a = leg
+          ? assessLegCached(leg, stage.day, snapshot, {
+              departureOffsetHours: offset || undefined,
+            })
+          : null;
+        if (!a || a.totalHours === null) {
+          known = false;
+          break;
+        }
+        hours += a.totalHours;
+        offset += a.totalHours + stopHours;
+      }
+      if (!known) continue;
+      const dev =
+        hours < stageHoursBandMinH
+          ? stageHoursBandMinH - hours
+          : hours > stageHoursBandMaxH
+            ? hours - stageHoursBandMaxH
+            : 0;
+      bandDevTenths += Math.round(dev * 10);
+    }
+
+    const harbourDays = r.plan.days.filter((d) => d.kind === 'harbour').length;
+    const lo = snapshot.params.harbourDays;
+    const hi = snapshot.params.harbourDaysTargetMax;
+    const harbourDev = harbourDays < lo ? lo - harbourDays : harbourDays > hi ? harbourDays - hi : 0;
+
+    const m: PlanMetrics = {
       reachNm: reach(r.turnIslandId),
       distinctIslands: new Set(islands).size,
       clockwise: isClockwise(ring),
       turnDay: turnDayOf(r),
-      harbourDays: r.plan.days.filter((d) => d.kind === 'harbour').length,
+      harbourDays,
       stages: stages.length,
+      bandDevTenths,
+      harbourDev,
     };
+    memo.set(r, m);
+    return m;
   };
 }
 
@@ -756,20 +954,32 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  * Welcher von zwei Plänen der bessere ist — lexikografisch, nicht als
  * gewichtete Summe.
  *
- * Die Reihenfolge IST die Entscheidung, und sie soll ablesbar sein statt aus
- * Gewichten hervorzugehen, die sich gegenseitig aufheben können:
+ * Die Reihenfolge IST die Entscheidung (Zielmodell v2, Skipper 2026-08-05),
+ * und sie soll ablesbar sein statt aus Gewichten hervorzugehen, die sich
+ * gegenseitig aufheben können:
  *
  *   1. gültig vor ungültig, und unter den ungültigen zuerst weniger
  *      Sicherheitsverletzungen, dann weniger Verletzungen überhaupt. Die App
  *      muss auch im Meltemi antworten (FR18) — aber nie mit etwas Unsicherem.
  *   2. WEITER vor näher. Das ist die Törnfrage.
- *   3. Erst danach die Bequemlichkeit: weniger Nachgeben auf der
- *      Eskalationsleiter. Ein Doppelschlag, der Santorin erreichbar macht, ist
- *      also willkommen; einer, der nichts einbringt, wird nicht genommen.
- *   4. Weniger Hafentage — ein Törn, der am Ende vier Tage im Hafen liegt, hat
- *      seine Zeit nicht genutzt.
- *   5. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt.
- *   6. Zum Schluss die Variante alphabetisch: gleiche Lage, gleiche Antwort.
+ *   3. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
+ *      Törn, der zwölf Tage dieselbe Kette auf und ab fährt, genauso gut wie
+ *      eine Runde — er erreicht denselben Wendepunkt und ist leichter gültig.
+ *   4. Weniger Nachgeben auf der Eskalationsleiter — VOR dem Wegstunden-Band,
+ *      mit Absicht: zwei kurze Schläge an einem Tag füllen das Band besser als
+ *      einer, aber der Doppelschlag ist eine NACHGABE (Skipper 2026-08-05,
+ *      "ein Tag, eine Verbindung") und darf nicht zum Normalfall werden, nur
+ *      weil er die Stunden hübscher verteilt. Ein Doppelschlag, der WEITER
+ *      trägt oder mehr Inseln erschliesst, gewinnt weiterhin (Kriterien 2-3).
+ *   5. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
+ *      verschenken oder zu überziehen.
+ *   6. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
+ *      ohne Ruhetag ist der Törn so wenig gewollt wie mit vier.
+ *   7. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
+ *      Westseite zurück — die Empfehlung fürs Revier.
+ *   8. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
+ *   9. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
+ *      die Variante alphabetisch — gleiche Lage, gleiche Antwort.
  */
 export function preferred(
   a: SolveResult | null,
@@ -785,19 +995,12 @@ export function preferred(
     [-a.validity.violations.length, -b.validity.violations.length],
     // Wie weit kommen wir — die Törnfrage.
     [Math.round(ma.reachNm), Math.round(mb.reachNm)],
-    // Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der Westseite
-    // zurück. Die Empfehlung fürs Revier, nicht bloss Geschmack.
-    [ma.clockwise ? 1 : 0, mb.clockwise ? 1 : 0],
-    // So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
-    // Törn, der zwölf Tage dieselbe Kette auf und ab fährt, genauso gut wie
-    // eine Runde — er erreicht denselben Wendepunkt und ist leichter gültig.
     [ma.distinctIslands, mb.distinctIslands],
     [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
-    // "So früh wie möglich nach Süden, um genug Zeit für zurück zu haben":
-    // jeder Tag, den die Wende früher liegt, ist ein Tag Reserve auf dem
-    // Heimweg — der Strecke, die halten muss, wenn der Meltemi einsetzt.
+    [-ma.bandDevTenths, -mb.bandDevTenths],
+    [-ma.harbourDev, -mb.harbourDev],
+    [ma.clockwise ? 1 : 0, mb.clockwise ? 1 : 0],
     [-ma.turnDay, -mb.turnDay],
-    [-ma.harbourDays, -mb.harbourDays],
     [ma.stages, mb.stages],
   ];
   for (const [x, y] of cmp) if (x !== y) return x > y ? a : b;
@@ -964,26 +1167,25 @@ export function completePlan(
    * die Stufe zählt erst als Kriterium, wenn zwei Pläne gleich weit kommen.
    */
   for (const [levelIdx, level] of RELAXATION_ORDER.entries()) {
-    const relaxed: PlanningSnapshot = {
-      ...snapshot,
-      params: relaxParams(snapshot.params, level),
-    };
+    const relaxed = relaxedSnapshot(snapshot, level);
 
     for (const candidate of candidates) {
       /**
        * Beschneidung, die das Ergebnis nicht verändert: steht bereits ein
        * GÜLTIGER Plan, kann eine höhere Eskalationsstufe nur noch gewinnen,
-       * wenn sie WEITER kommt. Bei gleicher Reichweite verliert sie an der
-       * Stufe selbst, die in `preferred` vor Hafentagen und Etappenzahl steht.
+       * wenn sie mindestens GLEICH WEIT kommt — bei ECHT geringerer Reichweite
+       * verliert sie an Kriterium 2, egal was sonst passiert.
        *
-       * Ohne das kostete das Durchrechnen aller vier Stufen an der echten
-       * Bibliothek ein Vielfaches — und zwar bei jeder Forecast-Aktualisierung,
-       * auf dem Telefon.
+       * Nur strikt kleiner, nicht kleiner-gleich: seit dem Zielmodell v2
+       * stehen Inselvielfalt und Wegstunden-Band VOR der Eskalationsstufe —
+       * bei gleicher Reichweite kann eine höhere Stufe also durchaus noch
+       * gewinnen (etwa ein Doppelschlag, der eine vielfältigere Runde packbar
+       * macht) und muss durchgerechnet werden.
        */
       if (
         levelIdx > 0 &&
         best?.validity.valid &&
-        Math.round(reach(candidate.turnIslandId)) <=
+        Math.round(reach(candidate.turnIslandId)) <
           Math.round(reach(best.turnIslandId))
       ) {
         continue;
@@ -1136,8 +1338,14 @@ export function deriveAlternatives(
 
   // Spread by reach: most ambitious, least ambitious, then fill from the middle.
   // Alternatives are only useful if they differ in how far south they go.
+  // (Sortiert nach REICHWEITE — vorher stand hier die Etappenzahl, und die
+  // misst etwas anderes; siehe reachNmFor.)
+  const reach = reachNmFor(snapshot);
   const byReach = [...safe].sort(
-    (a, b) => stagesOf(b.plan).length - stagesOf(a.plan).length,
+    (a, b) =>
+      reach(b.turnIslandId) - reach(a.turnIslandId) ||
+      stagesOf(b.plan).length - stagesOf(a.plan).length ||
+      a.variantId.localeCompare(b.variantId),
   );
   const room = () => out.length < snapshot.params.alternativesMax;
   const take = (r: SolveResult | undefined) => {
@@ -1160,4 +1368,91 @@ export function deriveAlternatives(
 export function unassessableStages(plan: Plan, snapshot: PlanningSnapshot): Stage[] {
   const legs = legLibrary(snapshot);
   return stagesOf(plan).filter((s) => s.legIds.some((id) => !legs.has(id)));
+}
+
+// ---------------------------------------------------------------------------
+// Zielmodell v2 — die tägliche Abbruch-Notation (Absichern, nicht Planen)
+// ---------------------------------------------------------------------------
+
+/**
+ * Der Heimweg-Status für jeden zukünftigen Plantag.
+ *
+ * Das ist die zweite Hälfte des Zielmodells v2: GEPLANT wird optimistisch
+ * (Forecast + Persistenz-Annahme, der Worst-Case bindet die Suche nicht mehr),
+ * ABGESICHERT wird täglich. Für jeden Tag steht hier, ob der Heimweg auch
+ * unter dem vollen Meltemi hielte ('meltemi-fest') oder nur nach aktuellem
+ * Forecast ('wetterfenster') — und im zweiten Fall, woran der Skipper den
+ * Abbruch erkennt. Neu gerechnet wird bei jeder Forecast-Aktualisierung; das
+ * IST die tägliche Neubeurteilung, die der Skipper verlangt hat.
+ *
+ * Dieselben Funktionen wie Gültigkeitsbedingung (2') und PoR (AD-3: ein
+ * Machbarkeitsbegriff): `byForecast` fragt gegen den echten Stichtag, der
+ * Worst-Case konservativ gegen den PoR-Tag inklusive Puffer.
+ */
+export function deriveReturnChecks(
+  plan: Plan,
+  snapshot: PlanningSnapshot,
+): DayReturnCheck[] {
+  const { params } = snapshot;
+  const frame = deadlineFrame(params);
+  const checks: DayReturnCheck[] = [];
+  const wc = params.meltemiWorstCase;
+
+  for (const entry of [...plan.days].sort((a, b) => a.day - b.day)) {
+    if (entry.day < snapshot.trip.currentDay) continue;
+    if (entry.day >= frame.deadlineDay) continue;
+    const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+    // An der Basis gibt es keinen Heimweg zu prüfen.
+    if (islandId === params.baseIslandId) continue;
+
+    const byForecast: Feasibility = returnFeasibleStarting(
+      islandId,
+      entry.day + 1,
+      snapshot,
+      'forecast',
+      frame.deadlineDay,
+    );
+    const underWorstCase: Feasibility = returnFeasibleStarting(
+      islandId,
+      entry.day + 1,
+      snapshot,
+      'worstCase',
+    );
+
+    let status: DayReturnCheck['status'];
+    let note: string;
+    if (underWorstCase === 'feasible') {
+      status = 'meltemi-fest';
+      note = `Heimweg hält auch bei vollem Meltemi (${wc.twsKn} kn aus N) — Umkehr von hier jederzeit möglich.`;
+    } else if (byForecast !== 'infeasible') {
+      status = 'wetterfenster';
+      note =
+        `Heimweg trägt nur nach aktuellem Forecast: Frischt der Nordwind über ${params.maxUpwindTwsKn} kn auf, ` +
+        `hier abbrechen und den Rückweg einleiten.` +
+        (byForecast === 'horizon'
+          ? ' Ein Teil der Strecke liegt jenseits des verlässlichen Horizonts (Vorbehalt).'
+          : '');
+    } else {
+      status = 'kritisch';
+      note = 'Rückkehr ist von hier schon nach aktuellem Forecast nicht mehr darstellbar.';
+    }
+
+    checks.push({ day: entry.day, islandId, byForecast, underWorstCase, status, note });
+  }
+  return checks;
+}
+
+/**
+ * Bis zu welchem Tag die Route meltemi-fest ist: der letzte Tag der
+ * ANFÄNGLICHEN meltemi-festen Strecke. Null, wenn schon der erste geprüfte
+ * Tag am Forecast hängt — oder wenn es nichts zu prüfen gibt (Plan liegt an
+ * der Basis), dann gibt es auch keine Aussage.
+ */
+export function meltemiSafeUntilDay(checks: DayReturnCheck[]): number | null {
+  let last: number | null = null;
+  for (const c of checks) {
+    if (c.status !== 'meltemi-fest') break;
+    last = c.day;
+  }
+  return last;
 }

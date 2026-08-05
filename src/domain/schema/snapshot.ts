@@ -2,7 +2,7 @@ import type { Ampel } from './common.ts';
 import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
-import type { Plan, PlanValidity, RelaxationLevel } from './plan.ts';
+import type { DayReturnCheck, Plan, PlanValidity, RelaxationLevel } from './plan.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
 
@@ -381,6 +381,19 @@ export interface PlanAssessment {
   turnIslandId: string;
   /** Relaxation level the solver needed ('none' = nothing relaxed). */
   relaxedTo: string;
+  /**
+   * Zielmodell v2 — die tägliche Abbruch-Notation: der Heimweg-Status jedes
+   * zukünftigen Plantags (solver.deriveReturnChecks). Geplant wird auf das
+   * Wetterfenster; HIER steht, ab welchem Punkt der Plan nur noch vom Forecast
+   * getragen wird und woran der Skipper den Abbruch erkennt.
+   */
+  returnChecks: DayReturnCheck[];
+  /**
+   * Letzter Tag der anfänglich meltemi-festen Strecke — bis hierhin ist die
+   * Umkehr auch unter dem vollen Worst-Case jederzeit möglich. Null, wenn
+   * schon der erste geprüfte Tag am Forecast hängt oder nichts zu prüfen ist.
+   */
+  meltemiSafeUntilDay: number | null;
 }
 
 export interface Assessment {

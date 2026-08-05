@@ -13,7 +13,7 @@ import type { Leg } from './schema/route.ts';
 import type { PlanningSnapshot, PprResult } from './schema/snapshot.ts';
 import { RETURN_CHAIN_ROUTE_ID } from './schema/route.ts';
 import { islandSequence, legsOfVariant, reverseLeg } from './legs.ts';
-import { assessLeg, type LegScenario } from './scoring.ts';
+import { assessLegCached, type LegScenario } from './scoring.ts';
 import { deadlineFrame } from './time.ts';
 
 export type Feasibility = 'feasible' | 'infeasible' | 'horizon';
@@ -163,7 +163,9 @@ export function packLegs(
     if (cached) return cached;
 
     let best: PackResult = { verdict: 'infeasible', packed: [] };
-    const a = assessLeg(legs[legIdx]!, day, snapshot, { scenario });
+    // Gecacht (scoring.assessLegCached): der Packer läuft je Kandidat und
+    // Stufe neu, die Simulation derselben (Etappe, Tag)-Kombination nicht.
+    const a = assessLegCached(legs[legIdx]!, day, snapshot, { scenario });
     if (a.ampel !== 'rot') {
       // One leg today — the day constraint asks about the island we END at.
       if (ok(day, legs[legIdx]!.toIslandId)) {
@@ -197,7 +199,7 @@ export function packLegs(
         legIdx + 1 < legs.length &&
         a.totalHours !== null
       ) {
-        const b = assessLeg(legs[legIdx + 1]!, day, snapshot, {
+        const b = assessLegCached(legs[legIdx + 1]!, day, snapshot, {
           departureOffsetHours: a.totalHours,
           scenario,
         });

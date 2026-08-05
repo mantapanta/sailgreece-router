@@ -125,6 +125,14 @@ const ParamsObjectSchema = z.object({
    */
   harbourDays: z.number().int().min(0).default(1),
   /**
+   * Zielmodell v2 — oberes Ende des HAFENTAGE-ZIELBANDS [harbourDays,
+   * harbourDaysTargetMax]: "ein oder zwei Tage, an denen nicht gesegelt wird"
+   * (Skipper 2026-08-05). Ein Optimierungsziel, keine Grenze: der Solver zieht
+   * Pläne im Band vor (preferred), gültig sind auch andere — die Notgrenze
+   * bleibt harbourDaysMax.
+   */
+  harbourDaysTargetMax: z.number().int().min(0).default(2),
+  /**
    * Emergency ceiling for harbour days (skipper's call, 2026-08-03: "at a
    * pinch up to 5"). Beyond this the plan is no longer the trip that was
    * intended and says so — but it stays a structural finding, never a red
@@ -176,6 +184,20 @@ const ParamsObjectSchema = z.object({
   nightLegMaxPerTrip: z.number().int().min(0).default(2),
   /** Night legs only from this trip day on (second week). */
   nightLegEarliestDay: z.number().int().positive().default(8),
+
+  // --- Wegstunden-Zielband (Zielmodell v2) -----------------------------------
+  /**
+   * "Möglichst zwischen fünf und sieben Wegestunden am Tag" (Skipper
+   * 2026-08-05): das OPTIMIERUNGSBAND für die Stunden unter Weg eines
+   * Etappentages. Zu kurze Tage sind genauso eine Abweichung wie zu lange —
+   * ein 2-h-Tag verschenkt das Fenster, ein 9-h-Tag überzieht es.
+   *
+   * Unabhängig von den FR16-SICHERHEITSbudgets (targetDayHours/maxSailHours):
+   * die entscheiden über grün/gelb/rot, das Band nur über die Rangfolge
+   * gültiger Pläne (preferred). Es kann keinem Tag eine Ampel verpassen.
+   */
+  stageHoursBandMinH: z.number().min(0).default(5),
+  stageHoursBandMaxH: z.number().positive().default(7),
 
   // --- solver (FR29, AD-13) -------------------------------------------------------
   /** Max alternatives offered besides the main route. */
@@ -245,6 +267,21 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
     ctx.issues.push({
       code: 'custom',
       message: 'gelbReserveKn muss kleiner als maxUpwindTwsKn sein (sonst ist gruen unerreichbar)',
+      input: p,
+    });
+  }
+  if (p.stageHoursBandMinH > p.stageHoursBandMaxH) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'stageHoursBandMinH darf stageHoursBandMaxH nicht überschreiten',
+      input: p,
+    });
+  }
+  if (p.harbourDays > p.harbourDaysTargetMax || p.harbourDaysTargetMax > p.harbourDaysMax) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'Hafentage-Zielband: harbourDays ≤ harbourDaysTargetMax ≤ harbourDaysMax muss gelten',
       input: p,
     });
   }

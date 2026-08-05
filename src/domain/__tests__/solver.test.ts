@@ -80,6 +80,16 @@ function roundTripSnapshot(
       distanceNm: nm,
     });
 
+  // Zielmodell v2 — die Liegeplatz-Regel: 'mitte' liegt auf Hin- UND Rückweg
+  // (zwei Aufenthalte) und braucht deshalb einen zweiten Platz, sonst wäre
+  // jeder Rundkurs dieser Welt strukturell ungültig. Spiegelt die echte
+  // Bibliothek: jede Insel führt 3-8 recherchierte Plätze.
+  const mitteZwei = makePlace({
+    id: 'mitte-bucht-ost',
+    islandId: 'mitte',
+    coordinates: { lat: 37.62, lon: 24.25 },
+  });
+
   const nm = opts.legNm ?? 20;
   const outbound = [leg(base, mitte, nm), leg(mitte, sued, nm)];
   const homeward = [leg(sued, mitte, nm), leg(mitte, base, nm)];
@@ -107,8 +117,19 @@ function roundTripSnapshot(
   const snap = makeSnapshot({
     times,
     polar: TEST_POLAR,
-    forecast: { [base.id]: fc, [mitte.id]: fc, [sued.id]: fc },
-    library: { islands, places: [base, mitte, sued], invalidPlaces: [], legs, variants },
+    forecast: {
+      [base.id]: fc,
+      [mitte.id]: fc,
+      [mitteZwei.id]: fc,
+      [sued.id]: fc,
+    },
+    library: {
+      islands,
+      places: [base, mitte, mitteZwei, sued],
+      invalidPlaces: [],
+      legs,
+      variants,
+    },
     trip: {
       currentDay: opts.currentDay ?? 1,
       position: {
@@ -540,6 +561,9 @@ describe('solver — umgedrehte Heimweg-Etappen sind auflösbar', () => {
         fromIslandId: f.islandId, toIslandId: t.islandId,
         fromPlaceId: f.id, toPlaceId: t.id, distanceNm: 18,
       });
+    // Zweiter Platz auf 'mitte': der Törn nach 'fern' übernachtet dort auf Hin-
+    // und Rückweg — ohne zweiten Platz griffe die Liegeplatz-Regel (1e).
+    const mitteZwei = makePlace({ id: 'mitte-bucht-2', islandId: 'mitte', coordinates: { lat: 37.62, lon: 24.25 } });
     // Die Gegenrichtung von 'mitte--fern' ist NICHT gespeichert — der Heimweg
     // von 'fern' muss sie erzeugen.
     const legs = [leg(athen, mitte), leg(mitte, fern), leg(mitte, athen)];
@@ -558,8 +582,8 @@ describe('solver — umgedrehte Heimweg-Etappen sind auflösbar', () => {
     const fc = constantForecast(times.length, 10, 90);
     const snap = makeSnapshot({
       times, polar: TEST_POLAR,
-      forecast: { [athen.id]: fc, [mitte.id]: fc, [fern.id]: fc },
-      library: { islands, places: [athen, mitte, fern], invalidPlaces: [], legs, variants },
+      forecast: { [athen.id]: fc, [mitte.id]: fc, [mitteZwei.id]: fc, [fern.id]: fc },
+      library: { islands, places: [athen, mitte, mitteZwei, fern], invalidPlaces: [], legs, variants },
       trip: {
         currentDay: 1,
         position: { source: 'manual', lat: athen.coordinates.lat, lon: athen.coordinates.lon, placeId: athen.id },
