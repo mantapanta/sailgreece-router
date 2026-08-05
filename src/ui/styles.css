@@ -582,16 +582,10 @@ hr.hairline,
   filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 3px #fff);
 }
 
-.wind-barb .kn {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--navy);
-  background: rgba(255, 255, 255, 0.92);
-  padding: 0.02rem 0.28rem;
-  border-radius: 3px;
-  border: 1px solid var(--navy);
-  margin-top: -0.35rem;
-}
+/* Die Knoten-Ziffer neben der Fieder ist entfallen: die Fiedern kodieren die
+   Stärke schon (halbe Fieder = 5 kn), die Ziffer war dieselbe Aussage ein
+   zweites Mal — und über einem Feld von Fiedern war genau das die Überladung.
+   Der Wert steht weiter im Tooltip. */
 
 .wind-toggle {
   border-top: 1px solid var(--hairline);
@@ -1049,6 +1043,16 @@ footer.attribution a {
 .stage-number.highlight {
   transform: scale(1.25);
   z-index: 2;
+}
+
+/* "4·8" — dieselbe Insel wird auf dem Hin- und auf dem Rückweg angelaufen.
+   Aus dem Kreis wird eine Kapsel, statt die zweite Zahl abzuschneiden. */
+.stage-number.mehrfach {
+  width: auto;
+  min-width: 1.55rem;
+  padding: 0 0.4rem;
+  border-radius: 0.8rem;
+  letter-spacing: 0.02em;
 }
 
 .marker-pin.muted {

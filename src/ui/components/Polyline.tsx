@@ -16,6 +16,17 @@ export interface PolylineProps {
   /** Render as dashed line via symbol-repeat workaround. */
   dashed?: boolean;
   zIndex?: number;
+  /**
+   * Heller Saum unter der Linie (Kartografen-Kniff "casing").
+   *
+   * Auf dem Satellitenbild verschwindet eine 3-px-Linie im Blau der Ägäis —
+   * es gibt schlicht keinen Kontrast, auf den sie sich stützen könnte. Ein
+   * weisser Saum darunter schafft ihn, unabhängig davon, worüber die Linie
+   * gerade läuft. Null schaltet ihn ab.
+   */
+  casingColor?: string | null;
+  /** Breite des Saums über der Linie hinaus, je Seite. */
+  casingWeight?: number;
 }
 
 export function Polyline({
@@ -24,42 +35,72 @@ export function Polyline({
   strokeWeight = 3,
   dashed = false,
   zIndex,
+  casingColor = '#ffffff',
+  casingWeight = 3,
 }: PolylineProps) {
   const map = useMap();
-  const polylineRef = useRef<google.maps.Polyline | null>(null);
+  const polylineRef = useRef<google.maps.Polyline[]>([]);
 
   useEffect(() => {
     if (!map) return;
-    const options: google.maps.PolylineOptions = dashed
-      ? {
-          path,
-          strokeColor,
-          strokeOpacity: 0,
-          zIndex,
-          icons: [
-            {
-              icon: {
-                path: 'M 0,-1 0,1',
-                strokeOpacity: 1,
-                strokeColor,
-                strokeWeight,
-                scale: 3,
-              },
-              offset: '0',
-              repeat: '18px',
-            },
-          ],
-        }
-      : { path, strokeColor, strokeOpacity: 0.9, strokeWeight, zIndex };
 
-    const polyline = new google.maps.Polyline(options);
-    polyline.setMap(map);
-    polylineRef.current = polyline;
+    /** Ein Strich-Symbol für den repeat-Workaround. */
+    const dash = (color: string, weight: number): google.maps.IconSequence => ({
+      icon: {
+        path: 'M 0,-1 0,1',
+        strokeOpacity: 1,
+        strokeColor: color,
+        strokeWeight: weight,
+        scale: 3,
+      },
+      offset: '0',
+      repeat: '18px',
+    });
+
+    const lines: google.maps.Polyline[] = [];
+
+    if (dashed) {
+      // Saum und Linie in EINER Polyline: zwei Symbole an denselben Offsets,
+      // das hellere zuerst. Ein durchgezogener Saum unter einer gestrichelten
+      // Linie sähe aus wie eine durchgezogene Linie — und würde damit gerade
+      // die Unterscheidung einebnen, für die der Strich da ist.
+      const icons: google.maps.IconSequence[] = casingColor
+        ? [dash(casingColor, strokeWeight + casingWeight * 2), dash(strokeColor, strokeWeight)]
+        : [dash(strokeColor, strokeWeight)];
+      lines.push(new google.maps.Polyline({ path, strokeOpacity: 0, zIndex, icons }));
+    } else {
+      if (casingColor) {
+        lines.push(
+          new google.maps.Polyline({
+            path,
+            strokeColor: casingColor,
+            strokeOpacity: 0.85,
+            strokeWeight: strokeWeight + casingWeight * 2,
+            zIndex: (zIndex ?? 0) - 1,
+          }),
+        );
+      }
+      lines.push(
+        new google.maps.Polyline({ path, strokeColor, strokeOpacity: 1, strokeWeight, zIndex }),
+      );
+    }
+
+    for (const l of lines) l.setMap(map);
+    polylineRef.current = lines;
     return () => {
-      polyline.setMap(null);
-      polylineRef.current = null;
+      for (const l of lines) l.setMap(null);
+      polylineRef.current = [];
     };
-  }, [map, JSON.stringify(path), strokeColor, strokeWeight, dashed, zIndex]);
+  }, [
+    map,
+    JSON.stringify(path),
+    strokeColor,
+    strokeWeight,
+    dashed,
+    zIndex,
+    casingColor,
+    casingWeight,
+  ]);
 
   return null;
 }

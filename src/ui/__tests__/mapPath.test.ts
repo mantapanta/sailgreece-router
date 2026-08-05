@@ -1,0 +1,151 @@
+import { describe, expect, it } from 'vitest';
+import { buildLegsById, stageEndMarkers } from '../mapPath.ts';
+import type { Leg } from '../../domain/schema/route.ts';
+import type {
+  PlanningSnapshot,
+  StageAssessment,
+} from '../../domain/schema/snapshot.ts';
+import { makeLeg, makePlace, makeSnapshot } from '../../domain/__tests__/fixtures.ts';
+
+/**
+ * Ein Round-Trip über dieselbe Kette: Athen → Kea → Serifos und zurück.
+ * Genau die Form, in der die Rückreise die Hinreise zudeckte.
+ */
+function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; legs: Leg[] } {
+  const places = [
+    makePlace({ id: 'athen-alimos', islandId: 'athen', coordinates: { lat: 37.9, lon: 23.7 } }),
+    makePlace({ id: 'kea-vourkari', islandId: 'kea', coordinates: { lat: 37.66, lon: 24.32 } }),
+    makePlace({
+      id: 'serifos-livadi',
+      islandId: 'serifos',
+      coordinates: { lat: 37.14, lon: 24.52 },
+    }),
+  ];
+  const leg = (from: string, to: string): Leg => {
+    const f = places.find((p) => p.id === from)!;
+    const t = places.find((p) => p.id === to)!;
+    return makeLeg({
+      id: `${f.islandId}--${t.islandId}`,
+      fromIslandId: f.islandId,
+      toIslandId: t.islandId,
+      fromPlaceId: f.id,
+      toPlaceId: t.id,
+    });
+  };
+  const legs = [
+    leg('athen-alimos', 'kea-vourkari'),
+    leg('kea-vourkari', 'serifos-livadi'),
+    leg('serifos-livadi', 'kea-vourkari'),
+    leg('kea-vourkari', 'athen-alimos'),
+  ];
+  const snapshot = makeSnapshot({
+    library: { islands: [], places, invalidPlaces: [], legs, variants: [] },
+  });
+
+  const stage = (
+    day: number,
+    stageNumber: number,
+    legId: string,
+    toIslandId: string,
+  ): StageAssessment => ({
+    day,
+    stageNumber,
+    kind: 'stage',
+    toIslandId,
+    placeId: null,
+    placeIsSuggestion: true,
+    placeAmpel: 'unbewertet',
+    ampel: 'gruen',
+    legs: [
+      {
+        legId,
+        day,
+        ampel: 'gruen',
+        sailHours: 3,
+        motorHours: 0,
+        totalHours: 3,
+        avgTwsKn: 12,
+        avgTwaDeg: 90,
+        avgTwdDeg: 0,
+        avgSpeedKn: 6,
+        upwind: false,
+        basis: 'forecast',
+        reasons: [],
+        nightLeg: false,
+        arrivalHourAthens: 12,
+        breakdown: [],
+        pointPassages: [],
+      },
+    ],
+    pinned: false,
+    stopHoursPerStop: 3,
+    stopHoursTotal: 0,
+  });
+
+  return {
+    snapshot,
+    legs,
+    stages: [
+      stage(1, 1, 'athen--kea', 'kea'),
+      stage(2, 2, 'kea--serifos', 'serifos'),
+      stage(3, 3, 'serifos--kea', 'kea'),
+      stage(4, 4, 'kea--athen', 'athen'),
+    ],
+  };
+}
+
+/**
+ * Der gemeldete Fehler: auf der Karte waren nur die Nummern der Rückreise zu
+ * sehen (6…12), der Hinweg fehlte scheinbar. Gezeichnet war er — aber Tag 2
+ * und Tag 10 enden auf derselben Insel, und die später gezeichnete Nummer lag
+ * exakt über der früheren.
+ */
+describe('stageEndMarkers — Hin- und Rückweg teilen sich einen Ort', () => {
+  it('macht aus zwei Anläufen derselben Insel EINE Markierung', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    const markers = stageEndMarkers(stages, buildLegsById(legs), snapshot);
+    const kea = markers.find((m) => m.islandId === 'kea')!;
+    expect(kea.stops.map((s) => s.stageNumber)).toEqual([1, 3]);
+    expect(kea.label).toBe('1·3');
+  });
+
+  it('verliert dabei keine einzige Etappe', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    const markers = stageEndMarkers(stages, buildLegsById(legs), snapshot);
+    const gezeigt = markers.flatMap((m) => m.stops.map((s) => s.stageNumber));
+    expect(gezeigt.sort()).toEqual([1, 2, 3, 4]);
+  });
+
+  it('eine Insel, ein Marker — die Rückreise deckt die Hinreise nicht mehr zu', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    const markers = stageEndMarkers(stages, buildLegsById(legs), snapshot);
+    expect(markers.map((m) => m.islandId)).toEqual(['kea', 'serifos', 'athen']);
+    expect(new Set(markers.map((m) => m.key)).size).toBe(markers.length);
+  });
+
+  it('einmal angelaufene Inseln behalten die schlichte Zahl', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    const markers = stageEndMarkers(stages, buildLegsById(legs), snapshot);
+    expect(markers.find((m) => m.islandId === 'serifos')!.label).toBe('2');
+  });
+
+  it('die Stopps stehen chronologisch, egal wie die Etappen hereinkommen', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    const markers = stageEndMarkers([...stages].reverse(), buildLegsById(legs), snapshot);
+    const kea = markers.find((m) => m.islandId === 'kea')!;
+    expect(kea.stops.map((s) => s.day)).toEqual([1, 3]);
+  });
+
+  it('die Markierung sitzt am ERSTEN Anlauf und springt nicht zur Rückreise', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    const markers = stageEndMarkers(stages, buildLegsById(legs), snapshot);
+    const kea = markers.find((m) => m.islandId === 'kea')!;
+    expect(kea.position).toEqual({ lat: 37.66, lng: 24.32 });
+  });
+
+  it('eine Etappe ohne Geometrie erfindet keine Markierung', () => {
+    const { stages, snapshot } = roundTrip();
+    // Leere Leg-Bibliothek: es gibt keine Koordinaten für die Etappen.
+    expect(stageEndMarkers(stages, {}, snapshot)).toEqual([]);
+  });
+});

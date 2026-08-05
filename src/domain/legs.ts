@@ -10,10 +10,63 @@
 import type { Leg, Variant } from './schema/route.ts';
 import type { Library } from './schema/snapshot.ts';
 
-/** Leg lookup by id. */
+/** Leg lookup by id — only what the library really stores. */
 export function legIndex(library: Library): Map<string, Leg> {
   const byId = new Map<string, Leg>();
   for (const leg of library.legs) if (!byId.has(leg.id)) byId.set(leg.id, leg);
+  return byId;
+}
+
+/**
+ * Eine Etappe rückwärts gesegelt.
+ *
+ * Der Snapshot holt Forecast-Werte nur für die GESPEICHERTE Richtung
+ * (collectLocations, AD-3). Eine umgedrehte Etappe behält deshalb die
+ * Wegpunkt-Keys ihres Originals, gespiegelt — sonst geht jeder
+ * Wegpunkt-Zugriff ins Leere und die ganze Rückweg-Etappe fiele auf
+ * 'unbewertet', obwohl die Abdeckung vollständig ist.
+ */
+export function reverseLeg(leg: Leg): Leg {
+  const lastIdx = leg.waypoints.length - 1;
+  const originalKeyOf = (n: number): string =>
+    leg.waypointKeys?.[n] ?? `leg:${leg.id}:${n}`;
+  return {
+    ...leg,
+    id: `${leg.toIslandId}--${leg.fromIslandId}`,
+    fromIslandId: leg.toIslandId,
+    toIslandId: leg.fromIslandId,
+    fromPlaceId: leg.toPlaceId,
+    toPlaceId: leg.fromPlaceId,
+    waypoints: [...leg.waypoints].reverse(),
+    waypointKeys: leg.waypoints.map((_, n) => originalKeyOf(lastIdx - n)),
+  };
+}
+
+/**
+ * Leg lookup INKLUSIVE der Gegenrichtungen — der Index, gegen den ein PLAN
+ * aufgelöst werden muss.
+ *
+ * Der Solver baut den Heimweg teils aus umgedrehten Etappen (ppr.ts,
+ * `remainingReturnLegs`): von Santorin führt keine gespeicherte Etappe zurück
+ * auf die Rückfallkette, wohl aber `naxos--santorin` rückwärts. Ein Plan
+ * speichert aber nur IDs — und `santorin--naxos` stand in keinem Index. Jede
+ * Prüfung meldete daraufhin "Etappe nicht mehr in der Bibliothek", der Tag
+ * galt als unbewertbar, und der Plan konnte nie gültig werden.
+ *
+ * Folge: JEDE Route, die über einen umgedrehten Verbinder heimfährt — also
+ * Santorin, Amorgos, Ios — war strukturell ungültig und wurde nie vorgeschlagen.
+ * Nicht weil das Wetter oder das Zeitbudget dagegen sprachen, sondern weil die
+ * Etappe beim Nachschlagen fehlte.
+ *
+ * Gespeicherte Etappen gewinnen gegen erzeugte: steht eine Richtung kuratiert
+ * in der Bibliothek, gilt sie, nicht die Spiegelung der Gegenrichtung.
+ */
+export function legIndexWithReverses(library: Library): Map<string, Leg> {
+  const byId = legIndex(library);
+  for (const leg of library.legs) {
+    const reversed = reverseLeg(leg);
+    if (!byId.has(reversed.id)) byId.set(reversed.id, reversed);
+  }
   return byId;
 }
 
