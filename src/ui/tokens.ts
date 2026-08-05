@@ -73,3 +73,12 @@ export const ALT_ROUTE_COLORS = [
 export const MAP_LINE_SAILED = COLORS.mapLineSailed;
 export const MAP_LINE_CASING = COLORS.mapLineCasing;
 export const INK_PRIMARY = COLORS.inkPrimary;
+
+/**
+ * Round-trip direction colors (MapView): outbound vs. return leg. Deliberately
+ * outside the Ampel hues and the alt-route palette — a direction that looks
+ * like a verdict or an alternative would stop reading as a direction. Lines
+ * additionally carry direction arrows for color-blind safety (Polyline.tsx).
+ */
+export const HIN_LINE_COLOR = '#2f6fd0';
+export const RUECK_LINE_COLOR = '#c2418f';

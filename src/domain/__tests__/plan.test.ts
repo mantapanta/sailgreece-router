@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SOLVER_ALGORITHM_VERSION,
+  assumedViolations,
+  firmViolations,
   fixedDays,
   islandAtEndOfDay,
   pinnedDays,
   planDay,
+  planOutdated,
   stageNumber,
   stagesOf,
+  type PlanValidity,
 } from '../schema/plan.ts';
 import { makeHarbourDay, makePlan, makeStage } from './fixtures.ts';
 
@@ -80,5 +85,45 @@ describe('plan — pins and fixed days (AD-12)', () => {
       makeStage(4, ['serifos--sifnos'], 'sifnos', 'skipper'),
     ]);
     expect(fixedDays(plan, 3)).toEqual([1, 2, 4]);
+  });
+});
+
+describe('plan — Algorithmus-Version (planOutdated)', () => {
+  it('ein Plan ohne Versionsstempel gilt als veraltet — das ist der Bestand', () => {
+    // Genau der Fall vom Handy des Skippers: ein Plan des Vor-Fix-Solvers
+    // liegt im localStorage und überlebte jeden Redeploy unbemerkt.
+    const legacy = makePlan([makeStage(1, ['athen--kea'], 'kea')]);
+    expect(legacy.algorithmVersion).toBeUndefined();
+    expect(planOutdated(legacy)).toBe(true);
+  });
+
+  it('ein Plan mit aktuellem Stempel ist aktuell, ein älterer nicht', () => {
+    const current = {
+      ...makePlan([makeStage(1, ['athen--kea'], 'kea')]),
+      algorithmVersion: SOLVER_ALGORITHM_VERSION,
+    };
+    const older = {
+      ...makePlan([makeStage(1, ['athen--kea'], 'kea')]),
+      algorithmVersion: SOLVER_ALGORITHM_VERSION - 1,
+    };
+    expect(planOutdated(current)).toBe(false);
+    expect(planOutdated(older)).toBe(true);
+  });
+});
+
+describe('plan — feste und Annahme-Befunde (firmViolations)', () => {
+  it('trennt entlang von `assumed`, nicht entlang der Art', () => {
+    const validity: PlanValidity = {
+      valid: false,
+      horizonDependent: true,
+      violations: [
+        { kind: 'budget', day: 3, text: 'fest' },
+        { kind: 'budget', day: 9, text: 'unter Annahme', assumed: true },
+        { kind: 'return', day: 10, text: 'unter Annahme', assumed: true },
+      ],
+      safetyViolations: [],
+    };
+    expect(firmViolations(validity).map((v) => v.text)).toEqual(['fest']);
+    expect(assumedViolations(validity)).toHaveLength(2);
   });
 });

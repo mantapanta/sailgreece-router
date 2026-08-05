@@ -16,6 +16,7 @@ import { AdvancedMarker, Map, useMap } from '@vis.gl/react-google-maps';
 import type { Ampel } from '../../domain/schema/common.ts';
 import { AMPEL_GRAPHIC_HEX } from '../tokens.ts';
 import { Polyline } from './Polyline.tsx';
+import { SeamarkLayer } from './SeamarkLayer.tsx';
 import type { StagePoint } from '../mapPath.ts';
 
 /**
@@ -84,7 +85,21 @@ export function StageMap({
         fullscreenControl
       >
         <FitToStage path={path} />
-        <Polyline path={path} strokeColor={lineColor} strokeWeight={3} zIndex={20} />
+        {/* Seezeichen immer an: die Etappenkarte ist auf ihren Ausschnitt
+            gezoomt — genau der Massstab, in dem Tonnen und Feuer der
+            Ansteuerung sichtbar werden. Ein Toggle wäre hier nur UI. */}
+        <SeamarkLayer />
+        {/* Fahrtrichtungspfeile (Feedback 2026-08-05): die Punktnummern geben
+            die Reihenfolge, aber erst der Pfeil macht die Richtung auf einen
+            Blick lesbar — gerade wenn Hin- und Rücketappe desselben Törns
+            dieselbe Strecke nutzen. */}
+        <Polyline
+          path={path}
+          strokeColor={lineColor}
+          strokeWeight={3}
+          directionArrows
+          zIndex={20}
+        />
 
         {points.map((p) =>
           p.kind === 'platz' ? (
@@ -115,7 +130,11 @@ export function StageMap({
       <p className="beschreibung stage-map-legende">
         {points.length} Punkte, davon {wegpunkte}{' '}
         {wegpunkte === 1 ? 'Wegpunkt' : 'Wegpunkte'} — dieselben Nummern wie in der
-        Spalte <strong>Punkt</strong> der Rechnung.
+        Spalte <strong>Punkt</strong> der Rechnung. Seezeichen ©{' '}
+        <a href="https://www.openseamap.org" target="_blank" rel="noreferrer">
+          OpenSeaMap
+        </a>
+        -Mitwirkende (CC-BY-SA), keine verlässlichen Tiefen.
       </p>
     </div>
   );

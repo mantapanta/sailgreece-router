@@ -14,9 +14,9 @@ import { useQuery } from '@tanstack/react-query';
 import { loadLibraryBundle } from '../adapters/firestore.ts';
 import { collectLocations, fetchForecastBundle } from '../adapters/openMeteo.ts';
 import { assessPlanning } from '../domain/assess.ts';
-import { completePlan, type Pin } from '../domain/solver.ts';
+import { completePlan, planKey, type Pin } from '../domain/solver.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
-import type { Plan } from '../domain/schema/plan.ts';
+import { planOutdated, type Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
 
 export const STALE_TIME_MS = 3600_000; // ~1 h (FR13)
@@ -124,6 +124,29 @@ export function usePlanningEngine() {
         })),
     [trip.plan],
   );
+
+  /**
+   * Die ZWEITE plan-ändernde Reaktion auf eine Bewertung, so eng gefasst wie
+   * die erste: ein gespeicherter Plan von einem älteren Solver-Stand
+   * (planOutdated) wird VOR Törnbeginn automatisch durch den aktuellen
+   * Vorschlag ersetzt (Skipper-Entscheid 2026-08-05). Ohne den Stempel
+   * überlebte ein Plan des alten Solvers jeden Redeploy — die Fixes waren
+   * deployed und blieben trotzdem unsichtbar, weil die Hauptroute nie neu
+   * berechnet wird. Läuft der Törn schon oder sind Pins gesetzt, bleibt der
+   * Plan stehen und die DayView bietet die Neuberechnung sichtbar an.
+   */
+  useEffect(() => {
+    if (
+      trip.plan &&
+      planOutdated(trip.plan) &&
+      currentDay === 1 &&
+      pins.length === 0 &&
+      assessment?.proposal &&
+      planKey(assessment.proposal.plan) !== planKey(trip.plan)
+    ) {
+      dispatch({ type: 'REFRESH_OUTDATED', plan: assessment.proposal.plan });
+    }
+  }, [trip.plan, currentDay, pins, assessment?.proposal, dispatch]);
 
   /**
    * FR28 — the skipper sets a day's target; the rest of the trip is recomputed

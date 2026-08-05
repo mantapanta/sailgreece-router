@@ -1558,7 +1558,10 @@ table.shelter-table tr.sektor-inaktiv td {
   cursor: pointer;
 }
 
-.alt-route button.secondary {
+/* Verschmelzung Optionsraum + Alternativen: auch die Options-Zeile trägt
+   jetzt den Vorschau-Umschalter — gleiche Zweitrangigkeit wie drüben. */
+.alt-route button.secondary,
+.option-row button.secondary {
   background: transparent;
   color: var(--navy);
   border: 1px solid var(--navy-soft);

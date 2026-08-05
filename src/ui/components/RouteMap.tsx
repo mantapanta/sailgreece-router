@@ -95,13 +95,17 @@ export function RouteMap({
       >
         <FitToRoute paths={paths.map((p) => p.path)} />
         {/* Gestrichelt wie auf der grossen Karte: die Alternative ist ein
-            Vorschlag, keine gefahrene Strecke. */}
+            Vorschlag, keine gefahrene Strecke. Mit Fahrtrichtungspfeilen
+            (Feedback 2026-08-05): die Runde läuft teils über dieselben
+            Etappen hin und zurück, und die EINE Routenfarbe der Vorschau kann
+            die Richtung nicht sagen — die Pfeile tun es. */}
         {paths.map((p) => (
           <Polyline
             key={`alt-line-${p.day}`}
             path={p.path}
             strokeColor={color}
             dashed
+            directionArrows
             strokeWeight={4}
             zIndex={20}
           />

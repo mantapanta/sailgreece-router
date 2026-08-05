@@ -1,11 +1,13 @@
 /**
  * F1 — map & briefing picture (FR1-FR4).
  *
- * The map shows the ROUND TRIP (FR2): the distance already sailed as a solid
- * green line, the planned rest as a dashed line in the rest-trip light's colour,
- * and every stage numbered at its day target. Ampel markers appear only for the
- * current island and today's target island (FR1) — what matters is which
- * harbour we enter today, not what happens in five days.
+ * The map shows the ROUND TRIP (FR2): Hinweg und Rückweg in ZWEI Farben mit
+ * Fahrtrichtungspfeilen (Feedback 2026-08-05 — Hin und Rück laufen teils über
+ * dieselben Etappen und waren einfarbig nicht unterscheidbar), gefahren als
+ * durchgezogene, geplant als gestrichelte Linie, and every stage numbered at
+ * its day target. Die Rest-Trip-Ampel steht als Badge in der Legende. Ampel
+ * markers appear only for the current island and today's target island (FR1) —
+ * what matters is which harbour we enter today, not what happens in five days.
  *
  * Google Maps via @vis.gl/react-google-maps 1.x: AdvancedMarker for pins,
  * numbers and rotated wind arrows; dashed lines via the symbol-repeat
@@ -19,8 +21,9 @@ import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-m
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
-import { AMPEL_GRAPHIC_HEX, MAP_LINE_SAILED } from '../tokens.ts';
+import { AMPEL_GRAPHIC_HEX, HIN_LINE_COLOR, RUECK_LINE_COLOR } from '../tokens.ts';
 import { Polyline } from '../components/Polyline.tsx';
+import { SeamarkLayer } from '../components/SeamarkLayer.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
 import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
 import { type BarbPoint, windFieldFor } from '../windField.ts';
@@ -29,6 +32,22 @@ import { altRouteColor } from '../altRouteColors.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
 
+/**
+ * Hin- und Rückweg in ZWEI Farben (Feedback 2026-08-05): der Round-Trip nutzt
+ * teils dieselben Etappen in beide Richtungen, und einfarbig war auf der Karte
+ * nicht lesbar, welche Linie hin und welche zurück meint. Die Trennlinie ist
+ * `PlanAssessment.turnDay` (Etappen bis einschliesslich Wendetag = Hinweg).
+ *
+ * Gefahren vs. geplant bleibt als durchgezogen vs. gestrichelt kodiert; die
+ * Rest-Trip-Ampel, die vorher die Linienfarbe stellte, war ohnehin EIN
+ * Aggregat für alle Rest-Linien und steht jetzt allein im Legenden-Badge.
+ * Beide Farben meiden Grün/Gelb/Rot (Ampel) und die Alternativ-Farben
+ * (altRouteColors.ts) — eine Richtung, die aussieht wie ein Urteil oder wie
+ * eine Alternative, wäre nicht mehr als Richtung lesbar. Weil Blau/Magenta
+ * für Farbfehlsichtige zusammenfallen können, tragen die Linien zusätzlich
+ * Fahrtrichtungspfeile (Polyline.tsx). Die Farbwerte leben in tokens.ts
+ * (einzige TS-Farbquelle).
+ */
 /**
  * Abstand, um den eine Windfieder gegen die Windrichtung vom Platz weggesetzt
  * wird (in Breitengrad, ca. 3,5 sm). Die Fieder sitzt damit LUVSEITIG des
@@ -143,6 +162,12 @@ export function MapView({
    */
   const [showWind, setShowWind] = useState(true);
   /**
+   * Seezeichen-Overlay (OpenSeaMap). Transienter View-State wie die
+   * Windfiedern — Standard AN, weil die Ebene transparent ist und erst beim
+   * Hineinzoomen sichtbar wird; sie kostet das Besprechungsbild nichts.
+   */
+  const [showSeamarks, setShowSeamarks] = useState(true);
+  /**
    * FEEDBACK 2026-08-05: die Alternativ-Routen waren auf der Karte unsichtbar.
    * Jetzt sind sie EINBLENDBAR — gestrichelt, jede in ihrer Farbe (dieselbe
    * wie in der Vorschau der Tagesansicht, altRouteColors.ts). Transienter
@@ -197,8 +222,18 @@ export function MapView({
   );
 
   const nowIdx = useMemo(() => hourIndexAt(Date.now(), snapshot.times), [snapshot.times]);
-  /** Colour of the rest-trip line follows the FR2 light. */
-  const restColor = AMPEL_GRAPHIC_HEX[assessment.restTripAmpel];
+
+  /**
+   * Wendetag der Hauptroute — Domänenwert (AD-2), hier nur gelesen. Null ohne
+   * Segeltage; dann ist alles Hinweg-Farbe, und die Legende lässt den
+   * Wende-Hinweis weg statt einen zu erfinden.
+   */
+  const turnDay = main?.turnDay ?? null;
+  const turnIsland =
+    turnDay === null
+      ? null
+      : (sailingStages.find((s) => s.day === turnDay)?.toIslandId ?? null);
+  const isRueckweg = (stageDay: number) => turnDay !== null && stageDay > turnDay;
 
   const endMarkers = useMemo(
     () => stageEndMarkers(sailingStages, legsById, snapshot),
@@ -267,15 +302,22 @@ export function MapView({
         <span className="versal">Round-Trip</span>
         <div className="legend">
           <span>
-            <span className="legend-line solid" style={{ background: MAP_LINE_SAILED }} />
-            gefahren
+            <span className="legend-line solid" style={{ background: HIN_LINE_COLOR }} />
+            Hinweg
           </span>
           <span>
-            <span className="legend-line dashed" style={{ borderColor: restColor }} />
-            Rest-Trip
+            <span className="legend-line solid" style={{ background: RUECK_LINE_COLOR }} />
+            Rückweg
           </span>
           <AmpelBadge ampel={assessment.restTripAmpel} />
         </div>
+        <span className="beschreibung">
+          Durchgezogen = gefahren, gestrichelt = geplant; Pfeile zeigen die
+          Fahrtrichtung.
+          {turnDay !== null && turnIsland && (
+            <> Wende: {islandName(turnIsland)} (Tag {turnDay}).</>
+          )}
+        </span>
         <label className="wind-toggle">
           <input
             type="checkbox"
@@ -309,6 +351,24 @@ export function MapView({
               )}
             </span>
           </div>
+        )}
+        <label className="wind-toggle">
+          <input
+            type="checkbox"
+            checked={showSeamarks}
+            onChange={(e) => setShowSeamarks(e.target.checked)}
+          />
+          Seezeichen (OpenSeaMap)
+        </label>
+        {showSeamarks && (
+          <span className="beschreibung">
+            Tonnen, Leuchtfeuer, Häfen ab Zoomstufe&nbsp;8 — ©{' '}
+            <a href="https://www.openseamap.org" target="_blank" rel="noreferrer">
+              OpenSeaMap
+            </a>
+            -Mitwirkende (CC-BY-SA). Keine verlässlichen Tiefen — Pilotage nach
+            Revierführer.
+          </span>
         )}
         {assessment.alternatives.length > 0 && (
           <div className="alt-toggles">
@@ -425,6 +485,11 @@ export function MapView({
             mapTypeId="hybrid"
             gestureHandling="greedy"
           >
+            {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
+                Google-Maps-Architektur immer unter Markern und Polylinien —
+                die Ebene kann Route und Ampeln nie zudecken. */}
+            {showSeamarks && <SeamarkLayer />}
+
             {/* Eingeblendete Alternativ-Routen: gestrichelt in ihrer Farbe,
                 UNTER der Hauptroute (zIndex) — sie sind Vergleichsbild, nicht
                 Plan. Wo Alternative und Hauptroute dieselbe Etappe nutzen,
@@ -444,6 +509,7 @@ export function MapView({
                       path={path}
                       strokeColor={altRouteColor(i)}
                       dashed
+                      directionArrows
                       strokeWeight={3}
                       zIndex={12}
                     />
@@ -451,24 +517,33 @@ export function MapView({
                 });
             })}
 
-            {/* FR2 — round-trip overlay: sailed solid green, rest dashed in the
-                rest-trip light's colour. One polyline per stage, so a single
-                stage can be highlighted on hover. */}
+            {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
+                gefahren durchgezogen, geplant gestrichelt, Pfeile in
+                Fahrtrichtung. One polyline per stage, so a single stage can be
+                highlighted on hover. Der Rückweg liegt ÜBER dem Hinweg und um
+                die halbe Strichperiode versetzt: wo beide dieselbe Etappe
+                nutzen, scheint der Hinweg durch die Lücken der oberen
+                Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
+                Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
+                dashOffset). */}
             {sailingStages.map((stage) => {
               const path = stagePath(stage, legsById, snapshot);
               if (path.length < 2) return null;
               const isPast = stage.day < day;
+              const rueck = isRueckweg(stage.day);
               return (
                 <Polyline
                   key={`line-${stage.day}`}
                   path={path}
-                  strokeColor={isPast ? MAP_LINE_SAILED : restColor}
+                  strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
                   dashed={!isPast}
+                  dashOffset={rueck ? '9px' : undefined}
+                  directionArrows
                   // Kräftiger als bisher: über dem Satellitenbild geht eine
                   // 3-px-Linie im Blau der Ägäis unter (dazu der helle Saum
                   // in Polyline.tsx).
                   strokeWeight={hoverDay === stage.day ? 6 : 4}
-                  zIndex={hoverDay === stage.day ? 60 : 20}
+                  zIndex={hoverDay === stage.day ? 60 : rueck ? 21 : 20}
                 />
               );
             })}

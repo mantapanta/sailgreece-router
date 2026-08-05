@@ -399,7 +399,7 @@ describe('Entscheidungspunkte — Vorwarnung statt Nachruf', () => {
     routeId: 'sued', name: 'Süd-Route', state: 'schliesst', closesOnDay: 7,
     ampel: 'gruen', legAssessments: [], reasons: [],
     turnIslandId: 'fern', reachNm: 100, costLevel: 'none',
-    costNote: null, plan: null, turnDay: 3, ...over,
+    costNote: null, plan: null, turnDay: 3, previewIndex: null, ...over,
   });
   const ppr = {
     latestReturnStartDay: null, remainingDistanceNm: null,

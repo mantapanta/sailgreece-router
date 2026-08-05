@@ -304,6 +304,16 @@ export interface RouteOptionAssessment {
   plan: Plan | null;
   /** Tag, an dem dieser Plan den Wendepunkt erreicht (früher = mehr Luft). */
   turnDay: number | null;
+  /**
+   * Verschmelzung Optionsraum + Alternativ-Routen: Index der ansehbaren
+   * Alternative zu `plan` in `Assessment.alternatives`. Vorschau, Kartenfarbe
+   * und Übernahme laufen über DIESEN Eintrag — Tagesansicht und Karte meinen
+   * dieselbe Route in derselben Farbe, und angesehen wird exakt der Plan, der
+   * übernommen würde (AD-3). Null, wenn kein Plan existiert — oder wenn der
+   * Plan der aktuellen Hauptroute entspricht (dann gibt es nichts ANDERES
+   * anzusehen).
+   */
+  previewIndex: number | null;
 }
 
 export interface DayOption {
@@ -379,6 +389,16 @@ export interface PlanAssessment {
   /** Variant the outbound part follows and the turning point (display). */
   variantId: string;
   turnIslandId: string;
+  /**
+   * Tag, an dem DIESE Kette ihren fernsten Punkt erreicht — die Trennlinie
+   * zwischen Hin- und Rückweg: Etappen bis einschliesslich `turnDay` sind
+   * Hinweg, alles danach Rückweg (Feedback 2026-08-05: die Karte muss die
+   * beiden unterscheidbar zeichnen). Aus der eigenen Etappenfolge abgeleitet
+   * (solver.planTurnDay), nicht aus `turnIslandId` — der kann beim
+   * Hauptrouten-Assessment vom aktuellen Solver-Vorschlag stammen und muss in
+   * dieser Kette nicht vorkommen. Null ohne Segeltage.
+   */
+  turnDay: number | null;
   /** Relaxation level the solver needed ('none' = nothing relaxed). */
   relaxedTo: string;
   /**
@@ -422,7 +442,14 @@ export interface Assessment {
    * route, never an automatic replacement for it.
    */
   proposal: PlanAssessment | null;
-  /** FR29 alternatives; the skipper checks one in to make it the main route. */
+  /**
+   * FR29 alternatives; the skipper checks one in to make it the main route.
+   * Verschmolzen mit dem Optionsraum: die Einträge sind die konkreten Pläne
+   * der Optionen (`RouteOptionAssessment.previewIndex` zeigt hierher, dedupliziert
+   * über den Plan-Inhalt, die Hauptroute ausgenommen) plus der FR2-Zeuge,
+   * falls er von keiner Option abgedeckt ist — ein gelbes Licht bleibt
+   * einlösbar (AD-13).
+   */
   alternatives: PlanAssessment[];
   /**
    * FR2 rest-trip light, definition per AD-3:

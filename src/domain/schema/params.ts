@@ -74,6 +74,21 @@ const ParamsObjectSchema = z.object({
   maxLegsPerDay: z.number().int().min(1).max(2).default(1),
 
   /**
+   * Wie viele Doppelschlag-TAGE ein Törn höchstens trägt. Standard 1: der
+   * Doppelschlag ist "eine Ausnahme, kein Normalfall" (Skipper 2026-08-05,
+   * "ein Tag, eine Verbindung") — und eine Ausnahme, die an sechs Tagen
+   * hintereinander greift, ist keine.
+   *
+   * Nötig ZUSÄTZLICH zu maxLegsPerDay, weil die Eskalationsleiter
+   * (solver.ts 'doppelschlag'/'nightLeg') maxLegsPerDay auf 2 hebt: ohne
+   * Törn-Deckel erlaubte die Stufe damit beliebig viele Doppelschlag-Tage,
+   * und die Rangfolge belohnte sie (mehr Inseln vor dem Horizont). Gilt wie
+   * maxLegsPerDay nur für den PLAN — Kapazitätsfragen (packLegsFeasible)
+   * rechnen weiter mit dem, was das Schiff kann.
+   */
+  doppelschlagMaxPerTrip: z.number().int().min(0).default(1),
+
+  /**
    * Wie viele Tage VORHER eine Option gemeldet wird, die zu verfallen droht.
    *
    * Eine Option, die heute schliesst, ist keine Entscheidung mehr, sondern eine
@@ -199,9 +214,10 @@ const ParamsObjectSchema = z.object({
   stageHoursBandMinH: z.number().min(0).default(5),
   stageHoursBandMaxH: z.number().positive().default(7),
 
-  // --- solver (FR29, AD-13) -------------------------------------------------------
-  /** Max alternatives offered besides the main route. */
-  alternativesMax: z.number().int().min(0).default(3),
+  // (alternativesMax entfiel mit der Verschmelzung von Optionsraum und
+  //  Alternativ-Routen: je Option ihr Plan, dedupliziert — kein eigener
+  //  Suchraum mehr, der zu kappen wäre. Persistierte Werte werden von zod
+  //  weiterhin klaglos verworfen.)
 
   // --- position derivation ----------------------------------------------------
   /**

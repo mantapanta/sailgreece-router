@@ -11,8 +11,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   completePlan,
-  deriveAlternatives,
   existsValidPlan,
+  planKey,
   relaxParams,
   validatePlan,
 } from '../solver.ts';
@@ -234,14 +234,20 @@ describe('regression: a yellow light is always cashable (AD-13 invariant)', () =
     );
     const witness = existsValidPlan(snapshot, 'athen');
     expect(witness).not.toBeNull();
-    const alts = deriveAlternatives(snapshot, 'athen', witness, idle);
-    expect(alts.length).toBeGreaterThan(0);
     const assessment = assessPlanning({
       ...snapshot,
       trip: { ...snapshot.trip, plan: idle },
     });
     expect(assessment.restTripAmpel).toBe('gelb');
     expect(assessment.alternatives.length).toBeGreaterThan(0);
+    // Der Zeugen-Plan selbst steht in den Alternativen — entweder als
+    // inhaltsgleicher Options-Plan oder angehängt (Verschmelzung mit dem
+    // Optionsraum): das Gelb ist einlösbar, nicht nur behauptet.
+    expect(
+      assessment.alternatives.some(
+        (a) => planKey(a.plan) === planKey(witness!.plan),
+      ),
+    ).toBe(true);
   });
 });
 

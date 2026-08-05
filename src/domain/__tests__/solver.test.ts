@@ -4,11 +4,12 @@ import {
   RELAXATION_ORDER,
   buildCandidates,
   completePlan,
-  deriveAlternatives,
   existsValidPlan,
   legLibrary,
   planFromPacking,
+  planKey,
   planMetricsFor,
+  planTurnDay,
   preferred,
   relaxParams,
   validatePlan,
@@ -459,9 +460,12 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
   });
 
   it('die Alternativen halten sich an dieselbe Vorgabe', () => {
-    const snapshot = roundTripSnapshot();
-    const witness = existsValidPlan(snapshot, 'athen');
-    for (const alt of deriveAlternatives(snapshot, 'athen', witness)) {
+    // Alternativen sind seit der Verschmelzung mit dem Optionsraum die
+    // Options-Pläne selbst — die kommen aus completePlan und tragen dessen
+    // Vorgabe mit.
+    const assessment = assessPlanning(roundTripSnapshot());
+    expect(assessment.alternatives.length).toBeGreaterThan(0);
+    for (const alt of assessment.alternatives) {
       for (const stage of stagesOf(alt.plan)) {
         expect(stage.legIds).toHaveLength(1);
       }
@@ -473,14 +477,12 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
    * Alternative in der Liste. Der "(bleiben)"-Kandidat ist im Suchraum
    * legitim (FR18), aber ein Round-Trip ohne eine einzige Segeletappe ist
    * keine Alternative — dieselbe Regel, die existsValidPlan an den Zeugen
-   * anlegt.
+   * anlegt. Gilt unverändert für die aus den Optionen abgeleitete Liste.
    */
   it('bietet keinen Round-Trip ohne Segeletappen als Alternative an', () => {
-    const snapshot = roundTripSnapshot();
-    const witness = existsValidPlan(snapshot, 'athen');
-    const alts = deriveAlternatives(snapshot, 'athen', witness);
-    expect(alts.length).toBeGreaterThan(0);
-    for (const alt of alts) {
+    const assessment = assessPlanning(roundTripSnapshot());
+    expect(assessment.alternatives.length).toBeGreaterThan(0);
+    for (const alt of assessment.alternatives) {
       expect(stagesOf(alt.plan).length).toBeGreaterThan(0);
     }
   });
@@ -524,6 +526,182 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
     expect(relaxParams(base, 'hardMax').maxLegsPerDay).toBe(1);
     expect(relaxParams(base, 'doppelschlag').maxLegsPerDay).toBe(2);
     expect(relaxParams(base, 'nightLeg').maxLegsPerDay).toBe(2);
+  });
+
+  it('der Törn-Deckel überlebt jede Stufe der Leiter', () => {
+    const base = roundTripSnapshot().params;
+    expect(base.doppelschlagMaxPerTrip).toBe(1);
+    for (const level of RELAXATION_ORDER) {
+      expect(relaxParams(base, level).doppelschlagMaxPerTrip).toBe(1);
+    }
+  });
+
+  /**
+   * SKIPPER 2026-08-05 — die Ausnahme ist keine Serie: auch wenn die Leiter
+   * den Doppelschlag freigibt, trägt ein Törn höchstens
+   * params.doppelschlagMaxPerTrip Doppelschlag-TAGE. Vorher hob die Stufe
+   * maxLegsPerDay auf 2 und die Rangfolge belohnte die Serie (mehr Inseln vor
+   * dem Horizont) — heraus kamen sechs Doppelschlag-Tage hintereinander.
+   */
+  it('höchstens EIN Doppelschlag-Tag pro Törn, auch auf jeder Stufe der Leiter', () => {
+    // Kurze Etappen und ein zu enger Rahmen: der Packer DÜRFTE beliebig
+    // doppeln, der Deckel lässt genau einen Tag zu.
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    for (const level of RELAXATION_ORDER) {
+      const relaxed = { ...snapshot, params: relaxParams(snapshot.params, level) };
+      const legs = legLibrary(snapshot);
+      const chain = [
+        legs.get('athen--mitte')!,
+        legs.get('mitte--sued')!,
+        legs.get('sued--mitte')!,
+        legs.get('mitte--athen')!,
+      ];
+      // Vier Etappen in zwei Tagen bräuchten ZWEI Doppelschlag-Tage.
+      const two = packLegs(chain, 1, 2, relaxed, { startIslandId: 'athen' });
+      expect(two.verdict).toBe('infeasible');
+      // In drei Tagen reicht EIN Doppelschlag-Tag — den erlaubt der Deckel
+      // (nur auf Stufen, deren maxLegsPerDay ihn überhaupt freigibt).
+      if (relaxed.params.maxLegsPerDay >= 2) {
+        const three = packLegs(chain, 1, 3, relaxed, { startIslandId: 'athen' });
+        expect(three.verdict).not.toBe('infeasible');
+        const byDay = new Map<number, number>();
+        for (const p of three.packed) {
+          byDay.set(p.day, (byDay.get(p.day) ?? 0) + 1);
+        }
+        const doubleDays = [...byDay.values()].filter((n) => n > 1).length;
+        expect(doubleDays).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('Kapazitätsfragen bleiben ungedeckelt — der Heimweg darf doppeln', () => {
+    // Dieselben vier kurzen Etappen in zwei Tagen: als PLAN unzulässig (ein
+    // Doppelschlag-Tag reicht nicht), als KAPAZITÄTSFRAGE machbar.
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    const legs = legLibrary(snapshot);
+    const chain = [
+      legs.get('athen--mitte')!,
+      legs.get('mitte--sued')!,
+      legs.get('sued--mitte')!,
+      legs.get('mitte--athen')!,
+    ];
+    expect(packLegsFeasible(chain, 1, 2, snapshot)).not.toBe('infeasible');
+  });
+});
+
+/**
+ * ZIELMODELL v2, Nachtrag 2026-08-05 — der Rahmen wird genutzt: ein Plan, der
+ * früh heimkommt und die letzten Tage an der Basis liegt, ist nicht der Törn,
+ * der gewollt ist. Fünf Trailing-Hafentage waren vorher exakt KEIN Befund
+ * (nicht über der Notgrenze 5), und die Rangfolge belohnte sie noch, weil
+ * Basistage keine Annahme-Befunde tragen.
+ */
+describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
+  it('mehr als harbourDaysTargetMax Trailing-Hafentage an der Basis sind ein Befund', () => {
+    const snapshot = roundTripSnapshot({ days: 14 });
+    snapshot.params = {
+      ...snapshot.params,
+      tripLengthDays: 8,
+      returnDeadlineDate: '2026-08-15', // Törntag 8
+      pickupDate: '2026-08-10', // Törntag 3, auf 'sued' erreichbar
+    };
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeStage(3, ['sued--mitte'], 'mitte'),
+      makeStage(4, ['mitte--athen'], 'athen'),
+      makeHarbourDay(5, 'athen'),
+      makeHarbourDay(6, 'athen'),
+      makeHarbourDay(7, 'athen'),
+      makeHarbourDay(8, 'athen'),
+    ]);
+    const validity = validatePlan(plan, snapshot);
+    expect(
+      validity.violations.some(
+        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
+      ),
+    ).toBe(true);
+    // Strukturell, nie Safety: liegen bleiben ist sicher (FR18).
+    expect(validity.safetyViolations).toHaveLength(0);
+  });
+
+  it('bis zu harbourDaysTargetMax Tage am Ende bleiben legitim (Puffer + Ruhetag)', () => {
+    const snapshot = roundTripSnapshot({ days: 14 });
+    snapshot.params = {
+      ...snapshot.params,
+      tripLengthDays: 6,
+      returnDeadlineDate: '2026-08-13', // Törntag 6
+      pickupDate: '2026-08-10',
+    };
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeStage(3, ['sued--mitte'], 'mitte'),
+      makeStage(4, ['mitte--athen'], 'athen'),
+      makeHarbourDay(5, 'athen'),
+      makeHarbourDay(6, 'athen'),
+    ]);
+    const validity = validatePlan(plan, snapshot);
+    expect(
+      validity.violations.some(
+        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
+      ),
+    ).toBe(false);
+  });
+
+  it('Hafentage unterwegs zählen nicht als Trailing-Halde', () => {
+    const snapshot = roundTripSnapshot({ days: 14 });
+    snapshot.params = {
+      ...snapshot.params,
+      tripLengthDays: 7,
+      returnDeadlineDate: '2026-08-14', // Törntag 7
+      pickupDate: '2026-08-10',
+    };
+    // Drei Hafentage MITTEN im Törn (Wetter abwarten ist legitim), nur einer
+    // am Ende: kein Trailing-Befund.
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeHarbourDay(3, 'sued'),
+      makeHarbourDay(4, 'sued'),
+      makeStage(5, ['sued--mitte'], 'mitte'),
+      makeStage(6, ['mitte--athen'], 'athen'),
+      makeHarbourDay(7, 'athen'),
+    ]);
+    const validity = validatePlan(plan, snapshot);
+    expect(
+      validity.violations.some(
+        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
+      ),
+    ).toBe(false);
+  });
+
+  it('planMetricsFor misst den längsten Hafentage-Lauf ab dem aktuellen Tag', () => {
+    const snapshot = roundTripSnapshot();
+    const metrics = planMetricsFor(snapshot);
+    const mk = (days: ReturnType<typeof makeStage>[]): SolveResult => ({
+      plan: makePlan(days),
+      validity: { valid: true, horizonDependent: false, violations: [], safetyViolations: [] },
+      relaxedTo: 'none',
+      variantId: 'test',
+      turnIslandId: 'sued',
+    });
+    const halde = mk([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--athen'], 'athen'),
+      makeHarbourDay(3, 'athen'),
+      makeHarbourDay(4, 'athen'),
+      makeHarbourDay(5, 'athen'),
+    ]);
+    expect(metrics(halde).maxHarbourRun).toBe(3);
+    const verteilt = mk([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeHarbourDay(2, 'mitte'),
+      makeStage(3, ['mitte--sued'], 'sued'),
+      makeStage(4, ['sued--mitte'], 'mitte'),
+      makeStage(5, ['mitte--athen'], 'athen'),
+    ]);
+    expect(metrics(verteilt).maxHarbourRun).toBe(1);
   });
 });
 
@@ -852,5 +1030,74 @@ describe('solver — Round Trip statt Pendeln', () => {
     const gewinner = metrics(hin).clockwise ? hin : zurueck;
     expect(preferred(hin, zurueck, metrics)).toBe(gewinner);
     expect(preferred(zurueck, hin, metrics)).toBe(gewinner);
+  });
+});
+
+describe('solver — planTurnDay (Hin-/Rückweg-Trennlinie)', () => {
+  it('nennt den Tag des ersten Anlaufs der südlichsten Insel', () => {
+    const snapshot = roundTripSnapshot();
+    const plan = makePlan([
+      makeStage(1, ['athen--mitte'], 'mitte'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeHarbourDay(3, 'sued'),
+      makeStage(4, ['sued--mitte'], 'mitte'),
+      makeStage(5, ['mitte--athen'], 'athen'),
+    ]);
+    // sued (37.3° N) liegt südlich von mitte und athen — Tag 2 ist die Wende;
+    // der Hafentag AN der Wende verschiebt sie nicht.
+    expect(planTurnDay(plan, snapshot)).toBe(2);
+  });
+
+  it('bei mehrfachem Anlauf des Wendepunkts zählt der ERSTE (Erst-Anlauf-Konvention der Karte)', () => {
+    const snapshot = roundTripSnapshot();
+    const plan = makePlan([
+      makeStage(1, ['athen--sued'], 'sued'),
+      makeStage(2, ['sued--mitte'], 'mitte'),
+      makeStage(3, ['mitte--sued'], 'sued'),
+      makeStage(4, ['sued--athen'], 'athen'),
+    ]);
+    expect(planTurnDay(plan, snapshot)).toBe(1);
+  });
+
+  it('ohne Segeltage gibt es keine Wende', () => {
+    const snapshot = roundTripSnapshot();
+    const plan = makePlan([makeHarbourDay(1, 'athen')]);
+    expect(planTurnDay(plan, snapshot)).toBe(null);
+  });
+});
+
+/**
+ * Verschmelzung Optionsraum + Alternativ-Routen (Feedback 2026-08-05): die
+ * Alternativen SIND die Pläne der Optionen. `previewIndex` verbindet beide —
+ * angesehen wird exakt der Plan, der übernommen würde (AD-3), und ein Plan,
+ * der der Hauptroute entspricht, wird nicht noch einmal als "andere" Route
+ * angeboten.
+ */
+describe('Verschmelzung: Optionen tragen ihre Alternative', () => {
+  it('jede Option mit Plan zeigt auf eine Alternative mit GENAU diesem Plan', () => {
+    const assessment = assessPlanning(roundTripSnapshot());
+    expect(assessment.routeOptions.some((o) => o.previewIndex !== null)).toBe(true);
+    for (const opt of assessment.routeOptions) {
+      if (opt.previewIndex === null) continue;
+      const alt = assessment.alternatives[opt.previewIndex]!;
+      expect(planKey(alt.plan)).toBe(planKey(opt.plan!));
+    }
+  });
+
+  it('eine Option, deren Plan die Hauptroute IST, bekommt keine Vorschau', () => {
+    const snapshot = roundTripSnapshot();
+    const first = assessPlanning(snapshot);
+    const opt = first.routeOptions.find((o) => o.plan !== null)!;
+    const adopted = assessPlanning({
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: opt.plan! },
+    });
+    const same = adopted.routeOptions.find((o) => o.routeId === opt.routeId)!;
+    expect(same.plan).not.toBeNull();
+    expect(same.previewIndex).toBeNull();
+    // Und keine Alternative behauptet denselben Plan noch einmal.
+    for (const alt of adopted.alternatives) {
+      expect(planKey(alt.plan)).not.toBe(planKey(opt.plan!));
+    }
   });
 });
