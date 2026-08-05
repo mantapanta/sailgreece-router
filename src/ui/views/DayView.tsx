@@ -149,8 +149,8 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
       </div>
       <details className="beschreibung lesehilfe">
         <summary>Wie sind die Werte zu lesen?</summary>
-        Windrichtung rechtweisend und <strong>kommend aus</strong> (AD-6). TWA ist
-        der Winkel zwischen anliegendem Kurs und Wind: 0° von vorn, 180° von
+        Windrichtung rechtweisend und <strong>kommend aus</strong>. TWA ist der
+        Winkel zwischen anliegendem Kurs und Wind: 0° von vorn, 180° von
         achtern. Maßgeblich für die Ampel ist die schlechteste Stunde, nicht der
         Durchschnitt.
         {worstCase &&
@@ -843,7 +843,7 @@ export function DayView({
           ich dafür Zeit. */}
       {assessment.routeOptions.length > 0 && (
         <section className="section">
-          <span className="versal">Optionsraum (FR9/FR18)</span>
+          <span className="versal">Optionsraum</span>
           <h2>Wie weit kommen wir noch?</h2>
           <p className="beschreibung">
             Reichweite, Preis und Frist je Route. Eine Option schliesst an dem Tag,

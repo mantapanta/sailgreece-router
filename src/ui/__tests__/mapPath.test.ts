@@ -80,6 +80,7 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
         pointPassages: [],
       },
     ],
+    reachableIslandIds: [],
     pinned: false,
     stopHoursPerStop: 3,
     stopHoursTotal: 0,
