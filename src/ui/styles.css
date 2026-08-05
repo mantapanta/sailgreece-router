@@ -103,10 +103,6 @@ body {
   justify-content: space-between;
 }
 
-.notice-bar .warnhinweis {
-  letter-spacing: 0.06em;
-}
-
 .datenstand button {
   margin-left: 0.6rem;
   background: transparent;
@@ -448,15 +444,6 @@ hr.hairline,
 .auth-card code {
   font-size: 0.78rem;
   word-break: break-all;
-}
-
-.auth-note {
-  margin: 1.8rem 0 0;
-  padding-top: 1.2rem;
-  border-top: 1px solid var(--hairline);
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.5;
 }
 
 .account-chip {

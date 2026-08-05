@@ -190,12 +190,8 @@ function Shell() {
         <AccountChip />
       </header>
 
-      {/* Mandatory permanent notices: NFR3 + data state (FR13). */}
+      {/* Mandatory permanent notice: data state (FR13). */}
       <div className="notice-bar">
-        <span className="warnhinweis">
-          ⚓ Ersetzt nicht das seemännische Urteil — die App rechnet und
-          vergleicht, der Skipper entscheidet.
-        </span>
         <span className="datenstand">
           Modell {assessment?.model ?? '…'} · Modelllauf{' '}
           {formatStamp(assessment?.modelRunIso ?? null)} · abgerufen{' '}
