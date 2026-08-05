@@ -1,6 +1,10 @@
+---
+baseline_commit: 717c653db433306c4769c8f15771417aae233610
+---
+
 # Story 1.1: Design tokens and two-line header
 
-Status: ready-for-dev
+Status: in-progress
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; no epics.md exists — the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are the source
