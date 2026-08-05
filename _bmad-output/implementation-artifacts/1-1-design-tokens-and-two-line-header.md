@@ -85,7 +85,10 @@ Karte, Platzdetail, stage editing, refresh, sign-out.
 4. **One Ampel palette, everywhere.** `AMPEL_CSS_COLOR` in `AmpelBadge.tsx` (`#3a7d44/…`) and
    `REST_LINE_COLOR`/`SAILED_LINE_COLOR` in `MapView.tsx` (`#3f7d4f/…`) are deleted; MapView
    consumes `AMPEL_GRAPHIC_HEX` (rest-trip line + marker pins) and `MAP_LINE_SAILED` from
-   `tokens.ts`. `altRouteColors.ts` re-exports/consumes `ALT_ROUTE_COLORS` from `tokens.ts`.
+   `tokens.ts`. **`StageMap.tsx` (FR30 stage map, imported by DayView) is the SECOND importer
+   of `AMPEL_CSS_COLOR`** — it swaps that import for `AMPEL_GRAPHIC_HEX` from `../tokens.ts`
+   (its stage line is a map line, so the graphic variant applies); forgetting it breaks the
+   build. `altRouteColors.ts` re-exports/consumes `ALT_ROUTE_COLORS` from `tokens.ts`.
    `WindBarb.tsx` default stroke is `INK_PRIMARY` (`#23211e`), not `#1b2a41`. `Polyline.tsx`
    casing default is `MAP_LINE_CASING`. Values: gruen `#1a9d5c`, gelb `#e09112` (graphic
    variant `#b8770c` for dots + lines on light ground and on the map), rot `#d93636`,
@@ -151,8 +154,9 @@ Karte, Platzdetail, stage editing, refresh, sign-out.
     equivalent), each in footnote type.
 
 12. **The old chrome is GONE.** Grep proves no remaining references: `.topbar`, `.brand`,
-    `.notice-bar`, `.datenstand`, `.account-chip` (component AND CSS, including the
-    ≤860px media-query rule), the old header `.tabs` recipe, the uppercase date-range line
+    `.notice-bar`, `.datenstand`, `.account-chip` (component AND CSS — `.topbar` and
+    `.account-chip` each have an extra rule inside the ≤860px media query; both die too),
+    the old header `.tabs` recipe, the uppercase date-range line
     (`formatTripRange` call in App.tsx removed — beware `noUnusedLocals`: also remove the
     import), and the wide "ABMELDEN" button.
 
@@ -165,8 +169,9 @@ Karte, Platzdetail, stage editing, refresh, sign-out.
 14. **Definition of done / non-regression.** (a) `npm test` (vitest) green — all existing
     tests in `src/ui/__tests__/` and `src/domain/**/__tests__/` untouched and passing;
     (b) `npm run build` (`tsc --noEmit && vite build`) succeeds; (c) manual smoke via
-    `npm run dev`: sign-in gate renders, Tagesansicht renders with ControlsBar working,
-    Karte renders with polylines/pins/wind barbs in the new palette, Platzdetail opens and
+    `npm run dev`: sign-in gate renders, Tagesansicht renders with ControlsBar working and
+    the FR30 calc panel's StageMap drawing its stage line, Karte renders with
+    polylines/pins/wind barbs in the new palette, Platzdetail opens and
     "← Zurück" returns, avatar menu signs out; (d) no references to deleted CSS classes
     remain in any `.tsx`; (e) the hygiene greps in Dev Notes § "DoD greps" all come back
     empty; (f) all NEW UI strings are German; no emoji as meaning carriers anywhere.
@@ -189,18 +194,21 @@ Karte, Platzdetail, stage editing, refresh, sign-out.
         constants/file test (AD-2: no component tests).
 
 - [ ] **Task 2 — Re-point all TS color consumers** (AC: 4)
-  - [ ] 2.1 `AmpelBadge.tsx`: delete the `AMPEL_CSS_COLOR` export (MapView is its only
-        importer).
+  - [ ] 2.1 `AmpelBadge.tsx`: delete the `AMPEL_CSS_COLOR` export (TWO importers: MapView
+        and StageMap — both re-pointed below).
   - [ ] 2.2 `MapView.tsx`: delete `REST_LINE_COLOR` and `SAILED_LINE_COLOR`; import
         `AMPEL_GRAPHIC_HEX` and `MAP_LINE_SAILED` from `../tokens.ts`; rest-trip line color =
         `AMPEL_GRAPHIC_HEX[assessment.restTripAmpel]`, sailed = `MAP_LINE_SAILED`, marker
         pins = `AMPEL_GRAPHIC_HEX[ampel]`.
-  - [ ] 2.3 `altRouteColors.ts`: `export { ALT_ROUTE_COLORS } from './tokens.ts'` style
+  - [ ] 2.3 `StageMap.tsx`: swap `import { AMPEL_CSS_COLOR } from './AmpelBadge.tsx'` for
+        `AMPEL_GRAPHIC_HEX` from `../tokens.ts`; `lineColor = AMPEL_GRAPHIC_HEX[ampel]`.
+        Nothing else changes in this file.
+  - [ ] 2.4 `altRouteColors.ts`: `export { ALT_ROUTE_COLORS } from './tokens.ts'` style
         re-point (keep `altRouteColor(index)` helper and its doc comment; values now live in
         tokens.ts only).
-  - [ ] 2.4 `WindBarb.tsx`: default `color = INK_PRIMARY` (import from `../tokens.ts`).
-  - [ ] 2.5 `Polyline.tsx`: default `casingColor = MAP_LINE_CASING`.
-  - [ ] 2.6 Leave the four Google-brand hexes in `SignInView.tsx`'s Google logo SVG
+  - [ ] 2.5 `WindBarb.tsx`: default `color = INK_PRIMARY` (import from `../tokens.ts`).
+  - [ ] 2.6 `Polyline.tsx`: default `casingColor = MAP_LINE_CASING`.
+  - [ ] 2.7 Leave the four Google-brand hexes in `SignInView.tsx`'s Google logo SVG
         untouched — they are Google's logo colors, not design tokens (sanctioned exception).
 
 - [ ] **Task 3 — Rewrite the `styles.css` token layer + legacy alias block** (AC: 1, 2)
@@ -244,8 +252,8 @@ Karte, Platzdetail, stage editing, refresh, sign-out.
         bump `.map-sticky` `top` to `calc(var(--header-h) + 1rem)` so the sticky map no
         longer slides under the sticky header.
   - [ ] 5.5 Delete the `.topbar`, `.brand`, old `.tabs`, `.notice-bar`, `.datenstand`,
-        `.account-chip` CSS blocks including the `.account-chip` rule inside the ≤860px
-        media query.
+        `.account-chip` CSS blocks — including BOTH rules inside the ≤860px media query:
+        the `.account-chip` wrap rule AND the `.topbar` padding rule.
 
 - [ ] **Task 6 — AvatarMenu component** (AC: 9)
   - [ ] 6.1 New `AvatarMenu` (may live in `App.tsx` or `src/ui/components/AvatarMenu.tsx` —
@@ -447,8 +455,9 @@ export const INK_PRIMARY = '#23211e';
 ```
 
 Consumers after this story: `MapView.tsx` (AMPEL_GRAPHIC_HEX, MAP_LINE_SAILED),
-`altRouteColors.ts` (ALT_ROUTE_COLORS), `WindBarb.tsx` (INK_PRIMARY), `Polyline.tsx`
-(MAP_LINE_CASING). `AmpelBadge.tsx` keeps NO color constants (its dots are CSS classes).
+`StageMap.tsx` (AMPEL_GRAPHIC_HEX), `altRouteColors.ts` (ALT_ROUTE_COLORS), `WindBarb.tsx`
+(INK_PRIMARY), `Polyline.tsx` (MAP_LINE_CASING). `AmpelBadge.tsx` keeps NO color constants
+(its dots are CSS classes).
 The map "sailed" green is IDENTICAL to ampel-gruen by design — one green, not two.
 
 ### Legacy → new token mapping (the migration strategy for the 1369-line stylesheet)
@@ -775,11 +784,18 @@ Foundation).
 **`src/ui/components/AmpelBadge.tsx`**
 - CURRENT: renders `.ampel ampel-{ampel}` dot+label (German labels correct); exports
   `AMPEL_CSS_COLOR` with the FIRST divergent palette (`#3a7d44/#d9a441/#b0413e/#9aa5b1`).
-- CHANGES: delete `AMPEL_CSS_COLOR` (only importer is MapView, which moves to tokens.ts).
+- CHANGES: delete `AMPEL_CSS_COLOR` (importers: MapView line 21 AND StageMap line 17 —
+  both move to tokens.ts).
 - PRESERVE: the component itself — markup, labels, the `title` attr (redundant but its
   removal is a later-story concern), the `label?` prop.
 
-**`src/ui/views/MapView.tsx` (561 lines)**
+**`src/ui/components/StageMap.tsx`**
+- CURRENT: FR30 one-day stage map (imported by DayView's calc panel); imports
+  `AMPEL_CSS_COLOR` from AmpelBadge, uses it once: `const lineColor = AMPEL_CSS_COLOR[ampel]`.
+- CHANGES: Task 2.3 import swap only (`AMPEL_GRAPHIC_HEX` from `../tokens.ts`).
+- PRESERVE: everything else — FitToStage, waypoint markers, the `path.length < 2` guard.
+
+**`src/ui/views/MapView.tsx` (560 lines)**
 - CURRENT: `REST_LINE_COLOR` = SECOND divergent palette (`#3f7d4f/#c8952a/#b3423a/#8b8b8b`),
   `SAILED_LINE_COLOR = '#3f7d4f'`; imports `AMPEL_CSS_COLOR` from AmpelBadge for marker
   pins; itinerary sidebar, wind layer, alt-route toggles, `mapId` fallback `'DEMO_MAP_ID'`.
@@ -865,9 +881,9 @@ alias variables — that is the migration design, not a violation.
   live in App.tsx; prefer the component file), optionally
   `src/ui/__tests__/tokens.test.ts`.
 - Modified: `src/ui/styles.css`, `src/app/App.tsx`, `src/ui/components/AmpelBadge.tsx`,
-  `src/ui/components/WindBarb.tsx`, `src/ui/components/Polyline.tsx`,
-  `src/ui/views/MapView.tsx`, `src/ui/views/SignInView.tsx`, `src/ui/altRouteColors.ts`,
-  `index.html`.
+  `src/ui/components/StageMap.tsx`, `src/ui/components/WindBarb.tsx`,
+  `src/ui/components/Polyline.tsx`, `src/ui/views/MapView.tsx`,
+  `src/ui/views/SignInView.tsx`, `src/ui/altRouteColors.ts`, `index.html`.
 - Untouched (verify by diff): everything under `src/domain/`, `src/adapters/`,
   `src/app/tripContext.tsx`, `src/app/planningContext.tsx`, `src/app/usePlanning.ts`,
   `src/app/authContext.tsx`, `src/ui/views/DayView.tsx`, `src/ui/views/PlaceDetailView.tsx`,
