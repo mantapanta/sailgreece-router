@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction: Consumer Warm — SailGreece Router</title>
+<style>
+/* ============================================================
+   DIRECTION 1 — CONSUMER WARM
+   Farbwerte (Hex-Dokumentation)
+   ------------------------------------------------------------
+   Seiten-Hintergrund .......... #eeece7
+   Phone-App-Hintergrund ....... #faf9f7
+   Karten-Oberfläche ........... #ffffff
+   Text primär ................. #23211e
+   Text sekundär ............... #6f6a62
+   Text tertiär / Fußnote ...... #98928a
+   Akzent (Ägäis-Koralle) ...... #f2604d
+   Akzent dunkel (Hover/Text) .. #d94c3a
+   Akzent-Tint (Chip-BG) ....... #fdeeec
+   Ampel Grün .................. #1a9d5c
+   Ampel Grün Tint ............. #e4f5ec
+   Ampel Gelb .................. #e09112
+   Ampel Gelb Tint ............. #fcf3e0
+   Ampel Rot ................... #d93636
+   Ampel Unbewertet ............ #b6b1a9
+   Hairline / Border ........... #ecebe7
+   Bezel ....................... #1c1b19
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #eeece7;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: #23211e;
+  padding: 48px 24px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+.intro { max-width: 860px; margin: 0 auto 44px; }
+.intro .kicker {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #d94c3a; margin-bottom: 10px;
+}
+.intro h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+.intro p { font-size: 15.5px; line-height: 1.55; color: #6f6a62; max-width: 720px; }
+.stage-area {
+  max-width: 980px; margin: 0 auto;
+  display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start; justify-content: center;
+}
+.frame-label {
+  text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #98928a; margin-top: 18px;
+}
+
+/* ---------- iPhone-Rahmen ---------- */
+.phone {
+  width: 406px; background: #1c1b19; border-radius: 54px; padding: 8px;
+  box-shadow: 0 2px 6px rgba(30,25,20,0.18), 0 24px 60px rgba(30,25,20,0.28);
+}
+.phone-screen {
+  background: #faf9f7; border-radius: 46px; overflow: hidden; position: relative;
+}
+.phone.small { width: 346px; border-radius: 46px; }
+.phone.small .phone-screen { border-radius: 39px; }
+.statusbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 28px 4px; font-size: 14px; font-weight: 600;
+}
+.statusbar .sb-icons { display: flex; gap: 5px; align-items: center; }
+.sb-dot { width: 16px; height: 10px; border-radius: 3px; background: #23211e; opacity: 0.85; }
+.sb-dot.thin { width: 20px; }
+
+/* ---------- App-Header ---------- */
+.app-header { padding: 8px 20px 0; }
+.header-row { display: flex; align-items: center; justify-content: space-between; }
+.wordmark { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.wordmark .accent { color: #f2604d; }
+.wordmark .sub { font-weight: 600; color: #98928a; font-size: 12px; letter-spacing: 0; margin-left: 6px; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #f2604d 0%, #e5893c 100%);
+  color: #fff; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.tabs {
+  display: flex; gap: 4px;
+  background: #f0eeea; border-radius: 999px; padding: 3px; width: max-content;
+}
+.tab {
+  padding: 7px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #6f6a62;
+}
+.tab.active {
+  background: #ffffff; color: #23211e;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.08), 0 2px 8px rgba(30,25,20,0.06);
+}
+.refresh {
+  margin-left: auto; align-self: center; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #98928a; font-size: 15px;
+}
+.tabs-row { display: flex; margin-top: 10px; }
+
+/* ---------- Trip-Statuszeile ---------- */
+.trip-status {
+  margin: 14px 20px 0; display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: #6f6a62; line-height: 1.35;
+}
+.trip-status .dot { flex: none; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot.gruen { background: #1a9d5c; }
+.dot.gelb  { background: #e09112; }
+.dot.rot   { background: #d93636; }
+.trip-status b { color: #23211e; font-weight: 600; }
+
+/* ---------- Tageskontext ---------- */
+.day-context { padding: 20px 20px 10px; }
+.day-context .day { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #d94c3a; }
+.day-context .where { font-size: 14px; color: #6f6a62; margin-top: 3px; }
+
+/* ---------- Hero-Etappenkarte ---------- */
+.card {
+  background: #ffffff; border-radius: 20px; margin: 6px 16px 0;
+  box-shadow: 0 1px 2px rgba(30,25,20,0.06), 0 10px 30px rgba(30,25,20,0.08);
+  overflow: hidden;
+}
+.hero-card { padding: 20px; }
+.hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.route-from { font-size: 14px; color: #6f6a62; }
+.route-dest { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin-top: 2px; }
+.route-dest small { display: block; font-size: 14px; font-weight: 500; color: #6f6a62; letter-spacing: 0; margin-top: 4px; }
+.ampel-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 700;
+}
+.ampel-pill.gruen { background: #e4f5ec; color: #147a47; }
+.ampel-pill.gruen .dot { background: #1a9d5c; }
+.ampel-pill.gelb { background: #fcf3e0; color: #a86c09; }
+.ampel-pill.gelb .dot { background: #e09112; }
+.stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: #ecebe7; border-radius: 14px; overflow: hidden; margin-top: 18px;
+}
+.stat { background: #faf9f7; padding: 12px 14px; }
+.stat .label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #98928a; }
+.stat .value { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.stat .value small { font-size: 13px; font-weight: 500; color: #6f6a62; }
+.berth {
+  display: flex; align-items: center; gap: 10px; margin-top: 14px;
+  padding: 12px 14px; background: #faf9f7; border-radius: 14px;
+}
+.berth .icon { font-size: 16px; }
+.berth .text { font-size: 14px; }
+.berth .text b { font-weight: 650; }
+.berth .text span { color: #6f6a62; }
+.berth .dot { margin-left: auto; }
+.cta-row { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.btn-primary {
+  display: block; text-align: center; background: #f2604d; color: #fff;
+  font-size: 16px; font-weight: 700; padding: 15px; border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(242,96,77,0.35);
+}
+.btn-ghost { text-align: center; font-size: 14px; font-weight: 600; color: #d94c3a; padding: 4px; }
+.warn-note {
+  margin-top: 14px; padding: 12px 14px; border-radius: 14px;
+  background: #fcf3e0; color: #7a5306; font-size: 13.5px; line-height: 1.45;
+}
+.warn-note b { font-weight: 700; }
+
+/* ---------- Annahme-Chip ---------- */
+.assumption {
+  margin: 14px 20px 0; display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; color: #6f6a62;
+}
+.assumption .i {
+  width: 16px; height: 16px; border-radius: 50%; background: #f0eeea;
+  color: #98928a; font-size: 10.5px; font-weight: 700; font-style: normal;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+}
+.assumption u { text-decoration: underline; text-decoration-color: #cfcbc4; text-underline-offset: 2px; }
+
+/* ---------- Rest-Trip + Optionsraum ---------- */
+.section-title {
+  padding: 22px 20px 8px; font-size: 13px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase; color: #98928a;
+}
+.list-card { margin: 0 16px; }
+.row {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  border-bottom: 1px solid #ecebe7; font-size: 14.5px;
+}
+.row:last-child { border-bottom: none; }
+.row .tag { color: #98928a; font-size: 13px; width: 44px; flex: none; font-variant-numeric: tabular-nums; }
+.row .place { font-weight: 600; }
+.row .dot { margin-left: auto; }
+.row .chev { color: #b6b1a9; font-size: 16px; margin-left: 4px; }
+.row.more { color: #d94c3a; font-weight: 600; font-size: 13.5px; justify-content: center; }
+.options-row .place { font-weight: 600; }
+.options-row .meta { color: #6f6a62; font-size: 13px; margin-top: 2px; }
+.options-empty { text-align: left; }
+.options-empty .place { color: #6f6a62; font-weight: 600; }
+.options-empty .meta { color: #98928a; font-size: 13px; margin-top: 2px; }
+
+/* ---------- Footer / Provenienz ---------- */
+.provenance {
+  padding: 22px 20px 26px; font-size: 11.5px; color: #98928a; text-align: center;
+}
+.provenance .r { display: inline-block; margin-left: 4px; }
+.home-indicator { width: 130px; height: 5px; border-radius: 3px; background: #23211e; opacity: 0.25; margin: 0 auto 10px; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="kicker">Richtung 1 · Consumer Warm</div>
+  <h1>Modernes Reiseprodukt, warm &amp; freundlich</h1>
+  <p>Diese Richtung behandelt den Törnplaner wie ein poliertes Consumer-Reiseprodukt: weiße Karten mit weichen Schatten, eine warme Ägäis-Koralle als einziger Akzent, großzügiger Weißraum und Pill-Buttons. Um 07:00 im Cockpit liest sich die Tagesansicht wie eine Buchungsbestätigung — das Ziel des Tages steht groß und emotional im Zentrum, die grüne Ampel gibt sofort Entwarnung, alles Weitere tritt sichtbar zurück.</p>
+</div>
+
+<div class="stage-area">
+
+  <!-- ================= FRAME 1: Tagesansicht (Hero, GRÜN) ================= -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>07:00</span>
+          <span class="sb-icons"><span class="sb-dot thin"></span><span class="sb-dot"></span></span>
+        </div>
+
+        <header class="app-header">
+          <div class="header-row">
+            <div class="wordmark">Sail<span class="accent">Greece</span></div>
+            <div class="avatar">P</div>
+          </div>
+          <div class="tabs-row">
+            <nav class="tabs">
+              <span class="tab active">Heute</span>
+              <span class="tab">Karte</span>
+            </nav>
+            <span class="refresh">⟳</span>
+          </div>
+        </header>
+
+        <div class="trip-status">
+          <span class="dot gelb"></span>
+          <span><b>Round-Trip unter Vorbehalt</b> · Rückkehr Alimos bis Tag&nbsp;11 · Meltemi-fest bis Tag&nbsp;4</span>
+        </div>
+
+        <div class="day-context">
+          <div class="day">Tag 1 · Samstag, 8. August</div>
+          <div class="where">Position: Marina Alimos</div>
+        </div>
+
+        <section class="card hero-card">
+          <div class="hero-top">
+            <div>
+              <div class="route-from">Marina Alimos →</div>
+              <div class="route-dest">Kythnos <small>Loutra · über Kap Sounion</small></div>
+            </div>
+            <span class="ampel-pill gruen"><span class="dot gruen"></span>Grün</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="label">Abfahrt</div><div class="value">12:00</div></div>
+            <div class="stat"><div class="label">Fahrtzeit</div><div class="value">5,5&nbsp;h</div></div>
+            <div class="stat"><div class="label">Ankunft</div><div class="value">ca. 17:30</div></div>
+            <div class="stat"><div class="label">Wind</div><div class="value">NNE 18 <small>kn</small></div></div>
+          </div>
+
+          <div class="berth">
+            <span class="icon">⚓</span>
+            <span class="text"><b>Loutra — Gemeindekai</b> <span>· Liegeplatz</span></span>
+            <span class="dot gruen"></span>
+          </div>
+
+          <div class="cta-row">
+            <span class="btn-primary">Etappe ändern</span>
+            <span class="btn-ghost">Wie kommt die Zeit zustande?</span>
+          </div>
+        </section>
+
+        <div class="assumption"><span class="i">i</span><span>Ab Tag&nbsp;7 beruht die Planung auf einer <u>Annahme</u></span></div>
+
+        <div class="section-title">Rest-Trip</div>
+        <section class="card list-card">
+          <div class="row"><span class="tag">Tag 2</span><span class="place">Syros (Ermoupoli)</span><span class="dot gruen"></span><span class="chev">›</span></div>
+          <div class="row"><span class="tag">Tag 3</span><span class="place">Paros (Naoussa)</span><span class="dot gelb"></span><span class="chev">›</span></div>
+          <div class="row more">Alle 12 Tage anzeigen</div>
+        </section>
+
+        <div class="section-title">Optionsraum</div>
+        <section class="card list-card">
+          <div class="row options-row">
+            <div>
+              <div class="place">3 Optionen offen</div>
+              <div class="meta">Nächste Deadline: Tag 4</div>
+            </div>
+            <span class="chev" style="margin-left:auto;">›</span>
+          </div>
+        </section>
+
+        <footer class="provenance">
+          Forecast: ECMWF · Lauf 05.08. 09:00 · abgerufen 16:19 <span class="r">⟳</span>
+        </footer>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+    <div class="frame-label">Tagesansicht · Etappe Grün</div>
+  </div>
+
+  <!-- ================= FRAME 2: Zustandsvariante GELB ================= -->
+  <div>
+    <div class="phone small">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>07:00</span>
+          <span class="sb-icons"><span class="sb-dot thin"></span><span class="sb-dot"></span></span>
+        </div>
+
+        <div class="trip-status" style="margin-top:6px;">
+          <span class="dot gelb"></span>
+          <span><b>Round-Trip unter Vorbehalt</b> · Rückkehr Alimos bis Tag&nbsp;11</span>
+        </div>
+
+        <div class="day-context">
+          <div class="day">Tag 1 · Samstag, 8. August</div>
+          <div class="where">Position: Marina Alimos</div>
+        </div>
+
+        <section class="card hero-card">
+          <div class="hero-top">
+            <div>
+              <div class="route-from">Marina Alimos →</div>
+              <div class="route-dest">Kythnos <small>Loutra · über Kap Sounion</small></div>
+            </div>
+            <span class="ampel-pill gelb"><span class="dot gelb"></span>Gelb</span>
+          </div>
+
+          <div class="warn-note"><b>Böen bis 28&nbsp;kn am Kap</b> — Abfahrt vor 10:00 empfohlen.</div>
+
+          <div class="stats">
+            <div class="stat"><div class="label">Abfahrt</div><div class="value">vor 10:00</div></div>
+            <div class="stat"><div class="label">Fahrtzeit</div><div class="value">5,5&nbsp;h</div></div>
+            <div class="stat"><div class="label">Ankunft</div><div class="value">ca. 15:30</div></div>
+            <div class="stat"><div class="label">Wind</div><div class="value">NNE 22 <small>kn</small></div></div>
+          </div>
+
+          <div class="berth">
+            <span class="icon">⚓</span>
+            <span class="text"><b>Loutra — Gemeindekai</b></span>
+            <span class="dot gruen"></span>
+          </div>
+
+          <div class="cta-row">
+            <span class="btn-primary">Etappe ändern</span>
+            <span class="btn-ghost">Wie kommt die Zeit zustande?</span>
+          </div>
+        </section>
+
+        <footer class="provenance">
+          Forecast: ECMWF · Lauf 05.08. 09:00 · abgerufen 16:19 <span class="r">⟳</span>
+        </footer>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+    <div class="frame-label">Zustandsvariante · Etappe Gelb</div>
+  </div>
+
+</div>
+
+</body>
+</html>

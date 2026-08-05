@@ -37,7 +37,7 @@ export function SignInView() {
     <div className="auth-gate">
       <div className="auth-card">
         <div className="auth-brand">
-          sailgreece-router
+          Sail<span className="wordmark-accent">Greece</span>
           <small>Kykladen · Törnplanung</small>
         </div>
 

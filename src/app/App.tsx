@@ -9,7 +9,8 @@ import { DayView } from '../ui/views/DayView.tsx';
 import { MapView } from '../ui/views/MapView.tsx';
 import { PlaceDetailView } from '../ui/views/PlaceDetailView.tsx';
 import { SignInView } from '../ui/views/SignInView.tsx';
-import { formatStamp, formatTripRange } from '../ui/format.ts';
+import { AvatarMenu } from '../ui/components/AvatarMenu.tsx';
+import { formatStamp } from '../ui/format.ts';
 import '../ui/styles.css';
 
 const queryClient = new QueryClient({
@@ -127,27 +128,39 @@ function ControlsBar() {
   );
 }
 
-/** Signed-in account plus the way out, in the header (FR: session is visible). */
-function AccountChip() {
-  const { user, signOut } = useAuth();
-  if (!user) return null;
+/**
+ * Ghost refresh glyph (FR13) — used in the header and the footer provenance
+ * line. The ⟳ is a glyph, not an emoji: it is aria-hidden inside a button
+ * with a German accessible name. While fetching, the glyph spins; under
+ * prefers-reduced-motion the global CSS kills the spin and a visually hidden
+ * pending text carries the state instead.
+ */
+function RefreshButton() {
+  const { forecastQuery } = usePlanning();
   return (
-    <div className="account-chip">
-      {user.photoUrl && <img src={user.photoUrl} alt="" width={24} height={24} />}
-      <span title={user.email ?? undefined}>
-        {user.displayName ?? user.email ?? 'Angemeldet'}
+    <button
+      type="button"
+      className="icon-button"
+      aria-label="Forecast aktualisieren"
+      onClick={() => forecastQuery.refetch()}
+      disabled={forecastQuery.isFetching}
+    >
+      <span aria-hidden="true" className={forecastQuery.isFetching ? 'spin' : undefined}>
+        ⟳
       </span>
-      <button type="button" onClick={() => void signOut()}>
-        Abmelden
-      </button>
-    </div>
+      {forecastQuery.isFetching && (
+        <span className="visually-hidden">Aktualisierung läuft …</span>
+      )}
+    </button>
   );
 }
 
 function Shell() {
   const [view, setView] = useState<View>({ kind: 'tag' });
+  /** Footer provenance detail expander (FR13 — meaning never in a tooltip). */
+  const [detailOpen, setDetailOpen] = useState(false);
   const planning = usePlanning();
-  const { libraryQuery, forecastQuery, snapshot, assessment, bundle } = planning;
+  const { libraryQuery, forecastQuery, snapshot, assessment } = planning;
 
   const openPlace = (placeId: string) =>
     setView((v) => ({
@@ -161,50 +174,33 @@ function Shell() {
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <div className="brand">
-          sailgreece-router
-          <small>
-            Kykladen
-            {bundle
-              ? ` · ${formatTripRange(bundle.params.tripStartDate, bundle.params.tripLengthDays)}`
-              : ''}
-          </small>
+      <header className="app-header">
+        <div className="header-line1">
+          <div className="wordmark">
+            Sail<span className="wordmark-accent">Greece</span>
+          </div>
+          <AvatarMenu />
         </div>
-        <nav className="tabs">
-          <button
-            type="button"
-            className={activeTab === 'tag' ? 'active' : ''}
-            onClick={() => setView({ kind: 'tag' })}
-          >
-            Tagesansicht
-          </button>
-          <button
-            type="button"
-            className={activeTab === 'karte' ? 'active' : ''}
-            onClick={() => setView({ kind: 'karte' })}
-          >
-            Karte
-          </button>
-        </nav>
-        <AccountChip />
+        <div className="header-line2">
+          <nav className="segmented-tabs" aria-label="Ansicht">
+            <button
+              type="button"
+              aria-current={activeTab === 'tag' ? 'page' : undefined}
+              onClick={() => setView({ kind: 'tag' })}
+            >
+              Heute
+            </button>
+            <button
+              type="button"
+              aria-current={activeTab === 'karte' ? 'page' : undefined}
+              onClick={() => setView({ kind: 'karte' })}
+            >
+              Karte
+            </button>
+          </nav>
+          <RefreshButton />
+        </div>
       </header>
-
-      {/* Mandatory permanent notice: data state (FR13). */}
-      <div className="notice-bar">
-        <span className="datenstand">
-          Modell {assessment?.model ?? '…'} · Modelllauf{' '}
-          {formatStamp(assessment?.modelRunIso ?? null)} · abgerufen{' '}
-          {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}
-          <button
-            type="button"
-            onClick={() => forecastQuery.refetch()}
-            disabled={forecastQuery.isFetching}
-          >
-            {forecastQuery.isFetching ? 'lädt …' : 'Aktualisieren'}
-          </button>
-        </span>
-      </div>
 
       <main className="content">
         {libraryQuery.isError && (
@@ -246,18 +242,45 @@ function Shell() {
         )}
       </main>
 
-      <footer className="attribution">
-        <span>
+      {/* Mandatory permanent notice: data state (FR13), demoted to quiet
+          footer provenance. */}
+      <footer className="app-footer">
+        <p className="provenance" aria-live="polite">
+          <button
+            type="button"
+            className="provenance-text"
+            aria-expanded={detailOpen}
+            onClick={() => setDetailOpen((o) => !o)}
+          >
+            Forecast: {assessment?.model ?? '…'} · Lauf{' '}
+            {formatStamp(assessment?.modelRunIso ?? null)} · abgerufen{' '}
+            {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}
+          </button>
+          <RefreshButton />
+        </p>
+        {detailOpen && (
+          <div className="provenance-detail">
+            <p>Modell: {assessment?.model ?? '…'}</p>
+            <p>Modelllauf: {formatStamp(assessment?.modelRunIso ?? null)}</p>
+            <p>Abgerufen: {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}</p>
+            <p>Cache-TTL: {Math.round(STALE_TIME_MS / 3_600_000)} h</p>
+          </div>
+        )}
+        <p className="footnote">
           Weather data by{' '}
           <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">
             Open-Meteo
           </a>{' '}
           (CC BY 4.0)
-        </span>
-        <span>
+        </p>
+        <p className="footnote">
           Sichere Liegeplätze quellenbasiert kuratiert (Heikell, CruisersWiki u. a.) —
           unkuratierte Plätze erscheinen nie grün.
-        </span>
+        </p>
+        <p className="footnote">
+          Ersetzt nicht das seemännische Urteil — Modell-Konsens parallel prüfen
+          (z. B. Windy).
+        </p>
       </footer>
     </div>
   );
@@ -276,7 +299,7 @@ function AuthGate() {
       <div className="auth-gate">
         <div className="auth-card">
           <div className="auth-brand">
-            sailgreece-router
+            Sail<span className="wordmark-accent">Greece</span>
             <small>Kykladen · Törnplanung</small>
           </div>
           <p className="auth-lead">Anmeldung wird geprüft …</p>
