@@ -166,20 +166,43 @@ function Breakdown({
   );
 }
 
+/**
+ * Ampel als Textsymbol für native <option>-Einträge, die kein Markup können.
+ * Dieselben vier Zustände wie AmpelBadge, nur als Unicode.
+ */
+const AMPEL_SYMBOL: Record<string, string> = {
+  gruen: '🟢',
+  gelb: '🟡',
+  rot: '🔴',
+  unbewertet: '⚪',
+};
+
 /** FR28 — change this day's target: another island, another berth, or stay. */
 function StageEditor({
   stage,
   snapshot,
+  nightAmpeln,
   onClose,
 }: {
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
+  nightAmpeln: Assessment['nightAmpeln'];
   onClose: () => void;
 }) {
   const { editStage, releasePin, setStopHours } = usePlanning();
   const [error, setError] = useState<string | null>(null);
   const placesOnIsland = snapshot.library.places.filter(
     (p) => p.islandId === stage.toIslandId,
+  );
+
+  // Kontextfilter (Feedback 2026-08-05): NUR Inseln in Tagesreichweite der
+  // vorherigen Plan-Insel. Die Menge kommt aus dem Assessment (AD-2) — hier
+  // wird nur noch die aktuell gewählte Insel ergänzt, damit das select nie
+  // einen Wert anzeigt, der nicht in seinen Optionen vorkommt.
+  const selectableIslands = snapshot.library.islands.filter(
+    (i) =>
+      stage.reachableIslandIds.includes(i.id) ||
+      (stage.kind === 'stage' && i.id === stage.toIslandId),
   );
 
   const apply = (islandId: string | null, placeId?: string) => {
@@ -203,13 +226,18 @@ function StageEditor({
           onChange={(e) => apply(e.target.value || null)}
         >
           <option value="">— Hafentag: hier bleiben —</option>
-          {snapshot.library.islands.map((i) => (
+          {selectableIslands.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
             </option>
           ))}
         </select>
       </label>
+      <p className="beschreibung">
+        Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
+        raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
+        Vortagsziel.
+      </p>
       {placesOnIsland.length > 0 && (
         <label>
           Platz auf {islandName(snapshot, stage.toIslandId)}
@@ -222,6 +250,7 @@ function StageEditor({
             <option value="">— Vorschlag der App übernehmen —</option>
             {placesOnIsland.map((p) => (
               <option key={p.id} value={p.id}>
+                {AMPEL_SYMBOL[nightAmpeln[p.id]?.[stage.day]?.ampel ?? 'unbewertet']}{' '}
                 {p.name}
               </option>
             ))}
@@ -284,12 +313,14 @@ function StageEditor({
 function StageCard({
   stage,
   snapshot,
+  nightAmpeln,
   isToday,
   onOpenPlace,
   mapId,
 }: {
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
+  nightAmpeln: Assessment['nightAmpeln'];
   isToday: boolean;
   onOpenPlace: (placeId: string) => void;
   /** Null when no Maps key is configured — the panel then stays text-only. */
@@ -393,7 +424,7 @@ function StageCard({
       </div>
 
       {editing && (
-        <StageEditor stage={stage} snapshot={snapshot} onClose={() => setEditing(false)} />
+        <StageEditor stage={stage} snapshot={snapshot} nightAmpeln={nightAmpeln} onClose={() => setEditing(false)} />
       )}
       {expanded && (
         <>
@@ -579,6 +610,7 @@ export function DayView({
         <section className="section">
           <span className="versal">Heute</span>
           <StageCard
+            nightAmpeln={assessment.nightAmpeln}
             stage={todayStage}
             snapshot={snapshot}
             isToday
@@ -598,6 +630,7 @@ export function DayView({
                 key={s.day}
                 stage={s}
                 snapshot={snapshot}
+                nightAmpeln={assessment.nightAmpeln}
                 isToday={false}
                 onOpenPlace={onOpenPlace}
                 mapId={mapId}
@@ -609,7 +642,7 @@ export function DayView({
 
       {assessment.alternatives.length > 0 && (
         <section className="section">
-          <span className="versal">Alternativ-Routen (FR29)</span>
+          <span className="versal">Alternativ-Routen</span>
           <h2>Andere Round-Trips</h2>
           <p className="beschreibung">
             Erst ansehen, dann einchecken — eingecheckt wird die Alternative zur
@@ -640,7 +673,7 @@ export function DayView({
       )}
 
       <section className="section">
-        <span className="versal">Point of Return (FR19)</span>
+        <span className="versal">Point of Return</span>
         <h2>Rückweg nach Alimos</h2>
         <div className="badges">
           <span className="badge">
@@ -668,7 +701,7 @@ export function DayView({
       </section>
 
       <section className="section">
-        <span className="versal">Entscheidungspunkte (FR20)</span>
+        <span className="versal">Entscheidungspunkte</span>
         <h2>Was muss wann entschieden sein?</h2>
         {assessment.decisionPoints.length === 0 ? (
           <p className="beschreibung">Aktuell keine terminierten Entscheidungen.</p>
@@ -683,36 +716,12 @@ export function DayView({
         )}
       </section>
 
-      <section className="section">
-        <span className="versal">Platzbibliothek</span>
-        <h2>Alle Plätze mit Nacht-Ampel</h2>
-        <p className="beschreibung">
-          Nacht-Ampeln für Tag {day} — Details je Platz in der Karten- und
-          Detailansicht.
-        </p>
-        <div className="badges">
-          {snapshot.library.places.map((p) => (
-            <button
-              type="button"
-              key={p.id}
-              className="badge"
-              style={{ cursor: 'pointer' }}
-              onClick={() => onOpenPlace(p.id)}
-            >
-              {p.name}{' '}
-              <AmpelBadge
-                ampel={assessment.nightAmpeln[p.id]?.[day]?.ampel ?? 'unbewertet'}
-                label=""
-              />
-            </button>
-          ))}
-          {snapshot.library.invalidPlaces.map((p) => (
-            <span key={p.id} className="badge" title={p.error}>
-              {p.name ?? p.id} <AmpelBadge ampel="unbewertet" label="" />
-            </span>
-          ))}
-        </div>
-      </section>
+      {/* Die frühere Sektion "Platzbibliothek — Alle Plätze mit Nacht-Ampel"
+          ist bewusst ENTFERNT (Feedback 2026-08-05): ~60 Plätze des ganzen
+          Reviers unter Tag 1 sind Rauschen — Aegiali liegt mehrere Tagesreisen
+          entfernt. Plätze erscheinen jetzt nur im Kontext ihrer Insel: im
+          Platz-Dropdown der Etappe (mit Ampel) und auf der Karte entlang des
+          Plans. Ungültige Platz-Dokumente meldet weiterhin der Seeding-Report. */}
     </div>
   );
 

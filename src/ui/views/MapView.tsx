@@ -103,6 +103,22 @@ export function MapView({
     return ids;
   }, [assessment.currentIslandId, todayStage]);
 
+  // Kontextmenge der Karte (Feedback 2026-08-05, "gleiches Prinzip für die
+  // Kartendarstellung"): nur die Inseln, die der Round-Trip anfährt, plus die
+  // aktuelle Position. Plätze abseits davon sind kein Besprechungsbild,
+  // sondern Rauschen — sie bekommen weder Pin noch Windfieder. Die Menge
+  // besteht aus Assessment-Werten (AD-2: hier wird nichts gerechnet).
+  const planIslands = useMemo(() => {
+    const ids = new Set<string>();
+    if (assessment.currentIslandId) ids.add(assessment.currentIslandId);
+    for (const st of assessment.mainRoute?.stages ?? []) ids.add(st.toIslandId);
+    return ids;
+  }, [assessment.currentIslandId, assessment.mainRoute]);
+  const contextPlaces = useMemo(
+    () => snapshot.library.places.filter((p) => planIslands.has(p.islandId)),
+    [snapshot.library.places, planIslands],
+  );
+
   const nowIdx = useMemo(() => hourIndexAt(Date.now(), snapshot.times), [snapshot.times]);
   const restColor = REST_LINE_COLOR[assessment.restTripAmpel];
 
@@ -112,7 +128,7 @@ export function MapView({
   const itinerary = (
     <div className="map-itinerary">
       <div className="route-toggles">
-        <span className="versal">Round-Trip (FR2)</span>
+        <span className="versal">Round-Trip</span>
         <div className="legend">
           <span>
             <span className="legend-line solid" style={{ background: SAILED_LINE_COLOR }} />
@@ -278,8 +294,8 @@ export function MapView({
               );
             })}
 
-            {/* Places: ampel colour only where it is decision-relevant (FR1). */}
-            {snapshot.library.places.map((place) => {
+            {/* Places along the plan only; ampel colour where decision-relevant. */}
+            {contextPlaces.map((place) => {
               const relevant = ampelIslands.has(place.islandId);
               const ampel =
                 assessment.nightAmpeln[place.id]?.[day]?.ampel ?? 'unbewertet';
@@ -308,7 +324,7 @@ export function MapView({
                 (AD-6), nicht wohin er weht. */}
             {showWind &&
               nowIdx !== null &&
-              snapshot.library.places.map((place) => {
+              contextPlaces.map((place) => {
                 const fc = snapshot.forecast[place.id];
                 const kn = fc?.windKn[nowIdx] ?? null;
                 const dir = fc?.windDirDeg[nowIdx] ?? null;

@@ -328,7 +328,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
     violations.push({
       kind: 'budget',
       day: nightStages[params.nightLegMaxPerTrip]?.day ?? null,
-      text: `${nightStages.length} Nachtetappen — erlaubt sind ${params.nightLegMaxPerTrip} pro Törn (FR16)`,
+      text: `${nightStages.length} Nachtetappen — erlaubt sind ${params.nightLegMaxPerTrip} pro Törn`,
     });
   }
   for (const s of nightStages) {
@@ -336,7 +336,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       violations.push({
         kind: 'budget',
         day: s.day,
-        text: `Nachtetappe an Tag ${s.day} — erst ab Tag ${params.nightLegEarliestDay} zulässig (FR16: zweite Woche)`,
+        text: `Nachtetappe an Tag ${s.day} — erst ab Tag ${params.nightLegEarliestDay} zulässig (zweite Woche)`,
       });
     }
     for (const legId of s.legIds) {
@@ -348,7 +348,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
         violations.push({
           kind: 'budget',
           day: s.day,
-          text: `Nachtetappe an Tag ${s.day} bei ${Math.round(a.avgTwsKn)} kn — nur unter ${params.nightLegMaxTwsKn} kn zulässig (FR16)`,
+          text: `Nachtetappe an Tag ${s.day} bei ${Math.round(a.avgTwsKn)} kn — nur unter ${params.nightLegMaxTwsKn} kn zulässig`,
         });
       }
     }
@@ -519,7 +519,7 @@ export function validatePlan(plan: Plan, snapshot: PlanningSnapshot): PlanValidi
       violations.push({
         kind: 'pickup',
         day: pickupDay,
-        text: `Am Gäste-Zustiegstag (Törntag ${pickupDay}) ist ${islandId} nicht per Fähre erreichbar (FR31)`,
+        text: `Am Gäste-Zustiegstag (Törntag ${pickupDay}) ist ${islandId} nicht per Fähre erreichbar`,
       });
     } else if (pickupEntry.kind === 'stage') {
       // Arriving that same day is allowed only before the ferry cut-off.
