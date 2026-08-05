@@ -143,6 +143,33 @@ const ParamsObjectSchema = z.object({
   baseIslandId: z.string().default('athen'),
   basePlaceId: z.string().default('athen-alimos'),
 
+  // --- Routen-Konzepte (Törnkonzept 2026-08-05) ------------------------------
+  /**
+   * DIE ZENTRALE, ALLES ÜBERSCHREIBENDE LOGIK der App (Skipper 2026-08-05):
+   * geroutet wird nach einem von ZWEI Revier-Konzepten — Route 1 (Klassische
+   * Kykladen-Runde, West & Zentral, Rückweg im Lee-Korridor) oder Route 2
+   * (Ost-Kykladen, exponierte Ost-Ziele mit langem Am-Wind-Rückweg). Welches
+   * Konzept die Wetterlage trägt, entscheiden diese Schwellen; die Regeln
+   * selbst (Marker-Inseln, Korridor, Vorrang im Solver) stehen in
+   * domain/konzept.ts.
+   *
+   * Route 2 ist nur bei moderatem Meltemi segelbar (Törnanalyse: 3–5 Bft;
+   * bei anhaltend 6–7 Bft "für Charteryachten ungeeignet"). Oberhalb von
+   * `konzeptOstMaxKn` über mindestens `konzeptOstDauerTage` aufeinander-
+   * folgende Tage gilt das Ost-Konzept als ungeeignet.
+   */
+  konzeptOstMaxKn: z.number().positive().default(22),
+  konzeptOstDauerTage: z.number().int().min(1).default(2),
+  /**
+   * Route 1 funktioniert bei 4–6 Bft und wird kritisch, "wenn ein stabiles
+   * Starkwindfeld von 7 bis 8 Beaufort über mehr als drei aufeinanderfolgende
+   * Tage anhält" (Törnanalyse). Oberhalb von `konzeptKlassikMaxKn` über
+   * mindestens `konzeptKlassikDauerTage` Tage gilt auch das klassische
+   * Konzept als ungeeignet — dann bleibt nur Abwettern in Abdeckung.
+   */
+  konzeptKlassikMaxKn: z.number().positive().default(28),
+  konzeptKlassikDauerTage: z.number().int().min(1).default(3),
+
   // --- forecast horizon & worst case (AD-13) --------------------------------
   /**
    * Stages beyond this many days from the current day are computed on the
@@ -297,6 +324,14 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
     ctx.issues.push({
       code: 'custom',
       message: 'pickupDate muss innerhalb des Törnfensters liegen (FR31 ist harte Bedingung)',
+      input: p,
+    });
+  }
+  if (p.konzeptOstMaxKn > p.konzeptKlassikMaxKn) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'konzeptOstMaxKn darf konzeptKlassikMaxKn nicht überschreiten — das Ost-Konzept ist das exponiertere und kippt zuerst',
       input: p,
     });
   }

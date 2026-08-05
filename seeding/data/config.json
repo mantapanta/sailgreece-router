@@ -1,15 +1,23 @@
 {
   "approved": true,
-  "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme)",
+  "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme) | Routen-Konzept-Schwellen (Törnanalyse Kykladen, Skipper 2026-08-05) ergänzt.",
   "parameters": {
     "polarOffsetKn": 0.5,
     "motorSpeedKn": 8,
-    "fallbackSpeeds": { "sailKn": 6.0, "motorKn": 7.5, "upwindKn": 6.5 },
+    "fallbackSpeeds": {
+      "sailKn": 6.0,
+      "motorKn": 7.5,
+      "upwindKn": 6.5
+    },
     "minSailSpeedKn": 3.5,
     "upwindTwaDeg": 55,
     "beatTwaDeg": 50,
     "maxUpwindTwsKn": 25,
     "gelbReserveKn": 3,
+    "konzeptOstMaxKn": 22,
+    "konzeptOstDauerTage": 2,
+    "konzeptKlassikMaxKn": 28,
+    "konzeptKlassikDauerTage": 3,
     "targetDayHours": 6,
     "targetMotorHours": 1,
     "maxSailHours": 6,

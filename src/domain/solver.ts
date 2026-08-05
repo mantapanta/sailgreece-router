@@ -53,6 +53,7 @@ import {
   type PackedLeg,
 } from './ppr.ts';
 import { legIndexWithReverses, legsOfVariant } from './legs.ts';
+import { konzeptLageFor, konzeptOfPlan, rueckwegAbweichung } from './konzept.ts';
 import { enumerateRoundTrips } from './roundTrips.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
 import { distanceNm, isClockwise } from './geo.ts';
@@ -888,6 +889,18 @@ export interface PlanMetrics {
   bandDevTenths: number;
   /** Abstand der Hafentagszahl vom Zielband [harbourDays, harbourDaysTargetMax]. */
   harbourDev: number;
+  /**
+   * ROUTEN-KONZEPTE (konzept.ts) — trägt die Wetterlage das Konzept dieses
+   * Plans? Ein Plan, der Ost-Marker anläuft, während das Ost-Konzept
+   * ungeeignet ist, verliert gegen JEDEN Plan in tragendem Konzept — noch
+   * vor der Reichweite. Das ist die zentrale, alles überschreibende Logik.
+   */
+  konzeptTraegt: boolean;
+  /**
+   * Rückweg-Inseln außerhalb des westlichen Lee-Korridors (nach der Wende).
+   * Weniger ist besser: die Rückweg-Empfehlung der Törnanalyse als Rangmaß.
+   */
+  rueckwegAbweichung: number;
 }
 
 export function planMetricsFor(
@@ -898,6 +911,8 @@ export function planMetricsFor(
     snapshot.library.islands.find((i) => i.id === islandId)?.coordinates ?? null;
   const legs = legLibrary(snapshot);
   const { stageHoursBandMinH, stageHoursBandMaxH } = snapshot.params;
+  // Die Konzept-Lage gilt je Snapshot, nicht je Plan — einmal beurteilen.
+  const konzeptLage = konzeptLageFor(snapshot);
   // preferred vergleicht jeden Kandidaten gegen den bisherigen Besten — der
   // Beste würde ohne Memo bei jedem Vergleich neu durchgerechnet.
   const memo = new WeakMap<SolveResult, PlanMetrics>();
@@ -952,15 +967,23 @@ export function planMetricsFor(
     const hi = snapshot.params.harbourDaysTargetMax;
     const harbourDev = harbourDays < lo ? lo - harbourDays : harbourDays > hi ? harbourDays - hi : 0;
 
+    const turnDay = turnDayOf(r);
     const m: PlanMetrics = {
       reachNm: reach(r.turnIslandId),
       distinctIslands: new Set(islands).size,
       clockwise: isClockwise(ring),
-      turnDay: turnDayOf(r),
+      turnDay,
       harbourDays,
       stages: stages.length,
       bandDevTenths,
       harbourDev,
+      konzeptTraegt:
+        konzeptLage.eignung[konzeptOfPlan(r.plan)] !== 'ungeeignet',
+      rueckwegAbweichung: rueckwegAbweichung(
+        r.plan,
+        stages.length > 0 ? turnDay : null,
+        snapshot.params.baseIslandId,
+      ),
     };
     memo.set(r, m);
     return m;
@@ -997,24 +1020,33 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  *   1. gültig vor ungültig, und unter den ungültigen zuerst weniger
  *      Sicherheitsverletzungen, dann weniger Verletzungen überhaupt. Die App
  *      muss auch im Meltemi antworten (FR18) — aber nie mit etwas Unsicherem.
- *   2. WEITER vor näher. Das ist die Törnfrage.
- *   3. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
+ *   2. TRAGENDES KONZEPT vor gekipptem (konzept.ts) — VOR der Reichweite,
+ *      mit Absicht: das ist die zentrale, alles überschreibende Logik
+ *      (Skipper 2026-08-05). Steht ein anhaltendes Starkwindfeld über den
+ *      Ost-Kykladen im Forecast, zieht kein noch so ferner Wendepunkt den
+ *      Törn nach Osten — Route 2 verliert dann gegen jede Route-1-Runde.
+ *   3. WEITER vor näher. Das ist die Törnfrage.
+ *   4. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
  *      Törn, der zwölf Tage dieselbe Kette auf und ab fährt, genauso gut wie
  *      eine Runde — er erreicht denselben Wendepunkt und ist leichter gültig.
- *   4. Weniger Nachgeben auf der Eskalationsleiter — VOR dem Wegstunden-Band,
+ *   5. Weniger Nachgeben auf der Eskalationsleiter — VOR dem Wegstunden-Band,
  *      mit Absicht: zwei kurze Schläge an einem Tag füllen das Band besser als
  *      einer, aber der Doppelschlag ist eine NACHGABE (Skipper 2026-08-05,
  *      "ein Tag, eine Verbindung") und darf nicht zum Normalfall werden, nur
  *      weil er die Stunden hübscher verteilt. Ein Doppelschlag, der WEITER
- *      trägt oder mehr Inseln erschliesst, gewinnt weiterhin (Kriterien 2-3).
- *   5. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
+ *      trägt oder mehr Inseln erschliesst, gewinnt weiterhin (Kriterien 3-4).
+ *   6. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
  *      verschenken oder zu überziehen.
- *   6. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
+ *   7. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
  *      ohne Ruhetag ist der Törn so wenig gewollt wie mit vier.
- *   7. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
+ *   8. Rückweg im westlichen LEE-KORRIDOR (konzept.ts): unter sonst gleichen
+ *      Plänen gewinnt der, dessen Heimweg nach der Wende in der Abdeckung
+ *      Milos–Sifnos–Serifos–Kythnos läuft — die Rückweg-Empfehlung der
+ *      Törnanalyse, präziser als der reine Umlaufsinn.
+ *   9. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
  *      Westseite zurück — die Empfehlung fürs Revier.
- *   8. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
- *   9. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
+ *  10. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
+ *  11. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
  *      die Variante alphabetisch — gleiche Lage, gleiche Antwort.
  */
 export function preferred(
@@ -1029,12 +1061,16 @@ export function preferred(
     [a.validity.valid ? 1 : 0, b.validity.valid ? 1 : 0],
     [-a.validity.safetyViolations.length, -b.validity.safetyViolations.length],
     [-a.validity.violations.length, -b.validity.violations.length],
+    // Das Routen-Konzept überschreibt die Reichweite (konzept.ts).
+    [ma.konzeptTraegt ? 1 : 0, mb.konzeptTraegt ? 1 : 0],
     // Wie weit kommen wir — die Törnfrage.
     [Math.round(ma.reachNm), Math.round(mb.reachNm)],
     [ma.distinctIslands, mb.distinctIslands],
     [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
     [-ma.bandDevTenths, -mb.bandDevTenths],
     [-ma.harbourDev, -mb.harbourDev],
+    // Rückweg im Lee-Korridor vor dem groben Umlaufsinn.
+    [-ma.rueckwegAbweichung, -mb.rueckwegAbweichung],
     [ma.clockwise ? 1 : 0, mb.clockwise ? 1 : 0],
     [-ma.turnDay, -mb.turnDay],
     [ma.stages, mb.stages],
@@ -1210,17 +1246,24 @@ export function completePlan(
        * Beschneidung, die das Ergebnis nicht verändert: steht bereits ein
        * GÜLTIGER Plan, kann eine höhere Eskalationsstufe nur noch gewinnen,
        * wenn sie mindestens GLEICH WEIT kommt — bei ECHT geringerer Reichweite
-       * verliert sie an Kriterium 2, egal was sonst passiert.
+       * verliert sie an der Reichweite, egal was sonst passiert.
        *
        * Nur strikt kleiner, nicht kleiner-gleich: seit dem Zielmodell v2
        * stehen Inselvielfalt und Wegstunden-Band VOR der Eskalationsstufe —
        * bei gleicher Reichweite kann eine höhere Stufe also durchaus noch
        * gewinnen (etwa ein Doppelschlag, der eine vielfältigere Runde packbar
        * macht) und muss durchgerechnet werden.
+       *
+       * SEIT DEN ROUTEN-KONZEPTEN nur, wenn der bisherige Beste in einem
+       * TRAGENDEN Konzept steht: das Konzept rangiert VOR der Reichweite
+       * (preferred), ein näherer Kandidat in tragendem Konzept kann einen
+       * ferneren in gekipptem also noch schlagen — der darf nicht
+       * weggeschnitten werden.
        */
       if (
         levelIdx > 0 &&
         best?.validity.valid &&
+        metrics(best).konzeptTraegt &&
         Math.round(reach(candidate.turnIslandId)) <
           Math.round(reach(best.turnIslandId))
       ) {

@@ -4,6 +4,13 @@ Törnplanungs-Web-App für den 12-Tage-Kykladen-Familientörn ab 8. August 2026.
 Die App übersetzt Windvorhersagen täglich in bewertete Routen-Optionen — sie
 ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
 
+- **Routen-Konzept (zentrale Logik):** Geroutet wird nach einem von zwei
+  Revier-Konzepten — Route 1 (Klassische Kykladen-Runde West & Zentral,
+  Rückweg im Lee-Korridor Milos–Sifnos–Serifos–Kythnos) oder Route 2
+  (Ost-Kykladen, nur bei moderatem Meltemi). Die Konzept-Eignung kommt aus dem
+  Forecast (`domain/konzept.ts`), überschreibt im Solver die Reichweite,
+  erzeugt den Konzeptwechsel-Entscheid („Vorstoß nach Osten streichen") und
+  trägt die Rückweg-Empfehlung der Törnanalyse.
 - **Tagesansicht:** „Was machen wir heute?" — Tagesoptionen mit Etappen-Score,
   bester Platz je Ziel-Insel mit Nacht-Ampel, Zustand des Mittelfristplans
   (offen / schließt am Tag X / geschlossen), Predicted Point of Return,

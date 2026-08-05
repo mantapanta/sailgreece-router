@@ -23,6 +23,7 @@ import type {
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
 import type { DayReturnCheck } from '../../domain/schema/plan.ts';
+import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
 import { AmpelBadge } from '../components/AmpelBadge.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
@@ -535,6 +536,96 @@ const OPTION_STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
   zu: 'zu',
 };
 
+/** Kurzform des Routen-Konzepts fürs Options-Badge (Langform im Panel). */
+const KONZEPT_KURZ: Record<KonzeptId, string> = {
+  klassik: 'Route 1 · West/Zentral',
+  ost: 'Route 2 · Ost',
+};
+
+const EIGNUNG_LABEL: Record<KonzeptEignung, string> = {
+  geeignet: 'trägt',
+  grenzwertig: 'grenzwertig',
+  ungeeignet: 'trägt nicht',
+};
+
+/**
+ * ROUTEN-KONZEPT — die zentrale, alles überschreibende Logik der App
+ * (Skipper 2026-08-05, domain/konzept.ts): NACH WELCHEM der beiden
+ * Revier-Konzepte segeln wir? Das Panel steht direkt unter dem
+ * Rest-Trip-Banner, weil diese Entscheidung über allem anderen liegt:
+ * der Solver hat sie beim Ranking bereits angewendet, die Options-Liste
+ * trägt sie je Ziel — hier steht sie als EINE Aussage mit Begründung,
+ * Wechsel-Hinweis und der Rückweg-Empfehlung der Törnanalyse.
+ */
+function KonzeptPanel({ assessment }: { assessment: Assessment }) {
+  const entscheid = assessment.konzeptEntscheid;
+  return (
+    <section className="section konzept-panel">
+      <span className="versal">Routen-Konzept</span>
+      <h2>Nach welchem Konzept segeln wir?</h2>
+      <p className="beschreibung">
+        Die übergeordnete Törn-Entscheidung: Route 1 (klassische Runde, Rückweg
+        im westlichen Lee-Korridor) oder Route 2 (Ost-Kykladen, nur bei
+        moderatem Meltemi). Vorschlag und Rangfolge der App folgen dieser
+        Beurteilung — kippt das aktive Konzept, wird umgeschwenkt.
+      </p>
+      {entscheid.wechselHinweis && (
+        <div className="hint-panel konzept-wechsel">
+          <strong>{entscheid.wechselHinweis}</strong>
+        </div>
+      )}
+      <div className="konzept-karten">
+        {entscheid.konzepte.map((k) => (
+          <div
+            key={k.id}
+            className={`konzept-karte eignung-${k.eignung}${k.empfohlen ? ' empfohlen' : ''}`}
+          >
+            <div className="option-kopf">
+              <span className="option-name">{k.name}</span>
+              <span className={`state-chip eignung-${k.eignung}`}>
+                {EIGNUNG_LABEL[k.eignung]}
+              </span>
+            </div>
+            <p className="beschreibung">{k.beschreibung}</p>
+            <div className="badges">
+              {k.aktiv && (
+                <span className="badge" title="Die aktuelle Haupt- bzw. Vorschlagsroute folgt diesem Konzept.">
+                  aktives Konzept
+                </span>
+              )}
+              {k.empfohlen && (
+                <span className="badge badge-empfohlen">Empfehlung der App</span>
+              )}
+            </div>
+            <ul className="reasons">
+              {k.gruende.map((g) => (
+                <li key={g}>{g}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {entscheid.basisAnnahme && (
+        <p className="beschreibung">
+          Die Konzept-Beurteilung stützt sich teilweise auf die
+          Persistenz-Annahme jenseits des Forecast-Horizonts — Vorbehalt, kein
+          Urteil.
+        </p>
+      )}
+      {assessment.rueckwegEmpfehlung.length > 0 && (
+        <div className="rueckweg-empfehlung">
+          <span className="versal">Rückweg-Empfehlung</span>
+          <ul className="reasons">
+            {assessment.rueckwegEmpfehlung.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /**
  * Vorschau einer ansehbaren Route: Routenkarte plus Etappenliste Tag für Tag,
  * und der Übernehmen-Knopf steht IN der Vorschau — wer übernimmt, hat gesehen,
@@ -668,6 +759,12 @@ function OptionRow({
       </div>
 
       <div className="badges">
+        <span
+          className={`badge badge-konzept${option.konzeptWarnung ? ' badge-konzept-warnung' : ''}`}
+          title="Routen-Konzept dieser Option (siehe Panel „Routen-Konzept“)."
+        >
+          {KONZEPT_KURZ[option.konzeptId]}
+        </span>
         <span className="badge" title="Entfernung von der Basis zum Wendepunkt">
           bis {islandName(snapshot, option.turnIslandId)}
           {option.reachNm !== null && ` · ${Math.round(option.reachNm)} sm`}
@@ -696,6 +793,13 @@ function OptionRow({
           : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
         {istHauptroute && ' Dieser Plan ist bereits die Hauptroute.'}
       </div>
+
+      {/* Die Konzept-Warnung steht AN der Option, nicht nur im Panel oben:
+          wer hier "Verlängerung Amorgos · offen" liest, soll im selben
+          Blick sehen, dass das Ost-Konzept die Lage gerade nicht trägt. */}
+      {option.konzeptWarnung && (
+        <div className="konzept-warnung">{option.konzeptWarnung}</div>
+      )}
 
       {option.reasons.length > 0 && (
         <ul className="reasons">
@@ -934,6 +1038,10 @@ export function DayView({
           </ul>
         )}
       </div>
+
+      {/* ROUTEN-KONZEPT — die zentrale Logik, direkt unter dem Rest-Trip-
+          Banner: erst das Konzept, dann die Etappen und Optionen darunter. */}
+      <KonzeptPanel assessment={assessment} />
 
       {!main && assessment.proposal && (
         <div className="hint-panel">

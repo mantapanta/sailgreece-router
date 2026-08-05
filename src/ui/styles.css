@@ -1224,6 +1224,74 @@ footer.attribution a {
   cursor: pointer;
 }
 
+/* --- Routen-Konzept (zentrale Logik, domain/konzept.ts) ---------------------
+   Zwei Karten — Route 1 (Klassik) und Route 2 (Ost) — mit Eignung, aktivem
+   Konzept und Empfehlung. Das Panel steht direkt unter dem Rest-Trip-Banner:
+   erst das Konzept, dann alles andere. */
+
+.konzept-karten {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.konzept-karte {
+  border: 1px solid var(--hairline);
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: var(--creme-card);
+  padding: 0.7rem 0.9rem;
+}
+.konzept-karte.eignung-geeignet { border-left-color: var(--gruen); }
+.konzept-karte.eignung-grenzwertig { border-left-color: var(--gelb); }
+.konzept-karte.eignung-ungeeignet { border-left-color: var(--rot); opacity: 0.85; }
+.konzept-karte.empfohlen {
+  box-shadow: 0 0 0 1px var(--navy-soft);
+}
+
+.state-chip.eignung-geeignet { background: #e8f2ea; color: var(--gruen); border-color: #bcd8c2; }
+.state-chip.eignung-grenzwertig { background: #f7ecd7; color: #8a6414; border-color: #e4cf9f; }
+.state-chip.eignung-ungeeignet { background: #f6e4e3; color: var(--rot); border-color: #e0b7b5; }
+
+.badge-empfohlen {
+  background: var(--navy);
+  color: var(--creme);
+  border-color: var(--navy);
+  font-weight: 600;
+}
+
+/* Der Konzeptwechsel ist der wichtigste Satz der Seite, wenn er da ist. */
+.hint-panel.konzept-wechsel {
+  border-left: 4px solid var(--rot);
+  background: #f6e4e3;
+}
+
+.rueckweg-empfehlung {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--hairline);
+}
+
+/* Konzept-Zuordnung an der einzelnen Option + Warnung, wenn es kippt. */
+.badge-konzept {
+  background: #eef1f4;
+  color: var(--navy);
+}
+.badge-konzept-warnung {
+  background: #f6e4e3;
+  color: var(--rot);
+  border-color: #e0b7b5;
+}
+.konzept-warnung {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border-left: 3px solid var(--rot);
+  background: #f6e4e3;
+  font-size: 0.82rem;
+  color: var(--navy);
+}
+
 /* --- Alternativ-Routen (FR29): erst ansehen, dann übernehmen ---------------
    Jede Alternative trägt ihre Farbe (altRouteColors.ts) als linke Kante und
    als Punkt vor dem Namen — dieselbe Farbe, in der die Karten-Ansicht sie

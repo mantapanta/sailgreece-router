@@ -3,6 +3,7 @@ import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
 import type { DayReturnCheck, Plan, PlanValidity, RelaxationLevel } from './plan.ts';
+import type { KonzeptEntscheid, KonzeptId } from './konzept.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
 
@@ -274,6 +275,17 @@ export interface RouteOptionAssessment {
   routeId: string;
   /** Kuratierter Name der Route — die View soll keine Ids anzeigen müssen. */
   name: string;
+  /**
+   * ROUTEN-KONZEPT dieser Option (domain/konzept.ts): Route 1 (klassik) oder
+   * Route 2 (ost). Die Tagesansicht ordnet jede Option ihrem Konzept zu.
+   */
+  konzeptId: KonzeptId;
+  /**
+   * Gesetzt, wenn das Konzept dieser Option die aktuelle Wetterlage nicht
+   * trägt — die Option bleibt ehrlich bepreist (Solver-Machbarkeit), aber die
+   * Revier-Empfehlung steht sichtbar daneben, nie stumm.
+   */
+  konzeptWarnung: string | null;
   state: OptionState;
   /** Set when state === 'schliesst': last day the option can still be started. */
   closesOnDay: number | null;
@@ -425,6 +437,23 @@ export interface Assessment {
   /** bestPlaceByIsland[islandId][nightDay] = placeId | null (AD-2: ranking is domain). */
   bestPlaceByIsland: Record<string, Record<number, string | null>>;
   dayOptions: DayOption[];
+  /**
+   * ROUTEN-KONZEPTE — die zentrale, alles überschreibende Logik (Skipper
+   * 2026-08-05, domain/konzept.ts): welches der beiden Revier-Konzepte
+   * (Route 1 Klassik / Route 2 Ost) trägt die Lage, welchem folgt die
+   * Hauptroute, welches empfiehlt die App — und der Konzeptwechsel-Hinweis,
+   * wenn das aktive Konzept kippt. Der Solver hat dieselbe Beurteilung
+   * bereits als Vorrang-Kriterium angewendet (PlanMetrics.konzeptTraegt);
+   * hier steht sie sichtbar für den Skipper.
+   */
+  konzeptEntscheid: KonzeptEntscheid;
+  /**
+   * Die RÜCKWEG-EMPFEHLUNG der Törnanalyse, angewendet auf die Hauptroute:
+   * Lee-Korridor-Treue, Zeitreserve nach der Wende, Früh-Auslaufen auf
+   * Am-Wind-Etappen. Sätze für die Anzeige; vor dem ersten Check-in auf den
+   * Vorschlag angewendet, leer ganz ohne Plan.
+   */
+  rueckwegEmpfehlung: string[];
   /**
    * Route options ORDERED by escalation rank (conservative first) — ordering
    * by domain criteria is computing (AD-2), so it happens here, not in views.

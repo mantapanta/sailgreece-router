@@ -20,6 +20,12 @@ import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
 import { reachableIslands } from './reach.ts';
 import { applyPersistenceAssumption } from './persistence.ts';
 import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
+import {
+  deriveKonzeptEntscheid,
+  konzeptLageFor,
+  konzeptOfPlan,
+  rueckwegEmpfehlungFor,
+} from './konzept.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { assessLeg, stopHoursForDay } from './scoring.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
@@ -434,6 +440,36 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
       : existsValidPlan(snapshot, currentIslandId);
 
   /**
+   * ROUTEN-KONZEPTE — die zentrale, alles überschreibende Logik (konzept.ts):
+   * dieselbe Lage-Beurteilung, mit der der Solver soeben gerankt hat
+   * (PlanMetrics.konzeptTraegt), hier als sichtbarer Entscheid für den
+   * Skipper. AKTIV ist das Konzept der Hauptroute — vor dem ersten Check-in
+   * das des Vorschlags, ganz ohne Plan die konservative Route 1.
+   */
+  const konzeptLage = konzeptLageFor(snapshot);
+  const aktivPlan = trip.plan ?? solved?.plan ?? null;
+  const konzeptEntscheid = deriveKonzeptEntscheid(
+    konzeptLage,
+    aktivPlan ? konzeptOfPlan(aktivPlan) : 'klassik',
+    library,
+    currentIslandId,
+  );
+  // Kippt das aktive Konzept, ist der Wechsel eine Entscheidung von HEUTE —
+  // die Luv-Falle schnappt in den ersten Tagen zu, nicht am Törnende.
+  if (konzeptEntscheid.wechselHinweis) {
+    decisionPoints.push({
+      day: trip.currentDay,
+      text: `HEUTE entscheiden — ${konzeptEntscheid.wechselHinweis}`,
+    });
+    decisionPoints.sort((a, b) => a.day - b.day);
+  }
+  const rueckwegEmpfehlung = mainRoute
+    ? rueckwegEmpfehlungFor(mainRoute, snapshot)
+    : proposal
+      ? rueckwegEmpfehlungFor(proposal, snapshot)
+      : [];
+
+  /**
    * VERSCHMELZUNG Optionsraum + Alternativ-Routen: die Alternativen SIND die
    * konkreten Pläne der Optionen. Vorher standen zwei Listen nebeneinander —
    * der Optionsraum mit Reichweite/Preis/Frist und daneben solver-eigene
@@ -526,6 +562,8 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     nightAmpeln,
     bestPlaceByIsland,
     dayOptions,
+    konzeptEntscheid,
+    rueckwegEmpfehlung,
     routeOptions: routeOptionsMerged,
     mainRoute,
     proposal,
