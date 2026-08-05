@@ -102,8 +102,14 @@ Daraus je Tag ein Status mit Anweisung:
 
 - **meltemi-fest** — Heimweg hält auch im Worst-Case. Weiterfahren unkritisch.
 - **wetterfenster** — Heimweg trägt nur nach Forecast: *Frischt der Nordwind über
-  die Aufkreuz-Schwelle auf, hier abbrechen und den Rückweg einleiten.* Das ist die
-  tägliche Entscheidung, die der Skipper ab diesem Punkt bewusst trifft.
+  die Aufkreuz-Schwelle auf, abbrechen und den Rückweg einleiten.* Das ist die
+  tägliche Entscheidung, die der Skipper ab diesem Punkt bewusst trifft. Die
+  Anweisung unterscheidet den ERSTEN Tag eines Fensters („Ab hier …") von den
+  Folgetagen („… wird am selben Tag abgebrochen — nicht erst hier"): mehrere
+  wortgleiche „hier abbrechen"-Tage lasen sich wie wählbare Abbruchpunkte
+  (Skipper-Feedback 2026-08-05); tatsächlich wird an dem Tag umgekehrt, an dem
+  der Wind dreht. Ein meltemi-fester Tag oder ein Halt an der Basis schließt
+  das Fenster; danach beginnt die Zählung neu.
 - **kritisch** — Rückkehr schon nach Forecast nicht mehr darstellbar (deckt sich
   mit der harten Verletzung `return`).
 
