@@ -168,6 +168,42 @@ function worstCaseWind(
 export type LegScenario = 'forecast' | 'worstCase';
 
 /**
+ * Memo für {@link assessLeg} über BIBLIOTHEKS-Etappen, je Snapshot-Objekt.
+ *
+ * Der Solver bewertet dieselbe (Etappe, Tag)-Kombination hundertfach: einmal
+ * je Kandidat, je Eskalationsstufe, je Options-Scan. Die Simulation ist pur
+ * und hängt nur von (leg.id, Tag, Abfahrts-Offset, Szenario) und dem Snapshot
+ * ab — beim Snapshot zählt die OBJEKTIDENTITÄT, weil relaxierte Params ein
+ * eigenes Objekt bekommen (solver.relaxedSnapshot) und damit einen eigenen
+ * Cache.
+ *
+ * NUR für Etappen aus dem Bibliotheks-Index (eindeutige Id, auch die
+ * Gegenrichtungen): die GESEGELTEN Ketten aus legGeometry.ts tragen dieselbe
+ * Id mit anderer Verankerung und dürfen hier nicht landen — die Anzeige- und
+ * Gültigkeitspfade mit sailedLegs rufen weiterhin assessLeg direkt.
+ */
+const assessMemo = new WeakMap<PlanningSnapshot, Map<string, LegAssessment>>();
+
+export function assessLegCached(
+  leg: Leg,
+  day: number,
+  snapshot: PlanningSnapshot,
+  opts: { departureOffsetHours?: number; scenario?: LegScenario } = {},
+): LegAssessment {
+  let byKey = assessMemo.get(snapshot);
+  if (!byKey) {
+    byKey = new Map();
+    assessMemo.set(snapshot, byKey);
+  }
+  const key = `${leg.id}|${day}|${opts.departureOffsetHours ?? 0}|${opts.scenario ?? 'forecast'}`;
+  const cached = byKey.get(key);
+  if (cached) return cached;
+  const a = assessLeg(leg, day, snapshot, opts);
+  byKey.set(key, a);
+  return a;
+}
+
+/**
  * Assess one leg for trip day N: hour-by-hour simulation from the departure
  * time. Speed is taken from the polar (+ offset) at the current progress
  * point; the FR16 wind rule is checked each hour at EVERY leg point (worst

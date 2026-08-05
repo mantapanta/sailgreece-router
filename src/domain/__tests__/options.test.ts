@@ -130,8 +130,21 @@ function twoIslandSnapshot(opts: {
     forecast: { [base.id]: fc, [target.id]: fc },
     library: {
       islands: [
-        { id: 'athen', name: 'Athen', coordinates: base.coordinates },
-        { id: 'zielinsel', name: 'Zielinsel', coordinates: target.coordinates },
+        // Fähr-Daten kuratiert: ohne sie setzt die FR31-Regel horizonDependent
+        // ("Regel bindet nur, solange die Daten sie tragen können") und jede
+        // Option würde als offen-horizont statt offen/schliesst gemeldet.
+        {
+          id: 'athen',
+          name: 'Athen',
+          coordinates: base.coordinates,
+          guestPickup: { ferryReachable: true, sourceNote: 'fixture' },
+        },
+        {
+          id: 'zielinsel',
+          name: 'Zielinsel',
+          coordinates: target.coordinates,
+          guestPickup: { ferryReachable: true, sourceNote: 'fixture' },
+        },
       ],
       places: [base, target],
       invalidPlaces: [],
@@ -158,15 +171,15 @@ function twoIslandSnapshot(opts: {
 
 describe('options — FR18 open / closes / closed', () => {
   it('gentle broad-reach wind, full forecast axis: option closes on the last startable day (FR18)', () => {
-    // Axis covers the whole trip, so the calendar limit is computable: the
-    // last day to sail out AND still return by the PoR deadline (day 11 —
-    // arrival on the deadline date minus the buffer day, review finding H3)
-    // is day 10.
+    // Axis covers the whole trip, so the calendar limit is computable.
+    // Zielmodell v2: die Frist einer Option misst am ECHTEN Stichtag (Tag 12,
+    // wie die Plan-Gültigkeit), nicht mehr am Puffertag — der letzte Tag zum
+    // Auslaufen mit Rückkehr bis Tag 12 ist also Tag 11.
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
     const route = snapshot.library.variants[0]!;
     const result = assessRouteOption(route, 'athen', snapshot);
     expect(result.state).toBe('schliesst');
-    expect(result.closesOnDay).toBe(10);
+    expect(result.closesOnDay).toBe(11);
   });
 
   it('feasible now, closing-day scan hits the horizon: offen-horizont with visible caveat', () => {

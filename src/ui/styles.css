@@ -777,6 +777,31 @@ table.shelter-table tr.sektor-inaktiv td {
   white-space: normal;
 }
 
+/* Zielmodell v2 — die Abbruch-Notation an der Etappen-Karte: der
+   Heimweg-Status des Tages. Meltemi-fest ist eine leise Bestätigung,
+   das Wetterfenster eine sichtbare Anweisung, kritisch ein Alarm. */
+.rueckweg-zeile {
+  font-size: 0.85rem;
+  border-radius: 4px;
+  padding: 0.45rem 0.7rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--hairline);
+}
+.rueckweg-zeile.status-meltemi-fest {
+  color: var(--muted);
+  border-style: dashed;
+}
+.rueckweg-zeile.status-wetterfenster {
+  background: #f7ecd7;
+  color: #8a6414;
+  border-color: #e4cf9f;
+}
+.rueckweg-zeile.status-kritisch {
+  background: #f6e2df;
+  color: #8c2f24;
+  border-color: #e3b6af;
+}
+
 /* Ein Wert, der informiert statt zu bewerten. */
 .badge-info {
   border-style: dashed;

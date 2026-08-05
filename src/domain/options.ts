@@ -1,11 +1,16 @@
 /**
  * FR18 / FR20 — mid-term option space.
- * An option is OPEN when, with the current forecast, a remaining plan exists
- * that (1) keeps every leg inside the family thresholds (FR16, durations from
- * polar + offset) and (2) reaches Alimos by the eve of disembarkation incl.
- * buffer day (FR19). 'schliesst am Tag X' = from day X+1 no such plan exists;
- * 'zu' = none exists. Beyond the horizon: 'offen-horizont' with visible
- * caveat. Feasibility uses the SAME leg duration function as scoring/ppr.
+ *
+ * ZIELMODELL V2: "Geht dieses Ziel noch?" beantwortet dieselbe Maschine wie
+ * die Hauptroute — `completePlan` mit Wendepunkt-Filter. offen = es existiert
+ * ein GÜLTIGER Plan (alle harten Bedingungen, inklusive Zustiegstag und
+ * Liegeplatz-Regel); offen-horizont = gültig, hängt aber an der
+ * Persistenz-Annahme; zu = kein gültiger Plan, begründet mit den Verletzungen
+ * des besten Versuchs. Der Meltemi-Worst-Case ist hier KEIN K.-o. mehr: er
+ * gehört zur täglichen Abbruch-Notation (solver.deriveReturnChecks), nicht in
+ * die Planung. 'schliesst am Tag X' = ab Tag X+1 existiert kein forecast-
+ * tragfähiger Restplan mehr (Scan über restPlanFeasible, forecast-basiert,
+ * gegen den echten Stichtag).
  */
 
 import type { Leg, Variant } from './schema/route.ts';
@@ -20,14 +25,14 @@ import type {
 import { worstAmpel, type Ampel } from './schema/common.ts';
 import { assessLeg } from './scoring.ts';
 import {
-  effectiveDeadlineDay,
   packLegsFeasible,
   returnFeasibleStarting,
   routeIslandSequence,
   type Feasibility,
 } from './ppr.ts';
+import { deadlineFrame } from './time.ts';
 import { legsOfVariant } from './legs.ts';
-import { completePlan } from './solver.ts';
+import { completePlan, reachNmFor } from './solver.ts';
 import { stagesOf, type RelaxationLevel } from './schema/plan.ts';
 import type { Plan } from './schema/plan.ts';
 import { distanceNm } from './geo.ts';
@@ -46,7 +51,15 @@ export function remainingRouteLegs(
 /**
  * Does a remaining plan exist for this option when its execution starts on
  * `startDay` (staying put until then)? Combines the option's remaining legs
- * with the return constraint (FR18 definition, both conditions).
+ * with the return constraint.
+ *
+ * ZIELMODELL V2: forecast-basiert (Persistenz-Annahme => 'horizon'), gegen den
+ * ECHTEN Stichtag — dieselben Maßstäbe wie die Plan-Gültigkeit (Bedingungen 1,
+ * 2 und 2' hart nach Forecast). Der frühere Worst-Case-Maßstab machte den
+ * Optionsraum strenger als die Gültigkeit: bei 30 kn aus Nord ist keine
+ * Rückkehr nach Norden segelbar, also war jedes ferne Ziel "zu", während der
+ * Solver denselben Törn für gültig hielt. Der Worst-Case gehört jetzt zur
+ * täglichen Abbruch-Notation (solver.deriveReturnChecks).
  */
 export function restPlanFeasible(
   variantLegs: Leg[],
@@ -56,9 +69,9 @@ export function restPlanFeasible(
 ): Feasibility {
   const legs = remainingRouteLegs(variantLegs, currentIslandId);
   if (legs === null) return 'infeasible';
-  const deadline = effectiveDeadlineDay(snapshot);
+  const deadline = deadlineFrame(snapshot.params).deadlineDay;
   if (legs.length === 0) {
-    return returnFeasibleStarting(currentIslandId, startDay, snapshot);
+    return returnFeasibleStarting(currentIslandId, startDay, snapshot, 'forecast', deadline);
   }
   // Outbound legs one per day (waits allowed), then the return chain from the
   // route's final island. We search over the arrival day of the last leg.
@@ -74,7 +87,7 @@ export function restPlanFeasible(
   ) {
     const outbound = packLegsFeasibleByDeadline(legs, startDay, arrivalDay, snapshot);
     if (outbound === 'infeasible') continue;
-    const back = returnFeasibleStarting(lastIsland, arrivalDay + 1, snapshot);
+    const back = returnFeasibleStarting(lastIsland, arrivalDay + 1, snapshot, 'forecast', deadline);
     if (back === 'infeasible') continue;
     const combined: Feasibility =
       outbound === 'horizon' || back === 'horizon' ? 'horizon' : 'feasible';
@@ -94,28 +107,40 @@ function packLegsFeasibleByDeadline(
 }
 
 /**
- * WAS DIE OPTION KOSTET — die mildeste Stufe der Leiter, auf der ein gültiger
- * Plan für dieses Ziel existiert, samt dem Plan selbst.
+ * DIE EINE ANTWORT auf "geht dieses Ziel, und was kostet es?" — derselbe
+ * Solver wie für die Hauptroute (`completePlan` mit Filter auf den
+ * Wendepunkt), damit Karte und Plan nie zweierlei behaupten können (AD-3).
  *
- * Ohne diese Angabe ist eine offene Option eine Behauptung ohne Preisschild:
- * "Santorin offen" sagt nichts darüber, dass dafür zwei Nachtetappen fällig
- * wären. Genau diese Folge soll der Skipper sehen, BEVOR er sich entscheidet —
- * nicht erst, wenn er mitten drin steckt.
- *
- * Gerechnet wird über dieselbe Maschinerie wie die Hauptroute (`completePlan`
- * mit Filter auf den Wendepunkt), damit ein hier gezeigter Preis und ein
- * später tatsächlich gebauter Plan nicht auseinanderlaufen können (AD-3).
+ * Liefert auch den UNGÜLTIGEN besten Versuch zurück: seine Verletzungen sind
+ * die ehrliche Begründung eines "zu" — statt eines pauschalen Satzes, dem der
+ * Skipper nicht ansehen kann, ob Stichtag, Zustieg oder Wetter das Problem ist.
  */
-function optionCost(
+function optionPlan(
   turnIslandId: string,
   currentIslandId: string,
   snapshot: PlanningSnapshot,
-): { level: RelaxationLevel; note: string; plan: Plan; turnDay: number | null } | null {
+): {
+  /**
+   * Tragfähig = keine Sicherheits-, Termin- oder Zustiegs-Verletzung — die
+   * Messlatte des FR2-Zeugen, NICHT die volle Plan-Gültigkeit: strukturelle
+   * Defizite (Hafentage über der Notgrenze, ein wiederholter Liegeplatz)
+   * schliessen ein ZIEL nicht. Sie machen den konkreten Plan unschöner, und
+   * genau dafür stehen sie an ihm dran — aber "Santorin geht nicht" darf
+   * nicht heissen "der beste Plan dorthin hätte drei Hafentage zu viel".
+   */
+  tragfaehig: boolean;
+  horizonDependent: boolean;
+  violations: string[];
+  level: RelaxationLevel;
+  note: string;
+  plan: Plan;
+  turnDay: number | null;
+} | null {
   const solved = completePlan(snapshot, currentIslandId, [], {
     turnIslandId,
     stopAtFirstValid: true,
   });
-  if (!solved || !solved.validity.valid) return null;
+  if (!solved) return null;
 
   const stages = stagesOf(solved.plan);
   const doubleDays = stages.filter((s) => s.legIds.length > 1).length;
@@ -133,6 +158,16 @@ function optionCost(
   if (solved.relaxedTo === 'nightLeg') teile.push('mindestens eine Nachtetappe');
 
   return {
+    tragfaehig: solved.validity.safetyViolations.length === 0,
+    horizonDependent: solved.validity.horizonDependent,
+    violations: [
+      ...new Set(
+        (solved.validity.safetyViolations.length > 0
+          ? solved.validity.safetyViolations
+          : solved.validity.violations
+        ).map((v) => v.text),
+      ),
+    ],
     level: solved.relaxedTo,
     note:
       teile.length === 0
@@ -151,28 +186,37 @@ export function assessRouteOption(
 ): RouteOptionAssessment {
   const vLegs = legsOfVariant(variant, snapshot.library);
   const today = snapshot.trip.currentDay;
-  const deadline = effectiveDeadlineDay(snapshot);
+  const deadline = deadlineFrame(snapshot.params).deadlineDay;
   const reasons: string[] = [];
   /**
-   * Der Wendepunkt ist die FERNSTE Insel der Route, nicht die letzte.
-   *
-   * Eine Rundkurs-Variante endet wieder an der Basis; ihre letzte Insel als
-   * Wendepunkt zu lesen ergäbe Reichweite 0 und die Aussage "diese Route führt
-   * nirgendwohin" — für die Westkykladen-Runde genau verkehrt.
+   * Der Wendepunkt ist die SÜDLICHSTE Insel der Route (reachNmFor — dieselbe
+   * Kennzahl wie im Solver), nicht die letzte: eine Rundkurs-Variante endet
+   * wieder an der Basis, und ihre letzte Insel als Wendepunkt zu lesen ergäbe
+   * Reichweite 0. Bei Gleichstand entscheidet die Distanz. ANGEZEIGT wird
+   * als reachNm weiterhin die Distanz Basis→Wendepunkt — die Zahl, die der
+   * Skipper mit der Karte abgleichen kann.
    */
   const base = snapshot.library.islands.find(
     (i) => i.id === snapshot.params.baseIslandId,
   );
-  const reachOf = (islandId: string): number => {
+  const suedOf = reachNmFor(snapshot);
+  const distOf = (islandId: string): number => {
     const island = snapshot.library.islands.find((i) => i.id === islandId);
     return base && island ? distanceNm(base.coordinates, island.coordinates) : 0;
   };
   const seq = routeIslandSequence(vLegs);
   const turnIslandId =
     seq.length > 0
-      ? seq.reduce((far, id) => (reachOf(id) > reachOf(far) ? id : far), seq[0]!)
+      ? seq.reduce(
+          (far, id) =>
+            suedOf(id) > suedOf(far) ||
+            (suedOf(id) === suedOf(far) && distOf(id) > distOf(far))
+              ? id
+              : far,
+          seq[0]!,
+        )
       : snapshot.params.baseIslandId;
-  const reachNm = base ? reachOf(turnIslandId) : null;
+  const reachNm = base ? distOf(turnIslandId) : null;
 
   const leer = (
     over: Partial<RouteOptionAssessment>,
@@ -207,24 +251,31 @@ export function assessRouteOption(
       ? worstAmpel(legAssessments.map((l) => l.ampel))
       : 'unbewertet';
 
-  const now = restPlanFeasible(vLegs, currentIslandId, today, snapshot);
-  if (now === 'infeasible') {
-    reasons.push('Kein zulässiger Restplan mit aktuellem Forecast');
+  /**
+   * ZIELMODELL V2 — der Zustand kommt aus dem Solver, nicht aus einer zweiten
+   * Rechnung: offen heisst "es existiert ein gültiger Plan zu diesem
+   * Wendepunkt", mit denselben harten Bedingungen wie die Hauptroute. Ein "zu"
+   * nennt die Verletzungen des besten Versuchs — ehrlich statt pauschal.
+   */
+  const solved = optionPlan(turnIslandId, currentIslandId, snapshot);
+  if (!solved) {
+    reasons.push('Zu diesem Ziel lässt sich mit aktuellem Forecast kein Restplan bauen');
+    return leer({ state: 'zu', ampel, legAssessments });
+  }
+  if (!solved.tragfaehig) {
+    reasons.push('Kein tragfähiger Restplan zu diesem Ziel:');
+    for (const text of solved.violations.slice(0, 3)) reasons.push(text);
     return leer({ state: 'zu', ampel, legAssessments });
   }
 
-  // Der Preis wird nur für Optionen gerechnet, die überhaupt noch offen sind —
-  // für eine geschlossene gibt es nichts zu bezahlen, und der Lauf über die
-  // Leiter ist nicht umsonst.
-  const cost = optionCost(turnIslandId, currentIslandId, snapshot);
   const preis = {
-    costLevel: cost?.level ?? null,
-    costNote: cost?.note ?? null,
-    plan: cost?.plan ?? null,
-    turnDay: cost?.turnDay ?? null,
+    costLevel: solved.level,
+    costNote: solved.note,
+    plan: solved.plan,
+    turnDay: solved.turnDay,
   };
 
-  if (now === 'horizon') {
+  if (solved.horizonDependent) {
     reasons.push('Machbarkeit reicht über den Forecast-Horizont hinaus — offen mit Vorbehalt');
     return leer({ state: 'offen-horizont', ampel, legAssessments, ...preis });
   }
