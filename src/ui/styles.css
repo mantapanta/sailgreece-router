@@ -772,6 +772,17 @@ table.shelter-table tr.sektor-inaktiv td {
   font-style: italic;
 }
 
+/* Eine Abweichung von der Regel "eine Verbindung pro Tag" — sichtbar, aber
+   keine Warnung: erzwungen und zulässig, nur eben nicht der Normalfall. */
+.badge-doppelschlag {
+  border-style: dashed;
+  background: #f7ecd7;
+  color: #8a6414;
+  border-color: #e4cf9f;
+  cursor: help;
+  white-space: normal;
+}
+
 /* Ein Wert, der informiert statt zu bewerten. */
 .badge-info {
   border-style: dashed;

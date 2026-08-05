@@ -284,10 +284,29 @@ describe('regression: double-leg days can satisfy pins and the pickup', () => {
         startIslandId: 'athen',
         // Day 1 must end at 'c' — only possible by sailing both legs.
         dayConstraint: (day, island) => day !== 1 || island === 'c',
+        // Seit dem Ein-Etappen-Standard muss der Doppelschlag angefordert
+        // werden — der Packer kann ihn weiterhin, er wählt ihn nur nicht mehr
+        // von sich aus (params.maxLegsPerDay, RELAXATION_ORDER).
+        maxLegsPerDay: 2,
       },
     );
     expect(packed.verdict).not.toBe('infeasible');
     expect(packed.packed.filter((p) => p.day === 1)).toHaveLength(2);
+  });
+
+  it('ohne Freigabe bleibt derselbe Pin unerreichbar — statt still zwei Schläge zu legen', () => {
+    const snapshot = realSnapshot({ legNm: 6, windKn: 10, windFromDeg: 90 });
+    const packed = packLegs(
+      snapshot.library.legs.filter((l) => ['athen--b', 'b--c'].includes(l.id)),
+      1,
+      12,
+      snapshot,
+      {
+        startIslandId: 'athen',
+        dayConstraint: (day, island) => day !== 1 || island === 'c',
+      },
+    );
+    expect(packed.verdict).toBe('infeasible');
   });
 
   it('finds a pickup harbour that needs a double leg', () => {

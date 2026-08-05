@@ -439,8 +439,17 @@ function StageCard({
               {formatHours(stage.stopHoursTotal)} Liegezeit
             </span>
           )}
+          {/* Der Zwischenstopp ist die Ausnahme, nicht die Regel — geplant wird
+              eine Verbindung pro Tag. Steht hier trotzdem einer, hat eine harte
+              Bedingung ihn erzwungen, und der Tag sagt das statt es zu
+              verschweigen (params.maxLegsPerDay / RELAXATION_ORDER). */}
           {stage.legs.length > 1 && (
-            <span className="badge">{stage.legs.length} Schläge an einem Tag</span>
+            <span
+              className="badge badge-doppelschlag"
+              title="Normalerweise plant die App eine Verbindung pro Tag. Zwei Schläge an einem Tag kommen nur, wenn ein Tag je Verbindung den Stichtag oder den Gäste-Zustiegstag nicht mehr erreicht."
+            >
+              {stage.legs.length} Schläge an einem Tag — Ausnahme
+            </span>
           )}
         </div>
       )}
