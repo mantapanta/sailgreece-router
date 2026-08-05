@@ -63,6 +63,15 @@ export type TripAction =
   | { type: 'CHECK_IN'; plan: Plan }
   /** FR28: the skipper edited a day; payload is the fully recomputed plan. */
   | { type: 'EDIT_STAGE'; plan: Plan }
+  /**
+   * Ein gespeicherter Plan stammt von einem älteren Solver-Stand
+   * (planOutdated) und wird durch den aktuellen Vorschlag ersetzt — nur
+   * solange der Skipper nichts investiert hat: trägt der Plan Pins
+   * (source 'skipper'), bleibt er stehen und die Neuberechnung läuft über den
+   * sichtbaren Weg (Banner → CHECK_IN). Ob der Törn schon läuft, prüft der
+   * Effekt in usePlanning (der Reducer kennt den Törntag nicht).
+   */
+  | { type: 'REFRESH_OUTDATED'; plan: Plan }
   /** Release a pin so the solver may plan that day again. */
   | { type: 'RELEASE_PIN'; day: number }
   /** The skipper acknowledged an unreadable plan; a fresh one may be adopted. */
@@ -121,6 +130,15 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
       return { ...state, plan: releaseAllPins(action.plan), planUnreadable: false };
     case 'EDIT_STAGE':
       return { ...state, plan: action.plan, planUnreadable: false };
+    case 'REFRESH_OUTDATED':
+      // Nur ersetzen, was der Solver selbst gelegt hat: ein Pin ist eine
+      // Skipper-Entscheidung, und die wird nie stillschweigend verworfen
+      // (AD-12). Der Guard steht IM Reducer, nicht nur im Effekt — kein
+      // Aufrufer kann ihn vergessen.
+      if (!state.plan || state.plan.days.some((d) => d.source === 'skipper')) {
+        return state;
+      }
+      return { ...state, plan: action.plan };
     case 'RELEASE_PIN': {
       if (!state.plan) return state;
       return {

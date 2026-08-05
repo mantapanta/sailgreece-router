@@ -16,6 +16,21 @@ import { z } from 'zod';
  */
 export const PLAN_SCHEMA_VERSION = 1;
 
+/**
+ * Bumped whenever the solver BEHAVIOUR changes — a different question than
+ * PLAN_SCHEMA_VERSION (shape). A stored plan from an older algorithm parses
+ * fine, but it is a plan the current solver would no longer propose; the app
+ * must be able to SEE that (planOutdated) instead of re-assessing a stale
+ * route forever. Deliberately not folded into the schema version: bumping
+ * that would route every stored plan through the `planUnreadable` path and
+ * conflate "unreadable" with "merely outdated".
+ *
+ * v2 (2026-08-05): Doppelschlag-Deckel pro Törn, Hafentage-Verteilung,
+ * Rangfolge firm/assumed getrennt — Pläne der v1-Rangfolge (Doppelschlag-
+ * Serien, Hafentage-Halde am Ende) gelten als veraltet.
+ */
+export const SOLVER_ALGORITHM_VERSION = 2;
+
 /** Who put this day into the plan. `skipper` days are pins (AD-12). */
 export const PlanSourceSchema = z.enum(['solver', 'skipper']);
 export type PlanSource = z.infer<typeof PlanSourceSchema>;
@@ -65,6 +80,12 @@ export type PlanDay = z.infer<typeof PlanDaySchema>;
 export const PlanSchema = z
   .object({
     schemaVersion: z.literal(PLAN_SCHEMA_VERSION),
+    /**
+     * Solver-Stand, der diesen Plan erzeugt hat. Optional, damit Pläne aus
+     * älterem Storage weiter PARSEN (fehlend = Stand 0, also veraltet) —
+     * ein alter Plan ist lesbar, nur nicht mehr aktuell.
+     */
+    algorithmVersion: z.number().int().positive().optional(),
     days: z.array(PlanDaySchema).min(1),
   })
   // A plan covers each trip day exactly once and without gaps. Persisted state
@@ -93,6 +114,16 @@ export const PlanSchema = z
     }
   });
 export type Plan = z.infer<typeof PlanSchema>;
+
+/**
+ * Stammt der Plan von einem älteren Solver-Stand? Dann würde der aktuelle
+ * Solver ihn so nicht mehr vorschlagen — die App bietet die Neuberechnung an
+ * (bzw. ersetzt automatisch, solange der Törn nicht begonnen hat und keine
+ * Pins bestehen; tripContext/usePlanning).
+ */
+export function planOutdated(plan: Plan): boolean {
+  return (plan.algorithmVersion ?? 0) < SOLVER_ALGORITHM_VERSION;
+}
 
 // ---------------------------------------------------------------------------
 // Validity (AD-13) — shared vocabulary of solver and assessment
@@ -151,6 +182,25 @@ export const SAFETY_VIOLATION_KINDS: ViolationKind[] = [
  */
 export function isSafetyViolation(v: Violation): boolean {
   return SAFETY_VIOLATION_KINDS.includes(v.kind) && v.assumed !== true;
+}
+
+/**
+ * FEST etablierte Verletzungen — alles, was nicht auf der Persistenz-Annahme
+ * beruht. Die Trennung ist das Gegenstück zur Doktrin oben ("warnt, verurteilt
+ * nicht") auf der RANGFOLGE-Seite: ein Plan, dessen einzige Befunde Annahme-
+ * Befunde sind, darf im Vergleich nicht gegen einen Plan verlieren, der gar
+ * nicht erst losfährt. Genau das passierte, als `preferred` alle Verletzungen
+ * in einen Topf warf: jeder Segeltag jenseits des Horizonts zählte gegen den
+ * Plan, Tage an der Basis zählten nichts — "an Tag 7 heim und liegen bleiben"
+ * gewann rechnerisch gegen jeden Törn, der die zweite Woche nutzt.
+ */
+export function firmViolations(v: PlanValidity): Violation[] {
+  return v.violations.filter((x) => x.assumed !== true);
+}
+
+/** Die Annahme-Befunde — sie warnen weiter und rangieren, aber nachrangig. */
+export function assumedViolations(v: PlanValidity): Violation[] {
+  return v.violations.filter((x) => x.assumed === true);
 }
 
 export interface PlanValidity {
