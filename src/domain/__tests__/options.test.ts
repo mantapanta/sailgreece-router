@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { assessRouteOption, deriveDayOptions, restPlanFeasible } from '../options.ts';
+import {
+  assessRouteOption,
+  deriveDayOptions,
+  deriveDecisionPoints,
+  restPlanFeasible,
+} from '../options.ts';
 import { predictedPointOfReturn } from '../ppr.ts';
 
 import {
@@ -14,7 +19,56 @@ import {
 } from './fixtures.ts';
 import { TEST_POLAR } from './fixtures.ts';
 import { dateForTripDay } from '../time.ts';
-import type { PlanningSnapshot } from '../schema/snapshot.ts';
+import type {
+  PlanningSnapshot,
+  RouteOptionAssessment,
+} from '../schema/snapshot.ts';
+import type { Island } from '../schema/island.ts';
+
+/**
+ * Basis, eine Zwischeninsel und eine ferne Insel — plus ein RUNDKURS, der
+ * wieder an der Basis endet. Genau die Form, an der sich zeigt, ob der
+ * Wendepunkt als fernste oder als letzte Insel gelesen wird.
+ */
+function rundkursScenario() {
+  const athen = makePlace({ id: 'athen-alimos', islandId: 'athen', coordinates: { lat: 37.9, lon: 23.7 } });
+  const mitte = makePlace({ id: 'mitte-bucht', islandId: 'mitte', coordinates: { lat: 37.6, lon: 24.2 } });
+  const fern = makePlace({ id: 'fern-hafen', islandId: 'fern', coordinates: { lat: 37.3, lon: 24.6 } });
+  const leg = (f: typeof athen, t: typeof athen) =>
+    makeLeg({
+      id: `${f.islandId}--${t.islandId}`,
+      fromIslandId: f.islandId, toIslandId: t.islandId,
+      fromPlaceId: f.id, toPlaceId: t.id, distanceNm: 18,
+    });
+  const legs = [leg(athen, mitte), leg(mitte, fern), leg(fern, mitte), leg(mitte, athen)];
+  const hinweg = makeVariant('hinweg', [legs[0]!, legs[1]!], { escalationRank: 1, name: 'Hinweg bis Fern' });
+  const rundkurs = makeVariant('rundkurs', legs, { escalationRank: 2, name: 'Runde über Fern' });
+  const kette = makeVariant('rueckfallkette-west', [legs[2]!, legs[3]!], {
+    escalationRank: 0, isReturnChain: true, name: 'Rückfallkette',
+  });
+  const islands: Island[] = [
+    { id: 'athen', name: 'Athen', coordinates: athen.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'f' } },
+    { id: 'mitte', name: 'Mitte', coordinates: mitte.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'f' } },
+    { id: 'fern', name: 'Fern', coordinates: fern.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'f' } },
+  ];
+  const times = makeTimes(14);
+  const fc = constantForecast(times.length, 10, 90);
+  const snapshot = makeSnapshot({
+    times, polar: TEST_POLAR,
+    forecast: { [athen.id]: fc, [mitte.id]: fc, [fern.id]: fc },
+    library: { islands, places: [athen, mitte, fern], invalidPlaces: [], legs, variants: [hinweg, rundkurs, kette] },
+    trip: {
+      currentDay: 1,
+      position: { source: 'manual', lat: athen.coordinates.lat, lon: athen.coordinates.lon, placeId: athen.id },
+      plan: null, departureHourOverride: null, stopHoursByDay: {},
+    },
+  });
+  snapshot.params = {
+    ...snapshot.params, tripStartDate: TRIP_START, tripLengthDays: 5,
+    returnDeadlineDate: '2026-08-12', pickupDate: '2026-08-11', reliableHorizonDays: 14,
+  };
+  return { snapshot, hinweg, rundkurs };
+}
 
 /**
  * Two-island world: base (athen) and 'zielinsel' 20 nm south.
@@ -278,5 +332,94 @@ describe('ppr — FR19 predicted point of return', () => {
     const snapshot = twoIslandSnapshot({ windKn: 28, windFromDeg: 0, currentDay: 3 });
     const ppr = predictedPointOfReturn(snapshot, 'zielinsel');
     expect(ppr.latestReturnStartDay).toBeNull();
+  });
+});
+
+/**
+ * FR9/FR18/FR20 — eine Option ohne Preisschild und ohne Frist ist keine
+ * Entscheidungsgrundlage. Diese Fälle halten fest, was jede Option mitbringen
+ * muss, damit der Skipper sie überhaupt abwägen kann.
+ */
+describe('Optionsraum — Reichweite, Preis, Frist', () => {
+  it('nennt den Wendepunkt als FERNSTE Insel, nicht als letzte', () => {
+    // Ein Rundkurs endet wieder an der Basis. Seine letzte Insel als Wende zu
+    // lesen ergäbe Reichweite 0 — "diese Route führt nirgendwohin".
+    const { snapshot, rundkurs } = rundkursScenario();
+    const opt = assessRouteOption(rundkurs, 'athen', snapshot);
+    expect(opt.turnIslandId).toBe('fern');
+    expect(opt.reachNm).toBeGreaterThan(0);
+  });
+
+  it('trägt den Namen der Route, nicht ihre Id', () => {
+    const { snapshot, rundkurs } = rundkursScenario();
+    expect(assessRouteOption(rundkurs, 'athen', snapshot).name).toBe(rundkurs.name);
+  });
+
+  it('eine offene Option bringt Preis UND Plan mit', () => {
+    const { snapshot, hinweg } = rundkursScenario();
+    const opt = assessRouteOption(hinweg, 'athen', snapshot);
+    expect(opt.state).not.toBe('zu');
+    expect(opt.costLevel).not.toBeNull();
+    expect(opt.costNote).toBeTruthy();
+    // Der Plan ist da, damit "verfolgen" nicht heisst, ihn selbst zu bauen.
+    expect(opt.plan).not.toBeNull();
+    expect(opt.turnDay).not.toBeNull();
+  });
+
+  it('ohne Position gibt es keine Option und keinen erfundenen Preis', () => {
+    const { snapshot, hinweg } = rundkursScenario();
+    const opt = assessRouteOption(hinweg, null, snapshot);
+    expect(opt.state).toBe('zu');
+    expect(opt.costLevel).toBeNull();
+    expect(opt.plan).toBeNull();
+  });
+});
+
+/**
+ * Die Vorwarnung ist der eigentliche Zweck von FR20. Eine Option, die heute
+ * schliesst, ist keine Entscheidung mehr, sondern eine Mitteilung.
+ */
+describe('Entscheidungspunkte — Vorwarnung statt Nachruf', () => {
+  const option = (
+    over: Partial<RouteOptionAssessment>,
+  ): RouteOptionAssessment => ({
+    routeId: 'sued', name: 'Süd-Route', state: 'schliesst', closesOnDay: 7,
+    ampel: 'gruen', legAssessments: [], reasons: [],
+    turnIslandId: 'fern', reachNm: 100, costLevel: 'none',
+    costNote: null, plan: null, turnDay: 3, ...over,
+  });
+  const ppr = {
+    latestReturnStartDay: null, remainingDistanceNm: null,
+    effectiveDeadlineDay: 11, reasons: [],
+  };
+  const routes = [{ id: 'sued', name: 'Süd-Route' }];
+
+  it('warnt innerhalb der Vorwarnzeit mit der Zahl der verbleibenden Tage', () => {
+    const points = deriveDecisionPoints([option({})], ppr, routes, 4, 4);
+    expect(points[0]!.text).toContain('Noch 3 Tage');
+    expect(points[0]!.text).toContain('Süd-Route');
+  });
+
+  it('am letzten Tag heisst es HEUTE, nicht "noch 0 Tage"', () => {
+    const points = deriveDecisionPoints([option({})], ppr, routes, 7, 4);
+    expect(points[0]!.text).toContain('HEUTE entscheiden');
+  });
+
+  it('ausserhalb der Vorwarnzeit bleibt es der schlichte Termin', () => {
+    const points = deriveDecisionPoints([option({})], ppr, routes, 1, 4);
+    expect(points[0]!.text).toContain('Bis Tag 7 entscheiden');
+    expect(points[0]!.text).not.toContain('Noch');
+  });
+
+  it('die Warnung nennt den Preis mit — wer jetzt zieht, soll wissen wofür', () => {
+    const points = deriveDecisionPoints(
+      [option({ costNote: 'nur mit zwei Nachtetappen' })], ppr, routes, 5, 4,
+    );
+    expect(points[0]!.text).toContain('nur mit zwei Nachtetappen');
+  });
+
+  it('ohne Vorwarnzeit-Angabe verhält sich alles wie bisher', () => {
+    const points = deriveDecisionPoints([option({})], ppr, routes);
+    expect(points[0]!.text).toContain('Bis Tag 7 entscheiden');
   });
 });

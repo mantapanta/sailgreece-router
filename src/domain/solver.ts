@@ -37,10 +37,12 @@ import type {
 } from './schema/plan.ts';
 import {
   PLAN_SCHEMA_VERSION,
+  RELAXATION_ORDER,
   isSafetyViolation,
   planDay,
   stagesOf,
 } from './schema/plan.ts';
+import type { RelaxationLevel } from './schema/plan.ts';
 import { assessLeg, stopHoursForDay } from './scoring.ts';
 import {
   packLegs,
@@ -63,13 +65,7 @@ import { distanceNm } from './geo.ts';
  * ABSENT — they are never relaxed, and leaving them out of this list is the
  * structural guarantee, not a runtime check that could be forgotten.
  */
-export const RELAXATION_ORDER = [
-  'none',
-  'hardMax',
-  'doppelschlag',
-  'nightLeg',
-] as const;
-export type RelaxationLevel = (typeof RELAXATION_ORDER)[number];
+export { RELAXATION_ORDER, type RelaxationLevel } from './schema/plan.ts';
 
 /**
  * Apply a relaxation level to the params the DP runs against.
@@ -623,6 +619,18 @@ export function reachNmFor(snapshot: PlanningSnapshot): (islandId: string) => nu
   };
 }
 
+/**
+ * Tag, an dem der Plan den Wendepunkt erreicht — die Trennlinie zwischen Hin-
+ * und Rückweg. Ohne Wende-Etappe (Plan bleibt an der Basis) zählt der letzte
+ * Tag, damit "gar nicht losfahren" nicht als früheste Wende gewinnt.
+ */
+function turnDayOf(r: SolveResult): number {
+  const stages = stagesOf(r.plan);
+  const turn = stages.find((s) => s.toIslandId === r.turnIslandId);
+  if (turn) return turn.day;
+  return Math.max(0, ...r.plan.days.map((d) => d.day));
+}
+
 const RELAXATION_STEP: Record<RelaxationLevel, number> = {
   none: 0,
   hardMax: 1,
@@ -661,6 +669,12 @@ export function preferred(
     [-a.validity.violations.length, -b.validity.violations.length],
     [Math.round(reach(a.turnIslandId)), Math.round(reach(b.turnIslandId))],
     [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
+    // "So früh wie möglich nach Süden, um genug Zeit für zurück zu haben":
+    // bei gleicher Reichweite gewinnt der Plan, der den Wendepunkt FRÜHER
+    // erreicht. Jeder Tag, den die Wende früher liegt, ist ein Tag Reserve auf
+    // dem Heimweg — und der Heimweg ist die Strecke, die halten muss, wenn der
+    // Meltemi einsetzt.
+    [-turnDayOf(a), -turnDayOf(b)],
     [
       -a.plan.days.filter((d) => d.kind === 'harbour').length,
       -b.plan.days.filter((d) => d.kind === 'harbour').length,
@@ -758,6 +772,29 @@ export function completePlan(
   snapshot: PlanningSnapshot,
   startIslandId: string,
   pins: Pin[] = [],
+  opts: {
+    /**
+     * Nur Kandidaten betrachten, die an DIESER Insel wenden.
+     *
+     * Damit beantwortet dieselbe Maschinerie auch "was kostet mich Santorin?"
+     * (options.ts) — statt die Frage mit einer zweiten, leicht abweichenden
+     * Rechnung zu beantworten, die dann anderes behaupten könnte als der Plan,
+     * den der Skipper hinterher tatsächlich bekommt (AD-3).
+     */
+    turnIslandId?: string;
+    /**
+     * Bei der ERSTEN Stufe abbrechen, die etwas Gültiges liefert.
+     *
+     * Nur sinnvoll zusammen mit `turnIslandId`: dann ist die Reichweite über
+     * alle Kandidaten konstant, und `preferred` entscheidet als Nächstes nach
+     * der Eskalationsstufe — die mildeste gültige Stufe IST also das Optimum.
+     * Der Abbruch ändert das Ergebnis nicht, er spart nur die restlichen
+     * Stufen. Für die Hauptroute wäre er falsch: dort gewinnt Reichweite vor
+     * Stufe, und ein früher Abbruch hat genau deshalb jahrelang den kürzeren
+     * Törn geliefert.
+     */
+    stopAtFirstValid?: boolean;
+  } = {},
 ): SolveResult | null {
   const frame = deadlineFrame(snapshot.params);
   const startDay = snapshot.trip.currentDay;
@@ -784,7 +821,9 @@ export function completePlan(
     };
   }
 
-  const candidates = buildCandidates(snapshot, startIslandId);
+  const candidates = buildCandidates(snapshot, startIslandId).filter(
+    (c) => opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId,
+  );
   if (candidates.length === 0) return null;
   const constraint = dayConstraintFor(snapshot, futurePins);
 
@@ -867,6 +906,8 @@ export function completePlan(
       };
       best = preferred(best, result, reach);
     }
+
+    if (opts.stopAtFirstValid && best?.validity.valid) break;
   }
 
   return best;

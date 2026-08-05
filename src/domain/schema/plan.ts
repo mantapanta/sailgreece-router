@@ -207,3 +207,20 @@ export function islandAtEndOfDay(plan: Plan, day: number): string | null {
   if (!entry) return null;
   return entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
 }
+
+/**
+ * AD-13 — die feste Eskalationsleiter, in Reihenfolge steigender Zugeständnisse.
+ *
+ * Liegt im Schema und nicht im Solver, weil sie normativ ist: `upwind` und
+ * `pickup` fehlen hier ABSICHTLICH, und dass sie fehlen, ist die strukturelle
+ * Garantie, dass sie nie gelockert werden können — keine Laufzeitprüfung, die
+ * jemand vergessen könnte. Ausserdem trägt jede Bewertung einer Route die
+ * erreichte Stufe als Preisschild mit (`RouteOptionAssessment.costLevel`).
+ */
+export const RELAXATION_ORDER = [
+  'none',
+  'hardMax',
+  'doppelschlag',
+  'nightLeg',
+] as const;
+export type RelaxationLevel = (typeof RELAXATION_ORDER)[number];
