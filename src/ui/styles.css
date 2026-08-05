@@ -256,15 +256,6 @@ hr.hairline,
   color: var(--muted);
 }
 
-.route-state {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 0.3rem 1rem;
-  align-items: baseline;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--hairline);
-}
-
 .state-chip {
   font-size: 0.7rem;
   letter-spacing: 0.14em;
@@ -1231,6 +1222,107 @@ footer.attribution a {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+/* --- Alternativ-Routen (FR29): erst ansehen, dann übernehmen ---------------
+   Jede Alternative trägt ihre Farbe (altRouteColors.ts) als linke Kante und
+   als Punkt vor dem Namen — dieselbe Farbe, in der die Karten-Ansicht sie
+   einblendet. Die borderLeftColor kommt inline aus der View. */
+
+.alt-route {
+  border: 1px solid var(--hairline);
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: var(--creme-card);
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+.alt-route .legs-inline {
+  margin-top: 0.35rem;
+}
+
+.alt-farbe {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  margin-right: 0.45rem;
+}
+
+.alt-route button {
+  background: var(--navy);
+  color: var(--creme);
+  border: none;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.alt-route button.secondary {
+  background: transparent;
+  color: var(--navy);
+  border: 1px solid var(--navy-soft);
+}
+
+.alt-preview {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.alt-stage-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0.6rem 0;
+}
+
+.alt-stage {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.2rem 0.9rem;
+  align-items: baseline;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.85rem;
+}
+.alt-stage:last-child {
+  border-bottom: none;
+}
+.alt-stage.harbour {
+  color: var(--muted);
+}
+
+@media (max-width: 700px) {
+  .alt-stage {
+    grid-template-columns: 1fr auto;
+  }
+  .alt-stage .versal {
+    grid-column: 1 / -1;
+  }
+}
+
+.route-map {
+  margin: 0.4rem 0 0.8rem;
+}
+
+/* Einblend-Schalter der Alternativen in der Karten-Seitenleiste — gleicher
+   Block wie die Windfiedern: Blickentscheidung, keine Törnentscheidung. */
+.alt-toggles {
+  border-top: 1px solid var(--hairline);
+  margin-top: 0.35rem;
+  padding-top: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.alt-toggles .beschreibung {
+  font-size: 0.68rem;
+  font-style: italic;
+  margin: 0;
 }
 
 /* --- Aufklappbare Belege ------------------------------------------------

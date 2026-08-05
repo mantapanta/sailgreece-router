@@ -469,6 +469,23 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
   });
 
   /**
+   * FEEDBACK 2026-08-05: "Wendepunkt Athen (Basis) · 0 Etappen" stand als
+   * Alternative in der Liste. Der "(bleiben)"-Kandidat ist im Suchraum
+   * legitim (FR18), aber ein Round-Trip ohne eine einzige Segeletappe ist
+   * keine Alternative — dieselbe Regel, die existsValidPlan an den Zeugen
+   * anlegt.
+   */
+  it('bietet keinen Round-Trip ohne Segeletappen als Alternative an', () => {
+    const snapshot = roundTripSnapshot();
+    const witness = existsValidPlan(snapshot, 'athen');
+    const alts = deriveAlternatives(snapshot, 'athen', witness);
+    expect(alts.length).toBeGreaterThan(0);
+    for (const alt of alts) {
+      expect(stagesOf(alt.plan).length).toBeGreaterThan(0);
+    }
+  });
+
+  /**
    * Die Vorgabe ist eine Vorgabe, keine Mauer: passt der Törn mit einem Tag je
    * Verbindung nicht mehr in den Rahmen, darf der Planer nicht schweigend
    * scheitern (FR18) — er gibt nach und sagt es über `relaxedTo`.
