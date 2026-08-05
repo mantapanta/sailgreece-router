@@ -42,10 +42,15 @@ export interface BarbPoint {
 /**
  * Mindestabstand zweier Fiedern auf dem Schirm.
  *
- * Eine Fieder ist rund 34 px hoch und sitzt luvseitig versetzt; unter etwa der
- * doppelten Kantenlänge fangen Schaft und Fiedern an, sich zu überschneiden.
+ * Eine Fieder ist rund 34 px hoch und sitzt luvseitig versetzt — rein
+ * geometrisch würden 72 px reichen, damit sich nichts überschneidet. Der Wert
+ * ist trotzdem höher, weil "überladen" nicht erst bei Überschneidung anfängt:
+ * die Karte wird auf dem Telefon gelesen, wo ein Revierzoom in 390 px passt,
+ * und dort ist ein Feld dicht an dicht stehender Fiedern auch ohne Überlappung
+ * unlesbar. An der echten Bibliothek: 9 Fiedern auf dem Standardzoom 8 statt
+ * 13 bei 72 px — und 97 vor dieser Regel.
  */
-export const MIN_BARB_SPACING_PX = 72;
+export const MIN_BARB_SPACING_PX = 110;
 
 /**
  * Pixel je Längengrad in der Web-Mercator-Kachelpyramide, die Google Maps

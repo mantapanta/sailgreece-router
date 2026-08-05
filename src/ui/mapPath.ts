@@ -106,6 +106,75 @@ export function pointNumberByForecastKey(points: StagePoint[]): Record<string, n
   return byKey;
 }
 
+/**
+ * Etappennummern auf der Karte — je ORT eine Markierung, nicht je Etappe.
+ *
+ * Ein Round-Trip fährt hin und zurück über dieselbe Kette: Tag 4 endet auf
+ * Serifos, Tag 8 endet wieder auf Serifos. Beide Nummern landeten damit auf
+ * derselben Koordinate, und die später gezeichnete deckte die frühere zu. Auf
+ * der Karte blieben sichtbar: 6, 7, 8, …, 12 — also genau die Rückreise. Der
+ * Hinweg war gezeichnet, aber unlesbar, und die Karte behauptete damit eine
+ * Einbahnstrasse, wo ein Round-Trip geplant war.
+ *
+ * Deshalb wird gruppiert statt gestapelt: eine Markierung je Insel, die ALLE
+ * Etappen nennt, die dort enden ("4 · 8"). Das ist zugleich die ehrlichere
+ * Aussage — der Hafen wird zweimal angelaufen, und genau das steht jetzt da.
+ *
+ * Gruppiert wird nach Insel, nicht nach Koordinate: zwei Buchten derselben
+ * Insel liegen auf Revierzoom ohnehin im selben Pixel, und zwei sich
+ * überlappende Marker wären wieder das alte Problem. Welcher Platz jeweils
+ * gemeint ist, sagt der Tooltip.
+ */
+export interface StageEndMarker {
+  key: string;
+  position: google.maps.LatLngLiteral;
+  islandId: string;
+  /** Alle Etappen, die hier enden — chronologisch. */
+  stops: { day: number; stageNumber: number | null }[];
+  /** "4 · 8" — was auf der Markierung steht. */
+  label: string;
+}
+
+export function stageEndMarkers(
+  stages: StageAssessment[],
+  legsById: Record<string, Leg>,
+  snapshot: PlanningSnapshot,
+): StageEndMarker[] {
+  const byIsland: Record<string, StageEndMarker> = {};
+  const order: string[] = [];
+
+  for (const stage of [...stages].sort((a, b) => a.day - b.day)) {
+    const path = stagePath(stage, legsById, snapshot);
+    const end = path[path.length - 1];
+    if (!end) continue;
+    const existing = byIsland[stage.toIslandId];
+    if (existing) {
+      existing.stops.push({ day: stage.day, stageNumber: stage.stageNumber });
+      continue;
+    }
+    byIsland[stage.toIslandId] = {
+      key: `stage-end-${stage.toIslandId}`,
+      // Die Position des ERSTEN Anlaufs: die Markierung soll nicht springen,
+      // wenn der Rückweg eine andere Bucht derselben Insel nimmt.
+      position: end,
+      islandId: stage.toIslandId,
+      stops: [{ day: stage.day, stageNumber: stage.stageNumber }],
+      label: '',
+    };
+    order.push(stage.toIslandId);
+  }
+
+  return order.map((islandId) => {
+    const marker = byIsland[islandId]!;
+    return {
+      ...marker,
+      label: marker.stops
+        .map((s) => (s.stageNumber === null ? '–' : String(s.stageNumber)))
+        .join('·'),
+    };
+  });
+}
+
 /** Geographic path of the legs of one stage, start place to destination. */
 export function stagePath(
   stage: StageAssessment,

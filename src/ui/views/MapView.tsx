@@ -21,7 +21,7 @@ import { hourIndexAt } from '../../domain/time.ts';
 import { AMPEL_CSS_COLOR, AmpelBadge } from '../components/AmpelBadge.tsx';
 import { Polyline } from '../components/Polyline.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
-import { buildLegsById, stagePath } from '../mapPath.ts';
+import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
 import { type BarbPoint, windFieldFor } from '../windField.ts';
 import { formatHours, formatKn, compass } from '../format.ts';
 
@@ -173,6 +173,11 @@ export function MapView({
 
   const nowIdx = useMemo(() => hourIndexAt(Date.now(), snapshot.times), [snapshot.times]);
   const restColor = REST_LINE_COLOR[assessment.restTripAmpel];
+
+  const endMarkers = useMemo(
+    () => stageEndMarkers(sailingStages, legsById, snapshot),
+    [sailingStages, legsById, snapshot],
+  );
 
   /** Inseln, über die die Hauptroute führt — sie stehen vor dem übrigen Revier. */
   const routeIslands = useMemo(() => {
@@ -378,29 +383,43 @@ export function MapView({
                   path={path}
                   strokeColor={isPast ? SAILED_LINE_COLOR : restColor}
                   dashed={!isPast}
+                  // Kräftiger als bisher: über dem Satellitenbild geht eine
+                  // 3-px-Linie im Blau der Ägäis unter (dazu der helle Saum
+                  // in Polyline.tsx).
+                  strokeWeight={hoverDay === stage.day ? 6 : 4}
                   zIndex={hoverDay === stage.day ? 60 : 20}
                 />
               );
             })}
 
-            {/* Stage numbers at the day target (FR2). */}
-            {sailingStages.map((stage) => {
-              const path = stagePath(stage, legsById, snapshot);
-              const end = path[path.length - 1];
-              if (!end || stage.stageNumber === null) return null;
+            {/* FR2 — Etappennummern am Tagesziel, EINE Markierung je Insel.
+                Der Round-Trip läuft hin und zurück über dieselbe Kette; je
+                Etappe eine Markierung hiesse, dass die Rücktour die Hintour
+                zudeckt und die Karte nur noch die halbe Reise zeigt. */}
+            {endMarkers.map((marker) => {
+              const active = marker.stops.some((s) => s.day === hoverDay);
+              const allPast = marker.stops.every((s) => s.day < day);
+              const title = `${islandName(marker.islandId)} — ${marker.stops
+                .map(
+                  (s) =>
+                    `Etappe ${s.stageNumber ?? '–'} (Tag ${s.day})${s.day === day ? ', heute' : ''}`,
+                )
+                .join(', ')}`;
               return (
                 <AdvancedMarker
-                  key={`num-${stage.day}`}
-                  position={end}
-                  zIndex={hoverDay === stage.day ? 120 : 70}
-                  title={`Etappe ${stage.stageNumber} · Tag ${stage.day} · ${islandName(stage.toIslandId)}`}
+                  key={marker.key}
+                  position={marker.position}
+                  zIndex={active ? 120 : 70}
+                  title={title}
                 >
                   <div
-                    className={`stage-number${hoverDay === stage.day ? ' highlight' : ''}${stage.day < day ? ' past' : ''}`}
-                    onMouseEnter={() => setHoverDay(stage.day)}
+                    className={`stage-number${active ? ' highlight' : ''}${allPast ? ' past' : ''}${
+                      marker.stops.length > 1 ? ' mehrfach' : ''
+                    }`}
+                    onMouseEnter={() => setHoverDay(marker.stops[0]!.day)}
                     onMouseLeave={() => setHoverDay(null)}
                   >
-                    {stage.stageNumber}
+                    {marker.label}
                   </div>
                 </AdvancedMarker>
               );
