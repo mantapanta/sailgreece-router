@@ -61,11 +61,6 @@ export function SignInView() {
         )}
 
         {error && <div className="error-panel">{error}</div>}
-
-        <p className="auth-note">
-          ⚓ Ersetzt nicht das seemännische Urteil — die App rechnet und
-          vergleicht, der Skipper entscheidet.
-        </p>
       </div>
     </div>
   );

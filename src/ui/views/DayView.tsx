@@ -749,7 +749,6 @@ export function DayView({
       <span className="versal">
         Tag {day} · {formatTripDayDate(params.tripStartDate, day)}
       </span>
-      <h1>Was machen wir heute?</h1>
       <p className="beschreibung">
         Aktuelle Position: <strong>{hereName}</strong>
         {snapshot.trip.position?.source === 'manual' && ' (manuell gesetzt)'}
