@@ -43,6 +43,13 @@ export const COLORS = {
   altRoute3: '#b05f2c',
   mapLineSailed: '#1a9d5c',
   mapLineCasing: '#ffffff',
+  /* Etappen-Schnipsel (StageThumb): See kühl, Land warm — dieselbe Aufteilung
+     wie auf einer Seekarte, aber in den Papiertönen dieser App, damit der
+     Schnipsel in der Karte nicht wie ein Fremdkörper aus dem Satellitenbild
+     sitzt. Beide Töne tragen den Ampel-Kurs mit ≥3:1. */
+  mapThumbSea: '#d7e7ef',
+  mapThumbLand: '#ece7dd',
+  mapThumbCoast: '#c9c1b3',
 } as const;
 
 /** Ampel hues — badges-on-tint context (raw hue). */

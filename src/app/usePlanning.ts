@@ -27,6 +27,7 @@ import {
   type KonzeptSchwellen,
 } from '../domain/konzept.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
+import type { Params } from '../domain/schema/params.ts';
 import { planOutdated, type Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
 
@@ -40,6 +41,23 @@ function libraryLocationsHash(keys: string[]): string {
     h = ((h << 5) + h + s.charCodeAt(i)) | 0;
   }
   return (h >>> 0).toString(16);
+}
+
+/**
+ * ALLE Parameter, die das Forecast-ERGEBNIS verändern — der Datenteil des
+ * Cache-Keys. Als eigene Funktion, damit er nicht auseinanderläuft, wenn ein
+ * Modell dazukommt.
+ *
+ * `forecastDays` gehörte schon vor dem Hybrid hierher: das Parameter-Dokument
+ * wird ohne Redeploy editiert (AD-8), und ohne den Wert im Key blieb die Achse
+ * nach einer Änderung stumm auf der alten Länge, bis die TTL ablief.
+ */
+export function forecastCacheKey(p: Params): string {
+  return [
+    `${p.forecastModelNear}>${p.forecastModel}`,
+    `${p.waveModelNear}>${p.waveModel}`,
+    p.forecastDays,
+  ].join('|');
 }
 
 export function usePlanningEngine() {
@@ -85,7 +103,7 @@ export function usePlanningEngine() {
   );
 
   const forecastQuery = useQuery({
-    queryKey: ['forecast', bundle?.params.forecastModel, libHash],
+    queryKey: ['forecast', bundle ? forecastCacheKey(bundle.params) : null, libHash],
     queryFn: () => fetchForecastBundle(library!, bundle!.params),
     enabled: !!bundle && !!library,
     staleTime: STALE_TIME_MS,

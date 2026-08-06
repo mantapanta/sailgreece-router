@@ -42,6 +42,9 @@ colors:
   alt-route-3: '#b05f2c'
   map-line-sailed: '#1a9d5c'
   map-line-casing: '#ffffff'
+  map-thumb-sea: '#d7e7ef'
+  map-thumb-land: '#ece7dd'
+  map-thumb-coast: '#c9c1b3'
 typography:
   display:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif'

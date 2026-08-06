@@ -20,7 +20,7 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Route wird als sie selbst geplant: „Westkykladen-Runde" heißt die
   Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
 - **Schwellen als Regler:** Wo „zu viel Wind" anfängt, stellt der Skipper im
-  Konzept-Panel ein — je Konzept eine kn-Schwelle und die Zahl der Tage in
+  Konzept-Panel ein (eingeklappt am Ende der Tagesansicht) — je Konzept eine kn-Schwelle und die Zahl der Tage in
   Folge, über die sie halten muss (`KONZEPT_REGLER` in `domain/konzept.ts`,
   persistiert im Trip-Kontext, jederzeit auf die Törnanalyse-Werte
   zurücksetzbar). Die Regler sind gekoppelt: Route 2 darf nie über Route 1
@@ -234,8 +234,45 @@ Alle fachlichen Parameter (Polar-Offset +0,5 kn, Motorfahrt 8 kn,
 FR16-Budgets, Aufkreuz-Schwelle 25 kn, Gelb-Reserve, Zeitfenster,
 Forecast-Modell …) liegen im Firestore-Dokument `config/parameters`
 (bzw. `seeding/data/config.json` im local-Modus) — Feldkorrektur ohne
-Redeploy. Das Forecast-Modell (Default `ecmwf_ifs025`) lässt sich dort
-z. B. auf `icon_eu` umstellen.
+Redeploy.
+
+### Forecast-Modelle: Nahfeld + Fernfeld
+
+Der Wind kommt aus ZWEI Modellen. Das **Fernfeld** trägt die Stundenachse und
+den Horizont, das **Nahfeld** liefert die Stunden, die es abdeckt — feiner
+aufgelöst. Dahinter steht ein Befund der Törnanalyse: ein globales 25-km-Gitter
+bügelt genau die Kanaldüsen glatt, an denen es in den Kykladen hängt (Kea-Kanal,
+Paros–Naxos, Mykonos–Paros).
+
+| Parameter | Default | Bedeutung |
+|---|---|---|
+| `forecastModel` | `ecmwf_ifs025` | Fernfeld Wind, ~25 km, 10 Tage |
+| `forecastModelNear` | `dwd_icon_eu` | Nahfeld Wind, ~7 km, ~5 Tage |
+| `waveModel` | `best_match` | Fernfeld Wellen (MFWAM ~8 km) |
+| `waveModelNear` | `ewam` | Nahfeld Wellen, ~5 km, 79 h |
+
+Die gültigen Ids stehen in `src/domain/schema/models.ts` — **dort und nur dort**.
+Ein `""` im Nah-Feld schaltet den Hybrid ab; dann verhält sich die App wie vor
+der Umstellung. Zwei gleiche Modelle sind NICHT der Aus-Schalter (das wären zwei
+identische Abrufe) und werden abgelehnt.
+
+**Die Nahtstelle ist ein harter Schnitt — es wird nichts geblendet.** Ein
+geblendeter Wert wäre eine Zahl, die kein Modell vorhergesagt hat, und käme
+unmarkiert daher (AD-10). Ein Sprung an der Übergabestunde ist deshalb kein
+Fehler, sondern der Abstand zwischen zwei Modellen; das Annahme-Detail im
+Tagesblick sagt das auch so.
+
+**Achtung bei der Kalibrierung:** die Schwellen (`konzeptOstMaxKn`,
+`konzeptKlassikMaxKn`, `openSectorMaxKn`, `maxUpwindTwsKn`) wurden gegen
+ECMWF-geglättete Werte eingestellt. Ein 7-km-Modell zeigt in den Kanälen
+schärfere Spitzen — Ampeln können dort kippen, wo sie vorher grün waren. Das ist
+gewollt; nachjustiert wird über dieselben Config-Parameter, ohne Redeploy.
+
+**Poseidon (HCMR) ist nicht anbindbar** — nicht aus Mangel an Daten: das
+griechische System verteilt ausschliesslich NetCDF über THREDDS/OPeNDAP, ohne
+CORS, und diese App ist reines Hosting ohne Backend. Bei Open-Meteo ist Poseidon
+ebenfalls nicht dabei. Begründung ausführlich im Modulkopf von
+`src/domain/schema/models.ts`.
 
 Inkonsistente Kombinationen (z. B. `nightEndHourAthens >= nightStartHourAthens`
 oder `targetDayHours > maxSailHours + maxMotorHours`) werden vom Zod-Schema
@@ -412,6 +449,13 @@ Vermieden wird Kreuzen an zwei Stellen — beide raten ab, keine verbietet:
 ## Attribution
 
 - Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0)
+- Modelle je nach Konfiguration: ECMWF, `Datenbasis: Deutscher Wetterdienst`
+  (ICON-EU, EWAM), Météo-France / Copernicus Marine. Die Fusszeile der App
+  nennt die tatsächlich AKTIVEN Quellen — aus der Registry gerendert
+  (`src/domain/schema/models.ts`), damit die Angabe nicht veraltet, wenn das
+  Modell in Firestore umgestellt wird. Die Werte werden unverändert
+  durchgereicht (harter Schnitt an der Nahtstelle, kein Blending), es liegen
+  also keine veränderten Daten im Sinne der GeoNutzV vor.
 - Seezeichen-Overlay von [OpenSeaMap](https://www.openseamap.org)
   (`tiles.openseamap.org`, CC-BY-SA), Daten © OpenStreetMap-Mitwirkende,
   [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — rein visuelle

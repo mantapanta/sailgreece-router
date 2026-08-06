@@ -14,7 +14,7 @@
  * lives in the tested pure helpers of dayViewModel.ts.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
@@ -28,6 +28,7 @@ import type {
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
 import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
+import { forecastModelLabel } from '../../domain/schema/models.ts';
 import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
 import {
   KONZEPT_REGLER,
@@ -42,6 +43,7 @@ import { PositionPopover } from '../components/PositionPopover.tsx';
 import { TripStatusLine } from '../components/TripStatusLine.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
+import { StageThumb } from '../components/StageThumb.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
 import { altRouteColor } from '../altRouteColors.ts';
 import {
@@ -587,18 +589,37 @@ function StageCard({
         <AmpelBadge ampel={stage.ampel} />
       </div>
 
-      {from && <div className="route-from">{from} →</div>}
-      {hero ? (
-        <h1 className="route-dest">{headline}</h1>
-      ) : (
-        <h3 className="route-dest-sm">{headline}</h3>
-      )}
-      {!isHarbour && (
-        <div className="route-sub">
-          {placeName(snapshot, stage.placeId)}
-          {via.length > 0 && ` · über ${via.join(' · ')}`}
+      {/* Ziel links, Etappen-Schnipsel rechts oben (Skipper 2026-08-06): die
+          Strecke stand bisher nur in der aufgeklappten Rechnung, und damit war
+          die Frage „liegt das um die Ecke oder quer übers Revier?“ zwei Klicks
+          entfernt. Der Schnipsel beantwortet sie im selben Blick wie den Namen
+          — und klappt angetippt genau die Karte auf, deren Vorschau er ist. */}
+      <div className="stage-head">
+        <div className="stage-head-text">
+          {from && <div className="route-from">{from} →</div>}
+          {hero ? (
+            <h1 className="route-dest">{headline}</h1>
+          ) : (
+            <h3 className="route-dest-sm">{headline}</h3>
+          )}
+          {!isHarbour && (
+            <div className="route-sub">
+              {placeName(snapshot, stage.placeId)}
+              {via.length > 0 && ` · über ${via.join(' · ')}`}
+            </div>
+          )}
         </div>
-      )}
+        {!isHarbour && (
+          <StageThumb
+            points={points}
+            ampel={stage.ampel}
+            label={`${from ?? '–'} → ${headline}`}
+            size={hero ? 'hero' : 'row'}
+            expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          />
+        )}
+      </div>
 
       {(!isHarbour || stage.pinned) && (
         <div className="chip-list">
@@ -914,11 +935,20 @@ const EMPFEHLUNG_LABEL: Record<RoutenEmpfehlung, string> = {
 /**
  * ROUTEN-KONZEPT — die zentrale, alles überschreibende Logik der App
  * (Skipper 2026-08-05, domain/konzept.ts): NACH WELCHEM der beiden
- * Revier-Konzepte segeln wir? Das Panel steht direkt unter dem
- * Rest-Trip-Banner, weil diese Entscheidung über allem anderen liegt:
- * der Solver hat sie beim Ranking bereits angewendet, die Options-Liste
- * trägt sie je Ziel — hier steht sie als EINE Aussage mit Begründung,
+ * Revier-Konzepte segeln wir? Hier steht sie als EINE Aussage mit Begründung,
  * Wechsel-Hinweis und der Rückweg-Empfehlung der Törnanalyse.
+ *
+ * NACHGEORDNET UND EINGEKLAPPT (Skipper 2026-08-06). Das Panel stand zuvor
+ * ausgeschrieben zwischen Statuszeile und Hero und schob damit den heutigen
+ * Tag — das, womit die Ansicht beginnen soll — unter den Falz. Die Entscheidung
+ * ist zwar übergeordnet, aber sie fällt selten: der Solver hat sie beim Ranking
+ * bereits angewendet, die Options-Liste trägt sie je Ziel. Sie gehört deshalb
+ * ans Ende, hinter den Optionsraum, als Summenzeile im Haus-Muster (wie dieser)
+ * — aufklappbar, wenn der Skipper sie nachlesen will.
+ *
+ * Was NICHT verschwinden darf, ist der Fall, in dem das aktive Konzept kippt:
+ * dafür steht über dem Hero eine einzeilige Alarm-Zeile (`konzept-alarm`), die
+ * dieses Panel aufklappt und anspringt — ein Satz statt eines halben Bildschirms.
  */
 /**
  * DIE SCHWELLEN ALS REGLER (Skipper 2026-08-06). Wo "zu viel Wind" anfängt,
@@ -1008,77 +1038,125 @@ function KonzeptRegler({ snapshot }: { snapshot: PlanningSnapshot }) {
 function KonzeptPanel({
   assessment,
   snapshot,
+  open,
+  onToggle,
+  panelRef,
 }: {
   assessment: Assessment;
   snapshot: PlanningSnapshot;
+  /** Eingeklappt oder offen — der Stand liegt in der DayView, weil auch die
+   *  Alarm-Zeile über dem Hero ihn aufklappt. */
+  open: boolean;
+  onToggle: () => void;
+  panelRef: RefObject<HTMLElement | null>;
 }) {
   const entscheid = assessment.konzeptEntscheid;
+  // Das aktive Konzept trägt die Summenzeile: es ist die eine Aussage, die
+  // eingeklappt sichtbar bleiben muss. Die Karten führen es immer, aber die
+  // Zeile darf daran nicht zerbrechen.
+  const aktiv = entscheid.konzepte.find((k) => k.aktiv) ?? entscheid.konzepte[0] ?? null;
+  const empfohlen =
+    entscheid.konzepte.find((k) => k.id === entscheid.empfohlenId) ?? null;
+
   return (
-    <section className="section konzept-panel">
-      <span className="versal">Routen-Konzept</span>
-      <h2>Nach welchem Konzept segeln wir?</h2>
-      <p className="beschreibung">
-        Die übergeordnete Törn-Entscheidung: Route 1 (klassische Runde, Rückweg
-        im westlichen Lee-Korridor) oder Route 2 (Ost-Kykladen, nur bei
-        moderatem Meltemi). Vorschlag und Rangfolge der App folgen dieser
-        Beurteilung — kippt das aktive Konzept, empfiehlt die App den Wechsel.
-        Beide Konzepte und alle Routen darin bleiben trotzdem wählbar: bei zu
-        viel Wind rät die App ab, sie sperrt nicht.
-      </p>
-      {entscheid.wechselHinweis && (
-        <div className="hint-panel konzept-wechsel">
-          <strong>{entscheid.wechselHinweis}</strong>
-        </div>
-      )}
-      <div className="konzept-karten">
-        {entscheid.konzepte.map((k) => (
-          <div
-            key={k.id}
-            className={`konzept-karte eignung-${k.eignung}${k.empfohlen ? ' empfohlen' : ''}`}
-          >
-            <div className="option-kopf">
-              <span className="option-name">{k.name}</span>
-              <span className={`state-chip eignung-${k.eignung}`}>
-                {EIGNUNG_LABEL[k.eignung]}
-              </span>
-            </div>
-            <p className="beschreibung">{k.beschreibung}</p>
-            <div className="badges">
-              {k.aktiv && (
-                <span className="badge" title="Die aktuelle Haupt- bzw. Vorschlagsroute folgt diesem Konzept.">
-                  aktives Konzept
-                </span>
-              )}
-              {k.empfohlen && (
-                <span className="badge badge-empfohlen">Empfehlung der App</span>
-              )}
-            </div>
-            <ul className="reasons">
-              {k.gruende.map((g) => (
-                <li key={g}>{g}</li>
+    <section className="konzept-panel" ref={panelRef}>
+      <h2 className="section-title">Routen-Konzept</h2>
+      <div className="list-card">
+        <button
+          type="button"
+          className="trip-row summary-row"
+          aria-expanded={open}
+          aria-controls="konzept-detail"
+          onClick={onToggle}
+        >
+          <span>
+            <span className="place">
+              {aktiv ? aktiv.name : 'Nach welchem Konzept segeln wir?'}
+            </span>
+            <span className="meta">
+              {entscheid.wechselHinweis
+                ? 'Das aktive Konzept trägt die Lage nicht — Begründung und Wechsel-Empfehlung ansehen.'
+                : empfohlen && aktiv && empfohlen.id === aktiv.id
+                  ? 'Trägt die Lage — Empfehlung der App. Beurteilung, Karten und Schwellen ansehen.'
+                  : 'Beurteilung beider Konzepte, Schwellen und Rückweg-Empfehlung ansehen.'}
+            </span>
+          </span>
+          {aktiv && (
+            <span className={`state-chip eignung-${aktiv.eignung}`}>
+              {EIGNUNG_LABEL[aktiv.eignung]}
+            </span>
+          )}
+          <span className="chev" aria-hidden="true">
+            ›
+          </span>
+        </button>
+        {open && (
+          <div id="konzept-detail" className="optionsraum-body">
+            <p className="beschreibung">
+              Die übergeordnete Törn-Entscheidung: Route 1 (klassische Runde,
+              Rückweg im westlichen Lee-Korridor) oder Route 2 (Ost-Kykladen,
+              nur bei moderatem Meltemi). Vorschlag und Rangfolge der App folgen
+              dieser Beurteilung — kippt das aktive Konzept, empfiehlt die App
+              den Wechsel. Beide Konzepte und alle Routen darin bleiben trotzdem
+              wählbar: bei zu viel Wind rät die App ab, sie sperrt nicht.
+            </p>
+            {entscheid.wechselHinweis && (
+              <div className="hint-panel konzept-wechsel">
+                <strong>{entscheid.wechselHinweis}</strong>
+              </div>
+            )}
+            <div className="konzept-karten">
+              {entscheid.konzepte.map((k) => (
+                <div
+                  key={k.id}
+                  className={`konzept-karte eignung-${k.eignung}${k.empfohlen ? ' empfohlen' : ''}`}
+                >
+                  <div className="option-kopf">
+                    <span className="option-name">{k.name}</span>
+                    <span className={`state-chip eignung-${k.eignung}`}>
+                      {EIGNUNG_LABEL[k.eignung]}
+                    </span>
+                  </div>
+                  <p className="beschreibung">{k.beschreibung}</p>
+                  <div className="badges">
+                    {k.aktiv && (
+                      <span className="badge" title="Die aktuelle Haupt- bzw. Vorschlagsroute folgt diesem Konzept.">
+                        aktives Konzept
+                      </span>
+                    )}
+                    {k.empfohlen && (
+                      <span className="badge badge-empfohlen">Empfehlung der App</span>
+                    )}
+                  </div>
+                  <ul className="reasons">
+                    {k.gruende.map((g) => (
+                      <li key={g}>{g}</li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
+            <KonzeptRegler snapshot={snapshot} />
+            {entscheid.basisAnnahme && (
+              <p className="beschreibung">
+                Die Konzept-Beurteilung stützt sich teilweise auf die
+                Persistenz-Annahme jenseits des Forecast-Horizonts — Vorbehalt,
+                kein Urteil.
+              </p>
+            )}
+            {assessment.rueckwegEmpfehlung.length > 0 && (
+              <div className="rueckweg-empfehlung">
+                <span className="versal">Rückweg-Empfehlung</span>
+                <ul className="reasons">
+                  {assessment.rueckwegEmpfehlung.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-        ))}
+        )}
       </div>
-      <KonzeptRegler snapshot={snapshot} />
-      {entscheid.basisAnnahme && (
-        <p className="beschreibung">
-          Die Konzept-Beurteilung stützt sich teilweise auf die
-          Persistenz-Annahme jenseits des Forecast-Horizonts — Vorbehalt, kein
-          Urteil.
-        </p>
-      )}
-      {assessment.rueckwegEmpfehlung.length > 0 && (
-        <div className="rueckweg-empfehlung">
-          <span className="versal">Rückweg-Empfehlung</span>
-          <ul className="reasons">
-            {assessment.rueckwegEmpfehlung.map((s) => (
-              <li key={s}>{s}</li>
-            ))}
-          </ul>
-        </div>
-      )}
     </section>
   );
 }
@@ -1428,6 +1506,11 @@ export function DayView({
   const [showAllRest, setShowAllRest] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [pastOpen, setPastOpen] = useState(false);
+  // Das Konzept-Panel steht am Ende und ist eingeklappt; die Alarm-Zeile über
+  // dem Hero klappt es auf und springt es an — deshalb liegen Stand und Anker
+  // hier oben, nicht im Panel.
+  const [konzeptOpen, setKonzeptOpen] = useState(false);
+  const konzeptRef = useRef<HTMLElement>(null);
 
   /**
    * PPR-Hinweise für das Statuszeilen-Detail (Feedback 2026-08-05): an der
@@ -1507,9 +1590,32 @@ export function DayView({
         )}
       </div>
 
-      {/* ROUTEN-KONZEPT — die zentrale Logik, direkt unter dem Rest-Trip-
-          Banner: erst das Konzept, dann die Etappen und Optionen darunter. */}
-      <KonzeptPanel assessment={assessment} snapshot={snapshot} />
+      {/* Kippt das aktive Konzept, ist das der wichtigste Satz der Seite — und
+          bleibt oben stehen, während das Panel selbst ans Ende gewandert ist.
+          Eine Zeile, kein Panel: der heutige Tag beginnt gleich darunter. */}
+      {assessment.konzeptEntscheid.wechselHinweis && (
+        <button
+          type="button"
+          className="konzept-alarm"
+          onClick={() => {
+            setKonzeptOpen(true);
+            // scrollIntoView fehlt in jsdom — die Zeile klappt trotzdem auf.
+            konzeptRef.current?.scrollIntoView?.({
+              behavior: 'smooth',
+              block: 'start',
+            });
+          }}
+        >
+          <span className="status-dot rot" aria-hidden="true" />
+          <span>
+            <strong>Das aktive Routen-Konzept trägt diese Lage nicht.</strong>{' '}
+            Begründung und Wechsel-Empfehlung ansehen
+          </span>
+          <span className="chev" aria-hidden="true">
+            ›
+          </span>
+        </button>
+      )}
 
       {!main && assessment.proposal && (
         <div className="card-surface hero-card">
@@ -1603,6 +1709,21 @@ export function DayView({
                   früher als der Wind, zieht die Nacht-Ampeln aber nicht mit: Wellenwerte
                   gelten für die offene See.
                 </li>
+                {/* Die EINE Stelle, an der die Nahtstelle erklärt wird: ohne sie
+                    liest sich der Sprung in der Stundentabelle (FR30) wie ein
+                    Fehler, statt wie zwei Modelle, die sich uneins sind. */}
+                {assessment.provenance?.wind.near && (
+                  <li>
+                    Nahfeld {forecastModelLabel(assessment.provenance.wind.near)} trägt
+                    die ersten {assessment.provenance.wind.nearReachHours} Stunden (bis{' '}
+                    {formatStamp(
+                      snapshot.times[assessment.provenance.wind.nearReachHours - 1] ?? null,
+                    )}
+                    ), danach {forecastModelLabel(assessment.provenance.wind.far)} — harte
+                    Übergabe, es wird nichts geglättet. Ein Sprung an dieser Stunde ist
+                    keine Störung, sondern der Abstand zwischen zwei Modellen.
+                  </li>
+                )}
                 <li>
                   Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:
                   sie warnt, sie verurteilt nicht.
@@ -1758,6 +1879,17 @@ export function DayView({
           )}
         </div>
       </section>
+
+      {/* ROUTEN-KONZEPT — die zentrale Logik, hinter dem Optionsraum und
+          eingeklappt: die Entscheidung liegt über allem, fällt aber selten,
+          und der Solver hat sie oben schon angewendet (siehe KonzeptPanel). */}
+      <KonzeptPanel
+        assessment={assessment}
+        snapshot={snapshot}
+        open={konzeptOpen}
+        onToggle={() => setKonzeptOpen((o) => !o)}
+        panelRef={konzeptRef}
+      />
 
       {past.length > 0 && (
         <section>
