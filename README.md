@@ -9,8 +9,22 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Rückweg im Lee-Korridor Milos–Sifnos–Serifos–Kythnos) oder Route 2
   (Ost-Kykladen, nur bei moderatem Meltemi). Die Konzept-Eignung kommt aus dem
   Forecast (`domain/konzept.ts`), überschreibt im Solver die Reichweite,
-  erzeugt den Konzeptwechsel-Entscheid („Vorstoß nach Osten streichen") und
+  erzeugt den Konzeptwechsel-Entscheid („Vorstoß nach Osten — abgeraten") und
   trägt die Rückweg-Empfehlung der Törnanalyse.
+- **Abraten statt verbieten:** Zu viel Wind nimmt keine Best-Practice-Route
+  aus dem Angebot. Jede kuratierte Route (Westkykladen-Runde, Ostkykladen-
+  Runde …) behält ihren Plan, bleibt ansehbar und übernehmbar und trägt die
+  Empfehlung `empfohlen` / `möglich` / `abgeraten · wählbar` samt Begründung.
+  Der Zustand („offen / schließt / zu") beantwortet weiterhin, ob ein
+  tragfähiger Plan existiert — zwei Aussagen, keine Sperre. Und eine kuratierte
+  Route wird als sie selbst geplant: „Westkykladen-Runde" heißt die
+  Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
+- **Schwellen als Regler:** Wo „zu viel Wind" anfängt, stellt der Skipper im
+  Konzept-Panel ein — je Konzept eine kn-Schwelle und die Zahl der Tage in
+  Folge, über die sie halten muss (`KONZEPT_REGLER` in `domain/konzept.ts`,
+  persistiert im Trip-Kontext, jederzeit auf die Törnanalyse-Werte
+  zurücksetzbar). Die Regler sind gekoppelt: Route 2 darf nie über Route 1
+  liegen — wer den einen darüber schiebt, schiebt den anderen mit.
 - **Früh los, 15:00 vor Anker:** Je Etappentag empfiehlt die App die späteste
   Abfahrtsstunde, deren simulierte Ankunft das Ankerziel 15:00 noch hält
   (`domain/abfahrt.ts`; heute per Klick als Abfahrtszeit übernehmbar) —

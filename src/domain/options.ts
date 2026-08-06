@@ -33,7 +33,7 @@ import {
 import { deadlineFrame } from './time.ts';
 import { legsOfVariant } from './legs.ts';
 import { KONZEPT_NAME, konzeptLageFor, konzeptOfIslands } from './konzept.ts';
-import { completePlan, reachNmFor } from './solver.ts';
+import { completePlan, reachNmFor, type SolveResult } from './solver.ts';
 import { stagesOf, type RelaxationLevel } from './schema/plan.ts';
 import type { Plan } from './schema/plan.ts';
 import { distanceNm } from './geo.ts';
@@ -120,6 +120,15 @@ function optionPlan(
   turnIslandId: string,
   currentIslandId: string,
   snapshot: PlanningSnapshot,
+  /**
+   * Id der kuratierten Variante, deren eigene Etappenkette zuerst versucht
+   * wird. Trägt sie (der Solver findet zu ihr überhaupt eine Packung), IST
+   * sie der Plan der Option — "Westkykladen-Runde" heisst dann die
+   * Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
+   * Andernfalls fällt die Option auf die Wendepunkt-Suche zurück: das Ziel
+   * bleibt erreichbar, auch wenn die kuratierte Kette es gerade nicht trägt.
+   */
+  variantId?: string,
 ): {
   /**
    * Tragfähig = keine Sicherheits-, Termin- oder Zustiegs-Verletzung — die
@@ -137,10 +146,30 @@ function optionPlan(
   plan: Plan;
   turnDay: number | null;
 } | null {
-  const solved = completePlan(snapshot, currentIslandId, [], {
-    turnIslandId,
-    stopAtFirstValid: true,
-  });
+  /**
+   * Erst die EIGENE Kette der kuratierten Route, dann — und nur dann — die
+   * freie Suche zum selben Wendepunkt.
+   *
+   * Die Reihenfolge ist die ganze Aussage: trägt die Best-Practice-Kette, IST
+   * sie die Antwort (sonst hiesse "Westkykladen-Runde" irgendeine Kette nach
+   * Milos). Trägt sie nicht, darf ihr Scheitern aber nicht das ZIEL schliessen
+   * — "Santorin geht nicht" darf nicht heissen "die eine kuratierte Kette
+   * dorthin ist gerade nicht packbar". Also übernimmt die freie Suche, wenn
+   * sie einen tragfähigen Plan findet. Findet auch sie keinen, bleibt der
+   * kuratierte Versuch stehen: abraten braucht einen Plan zum Ansehen.
+   */
+  const solveTo = (opts: { variantId?: string }) =>
+    completePlan(snapshot, currentIslandId, [], {
+      turnIslandId,
+      stopAtFirstValid: true,
+      ...opts,
+    });
+  const sicher = (r: SolveResult | null): boolean =>
+    r !== null && r.validity.safetyViolations.length === 0;
+
+  const eigen = variantId !== undefined ? solveTo({ variantId }) : null;
+  const frei = sicher(eigen) ? null : solveTo({});
+  const solved = sicher(eigen) ? eigen : sicher(frei) ? frei : (eigen ?? frei);
   if (!solved) return null;
 
   const stages = stagesOf(solved.plan);
@@ -229,8 +258,24 @@ export function assessRouteOption(
   const lage = konzeptLageFor(snapshot);
   const konzeptWarnung =
     lage.eignung[konzeptId] === 'ungeeignet'
-      ? `${KONZEPT_NAME[konzeptId]} trägt die aktuelle Wetterlage nicht: ${lage.gruende[konzeptId].join(' ')}`
+      ? `${KONZEPT_NAME[konzeptId]} trägt die aktuelle Wetterlage nicht: ` +
+        `${lage.gruende[konzeptId].join(' ')} Die Route bleibt wählbar — die App rät ab, sie verbietet nicht.`
       : null;
+
+  /**
+   * EMPFEHLUNG statt AUSSCHLUSS (Skipper 2026-08-06). Die Wind-Lage bestimmt
+   * hier NUR, ob abgeraten wird; ob die Route noch geht, beantwortet weiterhin
+   * der Solver (`state`). Die Gründe werden unten um die Sicherheits-Befunde
+   * des besten Versuchs ergänzt — auch die sind ein Abraten, kein Verbot.
+   */
+  const abratenGruende: string[] = [];
+  if (konzeptWarnung) abratenGruende.push(konzeptWarnung);
+  const empfehlungBasis: RouteOptionAssessment['empfehlung'] =
+    lage.eignung[konzeptId] === 'ungeeignet'
+      ? 'abgeraten'
+      : lage.eignung[konzeptId] === 'grenzwertig'
+        ? 'moeglich'
+        : 'empfohlen';
 
   const leer = (
     over: Partial<RouteOptionAssessment>,
@@ -239,6 +284,10 @@ export function assessRouteOption(
     name: variant.name,
     konzeptId,
     konzeptWarnung,
+    empfehlung: empfehlungBasis,
+    // Kopie: die Gründe wachsen unten noch (Sicherheits-Befunde), und eine
+    // geteilte Referenz liesse die zurückgegebene Option nachträglich mutieren.
+    abratenGruende: [...abratenGruende],
     state: 'zu',
     closesOnDay: null,
     ampel: 'unbewertet',
@@ -275,15 +324,39 @@ export function assessRouteOption(
    * Wendepunkt", mit denselben harten Bedingungen wie die Hauptroute. Ein "zu"
    * nennt die Verletzungen des besten Versuchs — ehrlich statt pauschal.
    */
-  const solved = optionPlan(turnIslandId, currentIslandId, snapshot);
+  const solved = optionPlan(turnIslandId, currentIslandId, snapshot, variant.id);
   if (!solved) {
+    // Der EINZIGE echte Ausschluss: es gibt zu diesem Ziel gar keine
+    // Etappenkette. Das ist Bibliotheks-Geometrie, kein Wetterurteil.
     reasons.push('Zu diesem Ziel lässt sich mit aktuellem Forecast kein Restplan bauen');
     return leer({ state: 'zu', ampel, legAssessments });
   }
   if (!solved.tragfaehig) {
+    /**
+     * Der beste Versuch trägt Sicherheits-Befunde — typischerweise: der Wind
+     * ist zu stark. Die Route wird deshalb NICHT aus dem Angebot genommen
+     * (Skipper 2026-08-06): ihr Plan bleibt hängen, damit sie ansehbar und
+     * gegen die Empfehlung übernehmbar ist. `state: 'zu'` sagt weiterhin
+     * ehrlich, dass kein TRAGFÄHIGER Plan existiert; `empfehlung:
+     * 'abgeraten'` sagt, dass die App abrät — zwei Aussagen, nicht ein Verbot.
+     */
     reasons.push('Kein tragfähiger Restplan zu diesem Ziel:');
     for (const text of solved.violations.slice(0, 3)) reasons.push(text);
-    return leer({ state: 'zu', ampel, legAssessments });
+    abratenGruende.push(
+      `Der beste Plan zu diesem Ziel trägt Sicherheits-Befunde: ${solved.violations
+        .slice(0, 3)
+        .join(' ')} Wer trotzdem will, kann die Route ansehen und übernehmen — auf eigenes seemännisches Urteil.`,
+    );
+    return leer({
+      state: 'zu',
+      ampel,
+      legAssessments,
+      empfehlung: 'abgeraten',
+      // Der Preis bleibt bewusst null: einen gültigen Preis hat dieser Plan
+      // nicht. Der Plan selbst hängt trotzdem dran — das ist der Unterschied.
+      plan: solved.plan,
+      turnDay: solved.turnDay,
+    });
   }
 
   const preis = {
