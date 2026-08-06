@@ -1092,6 +1092,9 @@ function KonzeptPanel({
   open,
   onToggle,
   panelRef,
+  altRoutes,
+  shownAltIndex,
+  onShow,
 }: {
   assessment: Assessment;
   snapshot: PlanningSnapshot;
@@ -1100,6 +1103,10 @@ function KonzeptPanel({
   open: boolean;
   onToggle: () => void;
   panelRef: RefObject<HTMLElement | null>;
+  /** Die ansehbaren Routen — je Konzept-Karte die, die ihm folgen. */
+  altRoutes: AltRouteView[];
+  shownAltIndex: number | null;
+  onShow: (index: number) => void;
 }) {
   const entscheid = assessment.konzeptEntscheid;
   // Das aktive Konzept trägt die Summenzeile: es ist die eine Aussage, die
@@ -1149,7 +1156,11 @@ function KonzeptPanel({
               nur bei moderatem Meltemi). Vorschlag und Rangfolge der App folgen
               dieser Beurteilung — kippt das aktive Konzept, empfiehlt die App
               den Wechsel. Beide Konzepte und alle Routen darin bleiben trotzdem
-              wählbar: bei zu viel Wind rät die App ab, sie sperrt nicht.
+              wählbar: bei zu viel Wind rät die App ab, sie sperrt nicht. Das
+              Konzept wählt keine Route aus; es beurteilt, ob die Wetterlage die
+              Strategie trägt, der eine Route folgt. Welche Routen das je
+              Konzept sind, steht unten in seiner Karte — dieselben, die der
+              Optionsraum listet und die Karten-Ansicht als Linie zeigt.
             </p>
             {entscheid.wechselHinweis && (
               <div className="hint-panel konzept-wechsel">
@@ -1184,6 +1195,50 @@ function KonzeptPanel({
                       <li key={g}>{g}</li>
                     ))}
                   </ul>
+                  {/* WELCHE ROUTEN FOLGEN DIESEM KONZEPT (Skipper 2026-08-06):
+                      das Panel beurteilte zwei Strategien, ohne je zu sagen,
+                      welche der ansehbaren Routen dazugehören — die Kette
+                      Konzept → Optionsraum → Linie auf der Karte war von hier
+                      aus unsichtbar. Jetzt steht sie hier namentlich, in
+                      derselben Farbe, mit demselben Knopf wie im Optionsraum. */}
+                  {(() => {
+                    const routen = altRoutes.filter(
+                      (r) => r.option?.konzeptId === k.id,
+                    );
+                    if (routen.length === 0) {
+                      return (
+                        <p className="beschreibung">
+                          Derzeit keine ansehbare Route in diesem Konzept.
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="konzept-routen">
+                        <span className="versal">Routen in diesem Konzept</span>
+                        {routen.map((r) => (
+                          <button
+                            key={r.index}
+                            type="button"
+                            className="konzept-route-zeile"
+                            aria-pressed={r.index === shownAltIndex}
+                            onClick={() => onShow(r.index)}
+                          >
+                            <span
+                              className="alt-farbe"
+                              style={{ background: r.color }}
+                              aria-hidden="true"
+                            />
+                            <span className="kr-name">{r.name}</span>
+                            <span className="kr-meta">
+                              {r.index === shownAltIndex
+                                ? 'wird angesehen'
+                                : 'Etappen ansehen ›'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -2038,6 +2093,9 @@ export function DayView({
       <KonzeptPanel
         assessment={assessment}
         snapshot={snapshot}
+        altRoutes={altRoutes}
+        shownAltIndex={shownAltIndex}
+        onShow={showRoute}
         open={konzeptOpen}
         onToggle={() => setKonzeptOpen((o) => !o)}
         panelRef={konzeptRef}

@@ -2213,6 +2213,53 @@ hr.hairline,
   background: var(--creme-card);
   padding: 0.7rem 0.9rem;
 }
+/* Die Routen, die einem Konzept folgen — namentlich, in ihrer Farbe und mit
+   demselben Knopf wie im Optionsraum. Die Zeile ist die Antwort auf „wie hängt
+   das Konzept mit den Alternativen zusammen?" von OBEN her. */
+.konzept-routen {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.konzept-route-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  text-align: left;
+  font: 400 13.5px/1.4 var(--font-sans);
+  color: var(--ink-primary);
+}
+
+/* Der Identitätspunkt darf nicht schrumpfen: als Flex-Kind wurde er neben
+   einem umbrechenden Namen zum Oval. */
+.konzept-route-zeile .alt-farbe {
+  flex: 0 0 auto;
+  margin-right: 0;
+}
+
+.konzept-route-zeile .kr-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.konzept-route-zeile .kr-meta {
+  flex: 0 0 auto;
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.konzept-route-zeile[aria-pressed='true'] {
+  font-weight: 600;
+}
+
 .konzept-karte.eignung-geeignet { border-left-color: var(--gruen); }
 .konzept-karte.eignung-grenzwertig { border-left-color: var(--gelb); }
 .konzept-karte.eignung-ungeeignet { border-left-color: var(--rot); opacity: 0.85; }

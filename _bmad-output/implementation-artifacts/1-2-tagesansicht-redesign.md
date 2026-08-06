@@ -1281,3 +1281,16 @@ and the 16px input floor landed globally.
   Herkunft; der Intro-Text des Optionsraums nennt die Kette Konzept →
   Optionsraum → Linie auf der Karte ausdrücklich. Neu in styles.css:
   `.alt-banner` (+ `-actions`). Tests 641 green, build green.
+
+- 2026-08-06 (Nachtrag, Kette von oben): das Konzept-Panel beurteilte zwei
+  Strategien, ohne je zu sagen, WELCHE der ansehbaren Routen zu welcher
+  gehören — von unten war die Kette benannt (Options-Zeile trägt Konzept-Badge
+  und Herkunft), von oben nicht. Jede Konzept-Karte listet jetzt „Routen in
+  diesem Konzept": Name, Identitätsfarbe und derselbe Knopf wie im Optionsraum
+  („Etappen ansehen" / „wird angesehen"), leer als benannter Zustand („Derzeit
+  keine ansehbare Route in diesem Konzept"). Der Einleitungssatz sagt
+  ausserdem ausdrücklich, was das Konzept TUT: es wählt keine Route aus, es
+  beurteilt, ob die Wetterlage die Strategie trägt, der eine Route folgt. Neu
+  in styles.css: `.konzept-routen`, `.konzept-route-zeile` (+ `.kr-name`/
+  `.kr-meta`, 44px Zeilenhöhe). Bei 390px headless geprüft (kein Überlauf,
+  Zeilen 295×44). Tests 641 green, build green.
