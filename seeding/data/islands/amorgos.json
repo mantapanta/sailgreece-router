@@ -180,7 +180,21 @@
         "vhfChannel": null,
         "confidence": "mittel",
         "sources": ["Deep-Research Lauf 3: CruisersWiki Amorgos"]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "amorgos-aegiali-kyra-katinas",
+          "name": "To Limani tis Kyra Katinas",
+          "qualityRating": 4.2,
+          "cuisineType": "Traditionelle Taverne, seit 1980 in Familienhand",
+          "signatureDishes": [],
+          "accessInfo": "In der Fußgängergasse hinter dem Hafen von Aegiali, kurzer Weg von der Kaimauer",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,2/5 (677 Bewertungen, #16 von 112 auf Amorgos) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -100,6 +100,14 @@ Warnungen: ⚠ Völlig ungeschützt gegen Nord- und Nordostwind, bei Meltemi gef
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl.
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Enalion (`milos-pollonia-enalion`) | 4.5/5 | Fisch und Meeresfrüchte am Strand, Familienbetrieb | Gegrillte Garnelen, Fischsuppe | Pollonia wird frei geankert — Beiboot an den kleinen Fischerkai, von dort fußläufig an den Strand | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,5/5 (1.615 Bewertungen, #3 von 17 in Pollonia) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ### Kleftiko (`milos-kleftiko`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**

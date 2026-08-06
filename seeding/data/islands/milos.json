@@ -135,7 +135,24 @@
         "vhfChannel": null,
         "confidence": "hoch",
         "sources": ["Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl."]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "milos-pollonia-enalion",
+          "name": "Enalion",
+          "qualityRating": 4.5,
+          "cuisineType": "Fisch und Meeresfrüchte am Strand, Familienbetrieb",
+          "signatureDishes": [
+            "Gegrillte Garnelen",
+            "Fischsuppe"
+          ],
+          "accessInfo": "Pollonia wird frei geankert — Beiboot an den kleinen Fischerkai, von dort fußläufig an den Strand",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,5/5 (1.615 Bewertungen, #3 von 17 in Pollonia) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar"
+          ]
+        }
+      ]
     },
     {
       "id": "milos-kleftiko",

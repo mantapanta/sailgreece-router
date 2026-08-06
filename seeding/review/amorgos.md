@@ -142,5 +142,13 @@ Warnungen: ⚠ Spürbarer Schwell am Kai bei anhaltenden Nordwestwinden — laut
 
 Quellen: Deep-Research Lauf 3: CruisersWiki Amorgos
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| To Limani tis Kyra Katinas (`amorgos-aegiali-kyra-katinas`) | 4.2/5 | Traditionelle Taverne, seit 1980 in Familienhand | — | In der Fußgängergasse hinter dem Hafen von Aegiali, kurzer Weg von der Kaimauer | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,2/5 (677 Bewertungen, #16 von 112 auf Amorgos) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ---
 Freigabe: in `seeding/data/islands/amorgos.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.
