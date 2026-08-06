@@ -4,6 +4,7 @@ import { TripProvider, useTrip } from './tripContext.tsx';
 import { AuthProvider, useAuth } from './authContext.tsx';
 import { STALE_TIME_MS } from './usePlanning.ts';
 import { PlanningProvider, usePlanning } from './planningContext.tsx';
+import { RouteViewProvider } from './routeViewContext.tsx';
 import { getCurrentGpsPosition } from '../adapters/geolocation.ts';
 import { DayView } from '../ui/views/DayView.tsx';
 import { MapView } from '../ui/views/MapView.tsx';
@@ -207,13 +208,18 @@ function Shell() {
             assessment={assessment}
             onOpenPlace={openPlace}
             focusDay={view.focusDay ?? null}
+            // Die gewählte Route bleibt beim Wechsel stehen (routeViewContext):
+            // „auf der Karte zeigen" ist derselbe Blick, nur im Bild.
+            onOpenMap={() => setView({ kind: 'karte' })}
           />
         ) : view.kind === 'karte' ? (
           <MapView
             snapshot={snapshot}
             assessment={assessment}
             onOpenPlace={openPlace}
+            // Etappennummer → genau ihre Card; der Kopf der Ansicht ohne Tag.
             onOpenStageDay={openStageDay}
+            onOpenDay={() => setView({ kind: 'tag' })}
           />
         ) : (
           <PlaceDetailView
@@ -320,7 +326,11 @@ function AuthGate() {
   return (
     <TripProvider>
       <PlanningProvider>
-        <Shell />
+        {/* Die angesehene Route (Hauptroute oder eine Alternative) gilt für
+            BEIDE Ansichten — deshalb über dem Shell, nicht in einer View. */}
+        <RouteViewProvider>
+          <Shell />
+        </RouteViewProvider>
       </PlanningProvider>
     </TripProvider>
   );

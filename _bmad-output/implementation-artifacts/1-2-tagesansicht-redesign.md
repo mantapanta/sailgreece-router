@@ -1243,3 +1243,54 @@ assumption block became an info chip, "Bereits gefahren" a collapsed chip
 list, and cold load renders a skeleton. Emoji semantics (🟢📌⚓⚠⛔) were
 replaced by words, error/hint panels split (role="alert" vs quiet track),
 and the 16px input floor landed globally.
+
+- 2026-08-06 (Feedback Philipp, Alternativ-Ansicht): „Wenn ich auf der Karte
+  eine Alternative wähle, will ich mir in der Heute-Ansicht auch die einzelnen
+  Etappen anschauen — dann erkenne ich anhand der Etappen, warum eine Route
+  möglicherweise nicht taugt." Dazu: „Ich verstehe nicht, wie Routen-Konzept &
+  Optionsraum mit den alternativen Routen der Karte zusammenpassen. Die Namen
+  sind anders, es ist nicht selbsterklärend."
+  Beides hing zusammen: die Wahl lag als lokaler State IN der Karte (beim
+  Ansichtswechsel weg), und dieselbe Route hiess auf der Karte
+  „3. Wendepunkt Amorgos", im Optionsraum „Verlängerung Amorgos" — obwohl es
+  per `previewIndex` derselbe `alternatives`-Eintrag ist.
+  Neu: `app/routeViewContext.tsx` hält die angesehene Route (Index in
+  `assessment.alternatives`, null = Hauptroute) für BEIDE Ansichten; bewusst
+  ausserhalb des TripContext (AD-11: Ansehen ist keine Törnentscheidung) und
+  mit der EINEN Klemme gegen verschwundene Alternativen. `ui/altRoutes.ts`
+  (getestet, 9 Fälle) leitet die Identität einmal ab — Name aus der Option des
+  Optionsraums, Farbe aus dem Listenplatz, dazu `herkunft` als Satz
+  („Aus dem Optionsraum · Route 2 · Ost · schliesst · abgeraten · wählbar"
+  bzw. „Nachweis der Rest-Trip-Ampel … keine Option des Optionsraums"); die
+  Beschriftungen `KONZEPT_KURZ`/`OPTION_STATE_LABEL`/`EMPFEHLUNG_LABEL` sind
+  aus DayView dorthin gewandert, weil die Karte dieselben Wörter braucht.
+  Die Tagesansicht zeigt bei gewählter Alternative DEREN Etappen: Hero,
+  Rest-Trip-Zeilen und „Bereits gefahren" laufen über `viewRoute` statt über
+  `mainRoute`, darüber steht `AltRouteBanner` (Name, Herkunft, Badges,
+  Routenkarte, Abraten-Gründe, „Als Hauptroute übernehmen" / „Auf der Karte
+  zeigen" / „Zurück zur Hauptroute"). Die Etappen-Cards sind dabei `readOnly`:
+  ohne die Sperre hätte „Etappe ändern" die HAUPTROUTE bearbeitet, während
+  eine andere Route auf dem Schirm steht — Ampel, Kurs-Abschnitte, Wind und
+  die aufklappbare Stundenrechnung bleiben vollständig sichtbar, denn genau
+  sie sind der Grund, sich eine Alternative anzusehen. Hinweise zur
+  Hauptroute (Vorschlag, veralteter Solver-Stand) pausieren solange.
+  Die frühere `AltPreview` (Routenkarte + Kurzliste, eingeklappt in der
+  Options-Zeile) ist ERSETZT: zwei Arten, dieselbe Route anzusehen, waren Teil
+  der Verwirrung. Options- und Alternativ-Zeilen tragen jetzt „Etappen
+  ansehen" (schaltet die Ansicht um und springt an den Seitenkopf) und die
+  Herkunft; der Intro-Text des Optionsraums nennt die Kette Konzept →
+  Optionsraum → Linie auf der Karte ausdrücklich. Neu in styles.css:
+  `.alt-banner` (+ `-actions`). Tests 641 green, build green.
+
+- 2026-08-06 (Nachtrag, Kette von oben): das Konzept-Panel beurteilte zwei
+  Strategien, ohne je zu sagen, WELCHE der ansehbaren Routen zu welcher
+  gehören — von unten war die Kette benannt (Options-Zeile trägt Konzept-Badge
+  und Herkunft), von oben nicht. Jede Konzept-Karte listet jetzt „Routen in
+  diesem Konzept": Name, Identitätsfarbe und derselbe Knopf wie im Optionsraum
+  („Etappen ansehen" / „wird angesehen"), leer als benannter Zustand („Derzeit
+  keine ansehbare Route in diesem Konzept"). Der Einleitungssatz sagt
+  ausserdem ausdrücklich, was das Konzept TUT: es wählt keine Route aus, es
+  beurteilt, ob die Wetterlage die Strategie trägt, der eine Route folgt. Neu
+  in styles.css: `.konzept-routen`, `.konzept-route-zeile` (+ `.kr-name`/
+  `.kr-meta`, 44px Zeilenhöhe). Bei 390px headless geprüft (kein Überlauf,
+  Zeilen 295×44). Tests 641 green, build green.

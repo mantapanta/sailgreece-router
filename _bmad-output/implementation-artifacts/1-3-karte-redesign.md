@@ -1425,6 +1425,25 @@ claude-fable-5 (BMad dev-story)
   Treffer 6px darüber/darunter, Menü 246×328 bei 390px Viewport). Tests 592
   green, build green.
 
+- 2026-08-06 (Feedback Philipp, Verknüpfung mit der Heute-Ansicht): die
+  Routenwahl der Karte war gut („mir gefällt die einfache Logik"), endete aber
+  an der Karte — beim Wechsel auf „Heute" war die gewählte Alternative weg,
+  und sie hiess dort ausserdem anders. Jetzt liegt die Wahl im geteilten
+  `routeViewContext` (Index in `assessment.alternatives`, null = Hauptroute,
+  Klemme gegen verschwundene Alternativen im Provider statt in der View), und
+  die Namen kommen aus `ui/altRoutes.ts`: Chip, Menü und Legende nennen die
+  Route so, wie der Optionsraum sie nennt, die Menüzeile trägt darunter
+  Wendepunkt, Etappenzahl und Routen-Konzept (`.am-sub`). Alles Routenbezogene der Karte
+  folgt der GEZEIGTEN Route (`displayRouteStages`) — vorher zeichnete die Karte
+  eine Alternative, während die Liste darunter die Hauptroute aufzählte. (Die
+  Etappenliste und ihr `.alt-lead` sind mit dem Merge des Karten-Stands
+  entfallen, siehe den Eintrag darunter: die Zeile unter den Chips nennt die
+  Route und führt in die Heute-Ansicht, die Etappennummern führen auf die
+  einzelne Card.) Die
+  Legende erklärt zusätzlich, dass es dieselben Routen wie im Optionsraum
+  sind. Neu in styles.css: `.alt-lead` (+ `-name`/`-actions`),
+  `.layer-chips button.alt-note`, `.alt-menu .am-sub`. Tests 641 green,
+  build green.
 - 2026-08-06 (Feedback Philipp, dritter Durchgang — zwei Punkte): (1) Die
   Etappenliste der Kartenansicht ist KOMPLETT ENTFALLEN — Bottom-Sheet ≤860px
   und Listenspalte ≥861px. Sie wiederholte die Tagesansicht in kleinerer
@@ -1473,3 +1492,18 @@ claude-fable-5 (BMad dev-story)
   zweier. Die Chip-Variante von `AbfahrtMenu` bleibt als Baustein erhalten (ihre
   Kommentare nennen kein „scrollendes Etappen-Sheet" mehr); README an zwei
   Stellen nachgezogen. Tests 671 green, tsc und build green.
+
+- 2026-08-06 (Merge der beiden Karten-Stände): der Stand „Karte ohne
+  Etappenliste" und der Stand „Alternative Routen: eine Wahl, ein Name" trafen
+  sich in denselben drei Dateien. Übernommen ist beides: die Routenwahl liegt im
+  geteilten `routeViewContext` und trägt die Namen aus `ui/altRoutes.ts` (Chip,
+  Menü, Legende), die Karte hat weder Etappenliste noch Sheet. Was die Liste
+  trug, tragen jetzt zwei Wege: die Zeile unter den Chips nennt die gezeigte
+  Route und führt in die Heute-Ansicht (`onOpenDay`), und jede Etappennummer
+  führt auf ihre Card (`onOpenStageDay`). Weil beide Ansichten dieselbe Route
+  zeigen, ist die frühere Einschränkung weg — die Zahlen einer ANGESEHENEN
+  Alternative sind jetzt ebenfalls Knöpfe, ihr aria-label nennt die Route
+  („Verlängerung Amorgos — Aigiali — Etappe 7 (Tag 7) — in „Heute" öffnen").
+  Die Abfahrt-Kachel der Etappenkarte bleibt an einer nur angesehenen Route
+  Anzeige statt Menü (`readOnly`), und der Weg zurück zur Empfehlung erscheint
+  dort nicht — verstellt würde sonst der Plan, nicht die Ansicht.

@@ -19,10 +19,8 @@ import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
   LegAssessment,
-  PlanAssessment,
   PlanningSnapshot,
   RouteOptionAssessment,
-  RoutenEmpfehlung,
   StageAssessment,
   KursAbschnitt,
   LegHourBreakdown,
@@ -30,7 +28,7 @@ import type {
 } from '../../domain/schema/snapshot.ts';
 import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
 import { forecastModelLabel } from '../../domain/schema/models.ts';
-import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
+import type { KonzeptEignung } from '../../domain/schema/konzept.ts';
 import {
   KONZEPT_REGLER,
   konzeptSchwellenOf,
@@ -47,13 +45,21 @@ import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
 import { StageThumb } from '../components/StageThumb.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
-import { altRouteColor } from '../altRouteColors.ts';
+import {
+  altRouteAt,
+  altRouteViews,
+  EMPFEHLUNG_LABEL,
+  KONZEPT_KURZ,
+  OPTION_STATE_LABEL,
+  type AltRouteView,
+} from '../altRoutes.ts';
 import {
   buildLegsById,
   pointNumberByForecastKey,
   stagePoints,
 } from '../mapPath.ts';
 import { usePlanning } from '../../app/planningContext.tsx';
+import { useRouteView } from '../../app/routeViewContext.tsx';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
 import {
   compass,
@@ -84,7 +90,6 @@ import {
   islandWithPlace,
   placeName,
   stageFrom,
-  stageTitle,
   stageVia,
 } from '../stageText.ts';
 
@@ -550,6 +555,7 @@ function StageCard({
   mapId,
   returnCheck,
   harbourPointer,
+  readOnly = false,
 }: {
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
@@ -564,6 +570,16 @@ function StageCard({
   returnCheck?: DayReturnCheck | null;
   /** Hafentag-Hero: Hinweis auf den nächsten Segeltag ("Weiter am Mi: …"). */
   harbourPointer?: string | null;
+  /**
+   * Die Etappe einer ANGESEHENEN ALTERNATIVE: lesen ja, ändern nein.
+   *
+   * Ohne diese Sperre bearbeitete „Etappe ändern" die HAUPTROUTE, während der
+   * Skipper eine ganz andere Route auf dem Schirm hat — eine stille Änderung
+   * am falschen Plan. Ampel, Wind, Kreuz-Abschnitte und die Stundenrechnung
+   * bleiben vollständig sichtbar: sie sind der Grund, sich eine Alternative
+   * überhaupt anzusehen. Erst das Übernehmen (FR29) macht sie änderbar.
+   */
+  readOnly?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -718,8 +734,10 @@ function StageCard({
                 dieses Tages. Der frühere ±-Stepper stand nur an der
                 Hero-Kachel von heute — an jedem anderen Tag zeigte die Karte
                 eine Abfahrt, die sich nicht anfassen liess. Vergangene Tage
-                sind gefahren und bleiben Anzeige. */}
-            {stage.day >= currentDay ? (
+                sind gefahren und bleiben Anzeige — und eine nur ANGESEHENE
+                Alternative (readOnly) auch: sie ist nicht der Plan, ihre
+                Abfahrt zu stellen hätte den Plan verstellt. */}
+            {stage.day >= currentDay && !readOnly ? (
               <AbfahrtMenu
                 variant="tile"
                 day={stage.day}
@@ -809,17 +827,23 @@ function StageCard({
           {stage.abfahrtsEmpfehlung.hinweis && (
             <div className="beschreibung">{stage.abfahrtsEmpfehlung.hinweis}</div>
           )}
+          {/* Hat der Skipper die Abfahrt selbst gesetzt, sagt die Zeile es und
+              gibt den Tag auf Wunsch an die Empfehlung zurück. Den Weg zurück
+              trägt nur der PLAN: an einer nur angesehenen Alternative (readOnly)
+              bleibt die Aussage stehen, der Knopf nicht. */}
           {stage.abfahrtVomSkipper && (
             <div className="beschreibung">
               Gerechnet wird mit deiner Abfahrt um {departureHour}:00.{' '}
-              <button
-                type="button"
-                className="secondary"
-                title="Gibt diesen Tag an die Empfehlung zurück — die Bewertung rechnet dann wieder ab der empfohlenen Stunde."
-                onClick={() => setDepartureHour(stage.day, null)}
-              >
-                Empfehlung übernehmen
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  className="secondary"
+                  title="Gibt diesen Tag an die Empfehlung zurück — die Bewertung rechnet dann wieder ab der empfohlenen Stunde."
+                  onClick={() => setDepartureHour(stage.day, null)}
+                >
+                  Empfehlung übernehmen
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -900,13 +924,17 @@ function StageCard({
           Optionsraum erreichbar. */}
       {!(hero && isHarbour) && (
         <div className="cta-column">
-          <button
-            type="button"
-            className={hero ? 'btn-primary' : 'btn-secondary'}
-            onClick={() => setEditing((v) => !v)}
-          >
-            {editing ? 'Bearbeiten abbrechen' : 'Etappe ändern'}
-          </button>
+          {/* An einer angesehenen Alternative fehlt der Ändern-Knopf: er würde
+              die Hauptroute bearbeiten, die gerade gar nicht im Bild ist. */}
+          {!readOnly && (
+            <button
+              type="button"
+              className={hero ? 'btn-primary' : 'btn-secondary'}
+              onClick={() => setEditing((v) => !v)}
+            >
+              {editing ? 'Bearbeiten abbrechen' : 'Etappe ändern'}
+            </button>
+          )}
           {!isHarbour && (
             <button
               type="button"
@@ -964,34 +992,15 @@ function StageCard({
   );
 }
 
-const OPTION_STATE_LABEL: Record<RouteOptionAssessment['state'], string> = {
-  offen: 'offen',
-  'offen-horizont': 'offen · Vorbehalt',
-  schliesst: 'schliesst',
-  zu: 'zu',
-};
-
-/** Kurzform des Routen-Konzepts fürs Options-Badge (Langform im Panel). */
-const KONZEPT_KURZ: Record<KonzeptId, string> = {
-  klassik: 'Route 1 · West/Zentral',
-  ost: 'Route 2 · Ost',
-};
-
+/**
+ * Zustands-, Konzept- und Empfehlungs-Beschriftungen leben in altRoutes.ts:
+ * die Karten-Ansicht nennt dieselben Routen und braucht dieselben Wörter
+ * (Skipper 2026-08-06 — „die Namen sind anders").
+ */
 const EIGNUNG_LABEL: Record<KonzeptEignung, string> = {
   geeignet: 'trägt',
   grenzwertig: 'grenzwertig',
   ungeeignet: 'trägt nicht',
-};
-
-/**
- * Die EMPFEHLUNGS-Achse einer Option (schema/snapshot.ts). Bewusst getrennt
- * vom Zustands-Chip: "zu · abgeraten" ist eine andere Aussage als "zu", und
- * "offen · abgeraten" heisst — die Route geht, die App rät nur ab.
- */
-const EMPFEHLUNG_LABEL: Record<RoutenEmpfehlung, string> = {
-  empfohlen: 'empfohlen',
-  moeglich: 'möglich',
-  abgeraten: 'abgeraten · wählbar',
 };
 
 /**
@@ -1103,6 +1112,9 @@ function KonzeptPanel({
   open,
   onToggle,
   panelRef,
+  altRoutes,
+  shownAltIndex,
+  onShow,
 }: {
   assessment: Assessment;
   snapshot: PlanningSnapshot;
@@ -1111,6 +1123,10 @@ function KonzeptPanel({
   open: boolean;
   onToggle: () => void;
   panelRef: RefObject<HTMLElement | null>;
+  /** Die ansehbaren Routen — je Konzept-Karte die, die ihm folgen. */
+  altRoutes: AltRouteView[];
+  shownAltIndex: number | null;
+  onShow: (index: number) => void;
 }) {
   const entscheid = assessment.konzeptEntscheid;
   // Das aktive Konzept trägt die Summenzeile: es ist die eine Aussage, die
@@ -1160,7 +1176,11 @@ function KonzeptPanel({
               nur bei moderatem Meltemi). Vorschlag und Rangfolge der App folgen
               dieser Beurteilung — kippt das aktive Konzept, empfiehlt die App
               den Wechsel. Beide Konzepte und alle Routen darin bleiben trotzdem
-              wählbar: bei zu viel Wind rät die App ab, sie sperrt nicht.
+              wählbar: bei zu viel Wind rät die App ab, sie sperrt nicht. Das
+              Konzept wählt keine Route aus; es beurteilt, ob die Wetterlage die
+              Strategie trägt, der eine Route folgt. Welche Routen das je
+              Konzept sind, steht unten in seiner Karte — dieselben, die der
+              Optionsraum listet und die Karten-Ansicht als Linie zeigt.
             </p>
             {entscheid.wechselHinweis && (
               <div className="hint-panel konzept-wechsel">
@@ -1195,6 +1215,50 @@ function KonzeptPanel({
                       <li key={g}>{g}</li>
                     ))}
                   </ul>
+                  {/* WELCHE ROUTEN FOLGEN DIESEM KONZEPT (Skipper 2026-08-06):
+                      das Panel beurteilte zwei Strategien, ohne je zu sagen,
+                      welche der ansehbaren Routen dazugehören — die Kette
+                      Konzept → Optionsraum → Linie auf der Karte war von hier
+                      aus unsichtbar. Jetzt steht sie hier namentlich, in
+                      derselben Farbe, mit demselben Knopf wie im Optionsraum. */}
+                  {(() => {
+                    const routen = altRoutes.filter(
+                      (r) => r.option?.konzeptId === k.id,
+                    );
+                    if (routen.length === 0) {
+                      return (
+                        <p className="beschreibung">
+                          Derzeit keine ansehbare Route in diesem Konzept.
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="konzept-routen">
+                        <span className="versal">Routen in diesem Konzept</span>
+                        {routen.map((r) => (
+                          <button
+                            key={r.index}
+                            type="button"
+                            className="konzept-route-zeile"
+                            aria-pressed={r.index === shownAltIndex}
+                            onClick={() => onShow(r.index)}
+                          >
+                            <span
+                              className="alt-farbe"
+                              style={{ background: r.color }}
+                              aria-hidden="true"
+                            />
+                            <span className="kr-name">{r.name}</span>
+                            <span className="kr-meta">
+                              {r.index === shownAltIndex
+                                ? 'wird angesehen'
+                                : 'Etappen ansehen ›'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -1224,100 +1288,154 @@ function KonzeptPanel({
 }
 
 /**
- * Vorschau einer ansehbaren Route: Routenkarte plus Etappenliste Tag für Tag,
- * und der Übernehmen-Knopf steht IN der Vorschau — wer übernimmt, hat gesehen,
- * was (Feedback 2026-08-05: übernehmen ohne ansehen ist keine Entscheidung).
- * Ein Baustein für Options-Zeilen UND freistehende Alternativen (FR2-Zeuge).
+ * DER KOPF DER ALTERNATIV-ANSICHT (Skipper 2026-08-06): „Für mich reicht es,
+ * wenn ich eine Alternative wie in der Kartenansicht anschauen kann — dann
+ * erkenne ich anhand der einzelnen Etappen, warum sie möglicherweise nicht
+ * geeignet ist."
+ *
+ * Genau das passiert hier: die gewählte Alternative (routeViewContext, dieselbe
+ * Wahl wie auf der Karte) übernimmt die ganze Tagesansicht. Dieser Kopf sagt,
+ * WELCHE Route man sieht und woher sie kommt; darunter stehen ihre Etappen in
+ * denselben Karten wie die der Hauptroute — mit Ampel, Kreuz-Abschnitten,
+ * Abfahrt/Ankunft und der aufklappbaren Stundenrechnung.
+ *
+ * Die frühere `AltPreview` (Routenkarte + Kurzliste, eingeklappt IN der
+ * Options-Zeile) ist damit ersetzt: zwei Arten, dieselbe Route anzusehen, waren
+ * ein Teil des Problems. Übernommen wird weiterhin nur nach dem Ansehen —
+ * der Knopf steht hier, nicht an der Options-Zeile (Feedback 2026-08-05).
  */
-function AltPreview({
-  alt,
+function AltRouteBanner({
+  route,
   snapshot,
-  color,
   mapId,
-  abratenGruende = [],
+  onOpenMap,
+  onClose,
 }: {
-  alt: PlanAssessment;
+  route: AltRouteView;
   snapshot: PlanningSnapshot;
-  /** Farbe dieser Alternative (altRouteColors.ts) — identisch zur Karte. */
-  color: string;
   mapId: string | null;
-  /**
-   * Warum die App von dieser Route abrät (leer = sie rät nicht ab). Der Knopf
-   * bleibt in JEDEM Fall bedienbar: abgeraten ist nicht verboten (Skipper
-   * 2026-08-06) — aber wer übernimmt, hat die Gründe hier gelesen.
-   */
-  abratenGruende?: string[];
+  onOpenMap?: () => void;
+  onClose: () => void;
 }) {
   const { checkIn } = usePlanning();
+  const option = route.option;
+  const stages = route.plan.stages.filter((s) => s.kind === 'stage');
+  const nm = stages.reduce(
+    (sum, s) => sum + s.legs.reduce((l, leg) => l + (leg.sailedLeg?.distanceNm ?? 0), 0),
+    0,
+  );
+
   return (
-    <div className="alt-preview">
-      {mapId ? (
-        <RouteMap stages={alt.stages} snapshot={snapshot} color={color} mapId={mapId} />
-      ) : (
-        <p className="beschreibung">
-          Routenkarte nicht verfügbar — es fehlt: <code>{MAPS_MISSING}</code>.
-          Die Etappenliste unten ist davon unberührt.
-        </p>
-      )}
-      <div className="alt-stage-list">
-        {alt.stages.map((s) =>
-          s.kind === 'harbour' ? (
-            <div className="alt-stage harbour" key={s.day}>
-              <span className="versal">Tag {s.day} · Hafentag</span>
-              <span>{islandWithPlace(snapshot, s.toIslandId, s.placeId)}</span>
-              <AmpelBadge ampel={s.ampel} />
-            </div>
-          ) : (
-            <div className="alt-stage" key={s.day}>
-              <span className="versal">
-                Tag {s.day} · Etappe {s.stageNumber ?? '–'}
+    <section className="alt-banner" style={{ borderLeftColor: route.color }}>
+      <div className="option-kopf">
+        <span className="option-name">
+          <span className="alt-farbe" style={{ background: route.color }} />
+          {route.name}
+        </span>
+        <span className="state-chip">Alternative</span>
+      </div>
+
+      <p className="alt-banner-lead">
+        <strong>Angesehen, nicht übernommen</strong> — die Hauptroute bleibt,
+        wie sie ist.
+      </p>
+
+      {/* Die Antwort auf „wie passt das mit Routen-Konzept und Optionsraum
+          zusammen?" — sie steht AN der Route, nicht in einem anderen Panel. */}
+      <p className="beschreibung">{route.herkunft}</p>
+
+      <div className="badges">
+        <span className="badge" title="Insel am fernen Ende dieser Route">
+          Wendepunkt {route.turnName}
+        </span>
+        <span className="badge">
+          {route.stageCount} Etappen{nm > 0 && ` · ${Math.round(nm)} sm`}
+        </span>
+        {route.plan.turnDay !== null && (
+          <span className="badge">Wende an Tag {route.plan.turnDay}</span>
+        )}
+        {option && (
+          <>
+            <span className={`state-chip state-${option.state}`}>
+              {OPTION_STATE_LABEL[option.state]}
+            </span>
+            <span
+              className={`badge badge-empfehlung badge-empfehlung-${option.empfehlung}`}
+              title="Empfehlung der App zu dieser Route. Abgeraten heisst abgeraten, nicht gesperrt."
+            >
+              {EMPFEHLUNG_LABEL[option.empfehlung]}
+            </span>
+            <span className="badge badge-konzept">{KONZEPT_KURZ[option.konzeptId]}</span>
+            {option.closesOnDay !== null && (
+              <span className="badge badge-frist">
+                Entscheidung bis Tag {option.closesOnDay}
               </span>
-              <span>
-                {stageTitle(snapshot, s)}
-                {(() => {
-                  // Dieselbe Anzeige-Summe wie in der StageCard: die
-                  // GESEGELTE Etappe trägt die Distanz, die Bewertung die
-                  // Stunden — hier wird nichts neu gerechnet (AD-2).
-                  const nm = s.legs.reduce(
-                    (sum, l) => sum + (l.sailedLeg?.distanceNm ?? 0),
-                    0,
-                  );
-                  const h = s.legs.reduce((sum, l) => sum + (l.totalHours ?? 0), 0);
-                  return (
-                    <span className="beschreibung">
-                      {' '}
-                      — {nm > 0 ? `${Math.round(nm)} sm · ` : ''}
-                      {formatHours(h || null)}
-                    </span>
-                  );
-                })()}
-              </span>
-              <AmpelBadge ampel={s.ampel} />
-            </div>
-          ),
+            )}
+          </>
         )}
       </div>
-      <p className="beschreibung">
-        Auf der Karten-Ansicht lässt sich diese Route in derselben Farbe über
-        die Hauptroute legen. Übernehmen macht sie zur neuen Hauptroute —
-        bisherige Festlegungen werden dabei gelöst.
-      </p>
-      {abratenGruende.length > 0 && (
+
+      {option?.costNote && (
+        <p className="beschreibung">Kostet: {option.costNote}.</p>
+      )}
+
+      {mapId ? (
+        <RouteMap
+          stages={route.plan.stages}
+          snapshot={snapshot}
+          color={route.color}
+          mapId={mapId}
+        />
+      ) : (
+        <p className="beschreibung">
+          Routenkarte nicht verfügbar — es fehlt: <code>{MAPS_MISSING}</code>. Die
+          Etappen unten sind davon unberührt.
+        </p>
+      )}
+
+      {route.abratenGruende.length > 0 && (
         <div className="hint-panel abraten-hinweis">
-          <strong>Von dieser Route wird abgeraten — übernehmen kannst du sie trotzdem.</strong>
+          <strong>
+            Von dieser Route wird abgeraten — übernehmen kannst du sie trotzdem.
+          </strong>
           <ul className="reasons">
-            {abratenGruende.map((g) => (
+            {route.abratenGruende.map((g) => (
               <li key={g}>{g}</li>
             ))}
           </ul>
         </div>
       )}
-      <button type="button" className="btn-secondary" onClick={() => checkIn(alt.plan)}>
-        {abratenGruende.length > 0
-          ? 'Trotz Abraten als Hauptroute übernehmen'
-          : 'Als Hauptroute übernehmen'}
-      </button>
-    </div>
+
+      <p className="beschreibung">
+        Unten stehen die Etappen DIESER Route, Tag für Tag — Ampel, Wind,
+        Kreuz-Abschnitte und Ankunft wie bei der Hauptroute. Geändert wird an
+        einer Alternative nichts: erst das Übernehmen macht sie zur Hauptroute
+        (bisherige Festlegungen werden dabei gelöst).
+      </p>
+
+      <div className="alt-banner-actions">
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => {
+            checkIn(route.plan.plan);
+            onClose();
+          }}
+        >
+          {route.abratenGruende.length > 0
+            ? 'Trotz Abraten als Hauptroute übernehmen'
+            : 'Als Hauptroute übernehmen'}
+        </button>
+        {onOpenMap && (
+          <button type="button" className="btn-secondary" onClick={onOpenMap}>
+            Auf der Karte zeigen
+          </button>
+        )}
+        <button type="button" className="btn-secondary" onClick={onClose}>
+          Zurück zur Hauptroute
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -1332,34 +1450,36 @@ function AltPreview({
  *   Preis      — was nehme ich dafür in Kauf (Doppelschläge, Nachtetappen),
  *   Frist      — bis wann kann ich mich noch dafür entscheiden.
  *
- * Dazu die Vorschau: `preview` ist der bewertete Plan HINTER diesen Angaben
- * (assessment.alternatives[previewIndex] — angesehen wird exakt, was
- * übernommen würde, AD-3), in der Farbe, in der die Karten-Ansicht dieselbe
- * Route einblendet. Übernommen wird erst in der Vorschau — der frühere
- * Knopf "Diese Option verfolgen" ohne Ansehen ist bewusst weg.
+ * Dazu die ROUTE hinter diesen Angaben: `route` ist der bewertete Plan der
+ * Option (assessment.alternatives[previewIndex] — angesehen wird exakt, was
+ * übernommen würde, AD-3), mit Farbe und Namen der Karten-Ansicht. „Etappen
+ * ansehen" schlägt sie oben in der Tagesansicht auf, Tag für Tag; das ist
+ * derselbe Knopf wie die Routenwahl auf der Karte, nur von hier aus.
  */
 function OptionRow({
   option,
   snapshot,
   today,
-  preview,
-  color,
-  mapId,
+  route,
+  onShow,
+  shown,
 }: {
   option: RouteOptionAssessment;
   snapshot: PlanningSnapshot;
   today: number;
   /** Null: kein Plan — oder der Plan ist bereits die Hauptroute. */
-  preview: PlanAssessment | null;
-  color: string | null;
-  mapId: string | null;
+  route: AltRouteView | null;
+  /** Diese Route ansehen (Tagesansicht schlägt ihre Etappen auf). */
+  onShow: (index: number) => void;
+  /** True, während genau diese Route oben angesehen wird. */
+  shown: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const rest = option.closesOnDay !== null ? option.closesOnDay - today : null;
   const dringend =
     rest !== null && rest >= 0 && rest <= snapshot.params.decisionLookaheadDays;
   /** previewIndex null TROTZ Plan heisst genau: entspricht der Hauptroute. */
-  const istHauptroute = option.plan !== null && preview === null;
+  const istHauptroute = option.plan !== null && route === null;
+  const color = route?.color ?? null;
 
   return (
     <div
@@ -1441,27 +1561,17 @@ function OptionRow({
         </ul>
       )}
 
-      {preview && color && (
-        <>
-          <div className="stage-actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setOpen((v) => !v)}
-            >
-              {open ? 'Vorschau schließen' : 'Route ansehen'}
-            </button>
-          </div>
-          {open && (
-            <AltPreview
-              alt={preview}
-              snapshot={snapshot}
-              color={color}
-              mapId={mapId}
-              abratenGruende={option.abratenGruende}
-            />
-          )}
-        </>
+      {route && (
+        <div className="stage-actions">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => onShow(route.index)}
+            aria-pressed={shown}
+          >
+            {shown ? 'Wird oben angesehen' : 'Etappen ansehen'}
+          </button>
+        </div>
       )}
     </div>
   );
@@ -1473,28 +1583,27 @@ function OptionRow({
  * Optionen in derselben Sektion — ein gelbes Licht muss einlösbar bleiben.
  */
 function AlternativeRow({
-  alt,
+  route,
   snapshot,
-  color,
-  mapId,
+  onShow,
+  shown,
 }: {
-  alt: PlanAssessment;
+  route: AltRouteView;
   snapshot: PlanningSnapshot;
-  /** Farbe dieser Alternative (altRouteColors.ts) — identisch zur Karte. */
-  color: string;
-  mapId: string | null;
+  onShow: (index: number) => void;
+  shown: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const stages = alt.stages.filter((s) => s.kind === 'stage');
+  const stages = route.plan.stages.filter((s) => s.kind === 'stage');
   return (
-    <div className="alt-route" style={{ borderLeftColor: color }}>
+    <div className="alt-route" style={{ borderLeftColor: route.color }}>
       <div className="option-kopf">
         <span className="option-name">
-          <span className="alt-farbe" style={{ background: color }} />
-          Wendepunkt {islandName(snapshot, alt.turnIslandId)}
+          <span className="alt-farbe" style={{ background: route.color }} />
+          {route.name}
         </span>
         <span className="beschreibung">{stages.length} Etappen</span>
       </div>
+      <p className="beschreibung">{route.herkunft}</p>
       <span className="legs-inline">
         {stages.slice(0, 6).map((s) => (
           <span className="leg-chip" key={s.day}>
@@ -1504,11 +1613,15 @@ function AlternativeRow({
         {stages.length > 6 && <span className="leg-chip">…</span>}
       </span>
       <div className="stage-actions">
-        <button type="button" className="btn-secondary" onClick={() => setOpen((v) => !v)}>
-          {open ? 'Vorschau schließen' : 'Route ansehen'}
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => onShow(route.index)}
+          aria-pressed={shown}
+        >
+          {shown ? 'Wird oben angesehen' : 'Etappen ansehen'}
         </button>
       </div>
-      {open && <AltPreview alt={alt} snapshot={snapshot} color={color} mapId={mapId} />}
     </div>
   );
 }
@@ -1518,6 +1631,7 @@ export function DayView({
   assessment,
   onOpenPlace,
   focusDay = null,
+  onOpenMap,
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
@@ -1530,6 +1644,11 @@ export function DayView({
    * an und setzt den Fokus dorthin; null heisst "normal öffnen, oben".
    */
   focusDay?: number | null;
+  /**
+   * Zur Karten-Ansicht wechseln — die angesehene Route bleibt dabei stehen
+   * (routeViewContext). Optional, damit die View ohne Navigationsrahmen rendert.
+   */
+  onOpenMap?: () => void;
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
@@ -1539,12 +1658,42 @@ export function DayView({
     : null;
 
   const main = assessment.mainRoute;
+
+  /**
+   * DIE ANGESEHENE ROUTE (Skipper 2026-08-06): dieselbe Wahl wie auf der Karte
+   * (routeViewContext). Ist eine Alternative gewählt, zeigt die Tagesansicht
+   * DEREN Etappen — in denselben Karten wie die der Hauptroute, damit sich an
+   * den einzelnen Etappen erkennen lässt, warum eine Route taugt oder nicht.
+   * Der Plan selbst bleibt unangetastet, bis die Route übernommen wird (FR29).
+   */
+  const { shownAltIndex, showAlt } = useRouteView();
+  const altRoutes = useMemo(
+    () => altRouteViews(assessment, (id) => islandName(snapshot, id)),
+    [assessment, snapshot],
+  );
+  const shownRoute = altRouteAt(altRoutes, shownAltIndex);
+  const viewRoute = shownRoute?.plan ?? main;
+
   /** Hero-Switch + Listen-Split — pure helper (AC 8/9), kein eigenes Branching. */
-  const { hero, rest, past } = dayViewStages(main, day, assessment.currentIslandId);
+  const { hero, rest, past } = dayViewStages(
+    viewRoute,
+    day,
+    assessment.currentIslandId,
+  );
   /** Abbruch-Notation je Tag (Zielmodell v2) — für die Etappen-Cards. */
   const returnCheckByDay = new Map(
-    (main?.returnChecks ?? []).map((c) => [c.day, c]),
+    (viewRoute?.returnChecks ?? []).map((c) => [c.day, c]),
   );
+
+  /**
+   * Eine Alternative ansehen und an den Kopf der Seite springen — sonst
+   * schaltete der Knopf im Optionsraum eine Ansicht um, die weit über dem
+   * sichtbaren Ausschnitt beginnt.
+   */
+  const showRoute = (index: number) => {
+    showAlt(index);
+    window.scrollTo?.({ top: 0, behavior: 'smooth' });
+  };
 
   // Staleness (FR13/AD-7): geprüft höchstens einmal pro Minute; das Label
   // selbst kommt aus dem getesteten Helper (AC 2/14).
@@ -1635,17 +1784,10 @@ export function DayView({
   /**
    * Alternativen, auf die KEINE Option zeigt — nach Konstruktion der FR2-Zeuge,
    * wenn sein Plan von keinem Optionsplan abgedeckt ist (AD-13: ein gelbes
-   * Licht muss einlösbar bleiben). Der Index bleibt der in
+   * Licht muss einlösbar bleiben). Sie behalten ihren Index in
    * `assessment.alternatives`, damit die Farbe zur Karten-Ansicht passt.
    */
-  const referencedAlts = new Set(
-    assessment.routeOptions
-      .map((o) => o.previewIndex)
-      .filter((i): i is number => i !== null),
-  );
-  const extraAlternatives = assessment.alternatives
-    .map((alt, index) => ({ alt, index }))
-    .filter(({ index }) => !referencedAlts.has(index));
+  const extraAlternatives = altRoutes.filter((r) => r.option === null);
 
   const summary = optionsSummary(assessment.routeOptions);
   const hasOptionContent =
@@ -1654,8 +1796,8 @@ export function DayView({
 
   // Hafentag-Hero: Zeiger auf den nächsten Segeltag ("Weiter am Mi: A → B").
   const nextSailing =
-    hero && hero.kind === 'harbour' && main
-      ? (main.stages.find((s) => s.day > hero.day && s.kind === 'stage') ?? null)
+    hero && hero.kind === 'harbour' && viewRoute
+      ? (viewRoute.stages.find((s) => s.day > hero.day && s.kind === 'stage') ?? null)
       : null;
   const harbourPointer =
     hero && nextSailing
@@ -1738,7 +1880,22 @@ export function DayView({
         </button>
       )}
 
-      {!main && assessment.proposal && (
+      {/* DIE ANGESEHENE ALTERNATIVE übernimmt die Ansicht: Kopf mit Herkunft
+          und Übernehmen-Knopf, darunter ihre Etappen in denselben Karten wie
+          die der Hauptroute. Solange sie steht, bleiben die Hinweise zur
+          Hauptroute (Vorschlag, veralteter Solver-Stand) aus dem Bild — sie
+          gehören zu einer Route, die man gerade nicht ansieht. */}
+      {shownRoute && (
+        <AltRouteBanner
+          route={shownRoute}
+          snapshot={snapshot}
+          mapId={mapId}
+          onOpenMap={onOpenMap}
+          onClose={() => showAlt(null)}
+        />
+      )}
+
+      {!shownRoute && !main && assessment.proposal && (
         <div className="card-surface hero-card">
           <h1 className="route-dest-sm">Noch keine Hauptroute festgelegt.</h1>
           <p>
@@ -1762,7 +1919,8 @@ export function DayView({
       {/* Veralteter Solver-Stand: die Fälle, die der Auto-Refresh (usePlanning)
           bewusst NICHT anfasst — Törn läuft schon oder Pins gesetzt. Die
           Neuberechnung bleibt dann eine sichtbare Skipper-Entscheidung. */}
-      {main &&
+      {!shownRoute &&
+        main &&
         planOutdated(main.plan) &&
         assessment.proposal &&
         planKey(assessment.proposal.plan) !== planKey(main.plan) && (
@@ -1801,6 +1959,7 @@ export function DayView({
             mapId={mapId}
             returnCheck={returnCheckByDay.get(hero.day) ?? null}
             harbourPointer={harbourPointer}
+            readOnly={shownRoute !== null}
           />
         </div>
       )}
@@ -1867,7 +2026,9 @@ export function DayView({
 
       {rest.length > 0 && (
         <section>
-          <h2 className="section-title">Rest-Trip</h2>
+          <h2 className="section-title">
+            {shownRoute ? 'Weitere Etappen dieser Alternative' : 'Rest-Trip'}
+          </h2>
           <div className="list-card">
             {visibleRest.map((s) => (
               <div key={s.day}>
@@ -1908,6 +2069,7 @@ export function DayView({
                       onOpenPlace={onOpenPlace}
                       mapId={mapId}
                       returnCheck={returnCheckByDay.get(s.day) ?? null}
+                      readOnly={shownRoute !== null}
                     />
                   </div>
                 )}
@@ -1979,13 +2141,20 @@ export function DayView({
           )}
           {optionsOpen && hasOptionContent && (
             <div className="optionsraum-body">
+              {/* WIE DAS ZUSAMMENHÄNGT (Skipper 2026-08-06): Konzept →
+                  Optionsraum → Alternative auf der Karte war drei Namen für
+                  eine Sache. Der Satz sagt die Kette, die Zeilen darunter
+                  tragen sie: derselbe Name, dieselbe Farbe, dieselbe Route. */}
               <p className="beschreibung">
                 Reichweite, Preis und Frist je Route — eine Option schliesst an dem
-                Tag, ab dem kein tragfähiger Restplan mehr existiert. „Route
-                ansehen“ zeigt Etappen und Karte, bevor etwas passiert; übernommen
-                wird erst per Knopf in der Vorschau. Jede ansehbare Route trägt
-                ihre Farbe, in der Karten-Ansicht lässt sie sich damit über die
-                Hauptroute legen.
+                Tag, ab dem kein tragfähiger Restplan mehr existiert. Jede Option
+                IST eine dieser Routen: „Etappen ansehen“ schlägt sie hier oben
+                Tag für Tag auf, und in der Karten-Ansicht liegt genau sie unter
+                demselben Namen und derselben Farbe als Linie im Bild.
+                Das Routen-Konzept (Panel darunter) sagt, welcher der beiden
+                Revier-Strategien eine Option folgt — es wählt keine Route aus,
+                es beurteilt, ob deren Konzept die Wetterlage trägt. Übernommen
+                wird eine Route erst nach dem Ansehen.
               </p>
               {assessment.routeOptions.map((o) => (
                 <OptionRow
@@ -1993,22 +2162,18 @@ export function DayView({
                   option={o}
                   snapshot={snapshot}
                   today={day}
-                  preview={
-                    o.previewIndex !== null
-                      ? (assessment.alternatives[o.previewIndex] ?? null)
-                      : null
-                  }
-                  color={o.previewIndex !== null ? altRouteColor(o.previewIndex) : null}
-                  mapId={mapId}
+                  route={altRouteAt(altRoutes, o.previewIndex)}
+                  onShow={showRoute}
+                  shown={o.previewIndex !== null && o.previewIndex === shownAltIndex}
                 />
               ))}
-              {extraAlternatives.map(({ alt, index }) => (
+              {extraAlternatives.map((r) => (
                 <AlternativeRow
-                  key={`${alt.variantId}-${alt.turnIslandId}`}
-                  alt={alt}
+                  key={`${r.plan.variantId}-${r.turnIslandId}`}
+                  route={r}
                   snapshot={snapshot}
-                  color={altRouteColor(index)}
-                  mapId={mapId}
+                  onShow={showRoute}
+                  shown={r.index === shownAltIndex}
                 />
               ))}
             </div>
@@ -2022,6 +2187,9 @@ export function DayView({
       <KonzeptPanel
         assessment={assessment}
         snapshot={snapshot}
+        altRoutes={altRoutes}
+        shownAltIndex={shownAltIndex}
+        onShow={showRoute}
         open={konzeptOpen}
         onToggle={() => setKonzeptOpen((o) => !o)}
         panelRef={konzeptRef}
