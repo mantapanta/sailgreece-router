@@ -12,7 +12,6 @@ import type {
   RouteOptionAssessment,
   StageAssessment,
 } from '../domain/schema/snapshot.ts';
-import { tripDayForDate } from '../domain/time.ts';
 
 /** "Stand vor 4 h" once fetchedAt is older than the cache TTL; null while fresh. */
 export function staleForecastLabel(
@@ -76,14 +75,6 @@ export function optionsSummary(
     openCount: open.length,
     nextDeadlineDay: deadlines.length > 0 ? Math.min(...deadlines) : null,
   };
-}
-
-/** FR31 — trip day of the guest pickup, from the existing domain date mapper. */
-export function pickupDay(params: {
-  tripStartDate: string;
-  pickupDate: string;
-}): number {
-  return tripDayForDate(params.tripStartDate, params.pickupDate);
 }
 
 /** Verdict wording of the trip status line (EXPERIENCE Voice & Tone). */

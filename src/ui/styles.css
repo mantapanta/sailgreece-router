@@ -1573,6 +1573,130 @@ hr.hairline,
   border-left: 4px solid var(--ampel-rot);
 }
 
+/* ---- Platzdetail: Liegeplatz-Details und Gastronomie ------------------------
+   Ergänzen die Karten aus Story 1.4 und übernehmen deren Idiom: `.section-title`
+   über `.card-surface`, und für die Gastro-Bewertung dasselbe `.meter` wie bei
+   den Qualitäten — nie Ampel- oder Akzentfarbe, denn beides ist kein Urteil. */
+
+/* Stat-Tile-Grid: Inset-Kacheln, getrennt durch ein 1px-Hairline-Raster. */
+.liegeplatz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--border-hairline);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin: var(--space-3) 0;
+}
+
+.liegeplatz-grid > div {
+  background: var(--surface-inset);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.liegeplatz-grid .micro-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+
+.liegeplatz-grid .wert {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Der harte Ausschluss (Tiefe, Grössenlimit) bleibt Ink — die Zahl warnt, nicht
+   die Farbe. Ampel-Rot ist für die Nacht-Ampel reserviert. */
+.liegeplatz-grid .wert.fehlt {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink-secondary);
+}
+
+.liegeplatz-liste {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.liegeplatz-liste li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-hairline);
+  font-size: 14px;
+}
+
+.liegeplatz-liste li .label {
+  color: var(--ink-secondary);
+}
+
+.liegeplatz-liste li .wert {
+  text-align: right;
+  flex: 1 1 55%;
+}
+
+.gastro-liste {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.gastro-liste li {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-hairline);
+}
+
+/* Name links, Meter und Wert rechts — dieselbe Rechtskante wie die Qualitäten
+   eine Karte darüber, damit beide Bewertungen auf einer Linie liegen. */
+.gastro-kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.gastro-kopf .name {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin-right: auto;
+}
+
+.gastro-kueche {
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+  margin-top: var(--space-1);
+}
+
+.gastro-liste .zeile {
+  font-size: 14px;
+  line-height: 1.45;
+  margin-top: var(--space-2);
+}
+
+.gastro-liste .zeile .label {
+  color: var(--ink-secondary);
+}
+
+/* Unbestätigter Kontakt: sichtbar als Vorbehalt, nicht als Fehler — deshalb
+   der Gelb-Ton der Ampel-Textfarbe, ohne Fläche und ohne Badge. */
+.gastro-liste .vorbehalt {
+  color: var(--ampel-gelb-text);
+}
+
 /* ---- footer (provenance, contentinfo) ---------------------------------------- */
 
 .app-footer {

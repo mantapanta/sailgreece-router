@@ -40,7 +40,7 @@ import {
 } from './fixtures.ts';
 
 /**
- * Realistic frame: 12 trip days (2026-08-08 .. 2026-08-19), pickup on day 8
+ * Realistic frame: 12 trip days (2026-08-08 .. 2026-08-19)
  * (2026-08-15), DEFAULT horizon (7 days), forecast axis covering 16 days —
  * so the axis reaches well beyond the reliable horizon, as it does in
  * production with ECMWF.
@@ -50,7 +50,6 @@ function realSnapshot(
     windKn?: number;
     windFromDeg?: number;
     currentDay?: number;
-    ferryIslands?: string[];
     /** Distance of each leg in nm — small values allow double-leg days. */
     legNm?: number;
     plan?: PlanningSnapshot['trip']['plan'];
@@ -86,11 +85,10 @@ function realSnapshot(
     }),
   ];
 
-  const ferry = new Set(opts.ferryIslands ?? ['athen', 'b', 'c']);
   const islands: Island[] = [
-    { id: 'athen', name: 'Athen', coordinates: a.coordinates, guestPickup: { ferryReachable: ferry.has('athen'), sourceNote: 'fixture' } },
-    { id: 'b', name: 'B', coordinates: b.coordinates, guestPickup: { ferryReachable: ferry.has('b'), sourceNote: 'fixture' } },
-    { id: 'c', name: 'C', coordinates: c.coordinates, guestPickup: { ferryReachable: ferry.has('c'), sourceNote: 'fixture' } },
+    { id: 'athen', name: 'Athen', coordinates: a.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'fixture' } },
+    { id: 'b', name: 'B', coordinates: b.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'fixture' } },
+    { id: 'c', name: 'C', coordinates: c.coordinates, guestPickup: { ferryReachable: true, sourceNote: 'fixture' } },
   ];
 
   const times = makeTimes(16);
@@ -113,7 +111,6 @@ function realSnapshot(
     tripStartDate: TRIP_START,
     tripLengthDays: 12,
     returnDeadlineDate: '2026-08-19', // trip day 12
-    pickupDate: '2026-08-15', // trip day 8
     // reliableHorizonDays stays at its DEFAULT of 7 on purpose.
   };
   return snap;
@@ -205,7 +202,6 @@ describe('regression: a thin leg library must not paint perfect weather red', ()
         ...base.params,
         tripLengthDays: 5,
         returnDeadlineDate: '2026-08-12',
-        pickupDate: '2026-08-11',
       },
     };
     const solved = completePlan(snapshot, 'athen')!;
@@ -277,7 +273,7 @@ describe('regression: pins on past days must not break planning', () => {
   });
 });
 
-describe('regression: double-leg days can satisfy pins and the pickup', () => {
+describe('regression: double-leg days can satisfy pins', () => {
   it('reaches a pinned island that is only reachable via two short legs', () => {
     // 6 nm legs: two of them fit comfortably into one day.
     const snapshot = realSnapshot({ legNm: 6, windKn: 10, windFromDeg: 90 });
@@ -315,32 +311,6 @@ describe('regression: double-leg days can satisfy pins and the pickup', () => {
     expect(packed.verdict).toBe('infeasible');
   });
 
-  it('finds a pickup harbour that needs a double leg', () => {
-    const snapshot = realSnapshot({ legNm: 6, ferryIslands: ['c'] });
-    const result = completePlan(snapshot, 'athen')!;
-    expect(result.validity.violations.some((v) => v.kind === 'pickup')).toBe(false);
-  });
-});
-
-describe('regression: an unassessable leg must not validate the pickup', () => {
-  it('does not treat a horizon stage as arriving on time', () => {
-    const base = realSnapshot({ ferryIslands: ['c'] });
-    // Shorten the horizon on purpose so the pickup day (trip day 8) falls
-    // BEYOND it — that is the path under test: an unknown duration must not
-    // silently pass the ferry cut-off.
-    const snapshot: PlanningSnapshot = {
-      ...base,
-      params: { ...base.params, reliableHorizonDays: 3 },
-    };
-    const plan = makePlan([makeStage(8, ['b--c'], 'c', 'solver')]);
-    const validity = validatePlan(plan, snapshot);
-    expect(validity.horizonDependent).toBe(true);
-    // No arrival-time violation may be claimed from an unknown duration...
-    const arrivalViolation = validity.violations.find(
-      (v) => v.kind === 'pickup' && v.text.includes('Ankunft'),
-    );
-    expect(arrivalViolation).toBeUndefined();
-  });
 });
 
 describe('regression: trip end and empty frames', () => {
@@ -365,12 +335,11 @@ describe('regression: relaxation actually changes what counts as red', () => {
     expect(nightLeg.lightWindMaxTwsKn).toBeGreaterThanOrEqual(base.nightLegMaxTwsKn);
   });
 
-  it('never relaxes the upwind threshold or the pickup', () => {
+  it('never relaxes the upwind threshold', () => {
     const base = realSnapshot().params;
     for (const level of ['none', 'hardMax', 'nightLeg'] as const) {
       const r = relaxParams(base, level);
       expect(r.maxUpwindTwsKn).toBe(base.maxUpwindTwsKn);
-      expect(r.pickupDate).toBe(base.pickupDate);
     }
   });
 });
@@ -545,18 +514,6 @@ describe('regression: plan integrity at the edges', () => {
     expect(v.violations.some((x) => x.text.includes('liegt auf c'))).toBe(true);
   });
 
-  it('flags a missing pickup day inside the planning window', () => {
-    const snapshot = realSnapshot({ ferryIslands: ['b'] });
-    // Plan covers days 1-2 only; the pickup day (8) is absent.
-    const plan = makePlan([
-      makeStage(1, ['athen--b'], 'b', 'solver'),
-      makeStage(2, ['b--c'], 'c', 'solver'),
-    ]);
-    const v = validatePlan(plan, snapshot);
-    expect(v.violations.some((x) => x.kind === 'pickup' && x.text.includes('fehlt im Plan'))).toBe(
-      true,
-    );
-  });
 
   it('reports an off-plan position instead of quietly reinterpreting it', () => {
     const sailed = makePlan([

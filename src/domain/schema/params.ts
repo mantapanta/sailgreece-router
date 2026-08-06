@@ -96,7 +96,7 @@ const ParamsObjectSchema = z.object({
    *
    * Der Zwischenstopp ist damit kein Normalfall mehr, sondern eine Stufe der
    * Eskalationsleiter (solver.ts, RELAXATION_ORDER 'doppelschlag'): Er kommt,
-   * wenn ein Tag pro Verbindung den Stichtag oder den Zustiegstag nicht mehr
+   * wenn ein Tag pro Verbindung den Stichtag oder einen Skipper-Pin nicht mehr
    * erreicht — und weil er dann aus der Leiter kommt, steht auch dabei, dass
    * etwas nachgegeben werden musste.
    *
@@ -184,7 +184,7 @@ const ParamsObjectSchema = z.object({
   bufferDays: z.number().int().min(0).default(1),
   /**
    * Planning TARGET for harbour days (days without a leg): normally one, the
-   * buffer/pickup day. Not a limit — waiting out weather is legitimate.
+   * buffer day. Not a limit — waiting out weather is legitimate.
    */
   harbourDays: z.number().int().min(0).default(1),
   /**
@@ -266,14 +266,12 @@ const ParamsObjectSchema = z.object({
     })
     .default({ twsKn: 30, fromDeg: 0, toDeg: 45, waveM: 2.0 }),
 
-  // --- guest pickup (FR31) ----------------------------------------------------
-  /** Hard validity condition: ferry-reachable harbour reached on this date. */
-  pickupDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .default('2026-08-15'),
-  /** Latest arrival (Athens hour) if the pickup day itself carries a leg. */
-  pickupLatestArrivalHourAthens: z.number().int().min(0).max(23).default(16),
+  // Der Gästewechsel (FR31) stand bis 2026-08-06 hier: `pickupDate` und
+  // `pickupLatestArrivalHourAthens` steuerten eine harte Gültigkeitsbedingung.
+  // Beide sind mit der Bedingung entfallen und bewusst NICHT als wirkungslose
+  // Konfiguration stehengeblieben — ein Feld, das man einstellen kann und das
+  // nichts tut, ist schlimmer als keines. Ein Config-Dokument, das die Schlüssel
+  // noch trägt, bleibt gültig: das Schema ist nicht strikt und streift sie ab.
 
   // --- night legs (FR16) --------------------------------------------------------
   /** Night leg only below this TWS, over the WHOLE leg duration. */
@@ -460,13 +458,6 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
     ctx.issues.push({
       code: 'custom',
       message: 'returnDeadlineDate darf nicht vor tripStartDate liegen',
-      input: p,
-    });
-  }
-  if (p.pickupDate < p.tripStartDate || p.pickupDate > p.returnDeadlineDate) {
-    ctx.issues.push({
-      code: 'custom',
-      message: 'pickupDate muss innerhalb des Törnfensters liegen (FR31 ist harte Bedingung)',
       input: p,
     });
   }

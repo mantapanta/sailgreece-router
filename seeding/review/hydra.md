@@ -23,6 +23,33 @@ Koordinaten: 37.3494, 23.4661 · Qualitäten: Schönheit 5/5, Restaurant 5/5, Ba
 
 Warnungen: ⚠ Sehr enges Hafenbecken, im August früh voll — Yachten liegen oft im Dreierpäckchen mit gekreuzten Ankern · ⚠ Extreme Gefahr von Ankersalat; Hafengrund mit alten Ketten und Unrat übersät · ⚠ Starke Fallböen und Hafenschwell bei Nordwind über 20 kn · ⚠ Kein Landstrom; Betankungs- und Motorenverbot an Teilen des Kais
 
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2.5–4.5 m |
+| Grössenlimit (LoA) | 20 m |
+| Haltegrund | schlamm-fels |
+| Haltequalität | schlecht — Der Grund ist mit zahllosen alten Ketten und Unrat übersät — der Anker hakt eher, als dass er hält. |
+| Seegras | Kein Seegras, aber erheblicher Unrat am Hafengrund. |
+| Kapazität | 30 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | Zentrale Abfallstation am Nordkai |
+| Landstrom / Wasser | nein / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Supermarkt, 1 Minute Gehdistanz in den Gassen |
+| Preis | ca. 8–15 EUR/Nacht (2024, Hafenbehörde Hydra) |
+| Hafengebühren | Limenarchio Hydra |
+| Schwell | Schwell dringt bei Wind aus N bis NW direkt in das enge Becken ein. |
+| Fährverkehr | Sehr dichter Verkehr von Katamaranen und Wassertaxis. |
+| Beiboot-Anlandung | — |
+| Auflagen | Motoren- und Betankungsverbot an Teilen des Kais |
+| UKW-Kanal | 12 |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)
+
 ### Ayios Nikolaos (`hydra-ayios-nikolaos`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -37,6 +64,33 @@ Quelle: Deep-Research Lauf 1 (Heikell 14. Aufl. S. 131, CruisersWiki Hydra): Öf
 Koordinaten: 37.3090, 23.4110 · Qualitäten: Schönheit 5/5, Restaurant 1/5, Badestrand 5/5
 
 Warnungen: ⚠ Abgelegen, keinerlei Versorgung an Land (90 Minuten Gehzeit) · ⚠ Meltemi-sicher: ja
+
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3.5–9 m |
+| Grössenlimit (LoA) | 35 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Exzellenter Halt in hellem Sand. |
+| Seegras | Geringer Seegrasbewuchs im inneren Buchtteil. |
+| Kapazität | 20 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | — |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Nichts, 90 Minuten Gehzeit |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Laut Quelle vollständiger Schutz gegen Meltemi über 25 kn und Nordschwell. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | Sandstrand zum Anlanden |
+| Auflagen | — |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)
 
 ### Mandraki (`hydra-mandraki`, bucht)
 
@@ -53,6 +107,33 @@ Koordinaten: 37.3560, 23.4810 · Qualitäten: Schönheit 4/5, Restaurant 3/5, Ba
 
 Warnungen: ⚠ Bei starkem Meltemi läuft unbequemer Schwell in die Bucht, ab etwa 20 kn Nordwind steigt er rasch · ⚠ Badezonen beachten
 
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3–8 m |
+| Grössenlimit (LoA) | 30 m |
+| Haltegrund | sand-schlamm |
+| Haltequalität | gut — Guter Halt in Sandmulden. |
+| Seegras | Seegrasfelder vorhanden; freie Sandflecken suchen. |
+| Kapazität | 20 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | Behälter an der Zufahrtsstraße |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Resort-Restaurant, 2 Minuten |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Schwell steigt bei Nordwind über 20 kn rasch an. |
+| Fährverkehr | Wassertaxis verkehren regelmäßig nach Hydra-Stadt. |
+| Beiboot-Anlandung | Anlanden am kleinen Hotelsteg möglich |
+| Auflagen | Badezonen beachten |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)
+
 ### Molos (`hydra-molos`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -67,6 +148,33 @@ Quelle: Deep-Research Lauf 1 (CruisersWiki Hydra, Abruf 2026-08): Öffnung nach 
 Koordinaten: 37.3390, 23.4250 · Qualitäten: Schönheit 4/5, Restaurant 1/5, Badestrand 4/5
 
 Warnungen: ⚠ Exponiert gegenüber Nordwinden; Meltemi erzeugt Fallböen von den dahinterliegenden Höhen · ⚠ Stellenweise harter Grund unter dünner Sandsohle — Anker sorgfältig prüfen · ⚠ Keine Versorgung, 60 Minuten Gehzeit nach Hydra-Stadt · ⚠ Privatgrundstücke an der Küste beachten
+
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 4–10 m |
+| Grössenlimit (LoA) | 30 m |
+| Haltegrund | sand-seegras |
+| Haltequalität | mittel — Stellenweise harter Grund unter dünner Sandsohle. |
+| Seegras | Ausgedehnte Seegrasflächen. |
+| Kapazität | 15 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | — |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Nichts, 60 Minuten Gehzeit nach Hydra-Stadt |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Exponiert gegenüber Nordwinden. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | Kiesstrand zur Anlandung geeignet |
+| Auflagen | Privatgrundstücke an der Küste |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki Hydra (Abruf 2026-08)
 
 ---
 Freigabe: in `seeding/data/islands/hydra.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

@@ -11,18 +11,23 @@
  * domain question "how far south can we get?": the turning point is the
  * decision, the way home is the chain.
  *
- * Validity is three-tiered and normative (see `validatePlan`):
+ * Validity is two-tiered and normative (see `validatePlan`):
  *   (1) every stage holds the FR16 thresholds. Stages beyond the reliable
  *       horizon are computed on the persistence assumption: they DO count,
  *       but their violations are flagged `assumed` and thus never safety-
  *       relevant — they block green without being able to force red (FR18)
  *   (2) arrival at the base by the ONE deadline constant
  *  (2') the return is sailable under the Meltemi worst case (shared with PoR)
- *   (3) a ferry-reachable pickup harbour is reached on the pickup date (FR31)
+ *
+ * Eine dritte Stufe gab es bis 2026-08-06: der Gästewechsel (FR31) verlangte,
+ * dass der Zustiegstag auf einer fährverbundenen Insel endet. Sie ist auf
+ * Skipper-Entscheid ersatzlos entfallen — die Fährdaten der Inseln bleiben als
+ * Information erhalten (`island.guestPickup`), aber keine Bewertung liest sie
+ * mehr, und kein Plan wird mehr daran gemessen.
  *
  * Relaxation is an OUTER loop over the same DP with loosened params, never a
  * special path inside it — which is what structurally guarantees that the
- * 65°/25 kn threshold and the pickup condition can never be relaxed away.
+ * 65°/25 kn threshold can never be relaxed away.
  */
 
 import type { Leg, Variant } from './schema/route.ts';
@@ -65,7 +70,7 @@ import { konzeptLageFor, konzeptOfPlan, rueckwegAbweichung } from './konzept.ts'
 import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import { enumerateRoundTrips } from './roundTrips.ts';
-import { deadlineFrame, tripDayForDate } from './time.ts';
+import { deadlineFrame } from './time.ts';
 import { distanceNm, isClockwise } from './geo.ts';
 import type { Coordinates } from './schema/common.ts';
 import type { DayReturnCheck } from './schema/plan.ts';
@@ -752,81 +757,6 @@ export function validatePlan(
     }
   }
 
-  // (3) FR31 pickup — hard, never relaxed.
-  //
-  // A MISSING guestPickup field means "not reachable" (AD-4) — but the rule may
-  // only bind while the data can actually carry it. Decisive is not whether ANY
-  // island has ferry data, but whether any island the solver can REACH does:
-  // during curation, newly researched islands may carry it while the ones the
-  // routes run over do not. Binding the rule then makes the condition
-  // permanently unsatisfiable, and the app answers "stay in port for twelve
-  // days" to a perfectly good forecast.
-  const reachableIslands = new Set<string>();
-  for (const leg of legs.values()) {
-    reachableIslands.add(leg.fromIslandId);
-    reachableIslands.add(leg.toIslandId);
-  }
-  const ferryDataCurated = library.islands.some(
-    (i) => reachableIslands.has(i.id) && i.guestPickup !== undefined,
-  );
-  const pickupDay = tripDayForDate(params.tripStartDate, params.pickupDate);
-  const pickupEntry = planDay(plan, pickupDay);
-  if (!ferryDataCurated) {
-    horizonDependent = true;
-  } else if (!pickupEntry) {
-    // The pickup day is not covered by the plan at all — e.g. it lies before
-    // today or past the deadline. A hard condition that cannot be evaluated
-    // must say so; without this branch the guests were silently forgotten.
-    if (pickupDay >= snapshot.trip.currentDay && pickupDay <= frame.deadlineDay) {
-      violations.push({
-        kind: 'pickup',
-        day: pickupDay,
-        text: `Der Gäste-Zustiegstag (Törntag ${pickupDay}) fehlt im Plan`,
-      });
-    }
-  } else if (pickupEntry) {
-    const islandId =
-      pickupEntry.kind === 'stage' ? pickupEntry.toIslandId : pickupEntry.islandId;
-    const island = library.islands.find((i) => i.id === islandId);
-    // A missing guestPickup field counts as NOT reachable (AD-4) — the
-    // condition is safety-relevant, so silence must not read as consent.
-    if (!island?.guestPickup?.ferryReachable) {
-      violations.push({
-        kind: 'pickup',
-        day: pickupDay,
-        text: `Am Gäste-Zustiegstag (Törntag ${pickupDay}) ist ${islandId} nicht per Fähre erreichbar`,
-      });
-    } else if (pickupEntry.kind === 'stage') {
-      // Arriving that same day is allowed only before the ferry cut-off.
-      let arrival = params.departureHourAthens;
-      let arrivalKnown = true;
-      let pickupAssumed = false;
-      for (const [legIdx, legId] of pickupEntry.legIds.entries()) {
-        const leg = legOfStage(pickupDay, legIdx, legId);
-        const a = leg ? assess(leg, pickupDay, snapshot) : null;
-        if (a?.basis === 'annahme') pickupAssumed = true;
-        // An unassessable leg (beyond the horizon, or a dead reference) must
-        // not be silently counted as zero hours — that would let the arrival
-        // stay at the departure time and pass the cut-off unchecked, turning
-        // an unknown into a "valid" hard condition.
-        if (!a || a.totalHours === null) {
-          arrivalKnown = false;
-          horizonDependent = true;
-          break;
-        }
-        arrival += a.totalHours;
-      }
-      if (arrivalKnown && arrival > params.pickupLatestArrivalHourAthens) {
-        violations.push({
-          kind: 'pickup',
-          day: pickupDay,
-          text: `Ankunft am Zustiegstag erst um ${arrival.toFixed(1)} Uhr — nach der Fähren-Grenze (${params.pickupLatestArrivalHourAthens} Uhr)`,
-          assumed: pickupAssumed,
-        });
-      }
-    }
-  }
-
   return {
     valid: violations.length === 0,
     horizonDependent,
@@ -1215,39 +1145,25 @@ export interface Pin {
 }
 
 /**
- * The hard per-day requirements handed INTO the packer: skipper pins plus the
- * FR31 pickup. Passing them as constraints (rather than filtering afterwards)
- * is what lets the solver actively FIND plans that satisfy them.
+ * The hard per-day requirements handed INTO the packer: the skipper's pins.
+ * Passing them as constraints (rather than filtering afterwards) is what lets
+ * the solver actively FIND plans that satisfy them.
+ *
+ * Bis 2026-08-06 stand hier auch die FR31-Gästewechsel-Bedingung (der
+ * Zustiegstag musste auf einer fährverbundenen Insel enden). Sie ist auf
+ * Skipper-Entscheid ersatzlos entfallen — siehe `validatePlan`.
  */
 function dayConstraintFor(
-  snapshot: PlanningSnapshot,
+  _snapshot: PlanningSnapshot,
   pins: Pin[],
 ): (day: number, endIslandId: string) => boolean {
-  const { params, library } = snapshot;
-  const pickupDay = tripDayForDate(params.tripStartDate, params.pickupDate);
   const pinByDay = new Map(pins.map((p) => [p.day, p]));
-  // Only constrain the pickup day while a REACHABLE island carries ferry data —
-  // otherwise the search would have no attainable target at all (see
-  // validatePlan for the full reasoning).
-  const reachable = new Set<string>();
-  for (const leg of library.legs) {
-    reachable.add(leg.fromIslandId);
-    reachable.add(leg.toIslandId);
-  }
-  const ferryDataCurated = library.islands.some(
-    (i) => reachable.has(i.id) && i.guestPickup !== undefined,
-  );
 
   return (day, endIslandId) => {
     const pin = pinByDay.get(day);
     // A harbour-day pin (toIslandId === null) fixes the island only
     // implicitly — the packer decides whether the day carries a leg.
     if (pin?.toIslandId && pin.toIslandId !== endIslandId) return false;
-    if (ferryDataCurated && day === pickupDay) {
-      const island = library.islands.find((i) => i.id === endIslandId);
-      // Missing data counts as NOT reachable (AD-4) — never silent optimism.
-      if (!island?.guestPickup?.ferryReachable) return false;
-    }
     return true;
   };
 }

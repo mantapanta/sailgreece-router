@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. ohne Seitenangabe; CruisersWiki Koufonisia). Neu aufgenommen. Chora ist quellintern konsistent; bei Pori widerspricht die Schwellnotiz dem Sektor, dort wurden die Grenzen gekappt.",
+  "sourceNote": "Deep-Research Lauf 3 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. ohne Seitenangabe; CruisersWiki Koufonisia). Neu aufgenommen. Chora ist quellintern konsistent; bei Pori widerspricht die Schwellnotiz dem Sektor, dort wurden die Grenzen gekappt. | Gastro-Recherche 2026-08-06: Restaurant-Subebene ergänzt, Gastro-Score Pori 3 -> 4, Brandungshinweis für die Beiboot-Anlandung aufgenommen. NICHT übernommen: die Recherche hebt Pori wieder auf 30 kn und confidence 'hoch' — die Kappung auf 18 kn bleibt, solange die Meltemi-Tauglichkeit einer nach NE offenen Bucht ungeklärt ist.",
   "island": {
     "id": "koufonisia",
     "name": "Koufonisia",
@@ -67,7 +67,7 @@
       "name": "Pori",
       "type": "bucht",
       "coordinates": { "lat": 36.945, "lon": 25.6128 },
-      "qualities": { "schoenheit": 5, "restaurant": 3, "badestrand": 5 },
+      "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 5 },
       "shelter": {
         "windSectors": [{ "fromDeg": 120, "toDeg": 30, "maxKn": 18 }],
         "waveSectors": [{ "fromDeg": 120, "toDeg": 30, "maxM": 0.5 }],
@@ -102,12 +102,32 @@
         "maxLoaM": 25,
         "swellExposureNote": "Quelle nennt ruhiges Wasser bei Meltemi — passt nicht zur nach NE offenen Lage und ist ungeprüft.",
         "ferryTrafficNote": "Kein Fährverkehr.",
-        "dinghyLanding": "Anlandung am Strand problemlos",
+        "dinghyLanding": "Anlandung am Sandstrand; bei auffrischendem Ostwind steht Brandung auf dem Strand — Schwellstand vor dem Transfer beobachten",
         "restrictions": null,
         "vhfChannel": null,
         "confidence": "mittel",
         "sources": ["Deep-Research Lauf 3: CruisersWiki Koufonisia"]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "koufonisia-kalofego",
+          "name": "Kalofego Bar & Restaurant",
+          "qualityRating": 4.8,
+          "cuisineType": "Moderne Bio-Mittelmeerküche",
+          "signatureDishes": [
+            "Gegrillter Oktopus mit Kichererbsenpüree",
+            "Lokal gewürzte Lammlenden",
+            "Wildkräutersalat"
+          ],
+          "accessInfo": "Anlandung per Beiboot am Sandstrand der Pori-Bucht — bei auffrischendem Ostwind Brandung, Schwellstand vor dem Transfer beobachten",
+          "reservationInfo": "Telefon +30 22850 74494, Reservierung zum Sonnenuntergang dringend empfohlen (Nummer unverifiziert)",
+          "confidence": "mittel",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: Navily 2025",
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Koufonisia"
+          ]
+        }
+      ]
     }
   ]
 }

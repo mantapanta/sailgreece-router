@@ -23,6 +23,33 @@ Koordinaten: 37.7083, 23.3605 · Qualitäten: Schönheit 3/5, Restaurant 4/5, Ba
 
 Warnungen: ⚠ GRENZWERTIG FÜR DIESES SCHIFF: Kaitiefe ab 1,8 m bei 2,0 m Tiefgang, Grössenlimit laut Quelle 14 m · ⚠ Nur etwa 12 Plätze; Fähranleger unbedingt freihalten · ⚠ Bei starkem Meltemi läuft Schwell in die Einfahrt · ⚠ Kein Landstrom
 
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 1.8–3 m |
+| Grössenlimit (LoA) | 14 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Sandgrund hält nach dem Eingraben gut. |
+| Seegras | Seegras außerhalb des Hafenbeckens. |
+| Kapazität | 12 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | Behälter am Kai |
+| Landstrom / Wasser | nein / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Minimarkt, 2 Minuten Gehdistanz |
+| Preis | ca. 6–10 EUR/Nacht (2024) |
+| Hafengebühren | Gemeinde |
+| Schwell | Bei starkem Meltemi läuft Schwell in die Einfahrt. |
+| Fährverkehr | Fähren legen am Kopf der Mole an. |
+| Beiboot-Anlandung | — |
+| Auflagen | Fähranleger freihalten; Tiefgang um 2,0 m kritisch |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)
+
 ### Alonia (Megalochori) (`angistri-alonia`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -37,6 +64,33 @@ Quelle: Deep-Research Lauf 1 (CruisersWiki Angistri, Abruf 2026-08): Öffnung na
 Koordinaten: 37.6980, 23.3420 · Qualitäten: Schönheit 4/5, Restaurant 3/5, Badestrand 4/5
 
 Warnungen: ⚠ Offen gegen Winde aus dem Nordquadranten · ⚠ Große Seegrasteppiche — freie Sandstellen suchen; laut Quelle saisonal veränderlich · ⚠ Wassertiefen im Bojenbereich laut Bericht nicht abschließend geklärt
+
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3–7 m |
+| Grössenlimit (LoA) | 30 m |
+| Haltegrund | sand-seegras |
+| Haltequalität | mittel — Gute Sandstellen müssen gesucht werden; Lage der Sandmulden laut Quelle saisonal veränderlich. |
+| Seegras | Große Seegrasteppiche. |
+| Kapazität | 15 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | Behälter an der Uferstraße |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Supermarkt, 5 Minuten Gehzeit |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Schwell bei auffrischendem Nordwind. |
+| Fährverkehr | Hydrofoils legen am nahen Kai an. |
+| Beiboot-Anlandung | Anlandung am Kiesstrand |
+| Auflagen | — |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki Angistri (Abruf 2026-08)
 
 ---
 Freigabe: in `seeding/data/islands/angistri.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

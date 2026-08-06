@@ -23,6 +23,33 @@ Koordinaten: 37.5780, 23.3360 · Qualitäten: Schönheit 5/5, Restaurant 5/5, Ba
 
 Warnungen: ⚠ Sehr enges Hafenbecken, nur etwa 12 Plätze · ⚠ Grössenlimit laut Quelle 16 m — für dieses Schiff knapp, vorab klären · ⚠ Wassertiefen an der Mole ab 2,0 m — bei 2,0 m Tiefgang genau prüfen · ⚠ Fischerboote haben Vorrang an der inneren Pier
 
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2–3.5 m |
+| Grössenlimit (LoA) | 16 m |
+| Haltegrund | schlamm-sand |
+| Haltequalität | gut — Hervorragende Haltekraft im dichten Schlamm. |
+| Seegras | Kein Seegras im kleinen Hafenbecken. |
+| Kapazität | 12 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | Behälter am Kai |
+| Landstrom / Wasser | ja / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Minimarkt, 3 Minuten Gehzeit |
+| Preis | ca. 5–10 EUR/Nacht (2024) |
+| Hafengebühren | Gemeinde |
+| Schwell | Laut Quelle vollständig geschützt vor Meltemi über 30 kn. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | — |
+| Auflagen | Fischerboote haben Vorrang an der inneren Pier |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)
+
 ### Methana (`methana-hafen`, hafen)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -37,6 +64,33 @@ Quelle: Deep-Research Lauf 1 (Heikell 14. Aufl. S. 121): Öffnung nach O bis SE,
 Koordinaten: 37.5790, 23.3910 · Qualitäten: Schönheit 3/5, Restaurant 4/5, Badestrand 3/5
 
 Warnungen: ⚠ Schwefelhaltiges Wasser kann den Rumpf verfärben · ⚠ Schwell bei seltenem Ostwind · ⚠ Fähren legen an der äußeren Mole an
+
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2.2–4.5 m |
+| Grössenlimit (LoA) | 22 m |
+| Haltegrund | schlamm |
+| Haltequalität | gut — Dicker Schlamm mit festem Halt. |
+| Seegras | Wenig Seegras im Hafeninneren. |
+| Kapazität | 25 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | Behälter am Hafenplatz |
+| Landstrom / Wasser | ja / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Supermarkt, 2 Minuten an der Promenade |
+| Preis | ca. 6–12 EUR/Nacht (2024) |
+| Hafengebühren | Limenarchio Methana |
+| Schwell | Laut Quelle gut geschützt vor Meltemi, Schwell bei seltenem Ostwind. |
+| Fährverkehr | Fähren legen an der äußeren Mole an. |
+| Beiboot-Anlandung | — |
+| Auflagen | — |
+| UKW-Kanal | 12 |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)
 
 ---
 Freigabe: in `seeding/data/islands/methana.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

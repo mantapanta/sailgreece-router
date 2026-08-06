@@ -23,5 +23,32 @@ Koordinaten: 36.9633, 25.0217 · Qualitäten: Schönheit 5/5, Restaurant 1/5, Ba
 
 Warnungen: ⚠ Keine Infrastruktur; nächste Taverne auf der Antiparos-Seite (Agios Georgios) · ⚠ Archäologische Schutzbereiche an Land beachten · ⚠ Meltemi-sicher: ja
 
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3–9 m |
+| Grössenlimit (LoA) | 50 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Vorzüglicher Sandgrund mit bester Haltekraft. |
+| Seegras | Weitgehend freier Sandboden. |
+| Kapazität | 40 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | nein |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Keine Geschäfte; Taverne gegenüber auf Antiparos (Agios Georgios) |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Laut Quelle glattes Wasser selbst bei 35 kn Meltemi durch die Abdeckung der Insel. |
+| Fährverkehr | Kein Fährverkehr, vereinzelt Ausflugsboote. |
+| Beiboot-Anlandung | Am Sandstrand oder kleinen Anleger bei den Ruinen |
+| Auflagen | Archäologische Schutzbereiche an Land |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl.
+
 ---
 Freigabe: in `seeding/data/islands/despotiko.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

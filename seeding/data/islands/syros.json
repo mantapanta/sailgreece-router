@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Syros; Jim Baerselman, Cruising the South Aegean; Heikell Greek Waters Pilot 14. Aufl. S. 216/218 — Seitenangaben unverifiziert). Neu aufgenommen. Sektoren und Öffnungsrichtungen sind konsistent; bei Grammata weist die Quelle selbst abweichende Haltegrund-Angaben aus.",
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (CruisersWiki Syros; Jim Baerselman, Cruising the South Aegean; Heikell Greek Waters Pilot 14. Aufl. S. 216/218 — Seitenangaben unverifiziert). Neu aufgenommen. Sektoren und Öffnungsrichtungen sind konsistent; bei Grammata weist die Quelle selbst abweichende Haltegrund-Angaben aus. | Gastro-Recherche 2026-08-06: Restaurant-Subebene für Finikas ergänzt, Gastro-Score 4 -> 5. NICHT übernommen: der Wellensektor 290–190 der Recherche; 300–200 des Bestands bleibt. WIDERSPRUCH der Recherche: sie nennt dieselbe Telefonnummer für den Hafenmeister Finikas und für die Taverne Barbalinas.",
   "island": {
     "id": "syros",
     "name": "Syros",
@@ -18,7 +18,7 @@
       "name": "Finikas",
       "type": "marina",
       "coordinates": { "lat": 37.3917, "lon": 24.8817 },
-      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 300, "toDeg": 200, "maxKn": 35 }],
         "waveSectors": [{ "fromDeg": 300, "toDeg": 200, "maxM": 0.4 }],
@@ -43,7 +43,7 @@
         "seagrassNote": "Seegras im äußeren Ankerfeld vor der Marina.",
         "capacityYachts": 30,
         "reservationPossible": true,
-        "reservationChannel": "Telefonisch beim Hafenmeister Finikas (Kontakt aus Lauf 2 unverifiziert — vor Verlass darauf gegenprüfen)",
+        "reservationChannel": "Telefonisch beim Hafenmeister Finikas, laut Gastro-Recherche 2026-08-06 +30 22810 42241 — dieselbe Nummer führt die Recherche auch für die Taverne Barbalinas; mindestens eine der beiden Zuordnungen ist falsch, vor Verlass darauf gegenprüfen",
         "shorePower": true,
         "water": true,
         "fuelDock": true,
@@ -63,7 +63,26 @@
           "Deep-Research Lauf 2: CruisersWiki Syros",
           "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "syros-barbalinas",
+          "name": "Barbalinas",
+          "qualityRating": 4.9,
+          "cuisineType": "Traditionelle Fisch- und Eintopfküche",
+          "signatureDishes": [
+            "Octopus Stifado (Oktopus-Eintopf mit Schalotten)",
+            "Würziger Kalamari-Eintopf"
+          ],
+          "accessInfo": "Fußläufig an der Hafenpromenade",
+          "reservationInfo": "Telefon +30 22810 42241 — WIDERSPRUCH: dieselbe Nummer führt die Recherche als Hafenmeister Finikas; vor Verlass darauf gegenprüfen",
+          "confidence": "niedrig",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: Jim Baerselman, Cruising the South Aegean",
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Syros"
+          ]
+        }
+      ]
     },
     {
       "id": "syros-ermoupoli",

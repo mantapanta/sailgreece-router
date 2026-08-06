@@ -70,7 +70,6 @@ import {
 import {
   dayViewStages,
   optionsSummary,
-  pickupDay,
   staleForecastLabel,
 } from '../dayViewModel.ts';
 import { resolveMapsEnv } from '../mapsEnv.ts';
@@ -647,7 +646,7 @@ function StageCard({
           {!isHarbour && stage.legs.length > 1 && (
             <span
               className="chip"
-              title="Normalerweise plant die App eine Verbindung pro Tag. Zwei Schläge an einem Tag kommen nur, wenn ein Tag je Verbindung den Stichtag oder den Gäste-Zustiegstag nicht mehr erreicht."
+              title="Normalerweise plant die App eine Verbindung pro Tag. Zwei Schläge an einem Tag kommen nur, wenn ein Tag je Verbindung den Stichtag oder einen festgesetzten Tag nicht mehr erreicht."
             >
               {stage.legs.length} Schläge an einem Tag — Ausnahme
             </span>
@@ -1539,7 +1538,6 @@ export function DayView({
   const summary = optionsSummary(assessment.routeOptions);
   const hasOptionContent =
     assessment.routeOptions.length > 0 || extraAlternatives.length > 0;
-  const pickupDayN = pickupDay(params);
   const visibleRest = showAllRest ? rest : rest.slice(0, 3);
 
   // Hafentag-Hero: Zeiger auf den nächsten Segeltag ("Weiter am Mi: A → B").
@@ -1755,7 +1753,6 @@ export function DayView({
                     {s.kind === 'harbour' ? 'Hafentag: ' : ''}
                     {islandWithPlace(snapshot, s.toIslandId, s.placeId)}
                   </span>
-                  {s.day === pickupDayN && <span className="chip">Pickup</span>}
                   <span className="verdict">
                     <span className={`status-dot ${s.ampel}`} aria-hidden="true" />{' '}
                     {AMPEL_LABEL[s.ampel]}

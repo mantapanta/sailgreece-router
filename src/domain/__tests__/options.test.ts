@@ -65,7 +65,7 @@ function rundkursScenario() {
   });
   snapshot.params = {
     ...snapshot.params, tripStartDate: TRIP_START, tripLengthDays: 5,
-    returnDeadlineDate: '2026-08-12', pickupDate: '2026-08-11', reliableHorizonDays: 14,
+    returnDeadlineDate: '2026-08-12', reliableHorizonDays: 14,
   };
   return { snapshot, hinweg, rundkurs };
 }
@@ -130,9 +130,9 @@ function twoIslandSnapshot(opts: {
     forecast: { [base.id]: fc, [target.id]: fc },
     library: {
       islands: [
-        // Fähr-Daten kuratiert: ohne sie setzt die FR31-Regel horizonDependent
-        // ("Regel bindet nur, solange die Daten sie tragen können") und jede
-        // Option würde als offen-horizont statt offen/schliesst gemeldet.
+        // Fähr-Daten der Inseln: seit dem Wegfall von FR31 (2026-08-06) reine
+        // Information — keine Bewertung liest sie mehr. Sie stehen hier, weil
+        // die Bibliothek sie trägt, nicht weil der Test sie bräuchte.
         {
           id: 'athen',
           name: 'Athen',

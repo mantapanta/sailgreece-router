@@ -8,7 +8,6 @@ import type { StageAssessment } from '../../domain/schema/snapshot.ts';
 import {
   dayViewStages,
   optionsSummary,
-  pickupDay,
   restTripVerdictLabel,
   staleForecastLabel,
 } from '../dayViewModel.ts';
@@ -142,17 +141,6 @@ describe('optionsSummary', () => {
 
   it('ist leer ohne Optionen', () => {
     expect(optionsSummary([])).toEqual({ openCount: 0, nextDeadlineDay: null });
-  });
-});
-
-describe('pickupDay (FR31)', () => {
-  it('bildet den Zustiegstag auf den Törntag ab — erster und letzter Tag', () => {
-    expect(
-      pickupDay({ tripStartDate: '2026-08-08', pickupDate: '2026-08-08' }),
-    ).toBe(1);
-    expect(
-      pickupDay({ tripStartDate: '2026-08-08', pickupDate: '2026-08-19' }),
-    ).toBe(12);
   });
 });
 

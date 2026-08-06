@@ -23,5 +23,32 @@ Koordinaten: 37.3320, 23.3280 · Qualitäten: Schönheit 5/5, Restaurant 0/5, Ba
 
 Warnungen: ⚠ Position der Bucht nur grob belegt (gelieferte Koordinate liegt fast auf dem Inselmittelpunkt) — bei der Ansteuerung gegen die Seekarte prüfen · ⚠ Fallwinde bei sehr starken Nordlagen — ausreichend Kette stecken · ⚠ Keinerlei Infrastruktur an Land · ⚠ Archäologisches Schutzgebiet (Wrackfundstelle)
 
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 4–12 m |
+| Grössenlimit (LoA) | 50 m |
+| Haltegrund | sand-schlamm |
+| Haltequalität | gut — Verlässlicher Halt im tieferen Schlamm-Sand-Gemisch. |
+| Seegras | Vereinzelt Seegrasstellen im flachen Bereich. |
+| Kapazität | 60 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | — |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Nichts, keine Geschäfte an Land |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Laut Quelle Schutz vor Welle aus N, NE, NW und W. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | Anlanden an Kiesstränden problemlos |
+| Auflagen | Archäologisches Schutzgebiet |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)
+
 ---
 Freigabe: in `seeding/data/islands/dokos.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

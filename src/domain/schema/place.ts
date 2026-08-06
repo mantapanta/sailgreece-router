@@ -2,11 +2,17 @@ import { z } from 'zod';
 import { CoordinatesSchema } from './common.ts';
 import { ShelterProfileSchema } from './shelter.ts';
 import { BerthingDetailsSchema, ConfidenceSchema } from './berthing.ts';
+import { RestaurantSchema } from './gastro.ts';
 
 export const PlaceTypeSchema = z.enum(['hafen', 'bucht', 'marina']);
 export type PlaceType = z.infer<typeof PlaceTypeSchema>;
 
-/** Qualities on a 1-5 scale (curated). */
+/**
+ * Qualities on a 1-5 scale (curated).
+ *
+ * `restaurant` is the CONDENSED gastronomy score and the only one the sorting
+ * reads; the named tavernas behind it live in `Place.restaurants` (gastro.ts).
+ */
 export const PlaceQualitiesSchema = z.object({
   schoenheit: z.number().int().min(1).max(5),
   restaurant: z.number().int().min(0).max(5),
@@ -31,6 +37,13 @@ export const PlaceSchema = z.object({
   warnings: z.array(z.string()).optional(),
   /** Berth-level facts (depth, holding ground, size limit) — see berthing.ts. */
   berthingDetails: BerthingDetailsSchema.optional(),
+  /**
+   * Gastronomie-Subebene: die kuratierten Tavernen/Restaurants, die von DIESEM
+   * Liegeplatz aus erreichbar sind (gastro.ts). Rein informativ — weder Ampel
+   * noch Solver lesen sie. Fehlt der Block, ist der Platz gastronomisch nicht
+   * recherchiert; das ist etwas anderes als „dort gibt es nichts".
+   */
+  restaurants: z.array(RestaurantSchema).optional(),
   /**
    * How well the CURATION of this place is backed by sources. Drives nothing in
    * the solver; it tells the reviewer where to look first before `approved`.

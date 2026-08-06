@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 256/258 — Seitenangaben unverifiziert; Navily 2024). Neu aufgenommen. Bei antiparos-town widerspricht der Schutzsektor dem eigenen Meltemi-Urteil der Quelle; Grenzen dort konservativ gekappt.",
+  "sourceNote": "Deep-Research Lauf 2 vom 2026-08-03 (Heikell Greek Waters Pilot 14. Aufl. S. 256/258 — Seitenangaben unverifiziert; Navily 2024). Neu aufgenommen. Bei antiparos-town widerspricht der Schutzsektor dem eigenen Meltemi-Urteil der Quelle; Grenzen dort konservativ gekappt. | Gastro-Recherche 2026-08-06: Restaurant-Subebene ergänzt, Gastro-Score Agios Georgios 3 -> 4. NICHT übernommen: die Recherche nennt für antiparos-town wieder 25 kn / 0.5 m und für Agios Georgios den Wellensektor 260–80 — die Kappung auf 15 kn / 0.4 m und der Sektor 270–90 bleiben, ihre Begründung steht unverändert.",
   "island": {
     "id": "antiparos",
     "name": "Antiparos",
@@ -27,7 +27,7 @@
       "description": "Kanalhafen gegenüber Pounda — flach, strömungsanfällig, mit lebendigem Ortskern.",
       "warnings": [
         "Nordschutz UNGEPRÜFT und quellenintern widersprüchlich — bei Meltemi nicht als Nachtplatz einplanen",
-        "Sehr flache Rinnen und Strömung im Antiparos-Kanal, Tiefgang über 2,0 m erfordert höchste Vorsicht",
+        "Sehr flache Rinnen und Strömung im Antiparos-Kanal, Tiefgang über 2,0 m erfordert höchste Vorsicht — der Kanal versandet, Tiefen 1,8–2,8 m; bei der Einfahrt Echolot peilen und die Hafenbehörde Parikia befragen",
         "Grössenlimit laut Quelle nur 15 m — für dieses Schiff zu knapp, vorab klären",
         "Ständiger Pendelfährverkehr nach Pounda",
         "Meltemi-sicher: nein"
@@ -65,7 +65,43 @@
         "sources": [
           "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl. (Seitenangabe unverifiziert)"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "antiparos-lollos",
+          "name": "Lollos Antiparos",
+          "qualityRating": 4.8,
+          "cuisineType": "Italienische Gourmetküche und Seafood",
+          "signatureDishes": [
+            "Trüffel-Pasta",
+            "Holzofen-Pizza",
+            "Fisch-Carpaccio"
+          ],
+          "accessInfo": "Direkt an der Hafenpromenade, fußläufig vom Liegeplatz",
+          "reservationInfo": "Telefon +30 22840 61416, im Sommer 2–3 Tage Vorlauf (Nummer unverifiziert)",
+          "confidence": "mittel",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: Navily 2025",
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Antiparos"
+          ]
+        },
+        {
+          "id": "antiparos-kalokairi",
+          "name": "Kalokairi Restaurant",
+          "qualityRating": 4.7,
+          "cuisineType": "Moderne griechische Fusionsküche",
+          "signatureDishes": [
+            "Slow-cooked Lamm",
+            "Gegrillte Makrele auf Fava"
+          ],
+          "accessInfo": "3 Minuten Fußweg vom Hafen in die Altstadtgasse",
+          "reservationInfo": "Telefon +30 22840 61168 (Nummer unverifiziert)",
+          "confidence": "niedrig",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Antiparos"
+          ]
+        }
+      ]
     },
     {
       "id": "antiparos-agios-georgios",
@@ -73,7 +109,7 @@
       "name": "Agios Georgios",
       "type": "bucht",
       "coordinates": { "lat": 36.968, "lon": 25.028 },
-      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 270, "toDeg": 90, "maxKn": 35 }],
         "waveSectors": [{ "fromDeg": 270, "toDeg": 90, "maxM": 0.3 }],
@@ -114,7 +150,27 @@
         "vhfChannel": null,
         "confidence": "hoch",
         "sources": ["Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl."]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "antiparos-captain-pipinos",
+          "name": "Captain Pipinos Fish Taverna",
+          "qualityRating": 4.9,
+          "cuisineType": "Authentische Fischtaverne",
+          "signatureDishes": [
+            "In der Sonne getrockneter gegrillter Oktopus",
+            "Fangfrische Rotbarben",
+            "Meeresfrüchte-Linguine"
+          ],
+          "accessInfo": "Anlandung per Beiboot direkt am Holzsteg der Taverne",
+          "reservationInfo": "Telefon +30 22840 61323 (Nummer unverifiziert)",
+          "confidence": "mittel",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: Navily 2025",
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Antiparos"
+          ]
+        }
+      ]
     }
   ]
 }

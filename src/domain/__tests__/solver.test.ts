@@ -17,7 +17,7 @@ import {
 } from '../solver.ts';
 import { packLegs, packLegsFeasible } from '../ppr.ts';
 import { pathCrossesLand } from '../searoute.ts';
-import { stagesOf } from '../schema/plan.ts';
+import { SAFETY_VIOLATION_KINDS, stagesOf } from '../schema/plan.ts';
 import { assessPlanning } from '../assess.ts';
 import type { Island } from '../schema/island.ts';
 
@@ -45,9 +45,6 @@ function roundTripSnapshot(
     windKn?: number;
     windFromDeg?: number;
     currentDay?: number;
-    /** Islands the guests can reach by ferry on the pickup date (FR31). */
-    ferryIslands?: string[];
-    pickupDate?: string;
     returnDeadlineDate?: string;
     reliableHorizonDays?: number;
     days?: number;
@@ -106,13 +103,14 @@ function roundTripSnapshot(
     }),
   ];
 
-  const ferry = new Set(opts.ferryIslands ?? ['athen', 'mitte', 'sued']);
   const islands: Island[] = ['athen', 'mitte', 'sued'].map((id) => ({
     id,
     name: id,
     coordinates:
       id === 'athen' ? base.coordinates : id === 'mitte' ? mitte.coordinates : sued.coordinates,
-    guestPickup: { ferryReachable: ferry.has(id), sourceNote: 'fixture' },
+    // Fährdaten bleiben in der Bibliothek, seit 2026-08-06 liest sie aber
+    // keine Bewertung mehr (FR31 entfallen) — hier steht sie als Beleg dafür.
+    guestPickup: { ferryReachable: true, sourceNote: 'fixture' },
   }));
 
   const times = makeTimes(opts.days ?? 14);
@@ -153,7 +151,6 @@ function roundTripSnapshot(
     tripStartDate: TRIP_START,
     tripLengthDays: 5,
     returnDeadlineDate: opts.returnDeadlineDate ?? '2026-08-12', // trip day 5
-    pickupDate: opts.pickupDate ?? '2026-08-11', // trip day 4
     reliableHorizonDays: opts.reliableHorizonDays ?? 14,
   };
   return snap;
@@ -235,27 +232,9 @@ describe('solver — pins are hard constraints (AD-12, FR28)', () => {
   });
 });
 
-describe('solver — FR31 pickup is hard and never relaxed (AD-13)', () => {
-  it('reaches a ferry-reachable island on the pickup day', () => {
-    // Only 'mitte' is reachable, so every valid plan must be at mitte on day 4.
-    const snapshot = roundTripSnapshot({ ferryIslands: ['mitte'] });
-    const result = completePlan(snapshot, 'athen')!;
-    const day4 = result.plan.days.find((d) => d.day === 4)!;
-    const island = day4.kind === 'stage' ? day4.toIslandId : day4.islandId;
-    expect(island).toBe('mitte');
-    expect(result.validity.violations.some((v) => v.kind === 'pickup')).toBe(false);
-  });
-
-  it('reports a pickup violation when no island is reachable', () => {
-    const snapshot = roundTripSnapshot({ ferryIslands: [] });
-    const result = completePlan(snapshot, 'athen');
-    expect(result).not.toBeNull();
-    expect(result!.validity.valid).toBe(false);
-    expect(result!.validity.violations.some((v) => v.kind === 'pickup')).toBe(true);
-  });
-
-  it('never relaxes the pickup or the upwind threshold', () => {
-    // The relaxation ladder must not contain them — structural guarantee.
+describe('solver — die Aufweich-Leiter lockert die Aufkreuz-Schwelle nie (AD-13)', () => {
+  it('never relaxes the upwind threshold', () => {
+    // The relaxation ladder must not contain it — structural guarantee.
     expect(RELAXATION_ORDER).toEqual([
       'none',
       'hardMax',
@@ -266,11 +245,35 @@ describe('solver — FR31 pickup is hard and never relaxed (AD-13)', () => {
     for (const level of RELAXATION_ORDER) {
       const relaxed = relaxParams(base, level);
       expect(relaxed.maxUpwindTwsKn).toBe(base.maxUpwindTwsKn);
-      expect(relaxed.pickupDate).toBe(base.pickupDate);
-      expect(relaxed.pickupLatestArrivalHourAthens).toBe(
-        base.pickupLatestArrivalHourAthens,
-      );
     }
+  });
+});
+
+/**
+ * FR31 ist am 2026-08-06 auf Skipper-Entscheid entfallen. Der Gästewechsel war
+ * die dritte harte Gültigkeitsstufe: der Zustiegstag musste auf einer
+ * fährverbundenen Insel enden, und ein fehlendes `guestPickup` zählte als
+ * "nicht erreichbar". Dieser Test hält fest, dass davon nichts übrig ist —
+ * sonst käme die Bedingung über eine Rückportierung leise zurück.
+ */
+describe('solver — der Gästewechsel bindet nicht mehr (FR31 entfallen)', () => {
+  it('bewertet einen Plan nicht mehr danach, ob eine Insel fährverbunden ist', () => {
+    const snapshot = roundTripSnapshot();
+    // Keine Insel trägt Fährdaten — früher hiess das "nicht erreichbar" und
+    // machte JEDEN Plan ungültig. Heute ist es schlicht ohne Wirkung.
+    snapshot.library = {
+      ...snapshot.library,
+      islands: snapshot.library.islands.map(({ guestPickup: _drop, ...rest }) => rest),
+    };
+    const result = completePlan(snapshot, 'athen')!;
+    expect(result.validity.violations).toEqual(
+      completePlan(roundTripSnapshot(), 'athen')!.validity.violations,
+    );
+    expect(result.validity.valid).toBe(true);
+  });
+
+  it('kennt die Verletzungsart gar nicht mehr', () => {
+    expect(SAFETY_VIOLATION_KINDS).toEqual(['upwind', 'deadline', 'return']);
   });
 });
 
@@ -303,14 +306,11 @@ describe('solver — no valid plan still yields a proposal (AD-13, FR18)', () =>
     expect(existsValidPlan(snapshot, 'athen')).toBeNull();
   });
 
-  it('names the violated condition when every plan breaks a hard one', () => {
-    // No island is ferry-reachable, so even staying put misses the pickup.
-    const snapshot = roundTripSnapshot({ windKn: 30, windFromDeg: 0, ferryIslands: [] });
-    const result = completePlan(snapshot, 'athen');
-    expect(result).not.toBeNull();
-    expect(result!.validity.valid).toBe(false);
-    expect(result!.validity.violations.some((v) => v.kind === 'pickup')).toBe(true);
-  });
+  // Der Fall "jeder Plan bricht eine harte Bedingung" wurde hier über FR31
+  // hergestellt (keine Insel fährverbunden => auch Liegenbleiben ungültig).
+  // Mit dem Wegfall von FR31 gibt es dieses Mittel nicht mehr: Liegenbleiben
+  // verletzt keine der verbliebenen harten Bedingungen. Deadline und Rückkehr
+  // prüft solver-regression.test.ts direkt gegen validatePlan.
 
   it('never throws for a domain state — red is a result, not an error', () => {
     const snapshot = roundTripSnapshot({ windKn: 45, windFromDeg: 0 });
@@ -495,20 +495,21 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
    * scheitern (FR18) — er gibt nach und sagt es über `relaxedTo`.
    */
   it('gibt den Doppelschlag frei, wenn ihn eine harte Bedingung erzwingt', () => {
-    // Kurze Etappen (zwei passen auf einen Tag) und die Gäste steigen schon an
-    // Tag 1 auf 'sued' zu — dorthin führen zwei Verbindungen. Mit einem Tag je
-    // Verbindung ist die FR31-Bedingung nicht zu erfüllen, also muss der Planer
-    // nachgeben statt die Gäste stehen zu lassen (FR18).
-    const snapshot = roundTripSnapshot({
-      legNm: 8,
-      ferryIslands: ['sued'],
-      pickupDate: '2026-08-08', // Törntag 1
-    });
-    const solved = completePlan(snapshot, 'athen')!;
+    // Kurze Etappen (zwei passen auf einen Tag) und ein Skipper-Pin, der Tag 1
+    // auf 'sued' festnagelt — dorthin führen zwei Verbindungen. Mit einem Tag
+    // je Verbindung ist der Pin nicht zu erfüllen, also muss der Planer
+    // nachgeben statt schweigend zu scheitern (FR18).
+    //
+    // Bis 2026-08-06 stellte FR31 denselben Zwang her (Gästezustieg an Tag 1
+    // auf 'sued'). Die Rückgabefrist taugt als Ersatz NICHT: sie verlangt keine
+    // bestimmte Insel, der Planer wiche einfach auf eine kürzere Runde aus.
+    // Ein Pin verlangt sie — gleicher Hebel, andere Quelle.
+    const snapshot = roundTripSnapshot({ legNm: 8 });
+    const solved = completePlan(snapshot, 'athen', [{ day: 1, toIslandId: 'sued' }])!;
     const tag1 = stagesOf(solved.plan).find((s) => s.day === 1);
     expect(tag1?.legIds).toHaveLength(2);
     expect(solved.relaxedTo).toBe('doppelschlag');
-    expect(solved.validity.violations.some((v) => v.kind === 'pickup')).toBe(false);
+    expect(solved.validity.violations.some((v) => v.kind === 'deadline')).toBe(false);
   });
 
   it('dieselbe Lage bleibt ohne die harte Bedingung bei einer Etappe pro Tag', () => {
@@ -605,7 +606,6 @@ describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
       ...snapshot.params,
       tripLengthDays: 8,
       returnDeadlineDate: '2026-08-15', // Törntag 8
-      pickupDate: '2026-08-10', // Törntag 3, auf 'sued' erreichbar
     };
     const plan = makePlan([
       makeStage(1, ['athen--mitte'], 'mitte'),
@@ -633,7 +633,6 @@ describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
       ...snapshot.params,
       tripLengthDays: 6,
       returnDeadlineDate: '2026-08-13', // Törntag 6
-      pickupDate: '2026-08-10',
     };
     const plan = makePlan([
       makeStage(1, ['athen--mitte'], 'mitte'),
@@ -657,7 +656,6 @@ describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
       ...snapshot.params,
       tripLengthDays: 7,
       returnDeadlineDate: '2026-08-14', // Törntag 7
-      pickupDate: '2026-08-10',
     };
     // Drei Hafentage MITTEN im Törn (Wetter abwarten ist legitim), nur einer
     // am Ende: kein Trailing-Befund.
@@ -789,7 +787,7 @@ describe('solver — umgedrehte Heimweg-Etappen sind auflösbar', () => {
     });
     snap.params = {
       ...snap.params, tripStartDate: TRIP_START, tripLengthDays: 5,
-      returnDeadlineDate: '2026-08-12', pickupDate: '2026-08-11',
+      returnDeadlineDate: '2026-08-12',
       reliableHorizonDays: 14,
     };
     return snap;

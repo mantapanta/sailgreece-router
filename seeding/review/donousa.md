@@ -23,6 +23,33 @@ Koordinaten: 37.0983, 25.8208 · Qualitäten: Schönheit 5/5, Restaurant 2/5, Ba
 
 Warnungen: ⚠ Unterwasser-Wrackteile im flachen Wasser beachten, nicht mit dem Anker beschädigen · ⚠ Meltemi-sicher: ja
 
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3.5–8 m |
+| Grössenlimit (LoA) | 25 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Sandgrund mit fester Haltekraft. |
+| Seegras | Freie Sandflächen gut nutzbar. |
+| Kapazität | 15 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | nein |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Strandbar in 2 Minuten Fußweg |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Laut Quelle sehr gut geschützt gegen Nordschwell. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | Sandstrand zur Anlandung |
+| Auflagen | Wrack nicht mit dem Anker beschädigen |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 3: CruisersWiki Donousa
+
 ### Stavros (`donousa-stavros`, hafen)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -37,6 +64,33 @@ Quelle: Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach SW bis W, Sektor
 Koordinaten: 37.1022, 25.8117 · Qualitäten: Schönheit 4/5, Restaurant 4/5, Badestrand 5/5
 
 Warnungen: ⚠ Nur etwa 12 Plätze; Anlegebereich der Fährschiffe freihalten · ⚠ Grössenlimit laut Quelle 18 m · ⚠ Meltemi-sicher: ja
+
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2.2–4 m |
+| Grössenlimit (LoA) | 18 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Sandgrund. |
+| Seegras | Geringer Bewuchs. |
+| Kapazität | 12 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | ja |
+| Landstrom / Wasser | ja / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Minimarkt in 2 Minuten Fußweg |
+| Preis | 6–12 EUR/Nacht (2025) |
+| Hafengebühren | keine regelmäßige Kontrolle |
+| Schwell | Laut Quelle ruhiges Becken bei Meltemi. |
+| Fährverkehr | Anläufe der Express Skopelitis und von Linienfähren. |
+| Beiboot-Anlandung | — |
+| Auflagen | Fährbereich freihalten |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.
 
 ---
 Freigabe: in `seeding/data/islands/donousa.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

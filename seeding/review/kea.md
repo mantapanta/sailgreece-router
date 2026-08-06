@@ -23,6 +23,33 @@ Koordinaten: 37.6667, 24.3250 · Qualitäten: Schönheit 4/5, Restaurant 5/5, Ba
 
 Warnungen: ⚠ Starke Fallböen bei Meltemi aus NE · ⚠ Wochenend-Andrang von Eignerbooten aus Athen · ⚠ Meltemi-sicher: ja (bei guter Ankerarbeit und ausreichend Kette) · ⚠ Öffnungsrichtung der Bucht in den Quellen widersprüchlich (SW vs. WNW) — bei West- bis Nordwestlagen nicht auf den Sektor verlassen
 
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2.2–4 m |
+| Grössenlimit (LoA) | 25 m |
+| Haltegrund | schlamm |
+| Haltequalität | gut — Dicker Schlamm hält exzellent; wegen der Fallböen reichlich Kette stecken. |
+| Seegras | Im Zentrum der Bucht stellenweise Posidonia, am Kai gut eingefahrener Schlammgrund. |
+| Kapazität | 40 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | ja |
+| Landstrom / Wasser | ja / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Minimarkt und Bäckerei in 2 Minuten Gehdistanz |
+| Preis | ca. 12–18 EUR/Nacht (Gemeindehafen, Stand 2024) |
+| Hafengebühren | Hafenbehörde kassiert unregelmäßig am Kai |
+| Schwell | Guter Schutz gegen Nord- und Ostschwell; nur schwerer NW-Sturm bringt Schwell. |
+| Fährverkehr | Kein Fährverkehr in Vourkari, Fähren laufen im benachbarten Korissia ein. |
+| Beiboot-Anlandung | Am Nordkai oder dem kleinen Holzsteg problemlos möglich |
+| Auflagen | Ansteuerungsrinne für Fischereifahrzeuge freihalten |
+| UKW-Kanal | 12 |
+
+Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 225 (Seitenangabe unverifiziert); Deep-Research Lauf 2: CruisersWiki Kea
+
 ### Korissia (`kea-korissia`, hafen)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -37,6 +64,33 @@ Quelle: Quelle 1: Rückfallhafen-Kette; Hafenbucht öffnet nach N/NW — Schwell
 Koordinaten: 37.6617, 24.3147 · Qualitäten: Schönheit 3/5, Restaurant 3/5, Badestrand 3/5
 
 Warnungen: ⚠ Erheblicher Fährschwell bei An- und Ablegemanövern der Schnellfähren · ⚠ Meltemi-sicher: bedingt (Schwell im Fährbecken) · ⚠ Liegeplätze nahe dem Fähranleger meiden
+
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2.5–5 m |
+| Grössenlimit (LoA) | 30 m |
+| Haltegrund | sand-schlamm |
+| Haltequalität | gut — Zuverlässiger Haltegrund im Hafenbecken. |
+| Seegras | Außerhalb des Hafenbeckens Seegraswiesen. |
+| Kapazität | 20 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | ja |
+| Landstrom / Wasser | ja / ja |
+| Diesel am Steg | ja |
+| Duschen / WC | nein |
+| Versorgung an Land | Großer Supermarkt direkt an der Hafenfront (1 Min) |
+| Preis | ca. 10–15 EUR/Nacht (Gemeinde, 2024) |
+| Hafengebühren | Hafenbehörde Korissia vor Ort |
+| Schwell | Fährschwell lässt die Schiffe stark schwojen und belastet die Ruckdämpfer. |
+| Fährverkehr | Hohe Fährfrequenz aus Lavrio. |
+| Beiboot-Anlandung | Am Südende der Kaimauer möglich |
+| Auflagen | Fährbereich strikt freihalten |
+| UKW-Kanal | 12 |
+
+Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 226 (Seitenangabe unverifiziert)
 
 ---
 Freigabe: in `seeding/data/islands/kea.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

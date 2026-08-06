@@ -23,5 +23,32 @@ Koordinaten: 37.4117, 25.2283 · Qualitäten: Schönheit 5/5, Restaurant 0/5, Ba
 
 Warnungen: ⚠ Übernachten für Yachten auf Delos selbst ist verboten — Ankern nur auf Rinia · ⚠ Buchtname und Position nur einfach belegt — Position bei der Ansteuerung gegen die Seekarte prüfen · ⚠ Tagsüber Ausflugsboote auf dem Weg nach Delos · ⚠ Meltemi-sicher: ja
 
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3–7 m |
+| Grössenlimit (LoA) | 45 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Reiner Sandboden mit exzellenter Haltekraft. |
+| Seegras | Sandfelder dominieren. |
+| Kapazität | 30 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | nein |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Keine |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Laut Quelle flaches Wasser und glatte See bei Meltemi. |
+| Fährverkehr | Ausflugsboote fahren tagsüber nach Delos. |
+| Beiboot-Anlandung | Am Sandstrand von Rinia |
+| Auflagen | Übernachtungsverbot auf Delos strikt einhalten |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 2: CruisersWiki Cyclades
+
 ---
 Freigabe: in `seeding/data/islands/delos-rinia.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

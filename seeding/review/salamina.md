@@ -23,6 +23,33 @@ Koordinaten: 37.9620, 23.4980 · Qualitäten: Schönheit 2/5, Restaurant 4/5, Ba
 
 Warnungen: ⚠ Industrielle Kulisse in der Umgebung · ⚠ Sperrgebiete der griechischen Marine im Osten beachten · ⚠ Kein Landstrom; Gebühren und Anschlüsse laut Quelle kommunal veränderlich
 
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2.2–4 m |
+| Grössenlimit (LoA) | 20 m |
+| Haltegrund | schlamm |
+| Haltequalität | gut — Zäher Schlamm mit hervorragendem Halt. |
+| Seegras | — |
+| Kapazität | 20 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | Behälter am Kai |
+| Landstrom / Wasser | nein / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Supermarkt, 2 Minuten Gehdistanz |
+| Preis | ca. 5–10 EUR/Nacht (2024) — laut Quelle kommunal veränderlich, vor Ort prüfen |
+| Hafengebühren | Limenarchio Salamina |
+| Schwell | Geschützt im tiefen Golf. |
+| Fährverkehr | Lokaler Fährverkehr im Norden. |
+| Beiboot-Anlandung | — |
+| Auflagen | Sperrgebiete der griechischen Marine im Osten |
+| UKW-Kanal | 12 |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki (Abruf 2026-08)
+
 ### Peristeri (`salamina-peristeri`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -37,6 +64,33 @@ Quelle: Deep-Research Lauf 1 (CruisersWiki Salamis, Abruf 2026-08): Öffnung nac
 Koordinaten: 37.8910, 23.4620 · Qualitäten: Schönheit 3/5, Restaurant 2/5, Badestrand 3/5
 
 Warnungen: ⚠ Kein Schutz bei Südwinden · ⚠ Schwellverhalten bei dichtem Frachtverkehr in den Zufahrten von Elefsina laut Quelle ungeklärt · ⚠ Keine Versorgung, 30 Minuten Gehzeit zur nächsten Taverne
+
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3–8 m |
+| Grössenlimit (LoA) | 30 m |
+| Haltegrund | sand-schlamm |
+| Haltequalität | gut — Dichter Grund. |
+| Seegras | Stellenweise Seegras. |
+| Kapazität | 15 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | — |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Nichts, 30 Minuten Gehzeit zur nächsten Taverne |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Laut Quelle guter Meltemi-Schutz; Schwell durch Frachtverkehr ungeklärt. |
+| Fährverkehr | Kein direkter Fährverkehr. |
+| Beiboot-Anlandung | Kiesstrand zum Anlanden |
+| Auflagen | — |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 1: CruisersWiki Salamis (Abruf 2026-08)
 
 ---
 Freigabe: in `seeding/data/islands/salamina.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

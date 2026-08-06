@@ -110,7 +110,6 @@ function diamondSnapshot(
     tripStartDate: TRIP_START,
     tripLengthDays: 6,
     returnDeadlineDate: '2026-08-13', // Törntag 6
-    pickupDate: '2026-08-12', // Törntag 5
     reliableHorizonDays: opts.reliableHorizonDays ?? 14,
   };
   return snap;
