@@ -32,6 +32,7 @@ function makeStage(
     placeAmpel: 'unbewertet',
     ampel: 'gruen',
     legs: [],
+    kursAbschnitte: [],
     pinned: false,
     stopHoursPerStop: 0,
     stopHoursTotal: 0,

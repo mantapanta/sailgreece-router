@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme) | Routen-Konzept-Schwellen (Törnanalyse Kykladen, Skipper 2026-08-05) ergänzt. | Ankerziel 15:00, frueheste Abfahrt 06:00, Entscheidungstor-Fenster 48 h (Crowd-/Gate-Strategie 2026-08-05). | Kreuz-Modell: beatTwaDeg 50° ist der engste segelbare Winkel (Skipper 2026-08-06), kreuzGelbAbStunden meldet Kreuzschlaege ab einer halben Stunde. | Kite-Regler 2026-08-06: Band 12-30 kn, Korridor 5 sm neben dem Kurs, Fenster 12-19 Uhr Athen. Sie steuern NUR die Kite-Anzeige (src/domain/kite.ts) und keine Bewertung.",
+  "sourceNote": "PRD FR15/FR16/FR26 + Brief-Addendum 2026-07-30; Gelb-Reserve wird beim Bauen kalibriert (FR17-Annahme) | Routen-Konzept-Schwellen (Törnanalyse Kykladen, Skipper 2026-08-05) ergänzt. | Ankerziel 15:00, frueheste Abfahrt 06:00, Entscheidungstor-Fenster 48 h (Crowd-/Gate-Strategie 2026-08-05). | Kreuz-Modell: beatTwaDeg 50° ist der engste segelbare Winkel (Skipper 2026-08-06), kreuzGelbAbStunden meldet Kreuzschlaege ab einer halben Stunde. | Kurs-Ampel der Etappenkarte (Skipper 2026-08-06): Kreuz gelb ab 10 kn / rot ueber 20 kn, Halbwind gelb ab 20 kn / rot ueber 30 kn. | Kite-Regler 2026-08-06: Band 12-30 kn, Korridor 5 sm neben dem Kurs, Fenster 12-19 Uhr Athen. Sie steuern NUR die Kite-Anzeige (src/domain/kite.ts) und keine Bewertung.",
   "parameters": {
     "polarOffsetKn": 0.5,
     "motorSpeedKn": 8,
@@ -14,6 +14,10 @@
     "beatTwaDeg": 50,
     "kreuzGelbAbStunden": 0.5,
     "kreuzSchlagNm": 5,
+    "kreuzGelbAbKn": 10,
+    "kreuzRotAbKn": 20,
+    "halbwindGelbAbKn": 20,
+    "halbwindRotAbKn": 30,
     "maxUpwindTwsKn": 25,
     "gelbReserveKn": 3,
     "konzeptOstMaxKn": 22,

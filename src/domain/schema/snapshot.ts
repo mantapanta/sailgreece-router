@@ -269,6 +269,45 @@ export interface PointPassage {
   } | null;
 }
 
+/**
+ * Die beiden Kurse zum Wind, die eine Etappe UNBEQUEM machen können. Raumschots
+ * und vor dem Wind fehlen mit Absicht: dort trägt der Wind, und ein Abschnitt,
+ * über den nichts zu sagen ist, gehört nicht in eine Warnliste.
+ */
+export type KursKategorie = 'kreuz' | 'halbwind';
+
+/**
+ * PROBLEMATISCHE ABSCHNITTE EINER ETAPPE, nach Kurs zum Wind zusammengefasst
+ * (Skipper 2026-08-06: "Ich will bei den Etappenkarten erkennen, ob
+ * problematische Abschnitte mit dabei sind") — "ca. 4 sm Kreuz (16 kn)".
+ *
+ * Die Etappenkarte nennt bisher EINEN Wind und EINEN mittleren Kurs für den
+ * ganzen Tag. Beides verschweigt genau das, wonach hier gefragt wird: vier
+ * Meilen gegenan bei 16 kn verschwinden im Mittel einer Etappe, die danach
+ * raumschots läuft — an Bord sind sie die Stunde, über die geredet wird.
+ *
+ * Erzeugt aus den Durchfahrten (domain/kursAbschnitte.ts), also aus derselben
+ * Rechnung wie die aufklappbare Tabelle darunter — die Zeile ist deren
+ * Zusammenfassung, keine zweite Rechnung (AD-3).
+ */
+export interface KursAbschnitt {
+  kategorie: KursKategorie;
+  /** Summe der Abschnittslängen dieser Kategorie in sm. */
+  distanceNm: number;
+  /**
+   * STÄRKSTER Wind über diesen Abschnitten, nicht der mittlere — dieselbe
+   * Doktrin wie bei der Platz-Ampel: maßgeblich ist die schlechteste Stunde.
+   */
+  maxTwsKn: number;
+  /**
+   * Ampel dieses Abschnitts aus den Kurs-Schwellen der Parameter
+   * (kreuzGelbAbKn/kreuzRotAbKn bzw. halbwindGelbAbKn/halbwindRotAbKn).
+   * MELDUNG, kein Urteil über den Tag: sie geht NICHT in `LegAssessment.ampel`
+   * oder `StageAssessment.ampel` ein.
+   */
+  ampel: Ampel;
+}
+
 export interface LegAssessment {
   legId: string;
   /**
@@ -371,6 +410,12 @@ export interface LegAssessment {
    * Durchfahrtszeit. Leer, wenn die Etappe nicht simuliert werden konnte.
    */
   pointPassages: PointPassage[];
+  /**
+   * Kreuz- und Halbwind-Anteil dieser Etappe als Warnzeilen der Etappenkarte
+   * (domain/kursAbschnitte.ts). Leer, wenn die Etappe nur raumschots läuft oder
+   * nicht simuliert werden konnte.
+   */
+  kursAbschnitte: KursAbschnitt[];
 }
 
 export type OptionState = 'offen' | 'offen-horizont' | 'schliesst' | 'zu';
@@ -521,6 +566,16 @@ export interface StageAssessment {
   /** Worst ampel across this day's legs; 'unbewertet' beyond the horizon. */
   ampel: Ampel;
   legs: LegAssessment[];
+  /**
+   * Die Kreuz-/Halbwind-Abschnitte des GANZEN Tages — über alle Etappen des
+   * Tages zusammengefasst (domain/kursAbschnitte.ts).
+   *
+   * Steht hier und nicht nur je Etappe, weil die Etappenkarte den TAG zeigt:
+   * an einem Doppelschlag-Tag stünde sonst zweimal "Kreuz", und der Skipper
+   * müsste die Meilen selbst addieren. Leer an Hafentagen und an Tagen, die nur
+   * raumschots laufen.
+   */
+  kursAbschnitte: KursAbschnitt[];
   /** True when the skipper pinned this day. */
   pinned: boolean;
   /**

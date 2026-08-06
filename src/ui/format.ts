@@ -1,6 +1,13 @@
 /** German display formatting (UI layer — display only, no domain values computed here). */
 
 import { compassPoint } from '../domain/geo.ts';
+import {
+  KURS_AM_WIND_BIS_DEG,
+  KURS_HALBWIND_BIS_DEG,
+  kursSchwellen,
+} from '../domain/kursAbschnitte.ts';
+import type { Params } from '../domain/schema/params.ts';
+import type { KursAbschnitt, KursKategorie } from '../domain/schema/snapshot.ts';
 import { dateForTripDay } from '../domain/time.ts';
 
 const dayFmt = new Intl.DateTimeFormat('de-DE', {
@@ -160,8 +167,47 @@ export function pointOfSail(twa: number | null): string {
   if (twa === null) return '–';
   const t = Math.abs(twa);
   if (t < 30) return 'gegenan';
-  if (t < 60) return 'Am Wind';
-  if (t < 100) return 'Halbwind';
+  // Die beiden Grenzen, an denen auch GEWARNT wird, kommen aus der Domäne
+  // (kursAbschnitte.ts) — eine Zeile, die hier "Am Wind" heisst, muss in der
+  // Kreuz-Meldung der Etappenkarte auftauchen und nicht in der Halbwind-Zeile.
+  if (t < KURS_AM_WIND_BIS_DEG) return 'Am Wind';
+  if (t < KURS_HALBWIND_BIS_DEG) return 'Halbwind';
   if (t < 150) return 'Raumschots';
   return 'Vor dem Wind';
+}
+
+/** Das Wort für den Kurs in der Warnzeile der Etappenkarte. */
+export const KURS_LABEL: Record<KursKategorie, string> = {
+  kreuz: 'Kreuz',
+  halbwind: 'Halbwind',
+};
+
+/**
+ * "ca. 4 sm Kreuz (16 kn)" — die Warnzeile der Etappenkarte.
+ *
+ * "ca." und die runde Meile sind Absicht: die Zahl beantwortet "wie lange geht
+ * das so?", und eine Nachkommastelle täuschte dort eine Genauigkeit vor, die
+ * eine Stunden-Simulation nicht hat. Nur unter einer Meile bleibt die Stelle
+ * stehen — "ca. 0 sm" wäre keine Angabe.
+ */
+export function formatKursAbschnitt(a: KursAbschnitt): string {
+  const sm =
+    a.distanceNm < 1
+      ? a.distanceNm.toFixed(1).replace('.', ',')
+      : String(Math.round(a.distanceNm));
+  return `ca. ${sm} sm ${KURS_LABEL[a.kategorie]} (${formatKn(a.maxTwsKn)})`;
+}
+
+/**
+ * Die Regel hinter der Ampel dieser Zeile, in einem Satz — als Titel/Tooltip,
+ * damit die Farbe nicht behauptet, sondern begründet ist. Gelesen wird sie aus
+ * den Parametern (AD-8), nicht aus fest getippten Zahlen: wer die Schwellen in
+ * der Konfiguration verschiebt, bekommt hier den verschobenen Satz.
+ */
+export function formatKursAmpelRegel(
+  kategorie: KursKategorie,
+  params: Params,
+): string {
+  const { gelbAbKn, rotAbKn } = kursSchwellen(kategorie, params);
+  return `${KURS_LABEL[kategorie]}: über ${rotAbKn} kn rot · ${gelbAbKn}–${rotAbKn} kn gelb · unter ${gelbAbKn} kn grün`;
 }
