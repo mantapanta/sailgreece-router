@@ -4,7 +4,7 @@ baseline_commit: feeab43a31f720a61dc400adf759331d41c8e468
 
 # Story 1.5: UI microcopy sweep
 
-Status: in-progress
+Status: review
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
@@ -159,29 +159,29 @@ content) after this story.**
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Read the rubric sources (AC: all).** EXPERIENCE.md §Voice and Tone +
+- [x] **Task 1 — Read the rubric sources (AC: all).** EXPERIENCE.md §Voice and Tone +
   Vocabulary note + State Patterns + Key Flows quotes; DESIGN.md §Do's and Don'ts +
   Typography (number format sentence); PRD glossary (`prd.md` §"Begriffe", lines ~135–148);
   Dev Agent Records of stories 1.1–1.4 (canonical strings). Then `git rev-parse HEAD` and
   confirm it equals `baseline_commit` (else record the actual one in the Dev Agent Record).
 
-- [ ] **Task 2 — Extract the inventory (AC: 1, 2).** Build
+- [x] **Task 2 — Extract the inventory (AC: 1, 2).** Build
   `microcopy-inventory-1-5.md` mechanically first, verdicts later:
-  - [ ] 2.1 Grep harvest: JSX text nodes and `aria-label|title=|placeholder=|alt=` in
+  - [x] 2.1 Grep harvest: JSX text nodes and `aria-label|title=|placeholder=|alt=` in
     `src/**/*.tsx`; German string literals (umlauts/ß or German keywords) in
     `src/ui/*.ts`, `src/app/*.tsx`, `src/domain/**/*.ts` (skip comments and
     `__tests__`), `src/adapters/auth.ts` + `firestore.ts`; `index.html`.
-  - [ ] 2.2 Classify each hit: user-visible vs. console-only (`console.warn/error` in
+  - [x] 2.2 Classify each hit: user-visible vs. console-only (`console.warn/error` in
     tripContext/firestore = "dev console, out of audit" rows) vs. code (env var names,
     IDs, CSS classes = excluded).
-  - [ ] 2.3 Write the coverage cross-check table (AC 2) from the file listing in Dev
+  - [x] 2.3 Write the coverage cross-check table (AC 2) from the file listing in Dev
     Notes — every file accounted for.
 
-- [ ] **Task 3 — Audit pass (AC: 3–9).** Walk every inventory row against the nine rules;
+- [x] **Task 3 — Audit pass (AC: 3–9).** Walk every inventory row against the nine rules;
   mark `ok` / `ok-canonical` (cite the spine/story source) / `violation (rule #)` /
   `waive-candidate`. The suspect areas in Dev Notes get an explicit line-by-line pass.
 
-- [ ] **Task 4 — Fix UI-layer violations (AC: 4, 5, 6, 8).** String-literal edits in
+- [x] **Task 4 — Fix UI-layer violations (AC: 4, 5, 6, 8).** String-literal edits in
   views/components/App/index.html. Known fixes from the story-prep audit (verify each,
   the list is a floor not a ceiling): remove `⏰` (DayView ~699); `OPTION_STATE_LABEL`
   `'schliesst'`→`'schließt Tag'`-conform / `'zu'`→`'geschlossen'` (DayView ~816–821; keep
@@ -189,20 +189,20 @@ content) after this story.**
   berechnen"→"ließ" (DayView ~376); audit the Optionsraum deadline badge wording against
   the chip set ("schließt Tag X" appears somewhere visible per option).
 
-- [ ] **Task 5 — Route formats through helpers (AC: 7).**
-  - [ ] 5.1 `format.ts`: add/adjust pure helpers so no view needs `toFixed` — decimal-comma
+- [x] **Task 5 — Route formats through helpers (AC: 7).**
+  - [x] 5.1 `format.ts`: add/adjust pure helpers so no view needs `toFixed` — decimal-comma
     one-decimal distance/speed ("12,3 sm", "6,5 kn"); switch unit spacing to U+202F in
     `formatHours`/`formatKn`/`formatWaveM`/new helpers; update `format.test.ts`
     (append/adjust, string-only).
-  - [ ] 5.2 Swap the inline sites: DayView WindBasis ~126, Breakdown ~210/213/231;
+  - [x] 5.2 Swap the inline sites: DayView WindBasis ~126, Breakdown ~210/213/231;
     PlaceDetailView shelter list raw `{s.maxKn} kn` / `{s.maxM} m` (~313/320 →
     `formatKn`/`formatWaveM`); `{departureHour}:00`-style times (~597, ~636, ~705) →
     `formatHourOfDay`. Decide-and-record the two coordinate `toFixed(4)` sites (waiver ok).
-  - [ ] 5.3 Literal unit mentions in user-visible strings get U+202F consistently (UI and
+  - [x] 5.3 Literal unit mentions in user-visible strings get U+202F consistently (UI and
     domain); update affected test assertions; verify no U+202F leaked into `<code>`
     content, IDs, or ISO stamps.
 
-- [ ] **Task 6 — Fix domain reason strings (AC: 9, 4, 5).** String-literal-only edits +
+- [x] **Task 6 — Fix domain reason strings (AC: 9, 4, 5).** String-literal-only edits +
   same-edit test assertion updates. Known items (verify): options.ts `deriveDecisionPoints`
   "HEUTE entscheiden"→sachlich ("Heute entscheiden: …"), "schliesst am Tag X"→"schließt
   Tag X", "ab morgen ist diese Option zu"→"…geschlossen" (tests options.test.ts
@@ -212,7 +212,7 @@ content) after this story.**
   konzept.test.ts ~385/399/143 pins 'gedeckt'/'NICHT gedeckt'/'syros'). Every waived row
   names the blocking logic.
 
-- [ ] **Task 7 — Aria/sr-only audit (AC: 5, 6, 8).** All `aria-label`s and
+- [x] **Task 7 — Aria/sr-only audit (AC: 5, 6, 8).** All `aria-label`s and
   `.visually-hidden` texts read aloud in the same register: RefreshButton, AvatarMenu,
   PositionPopover, drag handle, legend button, map pins/capsules ("Ort + Ampel-Wort"
   pattern is spine-canonical), boat marker, stepper buttons, skeleton texts (note the
@@ -220,13 +220,13 @@ content) after this story.**
   "Karte lädt …" for the visible caption; audit, align only if genuinely divergent in
   meaning, record).
 
-- [ ] **Task 8 — Vocabulary sweep greps (AC: 4).** Run the Dev Notes greps for "Ort",
+- [x] **Task 8 — Vocabulary sweep greps (AC: 4).** Run the Dev Notes greps for "Ort",
   Swiss-ss, third Umkehr coinages, "Möglichkeitsraum" (UI must say Optionsraum),
   Ziel/Etappenziel/Tagesziel drift (PRD sanctions "Tagesziel = Insel" — DayView's
   "Tagesziel (Insel)" label is glossary-conform; record), Liegeplatz-vs-Platz misuse.
   Fix drift repo-wide consistently.
 
-- [ ] **Task 9 — DoD verification (AC: 10).** `npm test`, `npm run build`, all DoD greps
+- [x] **Task 9 — DoD verification (AC: 10).** `npm test`, `npm run build`, all DoD greps
   green; `git diff` reviewed file-by-file for copy-only shape; inventory verdicts final
   (zero unwaived violations); fill the Dev Agent Record + File List + Change Log.
 
@@ -515,12 +515,85 @@ git diff <baseline_commit> -- src/ui/styles.css           # MUST be empty
 
 ### Agent Model Used
 
+claude-opus-5 (BMad dev-story, in der Hauptsitzung ausgeführt — die für
+Unteragenten vorgesehenen Modelle waren durch das Ausgabenlimit blockiert)
+
 ### Debug Log References
+
+- `npm test` → 30 Dateien / 503 Tests grün (Baseline 498; +5 neue Format-Tests)
+- `npm run build` (`tsc --noEmit && vite build`) → grün
+- DoD-Greps: Ausrufezeichen in Anzeigetexten 0 · Emoji als Bedeutungsträger 0 (der
+  einzige Treffer `✎` ist `aria-hidden` in einem benannten Button, laut AC 8 zulässig) ·
+  „Ort" als Synonym für Platz 0 (die zwei Treffer sind Code-Kommentare) ·
+  Schweizer „ss" in Anzeigetexten 0 (verbleibende Treffer: Schema-Unionswert
+  `'schliesst'` und Kommentare) · Inline-Formatierung außerhalb `format.ts` nur noch
+  die zwei Koordinatenstellen (Waiver W6)
+- `git diff --stat`: 12 Dateien, ausschließlich String-/Format-Änderungen, Tests und
+  die beiden Artefaktdateien — kein `styles.css`, keine Konfiguration, keine
+  Schemawerte, keine neuen Komponenten, keine JSX-Struktur
 
 ### Completion Notes List
 
+1. **Inventar** `microcopy-inventory-1-5.md` geschrieben: behobene Verstöße, Waiver mit
+   Begründung, geprüft-und-unverändert-Liste sowie eine Abdeckungstabelle über ALLE
+   29 Dateien der Ernte-Menge (keine übersprungen).
+2. **24 Textstellen** korrigiert, davon 7 zentral über `src/ui/format.ts`. Kategorien:
+   Emoji (1), ß-Orthografie und Vokabular (5), Versalien-Register in Domänentexten (3),
+   Zahlen-/Einheitenformate (12), Fehlertexte ohne Ausweg (2), Bedienelement ohne Verb (2).
+3. **Einheiten-Konvention zentral gesetzt:** `format.ts` gibt jetzt das schmale
+   geschützte Leerzeichen (U+202F) zwischen Wert und Einheit aus, wie DESIGN.md es
+   fordert; zwei neue Helfer (`formatSm`, `formatKnPrecise`) lösen die letzten
+   `toFixed`-Stellen mit englischem Dezimalpunkt in den Rechenwegen ab.
+4. **Domänentexte** nur als String-Literale angefasst; die zwei Testzusicherungen, die
+   geänderte Strings festhalten (`options.test.ts`, `konzept.test.ts`), wurden in
+   derselben Änderung nachgezogen — keine Logik berührt.
+5. **6 Waiver** (W1–W6) mit Regel, Grund und benanntem Behebungsweg: zwei
+   Dezimalstunden-Uhrzeiten und drei Roh-ID-Texte in der Domäne (bräuchten
+   Datenfluss- bzw. Helfer-Änderungen) sowie die technischen Dezimalgrad-Koordinaten
+   (bewusst international belassen). Kandidaten für eine spätere Story
+   „Domänentexte auflösen".
+6. **Kanonische Texte unangetastet:** alle vom Spine oder von den Stories 1.1–1.4
+   wörtlich vorgegebenen Strings sind byte-identisch geblieben und im Inventar als
+   `ok-canonical` mit Quelle vermerkt.
+7. **Zwei bewusste Nicht-Änderungen** mit Begründung im Inventar: „am Ort des Platzes"
+   (dort bedeutet „Ort" die Position, nicht den Platz) und das zweistufige
+   Skeleton-Wording (knappe Bildschirmzeile, vollständiger gesprochener Satz).
+8. Kein Layout-, CSS- oder Logikeingriff; keine Textänderung hat eine Fläche gesprengt
+   (die Fehlertexte in `App.tsx` sind länger, stehen aber in umbruchfähigen Panels).
+
 ### Waivers (verbatim list for Philipp)
+
+| # | Was bleibt | Warum | Was es bräuchte |
+|---|---|---|---|
+| W1 | „Ankunft an der Basis erst um 19,5 Uhr" (`solver.ts`) | Dezimalstunde statt 19:30; Komma gesetzt | Anzeigehelfer in `domain/` oder Textbildung in die UI verlagern |
+| W2 | „Ankunft erst gegen 17,5 Uhr" (`abfahrt.ts`) | wie W1 | wie W1 |
+| W3 | Entscheidungstor nennt Insel-ID („… Tag 6, syros") | Domäne kennt hier nur die ID | Bibliotheks-Nachschlag in der Textbildung |
+| W4 | Konzeptwechsel-Hinweis nennt Insel-ID („ab syros") | wie W3 | wie W3 |
+| W5 | Rechenweg-Überschrift zeigt Leg-ID als Fallback | einzige verfügbare Information, wenn die Bibliothek keinen Namen liefert | Namensauflösung mit Fallback-Kette |
+| W6 | Koordinaten „37.4521° N" mit Punkt | Dezimalgrad sind internationale Konvention | bewusst belassen |
 
 ### File List
 
+- Neu: `_bmad-output/implementation-artifacts/microcopy-inventory-1-5.md`
+- Geändert: `src/ui/format.ts`, `src/ui/__tests__/format.test.ts`,
+  `src/ui/views/DayView.tsx`, `src/ui/views/MapView.tsx`,
+  `src/ui/views/PlaceDetailView.tsx`, `src/app/App.tsx`,
+  `src/domain/options.ts`, `src/domain/assess.ts`, `src/domain/konzept.ts`,
+  `src/domain/solver.ts`, `src/domain/__tests__/options.test.ts`,
+  `src/domain/__tests__/konzept.test.ts`, diese Story-Datei
+- Unangetastet: `src/ui/styles.css`, alle Konfigurationen, alle Schemata,
+  `src/adapters/`, alle Komponenten außer den oben genannten
+
 ## Change Log
+
+Audit aller nutzersichtbaren deutschen Texte gegen die neun Voice-&-Tone-Regeln des
+Experience-Spines. 24 Textstellen korrigiert: ein Emoji als Bedeutungsträger entfernt,
+Options-Vokabular und ß-Orthografie auf das Spine-Chip-Set gebracht, zwei
+Versalien-Schreier in Domänentexten sachlich gefasst, alle Zahlen- und Einheitenformate
+über `format.ts` geführt (deutsches Dezimalkomma, schmales geschütztes Leerzeichen vor
+Einheiten, nullgepolsterte Uhrzeiten), zwei Fehlertexte nennen jetzt Ursache UND Ausweg,
+zwei Stepper-Beschriftungen wurden zu Infinitiv-Phrasen. Sechs Verstöße sind mit
+Begründung und benanntem Behebungsweg zurückgestellt, weil ihre Behebung Logik- oder
+Datenfluss-Änderungen bräuchte. Das Inventar dokumentiert jede Entscheidung und weist die
+Abdeckung aller 29 geprüften Dateien nach. Diff ist reine Copy: keine Layout-, CSS- oder
+Logikänderung. 503 Tests und Build grün.

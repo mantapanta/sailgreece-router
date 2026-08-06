@@ -139,7 +139,8 @@ function Shell() {
       <main className="content">
         {libraryQuery.isError && (
           <div className="error-panel" role="alert">
-            Bibliothek konnte nicht geladen werden:{' '}
+            Törnbibliothek nicht geladen — ohne sie gibt es keine Plätze und
+            keine Etappen. Verbindung prüfen und die Seite neu laden. Ursache:{' '}
             {libraryQuery.error instanceof Error
               ? libraryQuery.error.message
               : String(libraryQuery.error)}
@@ -147,9 +148,10 @@ function Shell() {
         )}
         {forecastQuery.isError && (
           <div className="error-panel" role="alert">
-            Open-Meteo nicht erreichbar — angezeigt wird der letzte Datenstand
+            Forecast nicht erreichbar — angezeigt wird der letzte Datenstand
             {assessment ? ` (abgerufen ${formatStamp(assessment.fetchedAtIso)})` : ''}.
-            Fehler:{' '}
+            Später erneut aktualisieren; bis dahin bleibt die Planung auf diesem
+            Stand. Ursache:{' '}
             {forecastQuery.error instanceof Error
               ? forecastQuery.error.message
               : String(forecastQuery.error)}

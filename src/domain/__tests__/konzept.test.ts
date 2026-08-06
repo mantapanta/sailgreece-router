@@ -385,7 +385,7 @@ describe('Ende-zu-Ende: das Konzept überschreibt die Solver-Wahl', () => {
       expect(checks[0]!.note).toContain('gedeckt');
     });
 
-    it('eine Festlegung jenseits des verlässlichen Horizonts ist NICHT gedeckt', () => {
+    it('eine Festlegung jenseits des verlässlichen Horizonts ist nicht gedeckt', () => {
       const snapshot = zweiZielSnapshot(15);
       const plan = makePlan([
         makeStage(10, ['athen--mykonos'], 'mykonos'),
@@ -396,7 +396,7 @@ describe('Ende-zu-Ende: das Konzept überschreibt die Solver-Wahl', () => {
       expect(checks).toHaveLength(1);
       expect(checks[0]!.fensterOk).toBe(false);
       expect(checks[0]!.erfuellt).toBe(false);
-      expect(checks[0]!.note).toContain('NICHT gedeckt');
+      expect(checks[0]!.note).toContain('nicht gedeckt');
     });
 
     it('ohne Tor-Durchfahrt gibt es keine Prüfung, vergangene zählen nicht', () => {

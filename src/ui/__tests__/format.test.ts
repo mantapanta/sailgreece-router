@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   compass,
   formatAthensTime,
+  formatHours,
+  formatKn,
+  formatKnPrecise,
+  formatSm,
   formatTripDayShort,
   formatWaveM,
   formatWindFrom,
@@ -104,14 +108,47 @@ describe('formatTripDayShort — Tag-Tag der Karten-Etappenkarten', () => {
  */
 describe('formatWaveM — Wellenhöhe/-grenze in Metern', () => {
   it('formatiert mit Dezimalkomma und einer Nachkommastelle', () => {
-    expect(formatWaveM(0.3)).toBe('0,3 m');
+    expect(formatWaveM(0.3)).toBe('0,3\u202fm');
   });
 
   it('zeigt auch ganze Meter mit Nachkommastelle ("1,0 m")', () => {
-    expect(formatWaveM(1)).toBe('1,0 m');
+    expect(formatWaveM(1)).toBe('1,0\u202fm');
   });
 
   it('ohne Wert kein erfundener Wellenwert', () => {
     expect(formatWaveM(null)).toBe('–');
+  });
+});
+
+/**
+ * Story 1.5 — die Einheiten-Konvention der Anzeige: deutsches Dezimalkomma und
+ * ein schmales geschütztes Leerzeichen (U+202F) zwischen Zahl und Einheit
+ * (DESIGN.md, Typography). Kein Wert darf in einer schmalen Kachel von seiner
+ * Einheit weggebrochen werden, und kein Rechenweg zeigt einen englischen
+ * Dezimalpunkt.
+ */
+describe('Einheiten-Konvention (Dezimalkomma + U+202F)', () => {
+  it('formatHours trennt Wert und Einheit schmal und geschützt', () => {
+    expect(formatHours(5.5)).toBe('5,5\u202fh');
+  });
+
+  it('formatKn rundet auf ganze Knoten', () => {
+    expect(formatKn(17.6)).toBe('18\u202fkn');
+  });
+
+  it('formatSm zeigt Seemeilen mit einer Nachkommastelle', () => {
+    expect(formatSm(12.34)).toBe('12,3\u202fsm');
+    expect(formatSm(null)).toBe('–');
+  });
+
+  it('formatKnPrecise zeigt die Bootsfahrt mit einer Nachkommastelle', () => {
+    expect(formatKnPrecise(6.45)).toBe('6,5\u202fkn');
+    expect(formatKnPrecise(null)).toBe('–');
+  });
+
+  it('kein Ergebnis enthält einen englischen Dezimalpunkt', () => {
+    for (const s of [formatHours(5.5), formatSm(12.34), formatKnPrecise(6.45), formatWaveM(0.3)]) {
+      expect(s).not.toMatch(/\d\.\d/);
+    }
   });
 });

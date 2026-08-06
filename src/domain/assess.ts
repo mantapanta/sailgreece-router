@@ -484,7 +484,7 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   if (konzeptEntscheid.wechselHinweis) {
     decisionPoints.push({
       day: trip.currentDay,
-      text: `HEUTE entscheiden — ${konzeptEntscheid.wechselHinweis}`,
+      text: `Heute entscheiden — ${konzeptEntscheid.wechselHinweis}`,
     });
   }
   // Entscheidungstore der gefahrenen Route: die Festlegung hinter ein Tor

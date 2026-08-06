@@ -671,7 +671,7 @@ export function validatePlan(
         violations.push({
           kind: 'deadline',
           day: arrivingStage.day,
-          text: `Ankunft an der Basis erst um ${arrival.toFixed(1)} Uhr — die Rückgabe ist um ${params.returnDeadlineHourAthens}:00 (Athen)`,
+          text: `Ankunft an der Basis erst um ${arrival.toFixed(1).replace('.', ',')} Uhr — die Rückgabe ist um ${params.returnDeadlineHourAthens}:00 (Athen)`,
           assumed: arrivalAssumed,
         });
       }
@@ -812,7 +812,7 @@ export function validatePlan(
         violations.push({
           kind: 'pickup',
           day: pickupDay,
-          text: `Ankunft am Zustiegstag erst um ${arrival.toFixed(1)} Uhr — nach der Fähren-Grenze (${params.pickupLatestArrivalHourAthens} Uhr)`,
+          text: `Ankunft am Zustiegstag erst um ${arrival.toFixed(1).replace('.', ',')} Uhr — nach der Fähren-Grenze (${params.pickupLatestArrivalHourAthens} Uhr)`,
           assumed: pickupAssumed,
         });
       }
