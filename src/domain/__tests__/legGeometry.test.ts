@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sailedLeg, sailedLegsByDay } from '../legGeometry.ts';
 import { pathCrossesLand } from '../searoute.ts';
+import { distanceNm } from '../geo.ts';
 import type { Leg } from '../schema/route.ts';
 import type { Place } from '../schema/place.ts';
 import { makePlace } from './fixtures.ts';
@@ -36,6 +37,11 @@ const places: Place[] = [
     id: 'syros-ermoupoli',
     islandId: 'syros',
     coordinates: { lat: 37.4436, lon: 24.9436 },
+  }),
+  makePlace({
+    id: 'syros-grammata',
+    islandId: 'syros',
+    coordinates: { lat: 37.498, lon: 24.8911 },
   }),
 ];
 
@@ -129,6 +135,53 @@ describe('sailedLeg — Verankerung an einem anderen Hafen derselben Insel', () 
   it('lässt eine Etappe unverändert, deren Plätze die Bibliothek nicht kennt', () => {
     const orphan = leg({ id: 'nirgendwo--nirgendwo' });
     expect(sailedLeg(orphan, places)).toBe(orphan);
+  });
+
+  /**
+   * Die tote Spitze: `kea--syros` trägt die Ansteuerung von Ermoupoli
+   * (Ostseite). Endet der Tag in Grammata (Nordwestseite), fuhr das Boot an
+   * Grammata vorbei bis vor Ermoupoli und über dieselben Punkte zurück — 5,6 sm
+   * hin und her, auf der Karte zweimal übereinander und quer über die Insel.
+   * Der Kurs muss sich dem Ziel monoton nähern.
+   */
+  it('schneidet die Ansteuerung des ersetzten Hafens ab', () => {
+    const curated = leg({
+      ...KEA_SYROS,
+      waypoints: [
+        { lat: 37.5087, lon: 24.9213 }, // nördlich Syros, auf dem Weg
+        { lat: 37.4879, lon: 24.9528 }, // schon Ansteuerung Ermoupoli
+        { lat: 37.4441, lon: 24.9541 }, // vor Ermoupoli — 4,4 sm hinter Grammata
+      ],
+    });
+    const sailed = sailedLeg(curated, places, { toPlaceId: 'syros-grammata' });
+    const path = pathOf(sailed);
+
+    expect(pathCrossesLand(path)).toBe(false);
+    const grammata = places.find((p) => p.id === 'syros-grammata')!.coordinates;
+    const rest = path.map((p) => distanceNm(p, grammata));
+
+    // Die ANSTEUERUNG muss monoton sein: ist das Boot einmal auf 5 sm heran,
+    // darf es sich nicht wieder entfernen. Weiter draussen ist ein Bogen
+    // erlaubt — aus der Bucht von Vourkari führt der erste Schlag zwangsläufig
+    // ein Stück vom Ziel weg.
+    const heran = rest.findIndex((nm) => nm < 5);
+    expect(heran).toBeGreaterThan(0);
+    for (let i = heran + 1; i < rest.length; i++) {
+      expect(rest[i]!).toBeLessThan(rest[i - 1]!);
+    }
+
+    // Und der Kurs bleibt in der Grössenordnung der kuratierten Etappe: die
+    // tote Spitze hatte 34 sm auf 39,4 sm aufgebläht.
+    expect(sailed.distanceNm).toBeLessThan(36);
+  });
+
+  it('behält die Ansteuerung, solange ihr Hafen angelaufen wird', () => {
+    const curated = leg({
+      ...KEA_SYROS,
+      waypoints: [{ lat: 37.4879, lon: 24.9528 }],
+    });
+    const sailed = sailedLeg(curated, places, { fromPlaceId: 'kea-vourkari' });
+    expect(sailed.waypoints).toContainEqual({ lat: 37.4879, lon: 24.9528 });
   });
 });
 

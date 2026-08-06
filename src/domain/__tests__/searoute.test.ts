@@ -47,6 +47,33 @@ describe('Landmaske', () => {
     // Ansteuerungszone — der Hafen selbst darf nie unerreichbar sein.
     expect(crossesLand(PAROS_PARIKIA, { lat: 37.0853, lon: 25.0 })).toBe(false);
   });
+
+  /**
+   * Der Fehler, wegen dem die Karte bei Syros über Land führte: die
+   * Ansteuerung war ein KREIS von 1,5 sm um Start und Ziel. Zwei solche Kreise
+   * decken jeden Schlag bis 3 sm restlos ab — auf kurzen Schlägen war die
+   * Landprüfung damit abgeschaltet. Dieser Schlag ist 3,0 sm lang und läuft
+   * 2,3 sm quer über Syros; gemeldet wurden 0,007 sm.
+   */
+  it('sieht Land auch auf einem kurzen Schlag', () => {
+    const ansteuerung = { lat: 37.4879, lon: 24.9528 }; // vor Ermoupoli
+    const grammata = { lat: 37.498, lon: 24.8911 }; // Nordwestküste
+    // Kaum länger als die beiden alten Ansteuerungsradien zusammen — genau der
+    // Bereich, in dem die Prüfung blind war.
+    expect(distanceNm(ansteuerung, grammata)).toBeLessThan(3.5);
+    expect(landCrossingNm(ansteuerung, grammata)).toBeGreaterThan(2);
+    expect(crossesLand(ansteuerung, grammata)).toBe(true);
+  });
+
+  /**
+   * Die Ansteuerung gilt dem Land, an dem der Endpunkt KLEBT — nicht jedem
+   * Land in seiner Nähe. Ermoupoli liegt selbst knapp hinter der
+   * Küstenlinie; ohne diese Unterscheidung wäre der Weg quer über die eigene
+   * Insel eine Ansteuerung.
+   */
+  it('lässt die eigene Insel nicht als Ansteuerung durchgehen', () => {
+    expect(crossesLand(SYROS_ERMOUPOLI, { lat: 37.4425, lon: 24.85 })).toBe(true);
+  });
 });
 
 describe('seaRoute — der Kurs um das Land herum', () => {
@@ -92,6 +119,19 @@ describe('seaRoute — der Kurs um das Land herum', () => {
     const r = seaRoute([PAROS_PARIKIA, PAROS_NAOUSSA]);
     expect(pathCrossesLand(r.path)).toBe(false);
     expect(r.nm).toBeGreaterThan(distanceNm(PAROS_PARIKIA, PAROS_NAOUSSA));
+  });
+
+  /**
+   * Ein Umfahrungspunkt an Land ist kein Umfahrungspunkt. Die Ecken werden vom
+   * Land nach aussen versetzt, aber in einer zerklüfteten Bucht zeigt die
+   * Winkelhalbierende zurück ins Land — bei Vourkari (Kea) landete so ein
+   * Punkt 14 m INNERHALB der Küstenlinie.
+   */
+  it('legt keinen Umfahrungspunkt an Land', () => {
+    const r = seaRoute([KEA_VOURKARI, SYROS_ERMOUPOLI]);
+    // Start und Ziel selbst dürfen hinter der Küstenlinie liegen (Buchten
+    // schneidet die Quellauflösung ab) — die EINGEFÜGTEN Punkte nie.
+    expect(r.path.slice(1, -1).filter(isOnLand)).toEqual([]);
   });
 
   it('rechnet die Kurslänge über alle Punkte', () => {
