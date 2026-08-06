@@ -17,7 +17,17 @@
 
 import { describe, expect, it } from 'vitest';
 import { assessRouteOption } from '../options.ts';
-import { deriveKonzeptEntscheid, konzeptLageFor, type KonzeptLage } from '../konzept.ts';
+import {
+  KONZEPT_REGLER,
+  deriveKonzeptEntscheid,
+  klemmeKonzeptSchwellen,
+  konzeptLageFor,
+  konzeptSchwellenOf,
+  setKonzeptSchwelle,
+  withKonzeptSchwellen,
+  type KonzeptLage,
+} from '../konzept.ts';
+import { DEFAULT_PARAMS, ParamsSchema } from '../schema/params.ts';
 import { stagesOf } from '../schema/plan.ts';
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
 import type { Island } from '../schema/island.ts';
@@ -257,5 +267,80 @@ describe('Konzept-Entscheid — die Sprache einer Empfehlung, nicht einer Sperre
     );
     expect(e.wechselHinweis).toContain('abwettern');
     expect(e.wechselHinweis).toContain('wählbar');
+  });
+});
+
+/**
+ * DIE SCHWELLEN ALS REGLER (Skipper 2026-08-06). Zwei Zusagen: der angefasste
+ * Regler folgt immer der Hand (kein stilles Zurückspringen), und die
+ * Params-Invariante `konzeptOstMaxKn ≤ konzeptKlassikMaxKn` überlebt jeden
+ * Reglerstand — auch einen aus dem localStorage, der nie geprüft wurde.
+ */
+describe('Konzept-Regler — wo "zu stark" anfängt, entscheidet der Skipper', () => {
+  const stand = konzeptSchwellenOf(DEFAULT_PARAMS);
+
+  it('liest den aktuellen Stand aus den Parametern', () => {
+    expect(stand.konzeptOstMaxKn).toBe(DEFAULT_PARAMS.konzeptOstMaxKn);
+    expect(stand.konzeptKlassikDauerTage).toBe(DEFAULT_PARAMS.konzeptKlassikDauerTage);
+  });
+
+  it('klemmt jeden Regler auf seinen Bereich', () => {
+    for (const r of KONZEPT_REGLER) {
+      expect(setKonzeptSchwelle(stand, r.key, -999)[r.key]).toBe(r.min);
+      expect(setKonzeptSchwelle(stand, r.key, 9999)[r.key]).toBe(r.max);
+      expect(setKonzeptSchwelle(stand, r.key, Number.NaN)[r.key]).toBe(r.min);
+    }
+  });
+
+  it('Route 2 über Route 1 zu schieben SCHIEBT Route 1 mit — kein Zurückspringen', () => {
+    const next = setKonzeptSchwelle(stand, 'konzeptOstMaxKn', 34);
+    expect(next.konzeptOstMaxKn).toBe(34);
+    expect(next.konzeptKlassikMaxKn).toBeGreaterThanOrEqual(34);
+  });
+
+  it('Route 1 unter Route 2 zu ziehen ZIEHT Route 2 mit', () => {
+    const next = setKonzeptSchwelle(stand, 'konzeptKlassikMaxKn', 18);
+    expect(next.konzeptKlassikMaxKn).toBe(18);
+    expect(next.konzeptOstMaxKn).toBeLessThanOrEqual(18);
+  });
+
+  it('ein Reglerstand ergibt immer gültige Parameter — auch ein manipulierter', () => {
+    const params = withKonzeptSchwellen(DEFAULT_PARAMS, {
+      konzeptOstMaxKn: 999,
+      konzeptOstDauerTage: 0,
+      konzeptKlassikMaxKn: 1,
+      konzeptKlassikDauerTage: 99,
+    });
+    expect(ParamsSchema.safeParse(params).success).toBe(true);
+    expect(params.konzeptOstMaxKn).toBeLessThanOrEqual(params.konzeptKlassikMaxKn);
+  });
+
+  it('ein bereits geklemmter Stand bleibt beim Übernehmen unverändert', () => {
+    // Sonst springt der Regler beim Loslassen — das Formular zieht mit
+    // setKonzeptSchwelle, übergibt und die Engine klemmt nochmals.
+    for (const r of KONZEPT_REGLER) {
+      const gezogen = setKonzeptSchwelle(stand, r.key, r.max);
+      expect(klemmeKonzeptSchwellen(gezogen)).toEqual(gezogen);
+    }
+  });
+
+  it('ohne Reglerstand bleiben die Werte der Bibliothek unangetastet', () => {
+    expect(withKonzeptSchwellen(DEFAULT_PARAMS, null)).toBe(DEFAULT_PARAMS);
+  });
+
+  it('ein höher gestellter Regler dreht ein "trägt nicht" wieder auf "trägt"', () => {
+    // 23 kn dauerhaft kippt Route 2 bei der Voreinstellung (22 kn / 2 Tage) …
+    const snapshot = revier(23);
+    expect(konzeptLageFor(snapshot).eignung.ost).toBe('ungeeignet');
+    // … mit einer Schwelle von 26 kn nicht mehr. Frischer Snapshot, weil die
+    // Lage je Snapshot-Objekt gemerkt wird.
+    const lockerer = revier(23);
+    lockerer.params = withKonzeptSchwellen(lockerer.params, {
+      ...konzeptSchwellenOf(lockerer.params),
+      konzeptOstMaxKn: 26,
+    });
+    expect(konzeptLageFor(lockerer).eignung.ost).toBe('geeignet');
+    const ost = lockerer.library.variants.find((v) => v.id === 'ost-runde')!;
+    expect(assessRouteOption(ost, 'athen', lockerer).empfehlung).toBe('empfohlen');
   });
 });

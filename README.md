@@ -19,6 +19,12 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   tragfähiger Plan existiert — zwei Aussagen, keine Sperre. Und eine kuratierte
   Route wird als sie selbst geplant: „Westkykladen-Runde" heißt die
   Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
+- **Schwellen als Regler:** Wo „zu viel Wind" anfängt, stellt der Skipper im
+  Konzept-Panel ein — je Konzept eine kn-Schwelle und die Zahl der Tage in
+  Folge, über die sie halten muss (`KONZEPT_REGLER` in `domain/konzept.ts`,
+  persistiert im Trip-Kontext, jederzeit auf die Törnanalyse-Werte
+  zurücksetzbar). Die Regler sind gekoppelt: Route 2 darf nie über Route 1
+  liegen — wer den einen darüber schiebt, schiebt den anderen mit.
 - **Früh los, 15:00 vor Anker:** Je Etappentag empfiehlt die App die späteste
   Abfahrtsstunde, deren simulierte Ankunft das Ankerziel 15:00 noch hält
   (`domain/abfahrt.ts`; heute per Klick als Abfahrtszeit übernehmbar) —

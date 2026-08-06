@@ -34,6 +34,7 @@ const state = (plan: Plan | null): TripState => ({
   departureHourOverride: null,
   stopHoursByDay: {},
   customLegs: [],
+  konzeptSchwellen: null,
 });
 
 describe('tripReducer — REFRESH_OUTDATED', () => {
@@ -128,5 +129,47 @@ describe('Persistenz — Pläne aus älterem Storage', () => {
     const parsed = PlanSchema.safeParse(freshPlan([stage(1)]));
     expect(parsed.success).toBe(true);
     expect(planOutdated(parsed.data!)).toBe(false);
+  });
+});
+
+/**
+ * Die Konzept-Regler (Skipper 2026-08-06): "ab wie viel Wind rät die App ab?"
+ * ist eine Skipper-Entscheidung dieses Törns — sie liegt deshalb im
+ * Trip-Kontext, wird persistiert und ist mit `null` jederzeit auf die Werte
+ * der Bibliothek zurückzusetzen. Der Reducer rechnet dabei nicht: geklemmt
+ * wird in der Domäne (setKonzeptSchwelle/withKonzeptSchwellen).
+ */
+describe('tripReducer — Konzept-Regler', () => {
+  const schwellen = {
+    konzeptOstMaxKn: 26,
+    konzeptOstDauerTage: 3,
+    konzeptKlassikMaxKn: 32,
+    konzeptKlassikDauerTage: 4,
+  };
+
+  it('übernimmt den Reglerstand unverändert', () => {
+    const result = tripReducer(state(null), {
+      type: 'SET_KONZEPT_SCHWELLEN',
+      schwellen,
+    });
+    expect(result.konzeptSchwellen).toEqual(schwellen);
+  });
+
+  it('null setzt auf die Werte der Bibliothek zurück', () => {
+    const verstellt = { ...state(null), konzeptSchwellen: schwellen };
+    const result = tripReducer(verstellt, {
+      type: 'SET_KONZEPT_SCHWELLEN',
+      schwellen: null,
+    });
+    expect(result.konzeptSchwellen).toBeNull();
+  });
+
+  it('lässt den Plan unangetastet — eine Schwelle ist keine Planänderung', () => {
+    const plan = freshPlan([stage(1, 'skipper')]);
+    const result = tripReducer(state(plan), {
+      type: 'SET_KONZEPT_SCHWELLEN',
+      schwellen,
+    });
+    expect(result.plan).toBe(plan);
   });
 });

@@ -29,6 +29,12 @@ import type {
 } from '../../domain/schema/snapshot.ts';
 import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
 import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
+import {
+  KONZEPT_REGLER,
+  konzeptSchwellenOf,
+  setKonzeptSchwelle,
+  type KonzeptSchwellen,
+} from '../../domain/konzept.ts';
 import { planKey } from '../../domain/solver.ts';
 import { departureHourChoices, departureHourForDay } from '../../domain/scoring.ts';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
@@ -853,7 +859,98 @@ const EMPFEHLUNG_LABEL: Record<RoutenEmpfehlung, string> = {
  * trägt sie je Ziel — hier steht sie als EINE Aussage mit Begründung,
  * Wechsel-Hinweis und der Rückweg-Empfehlung der Törnanalyse.
  */
-function KonzeptPanel({ assessment }: { assessment: Assessment }) {
+/**
+ * DIE SCHWELLEN ALS REGLER (Skipper 2026-08-06). Wo "zu viel Wind" anfängt,
+ * ist kein Naturgesetz, sondern die Risikobereitschaft dieses Skippers auf
+ * diesem Törn — und weil die Schwelle nur noch bestimmt, wovon ABGERATEN wird
+ * (nichts wird gesperrt), kann sie gefahrlos in seine Hand.
+ *
+ * Die Regler stehen bewusst IM Konzept-Panel, direkt unter den Karten, deren
+ * Eignungs-Chips sie umschalten: der Effekt ist im selben Blick sichtbar.
+ * Bereiche, Schritt und Beschriftung kommen aus `KONZEPT_REGLER`
+ * (domain/konzept.ts) — das Formular weiss nichts über das Revier.
+ */
+function KonzeptRegler({ snapshot }: { snapshot: PlanningSnapshot }) {
+  const { setKonzeptSchwellen, konzeptReglerVerstellt } = usePlanning();
+  const stand = konzeptSchwellenOf(snapshot.params);
+
+  /**
+   * Der Stand WÄHREND des Ziehens. Jede Übergabe an die Engine rechnet den
+   * Solver neu — der teuerste Schritt der ganzen Bewertung — und ein
+   * `<input type="range">` feuert bei jedem Pixel. Der Regler folgt deshalb
+   * sofort der Hand (Entwurf), gerechnet wird, sobald sie still steht.
+   * Null = kein Entwurf offen, es gilt der Stand der Engine.
+   */
+  const [entwurf, setEntwurf] = useState<KonzeptSchwellen | null>(null);
+  const anzeige = entwurf ?? stand;
+
+  useEffect(() => {
+    if (!entwurf) return;
+    const timer = setTimeout(() => {
+      setKonzeptSchwellen(entwurf);
+      setEntwurf(null);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [entwurf, setKonzeptSchwellen]);
+
+  return (
+    <details className="hint-panel konzept-regler">
+      <summary>
+        Ab wann rät die App ab? — Schwellen einstellen
+        {konzeptReglerVerstellt && <span className="badge badge-frist">verstellt</span>}
+      </summary>
+      <p className="beschreibung">
+        Ein Konzept gilt als „trägt nicht", sobald der Revier-Spitzenwind die
+        Schwelle über so viele Tage IN FOLGE erreicht. Die Voreinstellung stammt
+        aus der Törnanalyse. Die Regler ändern nur, wovon die App abrät — gesperrt
+        wird nichts.
+      </p>
+      {KONZEPT_REGLER.map((r) => (
+        <label className="regler-zeile" key={r.key}>
+          <span className="regler-kopf">
+            <span className="regler-label">{r.label}</span>
+            <output className="regler-wert">
+              {anzeige[r.key]} {r.einheit}
+            </output>
+          </span>
+          <input
+            type="range"
+            min={r.min}
+            max={r.max}
+            step={r.step}
+            value={anzeige[r.key]}
+            onChange={(e) =>
+              // Die Bewegungsregeln (Klemme, "Route 2 schiebt Route 1 mit")
+              // stehen in der Domäne — das Formular wendet sie nur an.
+              setEntwurf(setKonzeptSchwelle(anzeige, r.key, Number(e.target.value)))
+            }
+          />
+          <span className="beschreibung">{r.hilfe}</span>
+        </label>
+      ))}
+      {konzeptReglerVerstellt && (
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => {
+            setEntwurf(null);
+            setKonzeptSchwellen(null);
+          }}
+        >
+          Zurück auf die Werte der Törnanalyse
+        </button>
+      )}
+    </details>
+  );
+}
+
+function KonzeptPanel({
+  assessment,
+  snapshot,
+}: {
+  assessment: Assessment;
+  snapshot: PlanningSnapshot;
+}) {
   const entscheid = assessment.konzeptEntscheid;
   return (
     <section className="section konzept-panel">
@@ -903,6 +1000,7 @@ function KonzeptPanel({ assessment }: { assessment: Assessment }) {
           </div>
         ))}
       </div>
+      <KonzeptRegler snapshot={snapshot} />
       {entscheid.basisAnnahme && (
         <p className="beschreibung">
           Die Konzept-Beurteilung stützt sich teilweise auf die
@@ -1351,7 +1449,7 @@ export function DayView({
 
       {/* ROUTEN-KONZEPT — die zentrale Logik, direkt unter dem Rest-Trip-
           Banner: erst das Konzept, dann die Etappen und Optionen darunter. */}
-      <KonzeptPanel assessment={assessment} />
+      <KonzeptPanel assessment={assessment} snapshot={snapshot} />
 
       {!main && assessment.proposal && (
         <div className="card-surface hero-card">

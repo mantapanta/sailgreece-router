@@ -1981,6 +1981,62 @@ hr.hairline,
   margin-top: 0.5rem;
 }
 
+/* --- Konzept-Regler: wo "zu viel Wind" anfängt --------------------------
+   Eingeklappt unter den Konzept-Karten, deren Chips sie umschalten. Der
+   Zahlenwert steht am Regler selbst — ein Schieber ohne abgelesene Zahl ist
+   für eine Schwelle in Knoten wertlos. */
+
+details.konzept-regler {
+  margin-top: 0.6rem;
+}
+details.konzept-regler > summary {
+  font-family: var(--font-sans);
+  color: var(--navy);
+}
+
+.regler-zeile {
+  display: block;
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.regler-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.regler-label {
+  font-family: var(--font-sans);
+  color: var(--navy);
+}
+
+.regler-wert {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.regler-zeile input[type='range'] {
+  display: block;
+  width: 100%;
+  margin: 0.35rem 0 0.2rem;
+  /* Daumen gross genug für den nassen Finger an Bord. */
+  height: 1.6rem;
+  accent-color: var(--navy);
+}
+
+.regler-zeile .beschreibung {
+  display: block;
+}
+
+details.konzept-regler > button {
+  margin-top: 0.8rem;
+}
+
 /* --- Alternativ-Routen (FR29): erst ansehen, dann übernehmen ---------------
    Jede Alternative trägt ihre Farbe (altRouteColors.ts) als linke Kante und
    als Punkt vor dem Namen — dieselbe Farbe, in der die Karten-Ansicht sie
