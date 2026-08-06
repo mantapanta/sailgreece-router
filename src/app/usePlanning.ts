@@ -21,6 +21,11 @@ import {
   planWithoutStopover,
   type Pin,
 } from '../domain/solver.ts';
+import {
+  klemmeKonzeptSchwellen,
+  withKonzeptSchwellen,
+  type KonzeptSchwellen,
+} from '../domain/konzept.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
 import { planOutdated, type Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
@@ -87,6 +92,17 @@ export function usePlanningEngine() {
     refetchInterval: STALE_TIME_MS,
   });
 
+  /**
+   * Die Parameter der Bibliothek, überschrieben von den Konzept-Reglern des
+   * Skippers (domain/konzept.ts). EIN Einfügepunkt, damit Solver, Optionsraum,
+   * Konzept-Panel und Karte dieselben Schwellen sehen — "ab wie viel Wind rät
+   * die App ab?" darf nirgends anders beantwortet werden als hier (AD-3).
+   */
+  const params = useMemo(
+    () => (bundle ? withKonzeptSchwellen(bundle.params, trip.konzeptSchwellen) : null),
+    [bundle, trip.konzeptSchwellen],
+  );
+
   // Persisted overrides may stem from an older trip frame: clamp to
   // [1, tripLengthDays] so the engine never sees a day off the axis.
   const tripLengthDays = bundle?.params.tripLengthDays ?? 12;
@@ -96,12 +112,12 @@ export function usePlanningEngine() {
       : deriveCurrentDay(bundle?.params.tripStartDate, tripLengthDays);
 
   const snapshot: PlanningSnapshot | null = useMemo(() => {
-    if (!bundle || !library || !forecastQuery.data) return null;
+    if (!bundle || !library || !params || !forecastQuery.data) return null;
     return {
       ...forecastQuery.data,
       library,
       polar: bundle.polar,
-      params: bundle.params,
+      params,
       trip: {
         currentDay,
         position: trip.position,
@@ -113,6 +129,7 @@ export function usePlanningEngine() {
   }, [
     bundle,
     library,
+    params,
     forecastQuery.data,
     currentDay,
     trip.position,
@@ -270,6 +287,25 @@ export function usePlanningEngine() {
     [dispatch],
   );
 
+  /**
+   * Einen Regler-Stand übernehmen; `null` setzt auf die Schwellen der
+   * Bibliothek (Törnanalyse-Werte) zurück.
+   *
+   * Bewusst der GANZE Stand statt eines einzelnen Reglers: das Formular führt
+   * die Bewegung lokal (domain `setKonzeptSchwelle`) und übergibt erst, wenn
+   * die Hand still steht — jede Übergabe rechnet den Solver neu, und das ist
+   * der teuerste Schritt der Bewertung. Geklemmt wird trotzdem hier nochmals:
+   * kein Aufrufer kann die Invariante umgehen.
+   */
+  const setKonzeptSchwellen = useCallback(
+    (schwellen: KonzeptSchwellen | null) =>
+      dispatch({
+        type: 'SET_KONZEPT_SCHWELLEN',
+        schwellen: schwellen ? klemmeKonzeptSchwellen(schwellen) : null,
+      }),
+    [dispatch],
+  );
+
   return {
     libraryQuery,
     forecastQuery,
@@ -284,6 +320,9 @@ export function usePlanningEngine() {
     releasePin,
     setStopHours,
     setDepartureHour,
+    setKonzeptSchwellen,
+    /** True = die Schwellen weichen von der Bibliothek ab (Anzeige). */
+    konzeptReglerVerstellt: trip.konzeptSchwellen !== null,
   };
 }
 

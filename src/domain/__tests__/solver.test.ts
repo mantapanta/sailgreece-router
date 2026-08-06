@@ -1005,7 +1005,11 @@ describe('solver — Round Trip statt Pendeln', () => {
   });
 
   it('bei gleicher Reichweite gewinnt der Uhrzeigersinn', () => {
-    const snapshot = roundTripSnapshot();
+    // Wind querab zu BEIDEN Umlaufrichtungen (Kurse ~130°/~310°, Wind aus 40°):
+    // sonst entscheidet vor dem Umlaufsinn zu Recht das Kreuzen — die eine
+    // Richtung liefe zwei Etappen gegenan, die andere nur eine, und dann
+    // vergleicht dieser Test nicht mehr den Umlaufsinn, sondern die Windlage.
+    const snapshot = roundTripSnapshot({ windFromDeg: 40 });
     const metrics = planMetricsFor(snapshot);
     const basis = {
       validity: { valid: true, horizonDependent: false, violations: [], safetyViolations: [] },

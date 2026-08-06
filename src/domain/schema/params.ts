@@ -26,8 +26,41 @@ const ParamsObjectSchema = z.object({
   // --- course vs wind (FR16) ----------------------------------------------
   /** TWA below this counts as beating ("gegenan"). */
   upwindTwaDeg: z.number().min(0).max(90).default(55),
-  /** Close-hauled angle actually sailed when destination is upwind (VMG model). */
+  /**
+   * DER ENGSTE WINKEL ZUM WIND, DEN DAS SCHIFF SEGELN KANN (Skipper 2026-08-06:
+   * "ich kann maximal 50 Grad TWA segeln, sonst muss gekreuzt werden").
+   *
+   * Liegt der Kurs enger am Wind, wird er NICHT angelegen: es wird gekreuzt,
+   * und auf dem Kurs kommt nur cos(50°)/cos(TWA) der Fahrt an (polar.ts,
+   * kreuzFactor). Der Winkel ist damit keine Anzeigegrösse, sondern die Grenze,
+   * an der die Rechnung vom Anliegen aufs Kreuzen umschaltet.
+   */
   beatTwaDeg: z.number().min(30).max(70).default(50),
+  /**
+   * Ab wie vielen KREUZ-STUNDEN eine Etappe gelb wird (Skipper 2026-08-06:
+   * Kreuzen "sollte im Routing eher vermieden werden").
+   *
+   * Ein Regler, kein Verbot — dieselbe Doktrin wie bei den Wind-Schwellen:
+   * die App rät ab, sie verbietet nicht. Gelb heisst hier nicht "gefährlich",
+   * sondern "das ist nicht der Törn, der gewollt ist"; die Etappe bleibt
+   * segelbar und der Plan gültig. Vermieden wird das Kreuzen an der Stelle, an
+   * der es hingehört: in der Rangfolge der Pläne (solver.ts, `kreuzTenths`).
+   *
+   * 0.5 h, weil ein kurzer Kreuzschlag um eine Landspitze herum kein Befund
+   * ist — eine halbe Stunde Aufkreuzen merkt an Bord niemand.
+   */
+  kreuzGelbAbStunden: z.number().min(0).default(0.5),
+  /**
+   * PLANLÄNGE EINES KREUZSCHLAGS in sm — daraus folgt, wie oft der gezeichnete
+   * Zickzack wendet (domain/kreuz.ts).
+   *
+   * Keine Wendeanweisung, sondern der Massstab der Skizze: 5 sm sind bei
+   * Familiencrew und 6 kn knapp eine Stunde je Schlag. Kürzer wäre ein
+   * Zickzack aus vierzig Wenden, länger ein einzelner Schlag quer aus dem
+   * Revier heraus — beides zeigt nicht, was wirklich gefahren wird. Findet
+   * sich damit kein landfreier Weg, halbiert kreuz.ts selbst.
+   */
+  kreuzSchlagNm: z.number().positive().default(5),
   /** FR16: no beating upwind above this true wind speed. */
   maxUpwindTwsKn: z.number().positive().default(25),
   /** Yellow-band wind reserve (FR17 calibration parameter, AD-8/Deferred). */
@@ -323,6 +356,14 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
       code: 'custom',
       message:
         'maxDayRangeUpwindNm darf maxDayRangeNm nicht überschreiten (gegenan ist nie weiter als raumschots)',
+      input: p,
+    });
+  }
+  if (p.beatTwaDeg > p.upwindTwaDeg) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'beatTwaDeg darf upwindTwaDeg nicht überschreiten — ein Kurs, der gekreuzt werden muss, muss auch als "gegenan" gelten',
       input: p,
     });
   }

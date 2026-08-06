@@ -51,7 +51,12 @@ import {
   stagesOf,
 } from './schema/plan.ts';
 import type { RelaxationLevel } from './schema/plan.ts';
-import { assessLeg, assessLegCached, stopHoursForDay } from './scoring.ts';
+import {
+  assessLeg,
+  assessLegCached,
+  stopHoursForDay,
+  upwindRotReason,
+} from './scoring.ts';
 import {
   packLegs,
   remainingReturnLegs,
@@ -448,7 +453,10 @@ export function validatePlan(
        */
       if (a.basis === 'annahme') horizonDependent = true;
       if (a.ampel === 'rot') {
-        const upwind = a.reasons.some((r) => r.includes('Aufkreuzen'));
+        // Genau der EINE Satz der FR16-Grenze (scoring.ts) — nicht "enthält
+        // 'Aufkreuzen'": der Kreuz-Hinweis einer gelben Etappe trägt dasselbe
+        // Wort und ist trotzdem kein Sicherheits-Befund.
+        const upwind = a.reasons.includes(upwindRotReason(params));
         violations.push({
           kind: upwind ? 'upwind' : 'budget',
           day: stage.day,
@@ -865,6 +873,16 @@ export interface PlanMetrics {
   /** Abstand der Hafentagszahl vom Zielband [harbourDays, harbourDaysTargetMax]. */
   harbourDev: number;
   /**
+   * KREUZ-STUNDEN des ganzen Plans, in Zehntelstunden (ganzzahlig, damit der
+   * lexikografische Vergleich nicht an Float-Rauschen hängt).
+   *
+   * Das ist die Kennzahl, mit der die Rangfolge Kreuzen VERMEIDET (Skipper
+   * 2026-08-06): unter Plänen, die gleich weit kommen und gleich viele Inseln
+   * sehen, gewinnt der, der seine Ziele anliegen kann. Sie ersetzt keine
+   * Gültigkeit — gekreuzt werden DARF, es ist nur die schlechtere Runde.
+   */
+  kreuzTenths: number;
+  /**
    * ROUTEN-KONZEPTE (konzept.ts) — trägt die Wetterlage das Konzept dieses
    * Plans? Ein Plan, der Ost-Marker anläuft, während das Ost-Konzept
    * ungeeignet ist, verliert gegen JEDEN Plan in tragendem Konzept — noch
@@ -916,6 +934,10 @@ export function planMetricsFor(
     // und Gültigkeit (AD-3): die Folge-Etappe eines Doppelschlags startet nach
     // Ankunft plus Liegezeit, nicht wieder um 09:00.
     let bandDevTenths = 0;
+    // Kreuz-Stunden zählen über den GANZEN Plan, auch aus Tagen, deren
+    // Wegstunden-Band unbewertbar bleibt: eine gekreuzte Stunde ist eine
+    // gekreuzte Stunde, unabhängig davon, ob der Tag ins Band passt.
+    let kreuzTenths = 0;
     for (const stage of stages) {
       let offset = 0;
       let hours = 0;
@@ -932,6 +954,7 @@ export function planMetricsFor(
           known = false;
           break;
         }
+        kreuzTenths += Math.round((a.kreuzHours ?? 0) * 10);
         hours += a.totalHours;
         offset += a.totalHours + stopHours;
       }
@@ -973,6 +996,7 @@ export function planMetricsFor(
       stages: stages.length,
       bandDevTenths,
       harbourDev,
+      kreuzTenths,
       konzeptTraegt:
         konzeptLage.eignung[konzeptOfPlan(r.plan)] !== 'ungeeignet',
       rueckwegAbweichung: rueckwegAbweichung(
@@ -1050,20 +1074,30 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  *   6. Weniger Annahme-Befunde: der abgestufte Rest des alten Kriteriums 1.
  *      Bei gleicher Reichweite und Vielfalt ist der Plan vorzuziehen, der
  *      weniger auf der Persistenz-Annahme ruht.
- *   7. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
+ *   7. WENIGER KREUZEN (Skipper 2026-08-06: "ich kann maximal 50 Grad TWA
+ *      segeln … was im Routing eher vermieden werden sollte"). Muss ein Kurs
+ *      gekreuzt werden, kostet er Zeit, Strecke und Bequemlichkeit — unter
+ *      sonst gleichen Plänen gewinnt deshalb der, der seine Ziele anliegen
+ *      kann. Bewusst HIER und nicht weiter oben: das Kreuzen ist ein Preis,
+ *      keine Gefahr, und es darf weder eine Route aus dem Angebot nehmen noch
+ *      die Reichweite oder die Inselvielfalt überstimmen — genau deshalb steht
+ *      es unter Kriterium 3/5 und nicht über ihnen. Vor dem Wegstunden-Band,
+ *      weil das den Umweg nur indirekt sieht (mehr Stunden), nicht als das,
+ *      was er ist.
+ *   8. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
  *      verschenken oder zu überziehen.
- *   8. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
+ *   9. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
  *      ohne Ruhetag ist der Törn so wenig gewollt wie mit vier.
- *   9. Kürzester Hafentage-LAUF: verteilte Ruhetage vor der Halde — fünf am
+ *  10. Kürzester Hafentage-LAUF: verteilte Ruhetage vor der Halde — fünf am
  *      Stück sind ein anderer Törn als fünf verteilte (maxHarbourRun).
- *  10. Rückweg im westlichen LEE-KORRIDOR (konzept.ts): unter sonst gleichen
+ *  11. Rückweg im westlichen LEE-KORRIDOR (konzept.ts): unter sonst gleichen
  *      Plänen gewinnt der, dessen Heimweg nach der Wende in der Abdeckung
  *      Milos–Sifnos–Serifos–Kythnos läuft — die Rückweg-Empfehlung der
  *      Törnanalyse, präziser als der reine Umlaufsinn.
- *  11. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
+ *  12. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
  *      Westseite zurück — die Empfehlung fürs Revier.
- *  12. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
- *  13. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
+ *  13. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
+ *  14. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
  *      die Variante alphabetisch — gleiche Lage, gleiche Antwort.
  */
 export function preferred(
@@ -1087,6 +1121,8 @@ export function preferred(
     [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
     [ma.distinctIslands, mb.distinctIslands],
     [-assumedViolations(a.validity).length, -assumedViolations(b.validity).length],
+    // Weniger Kreuzen — anliegen vor aufkreuzen (Kriterium 7).
+    [-ma.kreuzTenths, -mb.kreuzTenths],
     [-ma.bandDevTenths, -mb.bandDevTenths],
     [-ma.harbourDev, -mb.harbourDev],
     [-ma.maxHarbourRun, -mb.maxHarbourRun],
@@ -1184,6 +1220,19 @@ export function completePlan(
      */
     turnIslandId?: string;
     /**
+     * Nur Kandidaten betrachten, die aus DIESER kuratierten Variante stammen
+     * (`Candidate.variantId`).
+     *
+     * Damit heisst "Westkykladen-Runde" auch die Westkykladen-Runde: ohne den
+     * Filter beantwortete `turnIslandId` allein die Frage, und der Solver
+     * lieferte irgendeine Kette zum selben Wendepunkt — angeboten unter dem
+     * Namen der Best-Practice-Route, gefahren aber woanders lang. Der Filter
+     * ist bewusst OPTIONAL und ohne Fallback im Solver: findet die Variante
+     * nichts, entscheidet der Aufrufer, ob er auf die Wendepunkt-Suche
+     * zurückfällt (options.ts tut das).
+     */
+    variantId?: string;
+    /**
      * Bei der ERSTEN Stufe abbrechen, die etwas Gültiges liefert.
      *
      * Nur sinnvoll zusammen mit `turnIslandId`: dann ist die Reichweite über
@@ -1223,7 +1272,9 @@ export function completePlan(
   }
 
   const candidates = buildCandidates(snapshot, startIslandId).filter(
-    (c) => opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId,
+    (c) =>
+      (opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId) &&
+      (opts.variantId === undefined || c.variantId === opts.variantId),
   );
   if (candidates.length === 0) return null;
   const constraint = dayConstraintFor(snapshot, futurePins);

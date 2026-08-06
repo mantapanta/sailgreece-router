@@ -47,12 +47,16 @@ export function SignInView() {
         </p>
 
         {configured ? (
-          <button type="button" className="google-button" onClick={() => void signIn()}>
+          <button
+            type="button"
+            className="btn-secondary google-button"
+            onClick={() => void signIn()}
+          >
             <GoogleMark />
             Mit Google anmelden
           </button>
         ) : (
-          <div className="error-panel">
+          <div className="error-panel" role="alert">
             Firebase ist nicht konfiguriert. In <code>.env</code> fehlen
             <code>VITE_FIREBASE_API_KEY</code>, <code>VITE_FIREBASE_PROJECT_ID</code>{' '}
             oder <code>VITE_FIREBASE_APP_ID</code> — siehe{' '}
@@ -60,7 +64,11 @@ export function SignInView() {
           </div>
         )}
 
-        {error && <div className="error-panel">{error}</div>}
+        {error && (
+          <div className="error-panel" role="alert">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );

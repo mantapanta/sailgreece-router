@@ -1,6 +1,7 @@
 import type { Ampel } from '../../domain/schema/common.ts';
 
-const LABELS: Record<Ampel, string> = {
+/** Die vier deutschen Ampel-Wörter — EINE Quelle, auch für Listen-Zeilen. */
+export const AMPEL_LABEL: Record<Ampel, string> = {
   gruen: 'Grün',
   gelb: 'Gelb',
   rot: 'Rot',
@@ -9,9 +10,9 @@ const LABELS: Record<Ampel, string> = {
 
 export function AmpelBadge({ ampel, label }: { ampel: Ampel; label?: string }) {
   return (
-    <span className={`ampel ampel-${ampel}`} title={LABELS[ampel]}>
+    <span className={`ampel ampel-${ampel}`} title={AMPEL_LABEL[ampel]}>
       <span className="dot" />
-      {label ?? LABELS[ampel]}
+      {label ?? AMPEL_LABEL[ampel]}
     </span>
   );
 }

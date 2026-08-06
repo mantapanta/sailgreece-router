@@ -184,17 +184,25 @@ export function northSouthScenario(opts: {
   distanceNm?: number;
   polar?: Polar | null;
   southbound?: boolean;
+  /**
+   * Längengrad der beiden Plätze. Der Default liegt mitten in den westlichen
+   * Kykladen — dort ist die Luftlinie frei, ein AUSHOLENDER Kreuzschlag aber
+   * nicht (domain/kreuz.ts prüft gegen die Landmaske). Wer den gezeichneten
+   * Zickzack testen will, verschiebt die Etappe auf offene See.
+   */
+  lon?: number;
 }): { snapshot: PlanningSnapshot; leg: Leg } {
   const distance = opts.distanceNm ?? 20;
+  const lon = opts.lon ?? 24.5;
   const north = makePlace({
     id: 'start-hafen',
     islandId: 'startinsel',
-    coordinates: { lat: 37.4, lon: 24.5 },
+    coordinates: { lat: 37.4, lon },
   });
   const south = makePlace({
     id: 'ziel-bucht',
     islandId: 'zielinsel',
-    coordinates: { lat: 37.0, lon: 24.5 },
+    coordinates: { lat: 37.0, lon },
   });
   const southbound = opts.southbound ?? true;
   const leg = makeLeg({

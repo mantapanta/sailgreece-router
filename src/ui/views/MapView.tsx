@@ -1,36 +1,70 @@
 /**
- * F1 — map & briefing picture (FR1-FR4).
+ * F1 — map & briefing picture (FR1-FR4), Consumer-Warm spine (Story 1.3).
  *
  * The map shows the ROUND TRIP (FR2): Hinweg und Rückweg in ZWEI Farben mit
  * Fahrtrichtungspfeilen (Feedback 2026-08-05 — Hin und Rück laufen teils über
  * dieselben Etappen und waren einfarbig nicht unterscheidbar), gefahren als
  * durchgezogene, geplant als gestrichelte Linie, and every stage numbered at
- * its day target. Die Rest-Trip-Ampel steht als Badge in der Legende. Ampel
- * markers appear only for the current island and today's target island (FR1) —
- * what matters is which harbour we enter today, not what happens in five days.
+ * its day target. Die Rest-Trip-Ampel steht als Badge in der Legende UND als
+ * TripStatusLine am Kopf der Etappenliste — nie nur als Farbe. Ampel markers
+ * appear only for the current island and today's target island (FR1) — what
+ * matters is which harbour we enter today, not what happens in five days.
  *
- * Google Maps via @vis.gl/react-google-maps 1.x: AdvancedMarker for pins,
- * numbers and rotated wind arrows; dashed lines via the symbol-repeat
- * workaround in Polyline.tsx. Sticky-split layout: itinerary left, fixed map
- * right (stacked on mobile). Hover syncs list and map (transient view state,
- * never TripContext). Without a Maps key the view shows a notice, not a crash.
+ * Layout: ≤860px full-bleed map unter dem Header, die Etappenliste als
+ * Bottom-Sheet (Zwei-Zustands-Toggle, bewusst ohne Gesten-Physik — AC 1);
+ * ≥861px der Sticky-Split (Liste links, Karte rechts). Layer-Chips und die
+ * Legende (Popover hinter dem "i") schweben auf der Karte. Google Maps via
+ * @vis.gl/react-google-maps 1.x: AdvancedMarker for pins, capsules and
+ * rotated wind arrows; dashed lines via the symbol-repeat workaround in
+ * Polyline.tsx. Hover/Fokus/Tap syncs list and map (transient view state,
+ * never TripContext). Ohne vollständige Maps-Konfiguration zeigt die
+ * Kartenfläche einen benannten Hinweis — die Etappenliste rendert voll.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-maps';
+import type { Ampel } from '../../domain/schema/common.ts';
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
-import { AmpelBadge } from '../components/AmpelBadge.tsx';
-import { AMPEL_GRAPHIC_HEX, HIN_LINE_COLOR, RUECK_LINE_COLOR } from '../tokens.ts';
+import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
+import { TripStatusLine } from '../components/TripStatusLine.tsx';
+import {
+  AMPEL_GRAPHIC_HEX,
+  COLORS,
+  HIN_LINE_COLOR,
+  RUECK_LINE_COLOR,
+} from '../tokens.ts';
 import { Polyline } from '../components/Polyline.tsx';
 import { SeamarkLayer } from '../components/SeamarkLayer.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
 import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
 import { type BarbPoint, windFieldFor } from '../windField.ts';
-import { formatHours, formatKn, compass } from '../format.ts';
+import {
+  compass,
+  formatAthensTime,
+  formatHours,
+  formatKn,
+  formatTripDayShort,
+  formatTripRange,
+} from '../format.ts';
+import { islandWithPlace } from '../stageText.ts';
 import { altRouteColor } from '../altRouteColors.ts';
+import { staleForecastLabel } from '../dayViewModel.ts';
+import { STALE_TIME_MS } from '../../app/usePlanning.ts';
+import { resolveMapsEnv } from '../mapsEnv.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
+
+/**
+ * Maps-Konfiguration — EINMAL pro View gelesen (Story 1.3, AC 9). Fehlende
+ * Werte sind ein BENANNTER Zustand: die Kartenfläche erklärt, welche
+ * VITE_-Variablen fehlen, die Etappenliste rendert voll — nie ein stiller
+ * Demo-Map-Fallback.
+ */
+const MAPS_ENV = resolveMapsEnv(
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined,
+  import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined,
+);
 
 /**
  * Hin- und Rückweg in ZWEI Farben (Feedback 2026-08-05): der Round-Trip nutzt
@@ -117,26 +151,174 @@ function WindLayer({
 
   return (
     <>
-      {field.shown.map((p) => (
-        <AdvancedMarker
-          key={`wind-${p.key}`}
-          position={upwindOffset(p.lat, p.lon, p.dirDeg)}
-          zIndex={5}
-        >
-          {/* Die Zahl neben der Fieder ist weg: die Fiedern kodieren die
-              Stärke bereits (5 kn je halbe Fieder), die Ziffer sagte dasselbe
-              ein zweites Mal. Sie steht weiter im Tooltip, wo sie niemanden
-              zudeckt. */}
-          <div
-            className="wind-barb"
-            title={`Wind aus ${compass(p.dirDeg)} (${Math.round(p.dirDeg)}°), ${formatKn(
-              p.knots,
-            )}`}
+      {field.shown.map((p) => {
+        // Die Zahl neben der Fieder ist weg: die Fiedern kodieren die Stärke
+        // bereits (5 kn je halbe Fieder), die Ziffer sagte dasselbe ein
+        // zweites Mal. Der Wert steht im aria-label (Bedeutung nie nur im
+        // Tooltip, Story 1.4) und im selben Text als Hover-Tooltip.
+        const barbText = `Wind aus ${compass(p.dirDeg)} (${Math.round(p.dirDeg)}°), ${formatKn(
+          p.knots,
+        )}`;
+        return (
+          <AdvancedMarker
+            key={`wind-${p.key}`}
+            position={upwindOffset(p.lat, p.lon, p.dirDeg)}
+            zIndex={5}
           >
-            <WindBarb dirDeg={p.dirDeg} knots={p.knots} size={34} />
+            <div
+              className="wind-barb"
+              role="img"
+              aria-label={barbText}
+              title={barbText}
+            >
+              <WindBarb dirDeg={p.dirDeg} knots={p.knots} size={34} />
+            </div>
+          </AdvancedMarker>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * Die Legende hinter dem "i" (Story 1.3, AC 4) — ein Popover nach dem
+ * PositionPopover-Kontrakt: eines zur Zeit, Esc/Backdrop/Auslöser schliessen,
+ * Fokus geht hinein und zurück zum Auslöser. Das Rest-Trip-Verdikt steht HIER
+ * als Badge — nie in der Linienfarbe; die Windfiedern-Kürzung meldet sich
+ * über aria-live, weil sich die Zahl beim Zoomen ändert, während das Popover
+ * offen ist.
+ */
+function LegendPopover({
+  restTripAmpel,
+  turnLabel,
+  windCount,
+  alternatives,
+}: {
+  restTripAmpel: Ampel;
+  turnLabel: string | null;
+  windCount: { shown: number; hidden: number };
+  /** Je Alternative: Identitätsfarbe + "Wendepunkt {Insel} · {n} Etappen". */
+  alternatives: { key: string; color: string; label: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  const close = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    // Fokus hinein: der Popover-Container selbst (tabIndex -1) — die Legende
+    // ist Lesestoff, ihr einziges interaktives Element ist der Quellen-Link.
+    popRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        close();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="legend-btn"
+        aria-label="Legende"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => (open ? close() : setOpen(true))}
+      >
+        <span aria-hidden="true">i</span>
+      </button>
+      {open && (
+        <>
+          <div className="menu-backdrop" aria-hidden="true" onClick={close} />
+          <div
+            ref={popRef}
+            className="legend-pop"
+            role="dialog"
+            aria-label="Legende"
+            tabIndex={-1}
+          >
+            <div className="lg-title">Legende</div>
+            <div className="lg-row" style={{ color: HIN_LINE_COLOR }}>
+              <span className="lg-line solid" aria-hidden="true" />
+              <span style={{ color: 'inherit' }}>Hinweg</span>
+            </div>
+            <div className="lg-row" style={{ color: RUECK_LINE_COLOR }}>
+              <span className="lg-line solid" aria-hidden="true" />
+              <span style={{ color: 'inherit' }}>Rückweg</span>
+            </div>
+            <div className="lg-row">
+              <span className="lg-line solid" aria-hidden="true" />
+              Durchgezogen = gefahren
+            </div>
+            <div className="lg-row">
+              <span className="lg-line dashed" aria-hidden="true" />
+              Gestrichelt = geplant
+            </div>
+            <p className="lg-caption">
+              Pfeile zeigen die Fahrtrichtung.
+              {turnLabel && <> {turnLabel}</>}
+            </p>
+            <div className="lg-row">
+              Rest-Trip: <AmpelBadge ampel={restTripAmpel} />
+            </div>
+            <div className="lg-row lg-wind">
+              <span>
+                <WindBarb dirDeg={0} knots={5} size={26} /> 5 kn
+              </span>
+              <span>
+                <WindBarb dirDeg={0} knots={10} size={26} /> 10 kn
+              </span>
+              <span>
+                <WindBarb dirDeg={0} knots={25} size={26} /> 25 kn
+              </span>
+            </div>
+            <p className="lg-caption">Schaft zeigt, woher der Wind kommt.</p>
+            {/* Keine stille Kürzung: die Karte sagt, wie viele Inseln sie
+                gerade auslässt — live, weil Zoomen die Zahl ändert, während
+                das Popover offen ist. */}
+            <div aria-live="polite">
+              {windCount.hidden > 0 && (
+                <p className="lg-caption">
+                  {windCount.shown} von {windCount.shown + windCount.hidden}{' '}
+                  Inseln — hineinzoomen zeigt die übrigen.
+                </p>
+              )}
+            </div>
+            {alternatives.length > 0 && (
+              <>
+                {alternatives.map((alt) => (
+                  <div key={alt.key} className="lg-row" style={{ color: alt.color }}>
+                    <span className="lg-line dashed" aria-hidden="true" />
+                    <span style={{ color: 'inherit' }}>{alt.label}</span>
+                  </div>
+                ))}
+                <p className="lg-caption">
+                  Zum Vergleich über die Hauptroute gelegt — übernommen wird in
+                  der Tagesansicht.
+                </p>
+              </>
+            )}
+            <p className="lg-caption">
+              Tonnen, Leuchtfeuer, Häfen ab Zoomstufe&nbsp;8 — ©{' '}
+              <a href="https://www.openseamap.org" target="_blank" rel="noreferrer">
+                OpenSeaMap
+              </a>
+              -Mitwirkende (CC-BY-SA). Keine verlässlichen Tiefen — Pilotage nach
+              Revierführer.
+            </p>
           </div>
-        </AdvancedMarker>
-      ))}
+        </>
+      )}
     </>
   );
 }
@@ -150,40 +332,42 @@ export function MapView({
   assessment: Assessment;
   onOpenPlace: (placeId: string) => void;
 }) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const mapId =
-    (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID';
   const day = snapshot.trip.currentDay;
+  const { params } = snapshot;
+  /**
+   * Blick-Zustand der Karte (AD-11): Sheet, Hover/Auswahl, Ebenen — alles
+   * transienter View-State, bewusst NICHT im TripContext. Das Ein-/Ausblenden
+   * ist eine Blickentscheidung, keine Törnentscheidung.
+   */
+  const [sheetOpen, setSheetOpen] = useState(false);
+  /** Transient (Hover/Fokus) + sticky (Tap) — Highlight ist eines von beiden. */
   const [hoverDay, setHoverDay] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const activeDay = hoverDay ?? selectedDay;
   /**
    * FR10-Lesbarkeit: 97 Windfiedern über den Kykladen verdecken die Route.
-   * Transienter View-State, bewusst NICHT im TripContext — das Ein-/Ausblenden
-   * ist eine Blickentscheidung, keine Törnentscheidung.
    */
   const [showWind, setShowWind] = useState(true);
   /**
-   * Seezeichen-Overlay (OpenSeaMap). Transienter View-State wie die
-   * Windfiedern — Standard AN, weil die Ebene transparent ist und erst beim
-   * Hineinzoomen sichtbar wird; sie kostet das Besprechungsbild nichts.
+   * Seezeichen-Overlay (OpenSeaMap). Standard AN, weil die Ebene transparent
+   * ist und erst beim Hineinzoomen sichtbar wird; sie kostet das
+   * Besprechungsbild nichts.
    */
   const [showSeamarks, setShowSeamarks] = useState(true);
   /**
    * FEEDBACK 2026-08-05: die Alternativ-Routen waren auf der Karte unsichtbar.
    * Jetzt sind sie EINBLENDBAR — gestrichelt, jede in ihrer Farbe (dieselbe
-   * wie in der Vorschau der Tagesansicht, altRouteColors.ts). Transienter
-   * View-State wie die Windfiedern: einblenden ist eine Blickentscheidung,
-   * keine Törnentscheidung — übernommen wird in der Tagesansicht.
+   * wie in der Vorschau der Tagesansicht, altRouteColors.ts). Story 1.3: EIN
+   * Chip schaltet ALLE Alternativen (Spine); die Identität je Alternative
+   * steht in der Legende, inspiziert wird in der Tagesansicht.
    */
-  const [shownAlts, setShownAlts] = useState<ReadonlySet<string>>(new Set());
-  const altKey = (alt: { variantId: string; turnIslandId: string }) =>
-    `${alt.variantId}-${alt.turnIslandId}`;
-  const toggleAlt = (key: string, on: boolean) =>
-    setShownAlts((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(key);
-      else next.delete(key);
-      return next;
-    });
+  const [showAlts, setShowAlts] = useState(false);
+  /** Touch-Zweischritt (AC 6): erster Tipp "bewaffnet" den Pin (Mini-Chip). */
+  const [armedPlaceId, setArmedPlaceId] = useState<string | null>(null);
+  /** Gesetzt in onPointerDown, gelesen im onClick — unterscheidet Touch. */
+  const lastPointerType = useRef<string>('');
+  // Record statt JS-Map: `Map` ist in diesem Modul die Kartenkomponente.
+  const cardRefs = useRef<Record<number, HTMLButtonElement | undefined>>({});
 
   const legsById = useMemo(
     () => buildLegsById(snapshot.library.legs),
@@ -296,107 +480,75 @@ export function MapView({
   const islandName = (id: string) =>
     snapshot.library.islands.find((i) => i.id === id)?.name ?? id;
 
+  // Statuszeile am Listenkopf (AC 2): dieselbe Ableitung wie die Tagesansicht —
+  // Minutentakt für die Stale-Prüfung, PPR-Hinweise nur abseits der Basis.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const staleLabel = staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS);
+  const atBase = assessment.currentIslandId === params.baseIslandId;
+  const pprHinweise = atBase ? [] : assessment.ppr.reasons;
+
+  /** Legenden-Zeilen der Alternativen — Identität bleibt benannt (VERIFY 3). */
+  const legendAlternatives = assessment.alternatives.map((alt, i) => ({
+    key: `${alt.variantId}-${alt.turnIslandId}`,
+    color: altRouteColor(i),
+    label: `Wendepunkt ${islandName(alt.turnIslandId)} · ${
+      alt.stages.filter((s) => s.kind === 'stage').length
+    } Etappen`,
+  }));
+
+  const turnLabel =
+    turnDay !== null && turnIsland
+      ? `Wende: ${islandName(turnIsland)} (Tag ${turnDay})`
+      : null;
+
+  /** Erster Segeltag zu einer Insel — Ziel des Pin-Tipps für den Karten-Sync. */
+  const stageDayForIsland = (islandId: string): number | null =>
+    sailingStages.find((s) => s.toIslandId === islandId)?.day ?? null;
+
+  /** Pin-Tipp (Touch, Schritt 1): Karte des Tages hervorheben + heranscrollen. */
+  const syncCardForIsland = (islandId: string) => {
+    const stageDay = stageDayForIsland(islandId);
+    if (stageDay !== null) {
+      setSelectedDay(stageDay);
+      cardRefs.current[stageDay]?.scrollIntoView({ block: 'nearest' });
+    }
+  };
+
+  const stagesByDay = useMemo(
+    () => [...(main?.stages ?? [])].sort((a, b) => a.day - b.day),
+    [main],
+  );
+
   const itinerary = (
-    <div className="map-itinerary">
-      <div className="route-toggles">
-        <span className="versal">Round-Trip</span>
-        <div className="legend">
-          <span>
-            <span className="legend-line solid" style={{ background: HIN_LINE_COLOR }} />
-            Hinweg
-          </span>
-          <span>
-            <span className="legend-line solid" style={{ background: RUECK_LINE_COLOR }} />
-            Rückweg
-          </span>
-          <AmpelBadge ampel={assessment.restTripAmpel} />
-        </div>
-        <span className="beschreibung">
-          Durchgezogen = gefahren, gestrichelt = geplant; Pfeile zeigen die
-          Fahrtrichtung.
-          {turnDay !== null && turnIsland && (
-            <> Wende: {islandName(turnIsland)} (Tag {turnDay}).</>
-          )}
+    <div className={`map-itinerary${sheetOpen ? ' open' : ''}`}>
+      <button
+        type="button"
+        className="drag-handle"
+        aria-expanded={sheetOpen}
+        aria-label={sheetOpen ? 'Etappenliste einklappen' : 'Etappenliste ausklappen'}
+        onClick={() => setSheetOpen((o) => !o)}
+      >
+        <span className="bar" aria-hidden="true" />
+      </button>
+      <TripStatusLine
+        assessment={assessment}
+        main={main}
+        pprHinweise={pprHinweise}
+        staleLabel={staleLabel}
+      />
+      {/* Der Kopf toggelt das Sheet mit (AC 1) — der Handle-Button ist das
+          zugängliche Steuerelement, der Kopf nur die grössere Tippfläche.
+          ≥861px ist das Sheet inert (Media Query), der Klick wirkungslos. */}
+      <div className="sheet-head" onClick={() => setSheetOpen((o) => !o)}>
+        <h2 className="section-title">Etappen</h2>
+        <span className="trip-caption">
+          {formatTripRange(params.tripStartDate, params.tripLengthDays)} ·{' '}
+          {params.tripLengthDays} Tage
         </span>
-        <label className="wind-toggle">
-          <input
-            type="checkbox"
-            checked={showWind}
-            onChange={(e) => setShowWind(e.target.checked)}
-          />
-          Windfiedern
-        </label>
-        {showWind && (
-          <div className="wind-legende">
-            <span>
-              <WindBarb dirDeg={0} knots={5} size={26} /> 5 kn
-            </span>
-            <span>
-              <WindBarb dirDeg={0} knots={10} size={26} /> 10 kn
-            </span>
-            <span>
-              <WindBarb dirDeg={0} knots={25} size={26} /> 25 kn
-            </span>
-            <span className="beschreibung">
-              Schaft zeigt, woher der Wind kommt.
-              {/* Keine stille Kürzung: die Karte sagt, wie viele Inseln sie
-                  gerade auslässt — sonst läse sich ein ausgedünntes Feld wie
-                  ein vollständiges. */}
-              {windCount.hidden > 0 && (
-                <>
-                  {' '}
-                  {windCount.shown} von {windCount.shown + windCount.hidden} Inseln —
-                  hineinzoomen zeigt die übrigen.
-                </>
-              )}
-            </span>
-          </div>
-        )}
-        <label className="wind-toggle">
-          <input
-            type="checkbox"
-            checked={showSeamarks}
-            onChange={(e) => setShowSeamarks(e.target.checked)}
-          />
-          Seezeichen (OpenSeaMap)
-        </label>
-        {showSeamarks && (
-          <span className="beschreibung">
-            Tonnen, Leuchtfeuer, Häfen ab Zoomstufe&nbsp;8 — ©{' '}
-            <a href="https://www.openseamap.org" target="_blank" rel="noreferrer">
-              OpenSeaMap
-            </a>
-            -Mitwirkende (CC-BY-SA). Keine verlässlichen Tiefen — Pilotage nach
-            Revierführer.
-          </span>
-        )}
-        {assessment.alternatives.length > 0 && (
-          <div className="alt-toggles">
-            <span className="versal">Alternativ-Routen</span>
-            {assessment.alternatives.map((alt, i) => {
-              const key = altKey(alt);
-              const n = alt.stages.filter((s) => s.kind === 'stage').length;
-              return (
-                <label key={key}>
-                  <input
-                    type="checkbox"
-                    checked={shownAlts.has(key)}
-                    onChange={(e) => toggleAlt(key, e.target.checked)}
-                  />
-                  <span
-                    className="legend-line dashed"
-                    style={{ borderColor: altRouteColor(i) }}
-                  />
-                  Wendepunkt {islandName(alt.turnIslandId)} · {n} Etappen
-                </label>
-              );
-            })}
-            <span className="beschreibung">
-              Zum Vergleich über die Hauptroute gelegt — übernommen wird in der
-              Tagesansicht.
-            </span>
-          </div>
-        )}
       </div>
 
       {!main && (
@@ -405,222 +557,390 @@ export function MapView({
         </div>
       )}
 
-      {sailingStages.map((stage) => {
-        const active = hoverDay === stage.day;
-        const isPast = stage.day < day;
-        const legNames = stage.legs
-          .map((la) => la.legId.replace('--', ' → '))
-          .join(' + ');
-        return (
-          <div
-            key={stage.day}
-            className={`itinerary-card${active ? ' active' : ''}${isPast ? ' past' : ''}`}
-            onMouseEnter={() => setHoverDay(stage.day)}
-            onMouseLeave={() => setHoverDay(null)}
-          >
-            <span className="versal">
-              Etappe {stage.stageNumber ?? '–'} · Tag {stage.day}
-              {stage.day === day && ' · HEUTE'}
-              {stage.pinned && ' · 📌'}
-            </span>
-            <div className="headline">{islandName(stage.toIslandId)}</div>
-            <div className="beschreibung">{legNames}</div>
-            <div className="badges">
-              <span className="badge">
-                {formatHours(
-                  stage.legs.reduce((s, l) => s + (l.totalHours ?? 0), 0) || null,
-                )}
-              </span>
-              <AmpelBadge ampel={stage.ampel} />
-            </div>
-          </div>
-        );
-      })}
-
-      {(main?.stages ?? [])
-        .filter((s) => s.kind === 'harbour')
-        .map((stage) => (
-          <div
-            key={`harbour-${stage.day}`}
-            className={`itinerary-card harbour${hoverDay === stage.day ? ' active' : ''}`}
-            onMouseEnter={() => setHoverDay(stage.day)}
-            onMouseLeave={() => setHoverDay(null)}
-          >
-            <span className="versal">Hafentag · Tag {stage.day}</span>
-            <div className="headline">{islandName(stage.toIslandId)}</div>
-          </div>
-        ))}
+      <div className="itin-list">
+        {/* Chronologisch VERSCHRÄNKT (Segel- und Hafentage in Tagesfolge) —
+            das Sheet liest sich wie der Törn, nicht wie zwei Listen. */}
+        {stagesByDay.map((stage) => {
+          if (stage.kind === 'harbour') {
+            return (
+              <button
+                key={`harbour-${stage.day}`}
+                type="button"
+                className="harbour-row"
+                aria-pressed={selectedDay === stage.day}
+                onMouseEnter={() => setHoverDay(stage.day)}
+                onMouseLeave={() => setHoverDay(null)}
+                onFocus={() => setHoverDay(stage.day)}
+                onBlur={() => setHoverDay(null)}
+                onClick={() =>
+                  setSelectedDay((d) => (d === stage.day ? null : stage.day))
+                }
+              >
+                <span className="hd">Tag {stage.day}</span>
+                <span>
+                  Hafentag: {islandWithPlace(snapshot, stage.toIslandId, stage.placeId)}
+                </span>
+              </button>
+            );
+          }
+          const isPast = stage.day < day;
+          const firstLeg0 = stage.legs[0];
+          const firstLeg = firstLeg0
+            ? (firstLeg0.sailedLeg ?? legsById[firstLeg0.legId])
+            : undefined;
+          const fromIsland = firstLeg ? islandName(firstLeg.fromIslandId) : null;
+          const totalHours = stage.legs.reduce((s, l) => s + (l.totalHours ?? 0), 0);
+          const lastLeg = stage.legs[stage.legs.length - 1];
+          const lastEta =
+            lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
+          return (
+            <button
+              key={stage.day}
+              type="button"
+              ref={(el) => {
+                cardRefs.current[stage.day] = el ?? undefined;
+              }}
+              className={`itin-card${isPast ? ' past' : ''}`}
+              aria-pressed={selectedDay === stage.day}
+              onMouseEnter={() => setHoverDay(stage.day)}
+              onMouseLeave={() => setHoverDay(null)}
+              onFocus={() => setHoverDay(stage.day)}
+              onBlur={() => setHoverDay(null)}
+              onClick={() =>
+                setSelectedDay((d) => (d === stage.day ? null : stage.day))
+              }
+            >
+              <div className="itin-top">
+                <div>
+                  <div className="itin-day">
+                    Tag {stage.day} · {formatTripDayShort(params.tripStartDate, stage.day)}
+                    {stage.day === day && ' · heute'}
+                    {isPast && ' · gefahren'}
+                  </div>
+                  <div className="itin-route">
+                    {fromIsland ? `${fromIsland} → ` : ''}
+                    {islandName(stage.toIslandId)}
+                  </div>
+                  <div className="itin-meta">
+                    {formatHours(totalHours || null)}
+                    {lastEta && <> · an {formatAthensTime(lastEta)}</>}
+                    {stage.pinned && (
+                      <>
+                        {' '}
+                        <span className="chip">Festgelegt</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <AmpelBadge ampel={stage.ampel} />
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 
-  if (!apiKey) {
-    return (
+  return (
+    <div className="map-view">
+      <h1 className="visually-hidden">Karte</h1>
       <div className="map-split">
         {itinerary}
         <div className="map-sticky">
-          <div className="hint-panel" style={{ height: '100%' }}>
-            <h2>Karte nicht verfügbar</h2>
-            <p>
-              Es ist kein Google-Maps-API-Key gesetzt. Trage{' '}
-              <code>VITE_GOOGLE_MAPS_API_KEY</code> in deine <code>.env</code> ein
-              (siehe <code>.env.example</code> und README) und lade die Seite neu.
-              Alle Bewertungen sind weiter in der Tagesansicht verfügbar.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+          {MAPS_ENV.ok ? (
+            <APIProvider apiKey={MAPS_ENV.env.apiKey}>
+              <Map
+                className="map-container"
+                mapId={MAPS_ENV.env.mapId}
+                defaultCenter={REVIER_CENTER}
+                defaultZoom={8}
+                mapTypeId="hybrid"
+                gestureHandling="greedy"
+                onClick={() => setArmedPlaceId(null)}
+              >
+                {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
+                    Google-Maps-Architektur immer unter Markern und Polylinien —
+                    die Ebene kann Route und Ampeln nie zudecken. */}
+                {showSeamarks && <SeamarkLayer />}
 
-  return (
-    <div className="map-split">
-      {itinerary}
-      <div className="map-sticky">
-        <APIProvider apiKey={apiKey}>
-          <Map
-            className="map-container"
-            mapId={mapId}
-            defaultCenter={REVIER_CENTER}
-            defaultZoom={8}
-            mapTypeId="hybrid"
-            gestureHandling="greedy"
-          >
-            {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
-                Google-Maps-Architektur immer unter Markern und Polylinien —
-                die Ebene kann Route und Ampeln nie zudecken. */}
-            {showSeamarks && <SeamarkLayer />}
+                {/* Eingeblendete Alternativ-Routen: gestrichelt in ihrer Farbe,
+                    UNTER der Hauptroute (zIndex) — sie sind Vergleichsbild, nicht
+                    Plan. Wo Alternative und Hauptroute dieselbe Etappe nutzen,
+                    deckt die Hauptroute die Alternative ab; das ist die ehrliche
+                    Aussage: dort unterscheiden sich die Routen nicht. */}
+                {showAlts &&
+                  assessment.alternatives.map((alt, i) =>
+                    alt.stages
+                      .filter((s) => s.kind === 'stage')
+                      .map((stage) => {
+                        const path = stagePath(stage, legsById, snapshot);
+                        if (path.length < 2) return null;
+                        return (
+                          <Polyline
+                            key={`alt-${alt.variantId}-${alt.turnIslandId}-${stage.day}`}
+                            path={path}
+                            strokeColor={altRouteColor(i)}
+                            dashed
+                            directionArrows
+                            strokeWeight={3}
+                            zIndex={12}
+                          />
+                        );
+                      }),
+                  )}
 
-            {/* Eingeblendete Alternativ-Routen: gestrichelt in ihrer Farbe,
-                UNTER der Hauptroute (zIndex) — sie sind Vergleichsbild, nicht
-                Plan. Wo Alternative und Hauptroute dieselbe Etappe nutzen,
-                deckt die Hauptroute die Alternative ab; das ist die ehrliche
-                Aussage: dort unterscheiden sich die Routen nicht. */}
-            {assessment.alternatives.map((alt, i) => {
-              const key = altKey(alt);
-              if (!shownAlts.has(key)) return null;
-              return alt.stages
-                .filter((s) => s.kind === 'stage')
-                .map((stage) => {
+                {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
+                    gefahren durchgezogen, geplant gestrichelt, Pfeile in
+                    Fahrtrichtung. One polyline per stage, so a single stage can
+                    be highlighted on hover. Der Rückweg liegt ÜBER dem Hinweg
+                    und um die halbe Strichperiode versetzt: wo beide dieselbe
+                    Etappe nutzen, scheint der Hinweg durch die Lücken der oberen
+                    Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
+                    Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
+                    dashOffset). */}
+                {sailingStages.map((stage) => {
                   const path = stagePath(stage, legsById, snapshot);
                   if (path.length < 2) return null;
+                  const isPast = stage.day < day;
+                  const rueck = isRueckweg(stage.day);
                   return (
                     <Polyline
-                      key={`alt-${key}-${stage.day}`}
+                      key={`line-${stage.day}`}
                       path={path}
-                      strokeColor={altRouteColor(i)}
-                      dashed
+                      strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
+                      dashed={!isPast}
+                      dashOffset={rueck ? '9px' : undefined}
                       directionArrows
-                      strokeWeight={3}
-                      zIndex={12}
+                      // Kräftiger als bisher: über dem Satellitenbild geht eine
+                      // 3-px-Linie im Blau der Ägäis unter (dazu der helle Saum
+                      // in Polyline.tsx).
+                      strokeWeight={activeDay === stage.day ? 6 : 4}
+                      zIndex={activeDay === stage.day ? 60 : rueck ? 21 : 20}
                     />
                   );
-                });
-            })}
+                })}
 
-            {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
-                gefahren durchgezogen, geplant gestrichelt, Pfeile in
-                Fahrtrichtung. One polyline per stage, so a single stage can be
-                highlighted on hover. Der Rückweg liegt ÜBER dem Hinweg und um
-                die halbe Strichperiode versetzt: wo beide dieselbe Etappe
-                nutzen, scheint der Hinweg durch die Lücken der oberen
-                Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
-                Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
-                dashOffset). */}
-            {sailingStages.map((stage) => {
-              const path = stagePath(stage, legsById, snapshot);
-              if (path.length < 2) return null;
-              const isPast = stage.day < day;
-              const rueck = isRueckweg(stage.day);
-              return (
-                <Polyline
-                  key={`line-${stage.day}`}
-                  path={path}
-                  strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
-                  dashed={!isPast}
-                  dashOffset={rueck ? '9px' : undefined}
-                  directionArrows
-                  // Kräftiger als bisher: über dem Satellitenbild geht eine
-                  // 3-px-Linie im Blau der Ägäis unter (dazu der helle Saum
-                  // in Polyline.tsx).
-                  strokeWeight={hoverDay === stage.day ? 6 : 4}
-                  zIndex={hoverDay === stage.day ? 60 : rueck ? 21 : 20}
-                />
-              );
-            })}
+                {/* FR2 — Etappennummern am Tagesziel, EINE Markierung je Insel.
+                    Der Round-Trip läuft hin und zurück über dieselbe Kette; je
+                    Etappe eine Markierung hiesse, dass die Rücktour die Hintour
+                    zudeckt und die Karte nur noch die halbe Reise zeigt.
+                    Kapseln sind tastaturbedienbar (AC 7): Enter/Space/Klick
+                    öffnet das Platzdetail des ersten Anlaufs (endPlaceId). */}
+                {endMarkers.map((marker) => {
+                  const active = marker.stops.some((s) => s.day === activeDay);
+                  const allPast = marker.stops.every((s) => s.day < day);
+                  const label = `${islandName(marker.islandId)} — ${marker.stops
+                    .map(
+                      (s) =>
+                        `Etappe ${s.stageNumber ?? '–'} (Tag ${s.day})${s.day === day ? ', heute' : ''}`,
+                    )
+                    .join(', ')}`;
+                  const endPlaceId = marker.endPlaceId;
+                  return (
+                    <AdvancedMarker
+                      key={marker.key}
+                      position={marker.position}
+                      zIndex={active ? 120 : 70}
+                    >
+                      <div
+                        className="marker-hit"
+                        {...(endPlaceId
+                          ? {
+                              role: 'button',
+                              tabIndex: 0,
+                              'aria-label': label,
+                              onKeyDown: (e: React.KeyboardEvent) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  onOpenPlace(endPlaceId);
+                                }
+                              },
+                              onClick: () => onOpenPlace(endPlaceId),
+                            }
+                          : { 'aria-label': label })}
+                        onMouseEnter={() => setHoverDay(marker.stops[0]!.day)}
+                        onMouseLeave={() => setHoverDay(null)}
+                        onFocus={() => setHoverDay(marker.stops[0]!.day)}
+                        onBlur={() => setHoverDay(null)}
+                      >
+                        <span
+                          className={`stage-capsule${active ? ' highlight' : ''}${allPast ? ' past' : ''}`}
+                          aria-hidden="true"
+                        >
+                          {marker.label}
+                        </span>
+                      </div>
+                    </AdvancedMarker>
+                  );
+                })}
 
-            {/* FR2 — Etappennummern am Tagesziel, EINE Markierung je Insel.
-                Der Round-Trip läuft hin und zurück über dieselbe Kette; je
-                Etappe eine Markierung hiesse, dass die Rücktour die Hintour
-                zudeckt und die Karte nur noch die halbe Reise zeigt. */}
-            {endMarkers.map((marker) => {
-              const active = marker.stops.some((s) => s.day === hoverDay);
-              const allPast = marker.stops.every((s) => s.day < day);
-              const title = `${islandName(marker.islandId)} — ${marker.stops
-                .map(
-                  (s) =>
-                    `Etappe ${s.stageNumber ?? '–'} (Tag ${s.day})${s.day === day ? ', heute' : ''}`,
-                )
-                .join(', ')}`;
-              return (
-                <AdvancedMarker
-                  key={marker.key}
-                  position={marker.position}
-                  zIndex={active ? 120 : 70}
-                  title={title}
-                >
-                  <div
-                    className={`stage-number${active ? ' highlight' : ''}${allPast ? ' past' : ''}${
-                      marker.stops.length > 1 ? ' mehrfach' : ''
-                    }`}
-                    onMouseEnter={() => setHoverDay(marker.stops[0]!.day)}
-                    onMouseLeave={() => setHoverDay(null)}
+                {/* Places along the plan only; ampel colour where
+                    decision-relevant. Pins sind Buttons (AC 6): Enter/Space und
+                    Mausklick öffnen direkt; Touch braucht zwei Tipps — der
+                    erste hebt die Etappen-Karte hervor und zeigt den Mini-Chip
+                    mit dem Ampel-Wort, der zweite öffnet. */}
+                {contextPlaces.map((place) => {
+                  const relevant = ampelIslands.has(place.islandId);
+                  const ampel =
+                    assessment.nightAmpeln[place.id]?.[day]?.ampel ?? 'unbewertet';
+                  const armed = armedPlaceId === place.id;
+                  return (
+                    <AdvancedMarker
+                      key={place.id}
+                      position={{
+                        lat: place.coordinates.lat,
+                        lng: place.coordinates.lon,
+                      }}
+                      // Bewaffneter Pin über dem Bootsmarker (90): sein
+                      // Mini-Chip darf nie verdeckt werden (AC 8).
+                      zIndex={armed ? 100 : relevant ? 50 : 30}
+                    >
+                      <div
+                        className="marker-hit"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${place.name} — ${AMPEL_LABEL[ampel]}`}
+                        onPointerDown={(e) => {
+                          lastPointerType.current = e.pointerType;
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onOpenPlace(place.id);
+                          }
+                        }}
+                        onClick={() => {
+                          if (lastPointerType.current === 'touch' && !armed) {
+                            // Schritt 1: bewaffnen — Karte synchronisieren,
+                            // Mini-Chip zeigen. Ein anderer Pin re-armiert.
+                            setArmedPlaceId(place.id);
+                            syncCardForIsland(place.islandId);
+                            return;
+                          }
+                          onOpenPlace(place.id); // Maus / Tastatur / zweiter Tipp
+                        }}
+                      >
+                        <div
+                          className={relevant ? 'marker-pin' : 'marker-pin muted'}
+                          style={{ background: AMPEL_GRAPHIC_HEX[ampel] }}
+                        />
+                        {armed && (
+                          <span className="marker-chip" aria-hidden="true">
+                            {place.name} · {AMPEL_LABEL[ampel]}
+                          </span>
+                        )}
+                      </div>
+                    </AdvancedMarker>
+                  );
+                })}
+
+                {/* Bootsposition (AC 8): Akzent-Punkt mit Halo — Blickanker,
+                    nicht interaktiv. Über den Pins (zIndex 90), unter einem
+                    bewaffneten Pin (100). */}
+                {snapshot.trip.position && (
+                  <AdvancedMarker
+                    position={{
+                      lat: snapshot.trip.position.lat,
+                      lng: snapshot.trip.position.lon,
+                    }}
+                    zIndex={90}
                   >
-                    {marker.label}
-                  </div>
-                </AdvancedMarker>
-              );
-            })}
+                    <div className="boat-marker" role="img" aria-label="Bootsposition">
+                      <span
+                        className="halo"
+                        style={{ background: COLORS.accent }}
+                      />
+                      <span
+                        className="core"
+                        style={{ background: COLORS.accent }}
+                      />
+                    </div>
+                  </AdvancedMarker>
+                )}
 
-            {/* Places along the plan only; ampel colour where decision-relevant. */}
-            {contextPlaces.map((place) => {
-              const relevant = ampelIslands.has(place.islandId);
-              const ampel =
-                assessment.nightAmpeln[place.id]?.[day]?.ampel ?? 'unbewertet';
-              return (
-                <AdvancedMarker
-                  key={place.id}
-                  position={{ lat: place.coordinates.lat, lng: place.coordinates.lon }}
-                  title={
-                    relevant
-                      ? `${place.name} — Nacht-Ampel Tag ${day}: ${ampel}`
-                      : place.name
-                  }
-                  onClick={() => onOpenPlace(place.id)}
-                  zIndex={relevant ? 50 : 30}
-                >
-                  <div
-                    className={relevant ? 'marker-pin' : 'marker-pin muted'}
-                    style={relevant ? { background: AMPEL_GRAPHIC_HEX[ampel] } : undefined}
+                {/* FR3 — Windfiedern in der Notation der Wetterkarte. Anders als
+                    der frühere Pfeil zeigt der Schaft dorthin, WOHER der Wind
+                    kommt (AD-6), nicht wohin er weht. Gezeigt werden nur die
+                    Plätze der Kontextmenge (Plan-Inseln plus aktuelle Position);
+                    wie viele davon die Karte verträgt, entscheidet windField.ts
+                    — eine je Insel, danach Mindestabstand auf dem Schirm. */}
+                {showWind && (
+                  <WindLayer
+                    points={barbCandidates}
+                    islandOf={islandOfPlace}
+                    onCount={onWindCount}
                   />
-                </AdvancedMarker>
-              );
-            })}
+                )}
+              </Map>
 
-            {/* FR3 — Windfiedern in der Notation der Wetterkarte. Anders als der
-                frühere Pfeil zeigt der Schaft dorthin, WOHER der Wind kommt
-                (AD-6), nicht wohin er weht. Gezeigt werden nur die Plätze der
-                Kontextmenge (Plan-Inseln plus aktuelle Position); wie viele
-                davon die Karte verträgt, entscheidet windField.ts — eine je
-                Insel, danach Mindestabstand auf dem Schirm. */}
-            {showWind && (
-              <WindLayer
-                points={barbCandidates}
-                islandOf={islandOfPlace}
-                onCount={onWindCount}
+              <div className="layer-chips">
+                <button
+                  type="button"
+                  className="layer-chip"
+                  aria-pressed={showWind}
+                  onClick={() => setShowWind((v) => !v)}
+                >
+                  Windfiedern
+                </button>
+                {assessment.alternatives.length > 0 && (
+                  <button
+                    type="button"
+                    className="layer-chip"
+                    aria-pressed={showAlts}
+                    onClick={() => setShowAlts((v) => !v)}
+                  >
+                    Alternativen
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="layer-chip"
+                  aria-pressed={showSeamarks}
+                  onClick={() => setShowSeamarks((v) => !v)}
+                >
+                  Seezeichen
+                </button>
+              </div>
+              {/* CC-BY-SA verlangt SICHTBARE Attribution, solange die Ebene an
+                  ist — der volle Satz steht zusätzlich in der Legende. */}
+              {showSeamarks && (
+                <span className="map-attrib">
+                  ©{' '}
+                  <a
+                    href="https://www.openseamap.org"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    OpenSeaMap
+                  </a>{' '}
+                  (CC-BY-SA)
+                </span>
+              )}
+              <LegendPopover
+                restTripAmpel={assessment.restTripAmpel}
+                turnLabel={turnLabel}
+                windCount={windCount}
+                alternatives={legendAlternatives}
               />
-            )}
-          </Map>
-        </APIProvider>
+            </APIProvider>
+          ) : (
+            <div className="hint-panel" style={{ height: '100%' }}>
+              <h2>Karte nicht verfügbar.</h2>
+              <p>
+                Es fehlt:{' '}
+                {MAPS_ENV.missing.map((name, i) => (
+                  <span key={name}>
+                    {i > 0 && ', '}
+                    <code>{name}</code>
+                  </span>
+                ))}
+                . Trage sie in deine <code>.env</code> ein (siehe{' '}
+                <code>.env.example</code> und README) und lade die Seite neu.
+                Alle Bewertungen sind weiter in der Tagesansicht verfügbar.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

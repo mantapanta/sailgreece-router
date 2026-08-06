@@ -281,6 +281,7 @@ describe('preferred — die Rangfolge des Zielmodells v2', () => {
     stages: 4,
     bandDevTenths: 0,
     harbourDev: 0,
+    kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
     maxHarbourRun: 1,

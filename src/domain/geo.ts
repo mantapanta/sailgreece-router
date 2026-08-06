@@ -30,6 +30,52 @@ export function normDeg(d: number): number {
   return ((d % 360) + 360) % 360;
 }
 
+/**
+ * VORZEICHENBEHAFTETE Winkeldifferenz in (−180, 180]: positiv, wenn `a` im
+ * Uhrzeigersinn von `b` aus liegt.
+ *
+ * `angleDiffDeg` faltet auf 0–180 und verliert dabei die SEITE — genau die,
+ * die beim Kreuzen entscheidet, welcher Bug der lange Schlag ist.
+ */
+export function signedAngleDeg(a: number, b: number): number {
+  const d = normDeg(a - b);
+  return d > 180 ? d - 360 : d;
+}
+
+/**
+ * Zielpunkt, wenn man von `from` mit rechtweisendem Kurs `bearing` die Strecke
+ * `nm` läuft — die Umkehrung von bearingDeg/distanceNm auf der Kugel.
+ *
+ * Gebraucht wird sie, seit Kurse nicht mehr nur GEMESSEN, sondern auch GELEGT
+ * werden: ein Kreuzschlag ist als Punktepaar nicht gegeben, sondern als "50°
+ * zum Wind, so und so weit" (domain/kreuz.ts).
+ */
+export function destinationPoint(
+  from: Coordinates,
+  bearing: number,
+  nm: number,
+): Coordinates {
+  const d = nm / R_NM;
+  const lat1 = rad(from.lat);
+  const lon1 = rad(from.lon);
+  const br = rad(bearing);
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(br),
+  );
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(br) * Math.sin(d) * Math.cos(lat1),
+      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
+    );
+  return {
+    lat: (lat2 * 180) / Math.PI,
+    // Auf (−180, 180] normiert: die Ägäis liegt weit davon entfernt, aber ein
+    // Längengrad von 361° wäre schlicht falsch.
+    lon: (((((lon2 * 180) / Math.PI) + 540) % 360) - 180),
+  };
+}
+
 const COMPASS_POINTS = [
   'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
   'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',

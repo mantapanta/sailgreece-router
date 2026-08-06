@@ -29,6 +29,7 @@ import { PlanSchema } from '../domain/schema/plan.ts';
 import type { Leg } from '../domain/schema/route.ts';
 import { LegSchema } from '../domain/schema/route.ts';
 import { DEFAULT_PARAMS } from '../domain/schema/params.ts';
+import type { KonzeptSchwellen } from '../domain/konzept.ts';
 import { athensToUtcMs } from '../domain/time.ts';
 
 export interface TripState {
@@ -60,6 +61,16 @@ export interface TripState {
    * Id (first-writer-wins in legIndex).
    */
   customLegs: Leg[];
+  /**
+   * Die vom Skipper eingestellten Konzept-Schwellen (domain/konzept.ts) —
+   * "ab wie viel Wind, über wie viele Tage rät die App von einer Route ab?".
+   * Null = die Werte der Bibliothek gelten unverändert.
+   *
+   * Persistiert und im TRIP-Kontext, nicht in der Firestore-Konfiguration:
+   * Wo "zu stark" anfängt, ist eine Skipper-Entscheidung dieses Törns und muss
+   * auf dem Wasser ohne Deploy verstellbar sein.
+   */
+  konzeptSchwellen: KonzeptSchwellen | null;
 }
 
 export type TripAction =
@@ -97,6 +108,12 @@ export type TripAction =
   | { type: 'SET_DEPARTURE_HOUR'; hour: number | null }
   /** Liegezeit für EINEN Tag setzen; null = zurück auf den Default. */
   | { type: 'SET_STOP_HOURS'; day: number; hours: number | null }
+  /**
+   * Konzept-Schwellen setzen (Regler) bzw. mit `null` auf die Werte der
+   * Bibliothek zurücksetzen. Der Payload ist ein FERTIGER, in der Domäne
+   * geklemmter Satz (`setKonzeptSchwelle`) — der Reducer rechnet nicht.
+   */
+  | { type: 'SET_KONZEPT_SCHWELLEN'; schwellen: KonzeptSchwellen | null }
   | { type: 'RESET' };
 
 const INITIAL: TripState = {
@@ -107,6 +124,7 @@ const INITIAL: TripState = {
   departureHourOverride: null,
   stopHoursByDay: {},
   customLegs: [],
+  konzeptSchwellen: null,
 };
 
 /** Release every skipper pin — the plan stays, only its ownership resets. */
@@ -191,6 +209,8 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
       else next[action.day] = action.hours;
       return { ...state, stopHoursByDay: next };
     }
+    case 'SET_KONZEPT_SCHWELLEN':
+      return { ...state, konzeptSchwellen: action.schwellen };
     case 'RESET':
       return INITIAL;
     default:
@@ -222,6 +242,21 @@ const TripStateSchema = z.object({
   // Erzeugte Direktrouten (FR28) — dasselbe Zod-Schema wie kuratierte Etappen:
   // was hier nicht parst, darf auch nie eine Plan-Referenz tragen.
   customLegs: z.array(LegSchema).default([]),
+  /**
+   * Regler-Stand der Konzept-Schwellen. Nur grob geprüft (positive Zahlen) —
+   * die eigentlichen Grenzen und die Invariante ost ≤ klassik setzt
+   * `withKonzeptSchwellen` beim Anwenden durch, damit ein Bereich, der sich
+   * später ändert, keinen gespeicherten Törn unlesbar macht.
+   */
+  konzeptSchwellen: z
+    .object({
+      konzeptOstMaxKn: z.number().positive(),
+      konzeptOstDauerTage: z.number().int().min(1),
+      konzeptKlassikMaxKn: z.number().positive(),
+      konzeptKlassikDauerTage: z.number().int().min(1),
+    })
+    .nullable()
+    .default(null),
 });
 
 function loadPersisted(): TripState {

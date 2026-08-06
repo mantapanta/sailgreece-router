@@ -3,6 +3,17 @@
  * computed for the coming night, plus the berth-level facts and the curated
  * gastronomy behind them. CruisersWiki attribution lives here
  * (Consistency Conventions).
+ *
+ * Consumer-Warm spine (Story 1.4): the place opens as ONE fused card — hero
+ * ladder, title block with the night verdict sub-line, warn-notes — followed
+ * by the Nacht-Ampel stat tiles, the 5-dot quality meters (never Ampel hues:
+ * qualities are not verdicts) and the shelter sector grid. All display
+ * aggregation lives in the tested pure helpers of placeViewModel.ts (AD-2).
+ *
+ * Darunter zwei Karten aus derselben Bibliothek, die nichts bewerten: die
+ * Liegeplatz-Details (Tiefe, Grössenlimit, Müll, Reservierbarkeit …) und die
+ * Gastronomie-Subebene des Platzes. Weder Ampel noch Solver lesen davon ein
+ * Feld — sie beantworten, was erst AM Platz zählt.
  */
 
 import { APIProvider, AdvancedMarker, Map } from '@vis.gl/react-google-maps';
@@ -13,30 +24,15 @@ import type {
 import type { Place } from '../../domain/schema/place.ts';
 import type { BerthingDetails } from '../../domain/schema/berthing.ts';
 import type { Restaurant } from '../../domain/schema/gastro.ts';
-import { AmpelBadge } from '../components/AmpelBadge.tsx';
-import { compass, formatTripDayDate } from '../format.ts';
-
-/**
- * Qualitäts-Meter nach DESIGN.md/Platzdetail: 5 Punkte in Ink auf Track-Ton,
- * NIE in Ampel- oder Akzentfarbe — eine Qualität ist kein Sicherheitsurteil —
- * und der Wert immer auch als Text, weil Farbe und Form allein nichts tragen
- * dürfen.
- */
-function DotMeter({ value, max = 5 }: { value: number; max?: number }) {
-  const filled = Math.round(value);
-  return (
-    <span className="dot-meter">
-      <span className="dots" aria-hidden="true">
-        {Array.from({ length: max }, (_, i) => (
-          <i key={i} className={i < filled ? 'on' : undefined} />
-        ))}
-      </span>
-      <span className="wert">
-        {value.toLocaleString('de-DE')} von {max}
-      </span>
-    </span>
-  );
-}
+import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
+import { compass, formatTripDayDate, formatWaveM } from '../format.ts';
+import { resolveMapsEnv } from '../mapsEnv.ts';
+import {
+  nightVerdictLine,
+  nightWindowLabel,
+  sectorTiles,
+  type SectorRating,
+} from '../placeViewModel.ts';
 
 /** Ja/Nein/Ortsangabe. `null`/`undefined` heisst „nicht recherchiert", nicht „nein". */
 function jaNein(v: boolean | string | null | undefined): string | null {
@@ -96,111 +92,140 @@ function LiegeplatzKarte({ berthing }: { berthing: BerthingDetails }) {
   push('Auflagen', b.restrictions);
   push('UKW-Kanal', b.vhfChannel ? `Kanal ${b.vhfChannel}` : null);
 
+  const tile = (label: string, wert: string | null) => (
+    <div key={label}>
+      <span className="micro-label">{label}</span>
+      <span className={wert ? 'wert' : 'wert fehlt'}>
+        {wert ?? 'nicht recherchiert'}
+      </span>
+    </div>
+  );
+
   return (
-    <section className="section">
-      <span className="versal">Liegeplatz-Details (kuratiert)</span>
-      <h2>Was am Platz zählt</h2>
-      <div className="liegeplatz-grid">
-        <div>
-          <span className="micro-label">Wassertiefe</span>
-          <span className={b.depthAtBerthM ? 'wert' : 'wert fehlt'}>
-            {b.depthAtBerthM
+    <>
+      <h2 className="section-title">Liegeplatz-Details</h2>
+      <section className="card-surface">
+        <div className="liegeplatz-grid">
+          {tile(
+            'Wassertiefe',
+            b.depthAtBerthM
               ? `${b.depthAtBerthM.min.toLocaleString('de-DE')}–${b.depthAtBerthM.max.toLocaleString('de-DE')} m`
-              : 'nicht recherchiert'}
-          </span>
+              : null,
+          )}
+          {tile('Grösse max.', b.maxLoaM ? `${b.maxLoaM.toLocaleString('de-DE')} m` : null)}
+          {tile('Anlegeart', mooringLabel[b.mooringType])}
+          {tile(
+            'Haltegrund',
+            b.anchorHoldingGround
+              ? `${b.anchorHoldingGround}${b.holdingQuality ? ` · Halt ${b.holdingQuality}` : ''}`
+              : null,
+          )}
         </div>
-        <div>
-          <span className="micro-label">Grösse max.</span>
-          <span className={b.maxLoaM ? 'wert' : 'wert fehlt'}>
-            {b.maxLoaM ? `${b.maxLoaM.toLocaleString('de-DE')} m` : 'nicht recherchiert'}
-          </span>
-        </div>
-        <div>
-          <span className="micro-label">Anlegeart</span>
-          <span className="wert">{mooringLabel[b.mooringType]}</span>
-        </div>
-        <div>
-          <span className="micro-label">Haltegrund</span>
-          <span className={b.anchorHoldingGround ? 'wert' : 'wert fehlt'}>
-            {b.anchorHoldingGround ?? 'nicht recherchiert'}
-            {b.holdingQuality ? ` · Halt ${b.holdingQuality}` : ''}
-          </span>
-        </div>
-      </div>
-      {b.holdingNote && <p className="beschreibung">{b.holdingNote}</p>}
-      <ul className="liegeplatz-liste">
-        {zeilen.map(([label, wert]) => (
-          <li key={label}>
-            <span className="label">{label}</span>
-            <span className="wert">{wert}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="beschreibung">
-        Tiefe und Grössenlimit sind kuratierte Angaben, keine Peilung — sie
-        ersetzen weder Echolot noch Hafenhandbuch. Konfidenz der Recherche:{' '}
-        {b.confidence}. Quellen: {b.sources.join('; ')}.
-      </p>
-    </section>
+        {b.holdingNote && <p className="shelter-legend">{b.holdingNote}</p>}
+        <ul className="liegeplatz-liste">
+          {zeilen.map(([label, wert]) => (
+            <li key={label}>
+              <span className="label">{label}</span>
+              <span className="wert">{wert}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="shelter-source">
+          Tiefe und Grössenlimit sind kuratierte Angaben, keine Peilung — sie
+          ersetzen weder Echolot noch Hafenhandbuch. Konfidenz der Recherche:{' '}
+          {b.confidence}. Quellen: {b.sources.join('; ')}.
+        </p>
+      </section>
+    </>
   );
 }
 
 /**
  * Gastronomie an Land — die Subebene des Platzes (gastro.ts).
  *
- * Sie bewertet nichts und steht deshalb nach dem Liegeplatz. Der
- * Reservierungskontakt trägt sichtbar seinen Vorbehalt, wenn die Kuratierung
- * ihn nicht bestätigen konnte: eine veraltete Nummer, die wie eine gesicherte
- * aussieht, kostet den Abend.
+ * Sie bewertet nichts und steht deshalb nach dem Liegeplatz. Die Bewertung
+ * nutzt dasselbe 5-Punkte-Meter wie die Qualitäten (Ink, nie Ampel oder
+ * Akzent) und trägt den Wert immer als Text daneben.
+ *
+ * Der Reservierungskontakt trägt sichtbar seinen Vorbehalt, wenn die
+ * Kuratierung ihn nicht bestätigen konnte: eine veraltete Nummer, die wie eine
+ * gesicherte aussieht, kostet den Abend.
  */
 function GastroKarte({ restaurants }: { restaurants: Restaurant[] }) {
   const sortiert = [...restaurants].sort((a, b) => b.qualityRating - a.qualityRating);
   const quellen = [...new Set(sortiert.flatMap((r) => r.sources))];
 
   return (
-    <section className="section">
-      <span className="versal">Gastronomie an Land</span>
-      <h2>Wo wir heute Abend essen</h2>
-      <ul className="gastro-liste">
-        {sortiert.map((r) => (
-          <li key={r.id}>
-            <div className="gastro-kopf">
-              <span className="name">{r.name}</span>
-              <DotMeter value={r.qualityRating} />
-            </div>
-            {r.cuisineType && <div className="gastro-kueche">{r.cuisineType}</div>}
-            {r.signatureDishes.length > 0 && (
-              <div className="zeile">
-                <span className="label">Spezialitäten: </span>
-                {r.signatureDishes.join(' · ')}
-              </div>
-            )}
-            {r.accessInfo && (
-              <div className="zeile">
-                <span className="label">Anlandung: </span>
-                {r.accessInfo}
-              </div>
-            )}
-            {r.reservationInfo && (
-              <div className={r.confidence === 'hoch' ? 'zeile' : 'zeile vorbehalt'}>
-                <span className="label">Reservierung: </span>
-                {r.reservationInfo}
-                {r.confidence !== 'hoch' && ' — Kontakt unbestätigt, vor Verlass darauf prüfen'}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="beschreibung">
-        Kuratierte Empfehlungen, kein Verzeichnis — sie gehen in keine Bewertung
-        ein. Quellen: {quellen.join('; ')}.
-      </p>
-    </section>
+    <>
+      <h2 className="section-title">Gastronomie an Land</h2>
+      <section className="card-surface">
+        <ul className="gastro-liste">
+          {sortiert.map((r) => {
+            const gefuellt = Math.round(r.qualityRating);
+            const wert = r.qualityRating.toLocaleString('de-DE');
+            return (
+              <li key={r.id}>
+                <div className="gastro-kopf">
+                  <span className="name">{r.name}</span>
+                  <span className="meter" role="img" aria-label={`${r.name}: ${wert} von 5`}>
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <i key={i} className={i < gefuellt ? 'fill' : undefined} />
+                    ))}
+                  </span>
+                  <span className="quality-value">{wert} von 5</span>
+                </div>
+                {r.cuisineType && <div className="gastro-kueche">{r.cuisineType}</div>}
+                {r.signatureDishes.length > 0 && (
+                  <div className="zeile">
+                    <span className="label">Spezialitäten: </span>
+                    {r.signatureDishes.join(' · ')}
+                  </div>
+                )}
+                {r.accessInfo && (
+                  <div className="zeile">
+                    <span className="label">Anlandung: </span>
+                    {r.accessInfo}
+                  </div>
+                )}
+                {r.reservationInfo && (
+                  <div className={r.confidence === 'hoch' ? 'zeile' : 'zeile vorbehalt'}>
+                    <span className="label">Reservierung: </span>
+                    {r.reservationInfo}
+                    {r.confidence !== 'hoch' &&
+                      ' — Kontakt unbestätigt, vor Verlass darauf prüfen'}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="shelter-source">
+          Kuratierte Empfehlungen, kein Verzeichnis — sie gehen in keine
+          Bewertung ein. Quellen: {quellen.join('; ')}.
+        </p>
+      </section>
+    </>
   );
 }
 
 /**
- * Der Kopf der Platzseite zeigt den Platz — nicht einen blauen Verlauf.
+ * Rating → presentation: one lookup, no logic — the rating itself comes from
+ * the domain's windHourAmpel via sectorTiles (placeViewModel.ts). The two rot
+ * states differ in visible text ("offen" vs "schwach · bis {kn} kn"), so
+ * color is never the only carrier.
+ */
+const SECTOR_PRESENTATION: Record<
+  SectorRating,
+  { cls: string; word: (limitKn: number | null) => string }
+> = {
+  gut: { cls: 'gruen', word: (kn) => `gut · bis ${kn} kn` },
+  maessig: { cls: 'gelb', word: (kn) => `mäßig · bis ${kn} kn` },
+  schwach: { cls: 'rot', word: (kn) => `schwach · bis ${kn} kn` },
+  offen: { cls: 'rot', word: () => 'offen' },
+};
+
+/**
+ * Der Kopf der Platzkarte zeigt den Platz — nicht einen blauen Verlauf.
  *
  * Reihenfolge der Quellen, absichtlich in dieser Rangfolge:
  *   1. `place.photoUrl` — ein kuratiertes Foto schlägt alles, sobald es eines
@@ -209,74 +234,84 @@ function GastroKarte({ restaurants }: { restaurants: Restaurant[] }) {
  *      ohnehin laden. Für die Planung ist das Luftbild sogar die nützlichere
  *      Ansicht als ein Postkartenfoto: Ankerfeld, Mole, Öffnung der Bucht und
  *      die Richtung, aus der es hereinsteht, sind darauf ablesbar.
- *   3. Ohne Maps-Key der bisherige Verlauf — nie ein kaputtes Bild.
+ *   3. Ohne Maps-Key der Imagery-Verlauf mit dem Chip "Kein Foto verfügbar" —
+ *      nie ein kaputtes Bild.
  *
- * Die Beschriftung liegt ÜBER der Karte, nimmt aber keine Klicks an
- * (pointer-events: none in styles.css): sonst liesse sich genau der Ausschnitt
- * nicht verschieben, für den das Bild überhaupt dasteht.
+ * Alle drei Stufen tragen Scrim und Beschriftung; die Beschriftung liegt ÜBER
+ * dem Bild, nimmt aber keine Klicks an (pointer-events: none in styles.css):
+ * sonst liesse sich genau der Ausschnitt nicht verschieben, für den das
+ * Satellitenbild überhaupt dasteht.
  */
-function PlaceHero({
-  place,
-  islandLabel,
-  typeLabel,
-}: {
-  place: Place;
-  islandLabel: string;
-  typeLabel: string;
-}) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const mapId =
-    (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID';
+function PlaceHero({ place, typeLabel }: { place: Place; typeLabel: string }) {
+  // Story 1.3, AC 9: fehlende Maps-Konfiguration ist ein benannter Zustand —
+  // kein stiller Demo-Map-Fallback. Ohne vollständige Konfiguration bleibt
+  // der bisherige Verlaufs-Hero stehen (nie ein kaputtes Bild).
+  const maps = resolveMapsEnv(
+    import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined,
+    import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined,
+  );
   const position = { lat: place.coordinates.lat, lng: place.coordinates.lon };
 
   const caption = (
-    <div className="place-hero-caption">
-      <span className="versal">
-        {islandLabel} · {typeLabel}
-      </span>
-      <div className="headline">{place.name}</div>
+    <div className="hero-caption">
+      {place.name} — {typeLabel}
     </div>
   );
 
   if (place.photoUrl) {
     return (
-      <div
-        className="place-hero"
-        style={{ backgroundImage: `url(${place.photoUrl})` }}
-      >
+      <div className="hero">
+        <div
+          className="hero-photo"
+          style={{ backgroundImage: `url(${place.photoUrl})` }}
+        />
+        <div className="hero-scrim" />
         {caption}
       </div>
     );
   }
 
-  if (!apiKey) return <div className="place-hero">{caption}</div>;
+  if (maps.ok) {
+    return (
+      <>
+        <div className="hero">
+          <div className="hero-map-canvas">
+            <APIProvider apiKey={maps.env.apiKey}>
+              <Map
+                className="hero-map-canvas"
+                mapId={maps.env.mapId}
+                defaultCenter={position}
+                defaultZoom={14}
+                mapTypeId="hybrid"
+                gestureHandling="cooperative"
+                disableDefaultUI
+                zoomControl
+                fullscreenControl
+              >
+                <AdvancedMarker position={position} />
+              </Map>
+            </APIProvider>
+          </div>
+          <div className="hero-scrim" />
+          {caption}
+        </div>
+        <p className="hero-legende">
+          Luftbild der Bucht — Position {place.coordinates.lat.toFixed(4)}° N,{' '}
+          {place.coordinates.lon.toFixed(4)}° E. Zoomen und verschieben ist
+          möglich; der Ausschnitt ist keine Seekarte und ersetzt keine
+          Hafenhandbuch-Angabe.
+        </p>
+      </>
+    );
+  }
 
   return (
-    <>
-      <div className="place-hero place-hero-map">
-        <APIProvider apiKey={apiKey}>
-          <Map
-            className="place-hero-canvas"
-            mapId={mapId}
-            defaultCenter={position}
-            defaultZoom={14}
-            mapTypeId="hybrid"
-            gestureHandling="cooperative"
-            disableDefaultUI
-            zoomControl
-            fullscreenControl
-          >
-            <AdvancedMarker position={position} title={place.name} />
-          </Map>
-        </APIProvider>
-        {caption}
-      </div>
-      <p className="beschreibung place-hero-legende">
-        Luftbild der Bucht — Position {place.coordinates.lat.toFixed(4)}° N,{' '}
-        {place.coordinates.lon.toFixed(4)}° E. Zoomen und verschieben ist möglich;
-        der Ausschnitt ist keine Seekarte und ersetzt keine Hafenhandbuch-Angabe.
-      </p>
-    </>
+    <div className="hero fallback">
+      <div className="hero-fallback-bg" />
+      <div className="hero-fallback-chip">Kein Foto verfügbar</div>
+      <div className="hero-scrim" />
+      {caption}
+    </div>
   );
 }
 
@@ -298,13 +333,16 @@ export function PlaceDetailView({
   if (!place) {
     return (
       <div>
-        <button type="button" className="back-link" onClick={onBack}>
-          ← Zurück
-        </button>
+        <div className="back-row">
+          <button type="button" className="btn-text" onClick={onBack}>
+            ← Zurück
+          </button>
+        </div>
         <h1>{invalid?.name ?? placeId}</h1>
-        <div className="error-panel">
+        <div className="error-panel" role="alert">
           Dieses Platz-Dokument ist ungültig und kann nicht bewertet werden
-          (Ampel: unbewertet). {invalid?.error}
+          (Ampel: unbewertet). {invalid?.error} Keine kuratierten Schutzdaten —
+          konservativ behandeln.
         </div>
         <AmpelBadge ampel="unbewertet" />
       </div>
@@ -315,52 +353,80 @@ export function PlaceDetailView({
   const night = assessment.nightAmpeln[place.id]?.[day];
   const typeLabel =
     place.type === 'hafen' ? 'Hafen' : place.type === 'marina' ? 'Marina' : 'Bucht';
+  const verdict = nightVerdictLine(night);
+  const windowLabel = nightWindowLabel(
+    snapshot.params.nightStartHourAthens,
+    snapshot.params.nightEndHourAthens,
+  );
+  const tiles = sectorTiles(place.shelter, snapshot.params);
 
   return (
     <div>
-      <button type="button" className="back-link" onClick={onBack}>
-        ← Zurück
-      </button>
-      <PlaceHero
-        place={place}
-        islandLabel={island?.name ?? place.islandId}
-        typeLabel={typeLabel}
-      />
+      <div className="back-row">
+        <button type="button" className="btn-text" onClick={onBack}>
+          ← Zurück
+        </button>
+      </div>
 
-      {place.description && (
-        <p className="beschreibung" style={{ marginTop: '0.8rem' }}>
-          {place.description}
+      <section className="place-card">
+        <PlaceHero place={place} typeLabel={typeLabel} />
+        <div className="place-head">
+          <div className="place-kicker">
+            {island?.name ?? place.islandId} · {typeLabel}
+          </div>
+          <div className="place-title-row">
+            <h1 className="place-title">{place.name}</h1>
+            <AmpelBadge ampel={verdict.ampel} />
+          </div>
+          <p className="ampel-sub">
+            <strong>
+              {AMPEL_LABEL[verdict.ampel]} — {verdict.text}
+            </strong>{' '}
+            · bewertet für {windowLabel}
+          </p>
+        </div>
+        {place.description && <p className="place-desc">{place.description}</p>}
+        {place.warnings?.map((w) => (
+          <div className="warn-note gelb" key={w}>
+            {w}
+          </div>
+        ))}
+        <div className="place-card-pad" />
+      </section>
+
+      <h2 className="section-title">Nacht-Ampel</h2>
+      <section className="card-surface">
+        <div className="night-head">
+          <AmpelBadge ampel={verdict.ampel} />
+          <span className="night-window">{windowLabel}</span>
+          <span className="night-caption">
+            Kommende Nacht · Tag {day} ·{' '}
+            {formatTripDayDate(snapshot.params.tripStartDate, day)}
+          </span>
+        </div>
+        <div className="stat-grid">
+          <div className="stat-tile">
+            <div className="label">Max. Wind</div>
+            <div className="value">
+              {night?.maxWindKn != null ? (
+                <>
+                  {Math.round(night.maxWindKn)} kn · {compass(night.windDirDeg)}
+                </>
+              ) : (
+                '–'
+              )}
+            </div>
+          </div>
+          <div className="stat-tile">
+            <div className="label">Welle (offene See)</div>
+            <div className="value">{formatWaveM(night?.maxWaveM ?? null)}</div>
+          </div>
+        </div>
+        <p className="wave-note">
+          Die Welle ist der Modellwert für die offene See am Ort des Platzes —
+          im Hafen oder hinter der Landzunge gilt sie nicht; sie geht nicht in
+          die Ampel ein.
         </p>
-      )}
-
-      {place.warnings?.map((w) => (
-        <div className="warnung" key={w}>
-          ⚠ {w}
-        </div>
-      ))}
-
-      <section className="section">
-        <span className="versal">Kommende Nacht (Tag {day})</span>
-        <h2>
-          Nacht-Ampel · {formatTripDayDate(snapshot.params.tripStartDate, day)}
-        </h2>
-        <AmpelBadge ampel={night?.ampel ?? 'unbewertet'} />
-        <div className="badges">
-          {night?.maxWindKn !== null && night?.maxWindKn !== undefined && (
-            <span className="badge">
-              max. Wind {Math.round(night.maxWindKn)} kn aus{' '}
-              {compass(night.windDirDeg)}
-            </span>
-          )}
-          {night?.maxWaveM !== null && night?.maxWaveM !== undefined && (
-            <span
-              className="badge badge-info"
-              title="Modellwert für die offene See am Ort des Platzes — im Hafen oder hinter der Landzunge gilt er nicht, deshalb geht er nicht in die Ampel ein."
-            >
-              Welle offene See {night.maxWaveM.toFixed(1)} m · nicht in der Ampel
-            </span>
-          )}
-        </div>
         {night && night.reasons.length > 0 && (
           <ul className="reasons">
             {night.reasons.map((r) => (
@@ -368,74 +434,78 @@ export function PlaceDetailView({
             ))}
           </ul>
         )}
-        <p className="beschreibung">
-          Bewertungszeitraum: {snapshot.params.nightStartHourAthens}:00–
-          {snapshot.params.nightEndHourAthens}:00 Uhr Ortszeit (Athen).
-        </p>
       </section>
 
-      <section className="section">
-        <span className="versal">Qualitäten</span>
-        <h2>Schön, Essen, Baden</h2>
-        <div className="qualitaeten-liste">
-          <div>
-            <span className="label">Schönheit</span>
-            <DotMeter value={place.qualities.schoenheit} />
+      <h2 className="section-title">Qualitäten</h2>
+      <section className="card-surface">
+        {(
+          [
+            ['Schönheit', place.qualities.schoenheit],
+            ['Restaurant', place.qualities.restaurant],
+            ['Badestrand', place.qualities.badestrand],
+          ] as const
+        ).map(([name, n]) => (
+          <div className="quality-row" key={name}>
+            <span className="quality-name">{name}</span>
+            <span className="meter" role="img" aria-label={`${name}: ${n} von 5`}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <i key={i} className={i < n ? 'fill' : undefined} />
+              ))}
+            </span>
+            <span className="quality-value">{n} von 5</span>
           </div>
-          <div>
-            <span className="label">Restaurant</span>
-            <DotMeter value={place.qualities.restaurant} />
-          </div>
-          <div>
-            <span className="label">Badestrand</span>
-            <DotMeter value={place.qualities.badestrand} />
-          </div>
+        ))}
+      </section>
+
+      <h2 className="section-title">Sicherer Liegeplatz</h2>
+      <section className="card-surface">
+        <div className="shelter-grid">
+          {tiles.map((t) => {
+            const p = SECTOR_PRESENTATION[t.rating];
+            return (
+              <div className={`sector ${p.cls}`} key={t.centerDeg}>
+                <div className="dir">{t.dir}</div>
+                <div className="word">{p.word(t.limitKn)}</div>
+                <div className="wave">
+                  {t.waveMaxM !== null
+                    ? `Welle bis ${formatWaveM(t.waveMaxM)}`
+                    : '–'}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </section>
-
-      <section className="section">
-        <span className="versal">Sicherer Liegeplatz (kuratiert)</span>
-        <h2>Geschützte Sektoren</h2>
-        <table className="shelter-table">
-          <thead>
-            <tr>
-              <th>Art</th>
-              <th>Geschützt gegen … kommend aus</th>
-              <th>bis Stärke</th>
-            </tr>
-          </thead>
-          <tbody>
-            {place.shelter.windSectors.map((s, i) => (
-              <tr key={`w${i}`}>
-                <td>Wind</td>
-                <td>
-                  {s.fromDeg}°–{s.toDeg}° ({compass(s.fromDeg)}–{compass(s.toDeg)})
-                  {s.fromDeg > s.toDeg ? ' · über Nord' : ''}
-                </td>
-                <td>{s.maxKn} kn</td>
-              </tr>
-            ))}
-            {place.shelter.waveSectors.map((s, i) => (
-              <tr key={`s${i}`} className="sektor-inaktiv">
-                <td>Welle</td>
-                <td>
-                  {s.fromDeg}°–{s.toDeg}° ({compass(s.fromDeg)}–{compass(s.toDeg)})
-                  {s.fromDeg > s.toDeg ? ' · über Nord' : ''}
-                </td>
-                <td>{s.maxM} m</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="beschreibung">
-          <strong>Die Ampel hängt allein an den Wind-Sektoren.</strong> Die
-          Wellen-Zeilen stehen als kuratiertes Wissen über den Platz da, bewerten
-          aber nichts: die Wellenhöhe des Modells gilt für die offene See, nicht für
-          den Liegeplatz dahinter.
+        <p className="shelter-legend">
+          Schutz je Windrichtung aus den kuratierten Sektoren, bewertet am
+          Meltemi-Worst-Case der Planung (
+          {snapshot.params.meltemiWorstCase.twsKn} kn); die Wellenwerte sind
+          kuratierte Grenzen und bewerten nichts.
         </p>
-        <p className="beschreibung">
-          Quelle: {place.shelter.sourceNote}. Enthält ggf. Material aus CruisersWiki
-          (CC-Lizenz, Attribution erforderlich).
+        <p className="shelter-legend">
+          <strong>Die Ampel hängt allein an den Wind-Sektoren.</strong> Die
+          Wellen-Zeilen stehen als kuratiertes Wissen über den Platz da,
+          bewerten aber nichts: die Wellenhöhe des Modells gilt für die offene
+          See, nicht für den Liegeplatz dahinter.
+        </p>
+        <ul className="shelter-sectors">
+          {place.shelter.windSectors.map((s, i) => (
+            <li key={`w${i}`}>
+              Wind {s.fromDeg}°–{s.toDeg}° ({compass(s.fromDeg)}–
+              {compass(s.toDeg)}){s.fromDeg > s.toDeg ? ' · über Nord' : ''} bis{' '}
+              {s.maxKn} kn
+            </li>
+          ))}
+          {place.shelter.waveSectors.map((s, i) => (
+            <li key={`s${i}`}>
+              Welle {s.fromDeg}°–{s.toDeg}° ({compass(s.fromDeg)}–
+              {compass(s.toDeg)}){s.fromDeg > s.toDeg ? ' · über Nord' : ''} bis{' '}
+              {s.maxM} m
+            </li>
+          ))}
+        </ul>
+        <p className="shelter-source">
+          Quelle: {place.shelter.sourceNote}. Enthält ggf. Material aus
+          CruisersWiki (CC-Lizenz, Attribution erforderlich).
         </p>
       </section>
 

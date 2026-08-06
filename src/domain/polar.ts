@@ -58,6 +58,81 @@ export function motorSpeedKn(params: Params): number {
 }
 
 /**
+ * KREUZ-FAKTOR — was von der Fahrt durchs Wasser auf dem ANLIEGENDEN KURS
+ * ankommt, wenn das Ziel enger am Wind liegt als `params.beatTwaDeg`.
+ *
+ * Das Schiff kann höchstens `beatTwaDeg` (50°, Skipper 2026-08-06) am Wind
+ * segeln. Liegt das Ziel bei 22° zum Wind, wird es NICHT angelegen — es wird
+ * gekreuzt, und von der gesegelten Strecke kommt nur ein Teil auf der Ideallinie
+ * an. Geometrie der symmetrischen Kreuz: die Höhe zum Wind ist auf beiden
+ * Schlägen v·cos(beat); um auf einem Kurs mit TWA `twa` die Strecke D gutzumachen,
+ * muss genau D·cos(twa) an Höhe gutgemacht werden. Also
+ *
+ *     v_kurs = v(beat) · cos(beat) / cos(twa).
+ *
+ * Bei twa = beat ist der Faktor 1 (die Kreuz beginnt stetig), bei twa = 0
+ * cos(beat) = 0,64 — die klassische Am-Wind-VMG. Der Kehrwert ist zugleich der
+ * UMWEG: bei 22° werden 1,44 sm durchs Wasser gesegelt, um 1 sm Kurs zu machen.
+ *
+ * Die vorige Formel `cos(beat − twa)` hat denselben Fall um bis zu 30 % zu gut
+ * gerechnet: bei 22° TWA ergab sie 0,92 statt 0,69 — eine Etappe, die in
+ * Wahrheit gekreuzt werden muss, sah damit fast so schnell aus wie ein
+ * anliegender Am-Wind-Kurs.
+ */
+export function kreuzFactor(twa: number, params: Params): number {
+  const t = foldTwa(twa);
+  if (t >= params.beatTwaDeg) return 1;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  return Math.cos(rad(params.beatTwaDeg)) / Math.cos(rad(t));
+}
+
+/** Any angle folded to 0-180 — the same folding rawPolarSpeedKn applies. */
+function foldTwa(twa: number): number {
+  const t = Math.abs(twa) % 360;
+  return t > 180 ? 360 - t : t;
+}
+
+/** Fahrt auf dem anliegenden Kurs, inklusive Kreuz-Modell. */
+export interface CourseSpeed {
+  /** Fahrt LÄNGS DES ANLIEGENDEN KURSES (kn) — was die Etappe wirklich vorankommt. */
+  speedKn: number;
+  /** Fahrt durchs Wasser auf dem gesegelten Winkel (kn); beim Kreuzen höher. */
+  boatSpeedKn: number;
+  /** Der Winkel, der wirklich gesegelt wird — beim Kreuzen `params.beatTwaDeg`. */
+  sailedTwaDeg: number;
+  /** True, wenn der Kurs enger am Wind liegt als das Schiff segeln kann. */
+  kreuzen: boolean;
+}
+
+/**
+ * Fahrt auf dem anliegenden Kurs bei gegebenem TWA/TWS — die EINE Stelle, an
+ * der aus Polare und Kreuz-Grenze eine Geschwindigkeit über Grund wird.
+ *
+ * Oberhalb von `beatTwaDeg` liest sie schlicht die Polare. Darunter wird
+ * gekreuzt: gesegelt wird bei `beatTwaDeg`, und auf den Kurs kommt davon
+ * {@link kreuzFactor} an.
+ */
+export function courseSpeedKn(
+  polar: Polar,
+  twa: number,
+  twsKn: number,
+  params: Params,
+): CourseSpeed {
+  const t = foldTwa(twa);
+  if (t >= params.beatTwaDeg) {
+    const v = sailSpeedKn(polar, t, twsKn, params);
+    return { speedKn: v, boatSpeedKn: v, sailedTwaDeg: t, kreuzen: false };
+  }
+  const boat = sailSpeedKn(polar, params.beatTwaDeg, twsKn, params);
+  return {
+    speedKn: boat * kreuzFactor(t, params),
+    boatSpeedKn: boat,
+    sailedTwaDeg: params.beatTwaDeg,
+    kreuzen: true,
+  };
+}
+
+/**
  * Fallback planning speed (kn) — ONLY while no polar is loaded (FR26).
  * 6.0 kn sail / 7.5 kn motor / 6.5 kn upwind.
  */

@@ -66,6 +66,17 @@ export function stageTitle(snapshot: PlanningSnapshot, stage: StageAssessment): 
   return `${islandWithPlace(snapshot, firstLeg.fromIslandId, firstLeg.fromPlaceId)} → ${to}`;
 }
 
+/** Startplatz der ersten gesegelten Etappe des Tages — für die Hero-Herkunftszeile. */
+export function stageFrom(
+  snapshot: PlanningSnapshot,
+  stage: StageAssessment,
+): string | null {
+  const first = stage.legs[0];
+  const firstLeg = first ? legOf(snapshot, first) : undefined;
+  if (!firstLeg) return null;
+  return islandWithPlace(snapshot, firstLeg.fromIslandId, firstLeg.fromPlaceId);
+}
+
 /** Zwischenstopps eines Mehr-Etappen-Tages, ebenfalls mit Liegeplatz. */
 export function stageVia(snapshot: PlanningSnapshot, stage: StageAssessment): string[] {
   return stage.legs.slice(0, -1).map((la) => {

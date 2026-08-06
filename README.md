@@ -9,8 +9,22 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Rückweg im Lee-Korridor Milos–Sifnos–Serifos–Kythnos) oder Route 2
   (Ost-Kykladen, nur bei moderatem Meltemi). Die Konzept-Eignung kommt aus dem
   Forecast (`domain/konzept.ts`), überschreibt im Solver die Reichweite,
-  erzeugt den Konzeptwechsel-Entscheid („Vorstoß nach Osten streichen") und
+  erzeugt den Konzeptwechsel-Entscheid („Vorstoß nach Osten — abgeraten") und
   trägt die Rückweg-Empfehlung der Törnanalyse.
+- **Abraten statt verbieten:** Zu viel Wind nimmt keine Best-Practice-Route
+  aus dem Angebot. Jede kuratierte Route (Westkykladen-Runde, Ostkykladen-
+  Runde …) behält ihren Plan, bleibt ansehbar und übernehmbar und trägt die
+  Empfehlung `empfohlen` / `möglich` / `abgeraten · wählbar` samt Begründung.
+  Der Zustand („offen / schließt / zu") beantwortet weiterhin, ob ein
+  tragfähiger Plan existiert — zwei Aussagen, keine Sperre. Und eine kuratierte
+  Route wird als sie selbst geplant: „Westkykladen-Runde" heißt die
+  Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
+- **Schwellen als Regler:** Wo „zu viel Wind" anfängt, stellt der Skipper im
+  Konzept-Panel ein — je Konzept eine kn-Schwelle und die Zahl der Tage in
+  Folge, über die sie halten muss (`KONZEPT_REGLER` in `domain/konzept.ts`,
+  persistiert im Trip-Kontext, jederzeit auf die Törnanalyse-Werte
+  zurücksetzbar). Die Regler sind gekoppelt: Route 2 darf nie über Route 1
+  liegen — wer den einen darüber schiebt, schiebt den anderen mit.
 - **Früh los, 15:00 vor Anker:** Je Etappentag empfiehlt die App die späteste
   Abfahrtsstunde, deren simulierte Ankunft das Ankerziel 15:00 noch hält
   (`domain/abfahrt.ts`; heute per Klick als Abfahrtszeit übernehmbar) —
@@ -130,8 +144,9 @@ Alles über die CLI — die Konsole braucht es nur für den Sign-in-Provider.
    Hosting-Domain, z. B. `sailgreece-router.web.app/*`) **und**
    **API-Restriction** (nur Maps JavaScript API). Der Key liegt als
    `VITE_`-Variable im Bundle — öffentlich by design, darum die Restriktionen.
-3. Optional: eine **Map ID** anlegen (Map Management) für AdvancedMarker;
-   `DEMO_MAP_ID` funktioniert für die Entwicklung.
+3. Pflicht für die Karte: eine **Map ID** anlegen (Map Management) für
+   AdvancedMarker. Ohne echte Map-ID zeigt die App einen benannten Hinweis
+   statt der Karte — es gibt keinen Demo-Fallback.
 
 ### 3. Umgebungsvariablen
 
@@ -140,7 +155,7 @@ Alles über die CLI — die Konsole braucht es nur für den Sign-in-Provider.
 ```bash
 VITE_DATA_SOURCE=firestore          # 'local' = Staging-JSONs statt Firestore
 VITE_GOOGLE_MAPS_API_KEY=<dein Key>
-VITE_GOOGLE_MAPS_MAP_ID=<Map-ID oder DEMO_MAP_ID>
+VITE_GOOGLE_MAPS_MAP_ID=<Map-ID>     # Pflicht für die Karte, kein Demo-Fallback
 
 # Pflicht (Login-Gate), Werte aus `apps:sdkconfig WEB`:
 VITE_FIREBASE_API_KEY=<apiKey>
@@ -339,6 +354,60 @@ node seeding/tools/seaRouteLegs.ts --dry-run   # Etappenkurse gegen die neue Mas
 
 `src/domain/__tests__/libraryGeometry.test.ts` hält den Zustand fest: kein
 Wegpunkt an Land, kein gespeicherter Kurs über Land, keine Route mit Sprung.
+
+## Ein Boot segelt keine 22 Grad am Wind
+
+Santorin → Folegandros stand mit „22° TWA · gegenan, 6,5 kn, 3,5 h Segeln" in
+der Tagesansicht. Das ist kein Kurs, das ist eine Behauptung: bei 22° zum Wind
+steht das Vorsegel back. Das Schiff segelt höchstens `beatTwaDeg` = **50° TWA**
+(Skipper 2026-08-06); alles darunter wird **gekreuzt**.
+
+Gerechnet wird das in `src/domain/polar.ts` (`courseSpeedKn` / `kreuzFactor`):
+gesegelt wird bei 50°, und auf der Ideallinie kommt davon
+
+```
+v_kurs = v(50°) · cos(50°) / cos(TWA)
+```
+
+an — bei 22° also 69 %, umgekehrt 1,44 sm durchs Wasser je Seemeile Kurs. Die
+vorige Faltung `cos(50° − TWA)` hatte denselben Fall um rund ein Viertel zu gut
+gerechnet, weshalb eine Kreuz-Etappe fast so schnell aussah wie ein anliegender
+Am-Wind-Kurs.
+
+Gefahren wird dabei kein enger Kurs, sondern ein **Zickzack**: ein Schlag auf
+dem einen Bug mit 50° zum Wind, wenden — 100° Kursänderung —, wieder 50° auf dem
+anderen. `src/domain/kreuz.ts` legt diese Schläge: aus Kurs C, Wind aus W und
+δ = C − W folgen die beiden Bugs auf W ± 50° und ihre Längen
+
+```
+l_A = D · sin(50° + δ) / sin(100°)     l_B = D · sin(50° − δ) / sin(100°)
+```
+
+deren Summe genau `D · cos(δ) / cos(50°)` ist — der Kehrwert des Kreuz-Faktors.
+Zeit und Gestalt sagen dasselbe, an zwei Stellen; ein Test hält das fest. Der
+lange Schlag kommt zuerst (näher am Kurs), die Schlaglänge kommt aus
+`kreuzSchlagNm` (Default 5 sm), und jeder Zickzack wird gegen die Landmaske
+geprüft: passt er nicht, wird halbiert, und wenn er dann immer noch an Land
+läuft, wird **nichts** gezeichnet statt einer Linie über Land.
+
+Sichtbar wird das überall, wo die Etappe von sich erzählt: die Bewertung führt
+`kreuzHours`, `kreuzExtraNm`, `wenden` und den `kreuzTrack`, jede simulierte
+Stunde trägt `kreuzen`, `sailedTwaDeg` und die Fahrt durchs Wasser. Die
+Tagesansicht schreibt „Kreuzen (50° am Wind) · 6 Wenden à 100°" statt „gegenan",
+und die Tageskarte legt den Zickzack gestrichelt über die Ideallinie — als
+Skizze des Umwegs, nicht als Wendeanweisung: wo wirklich gewendet wird,
+entscheiden Dreher und Welle.
+
+Vermieden wird Kreuzen an zwei Stellen — beide raten ab, keine verbietet:
+
+- **Ampel**: mehr als `kreuzGelbAbStunden` (Default 0,5 h) Kreuzschläge machen
+  die Etappe gelb, mit Begründung. Gelb heisst hier nicht „gefährlich", sondern
+  „nicht der Törn, der gewollt ist"; rot bleibt der FR16-Fall (Aufkreuzen über
+  25 kn), und nur der zählt als Sicherheitsverletzung.
+- **Rangfolge**: `PlanMetrics.kreuzTenths` ist Kriterium 7 in `preferred`
+  (`src/domain/solver.ts`) — unter sonst gleichen Plänen gewinnt der, der seine
+  Ziele anliegen kann. Bewusst UNTER Reichweite und Inselvielfalt: Kreuzen ist
+  ein Preis, kein Ausschluss.
 
 ## Attribution
 

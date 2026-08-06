@@ -34,9 +34,22 @@
  * bedingung: ein Ost-Plan bleibt baubar und wird ehrlich bepreist — aber er
  * verliert die Rangfolge und trägt die Warnung sichtbar. Die App ersetzt das
  * Kopfrechnen, nicht das seemännische Urteil (README).
+ *
+ * ABRATEN, NICHT VERBIETEN (Skipper 2026-08-06: "andere Best-Practice-Routen
+ * wie West-Kykladen trotzdem erlauben und lediglich davon abraten, wenn der
+ * Wind zu stark ist"). Daraus folgt für alles unten:
+ *   - Kein Konzept und keine kuratierte Route verschwindet je aus dem
+ *     Angebot, weil die Lage sie nicht trägt. Sie behält ihren Plan, bleibt
+ *     ansehbar und übernehmbar (RouteOptionAssessment.plan) und trägt die
+ *     Empfehlung 'abgeraten' samt Begründung.
+ *   - Die Rangfolge (`preferred`) und die Empfehlung sind die Werkzeuge des
+ *     Abratens — nicht ein Filter. Der Solver SCHLÄGT die tragende Route vor;
+ *     er nimmt die andere nicht weg.
+ *   - Die Sprache folgt dem: "abgeraten", "wählbar", nie "gestrichen".
  */
 
 import type { PlanningSnapshot, Library, PlanAssessment } from './schema/snapshot.ts';
+import type { Params } from './schema/params.ts';
 import type { Plan } from './schema/plan.ts';
 import type { Variant } from './schema/route.ts';
 import type {
@@ -135,6 +148,172 @@ export function konzeptOfPlan(plan: Plan): KonzeptId {
 /** Konzept einer kuratierten Variante — aus ihrer Inselfolge. */
 export function konzeptOfVariant(variant: Variant, library: Library): KonzeptId {
   return konzeptOfIslands(routeIslandSequence(legsOfVariant(variant, library)));
+}
+
+// ---------------------------------------------------------------------------
+// Die Schwellen als REGLER — wo "zu stark" anfängt, entscheidet der Skipper
+// ---------------------------------------------------------------------------
+
+/**
+ * Die vier Zahlen, die "zu viel Wind" definieren. Sie stehen bewusst als
+ * eigener Typ neben `Params`: der Skipper stellt genau diese vier ein
+ * (Skipper 2026-08-06 "bitte als Regler einstellbar machen"), alles andere
+ * bleibt Konfiguration der Bibliothek.
+ */
+export interface KonzeptSchwellen {
+  konzeptOstMaxKn: number;
+  konzeptOstDauerTage: number;
+  konzeptKlassikMaxKn: number;
+  konzeptKlassikDauerTage: number;
+}
+
+export type KonzeptSchwelleKey = keyof KonzeptSchwellen;
+
+/**
+ * Die Regler-Definitionen — Grenzen, Schrittweite und Beschriftung gehören in
+ * die Domäne, nicht ins Formular (AD-2): welche Windstärke überhaupt sinnvoll
+ * als Schwelle taugt, ist Revier-Wissen. Die View liest diese Liste und baut
+ * daraus stumpf ihre `<input type="range">`.
+ *
+ * Die kn-Bereiche sind an der Beaufort-Skala aufgehängt: Route 2 kippt laut
+ * Törnanalyse im Bereich 6–7 Bft (22–33 kn), Route 1 erst bei stabilen 7–8 Bft
+ * (28–40 kn). Die Regler lassen daneben Luft nach beiden Seiten — wer
+ * vorsichtiger oder mutiger ist als die Analyse, soll das einstellen können.
+ */
+export const KONZEPT_REGLER: ReadonlyArray<{
+  key: KonzeptSchwelleKey;
+  konzept: KonzeptId;
+  label: string;
+  hilfe: string;
+  min: number;
+  max: number;
+  step: number;
+  einheit: string;
+}> = [
+  {
+    key: 'konzeptOstMaxKn',
+    konzept: 'ost',
+    label: 'Route 2 — Wind ab',
+    hilfe:
+      'Spitzenwind im Revier, ab dem für die Ost-Kykladen ein Starkwindfeld zählt. ' +
+      'Törnanalyse: 22 kn (≈ 6 Bft) — darüber wird der lange Am-Wind-Rückweg zäh.',
+    min: 12,
+    max: 36,
+    step: 1,
+    einheit: 'kn',
+  },
+  {
+    key: 'konzeptOstDauerTage',
+    konzept: 'ost',
+    label: 'Route 2 — über',
+    hilfe:
+      'So viele Tage in Folge muss die Schwelle halten, bevor abgeraten wird. ' +
+      'Ein einzelner Starkwindtag ist "grenzwertig", kein Starkwindfeld.',
+    min: 1,
+    max: 5,
+    step: 1,
+    einheit: 'Tage',
+  },
+  {
+    key: 'konzeptKlassikMaxKn',
+    konzept: 'klassik',
+    label: 'Route 1 — Wind ab',
+    hilfe:
+      'Dasselbe für die klassische Runde im Lee-Korridor. Törnanalyse: 28 kn ' +
+      '(≈ 7 Bft) — die Abdeckung der West-Kette trägt deutlich länger.',
+    min: 15,
+    max: 45,
+    step: 1,
+    einheit: 'kn',
+  },
+  {
+    key: 'konzeptKlassikDauerTage',
+    konzept: 'klassik',
+    label: 'Route 1 — über',
+    hilfe:
+      'Törnanalyse: erst ein stabiles Starkwindfeld über mehr als drei Tage ' +
+      'macht auch die geschützte Runde untragbar.',
+    min: 1,
+    max: 5,
+    step: 1,
+    einheit: 'Tage',
+  },
+];
+
+const REGLER_BY_KEY = new Map(KONZEPT_REGLER.map((r) => [r.key, r]));
+
+/** Die aktuell gültigen Schwellen eines Parametersatzes — der Regler-Stand. */
+export function konzeptSchwellenOf(params: Params): KonzeptSchwellen {
+  return {
+    konzeptOstMaxKn: params.konzeptOstMaxKn,
+    konzeptOstDauerTage: params.konzeptOstDauerTage,
+    konzeptKlassikMaxKn: params.konzeptKlassikMaxKn,
+    konzeptKlassikDauerTage: params.konzeptKlassikDauerTage,
+  };
+}
+
+function klemme(key: KonzeptSchwelleKey, wert: number): number {
+  const regler = REGLER_BY_KEY.get(key)!;
+  if (!Number.isFinite(wert)) return regler.min;
+  const gerastert = Math.round(wert / regler.step) * regler.step;
+  return Math.min(Math.max(gerastert, regler.min), regler.max);
+}
+
+/**
+ * EINEN Regler bewegen — die einzige Stelle, an der Schwellen entstehen.
+ *
+ * Sie hält die Invariante der Params-Prüfung (`konzeptOstMaxKn ≤
+ * konzeptKlassikMaxKn`: das exponiertere Konzept kippt zuerst) aufrecht, ohne
+ * dass ein Regler unter der Hand zurückspringt: wer Route 2 über Route 1
+ * schiebt, SCHIEBT Route 1 mit; wer Route 1 unter Route 2 zieht, zieht Route 2
+ * mit. Der angefasste Regler folgt immer der Hand, der andere gibt nach — das
+ * ist die einzige Auflösung, die sich nicht wie ein Fehler anfühlt.
+ */
+export function setKonzeptSchwelle(
+  current: KonzeptSchwellen,
+  key: KonzeptSchwelleKey,
+  wert: number,
+): KonzeptSchwellen {
+  const next: KonzeptSchwellen = { ...current, [key]: klemme(key, wert) };
+  if (key === 'konzeptOstMaxKn' && next.konzeptOstMaxKn > next.konzeptKlassikMaxKn) {
+    next.konzeptKlassikMaxKn = klemme('konzeptKlassikMaxKn', next.konzeptOstMaxKn);
+  }
+  if (key === 'konzeptKlassikMaxKn' && next.konzeptKlassikMaxKn < next.konzeptOstMaxKn) {
+    next.konzeptOstMaxKn = klemme('konzeptOstMaxKn', next.konzeptKlassikMaxKn);
+  }
+  // Bleibt nach dem Klemmen eine Kollision (die Regler-Bereiche überlappen
+  // nicht vollständig), gewinnt die Invariante: Ost darf nie über Klassik
+  // stehen, sonst kippt das geschütztere Konzept zuerst.
+  if (next.konzeptOstMaxKn > next.konzeptKlassikMaxKn) {
+    next.konzeptOstMaxKn = klemme('konzeptOstMaxKn', next.konzeptKlassikMaxKn);
+  }
+  return next;
+}
+
+/**
+ * Einen ganzen Regler-Stand auf Bereich und Invariante bringen. Nötig, weil er
+ * aus dem localStorage kommt (ungeprüfte Eingabe) und weil die Regler-Bereiche
+ * sich zwischen zwei App-Versionen ändern dürfen, ohne einen gespeicherten
+ * Törn unbrauchbar zu machen.
+ */
+export function klemmeKonzeptSchwellen(schwellen: KonzeptSchwellen): KonzeptSchwellen {
+  let sicher = schwellen;
+  for (const { key } of KONZEPT_REGLER) {
+    sicher = setKonzeptSchwelle(sicher, key, schwellen[key]);
+  }
+  return sicher;
+}
+
+/**
+ * Die eingestellten Schwellen auf einen Parametersatz legen. `null` heisst
+ * "nichts eingestellt" — dann gelten die Werte der Bibliothek unverändert.
+ */
+export function withKonzeptSchwellen(
+  params: Params,
+  schwellen: KonzeptSchwellen | null,
+): Params {
+  if (!schwellen) return params;
+  return { ...params, ...klemmeKonzeptSchwellen(schwellen) };
 }
 
 // ---------------------------------------------------------------------------
@@ -544,8 +723,10 @@ export function deriveTorChecks(
  *   - Das AKTIVE Konzept (Hauptroute, sonst Vorschlag, sonst Klassik) wird
  *     beibehalten, solange es nicht 'ungeeignet' ist — Kurs halten ist eine
  *     Entscheidung, kein Unterlassen.
- *   - Kippt das Ost-Konzept, wird auf Route 1 umgeschwenkt (Abbruchroute der
- *     Törnanalyse). Der Wechsel-Hinweis nennt das ausdrücklich.
+ *   - Kippt das Ost-Konzept, EMPFIEHLT die App Route 1 (Abbruchroute der
+ *     Törnanalyse). Der Wechsel-Hinweis nennt das ausdrücklich — und ebenso
+ *     ausdrücklich, dass Route 2 wählbar bleibt: es ist eine Empfehlung,
+ *     keine Streichung (Skipper 2026-08-06).
  *   - Route 1 wechselt NIE aus Eignungsgründen nach Ost: nach Osten geht man
  *     aus Ambition, nicht als Wetterausweich. Ist auch Klassik ungeeignet,
  *     bleibt Klassik empfohlen (der geschütztere Rahmen) — mit dem Hinweis,
@@ -565,15 +746,17 @@ export function deriveKonzeptEntscheid(
   if (!aktivTraegt && aktivKonzept === 'ost') {
     const von = currentIslandId ? ` ab ${currentIslandId}` : '';
     wechselHinweis =
-      `Konzeptwechsel: Der Vorstoß in die Ost-Kykladen wird gestrichen —` +
+      `Konzeptwechsel empfohlen: Vom Vorstoß in die Ost-Kykladen wird abgeraten —` +
       `${von} nach Südwesten auf Route 1 (West-Korridor) umschwenken. ` +
-      lage.gruende.ost.join(' ');
+      lage.gruende.ost.join(' ') +
+      ' Route 2 bleibt wählbar: das ist eine Empfehlung, keine Sperre.';
   } else if (!aktivTraegt) {
     wechselHinweis =
-      'Auch Route 1 trägt diese Lage nicht: kein Konzeptwechsel möglich — ' +
-      'in Abdeckung bleiben und abwettern; die tägliche Abbruch-Notation der ' +
-      'Hauptroute nennt den Umkehrpunkt. ' +
-      lage.gruende.klassik.join(' ');
+      'Auch Route 1 trägt diese Lage nicht: es gibt kein besseres Konzept, ' +
+      'auf das sich umschwenken liesse — in Abdeckung bleiben und abwettern; ' +
+      'die tägliche Abbruch-Notation der Hauptroute nennt den Umkehrpunkt. ' +
+      lage.gruende.klassik.join(' ') +
+      ' Beide Konzepte bleiben wählbar; die App rät ab, sie sperrt nicht.';
   }
 
   const routeIdsOf = (konzept: KonzeptId): string[] =>

@@ -273,12 +273,10 @@ function ringCrossings(a: Pt, b: Pt, ring: Ring): number[] {
 }
 
 /**
- * Ansteuerungszone: Radius um Start und Ziel, in dem die eigene Insel den Kurs
- * nicht blockiert. 1,5 sm, weil der am weitesten "landeinwärts" liegende
- * kuratierte Platz (Poros, Russian Bay) rund 1 sm hinter der 250-m-Küstenlinie
- * sitzt — tiefe Buchten schneidet die Quellauflösung ab. Kleiner gewählt, und
- * die eigene Bucht wäre unerreichbar; grösser, und ein Kurs dürfte an einer
- * Landzunge vorbeischneiden.
+ * Obergrenze der Ansteuerung. Der am weitesten "landeinwärts" liegende
+ * kuratierte Platz (Poros, Russian Bay) sitzt 1,03 sm hinter der
+ * 250-m-Küstenlinie — tiefe Buchten schneidet die Quellauflösung ab. Weiter als
+ * das darf keine Ansteuerung reichen, was auch immer die Geometrie sagt.
  */
 const APPROACH_NM = 1.5;
 
@@ -289,63 +287,141 @@ const APPROACH_NM = 1.5;
  */
 const TOUCH_TOLERANCE_NM = 0.15;
 
-/** Intervalle [t0,t1] auf a→b, die innerhalb der Ansteuerungszonen liegen. */
-function approachIntervals(a: Pt, b: Pt, exempt: Pt[]): [number, number][] {
-  const out: [number, number][] = [];
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const A = dx * dx + dy * dy;
-  if (A === 0) return out;
-  for (const e of exempt) {
-    const fx = a.x - e.x;
-    const fy = a.y - e.y;
-    const B = 2 * (fx * dx + fy * dy);
-    const C = fx * fx + fy * fy - APPROACH_NM * APPROACH_NM;
-    const disc = B * B - 4 * A * C;
-    if (disc <= 0) continue;
-    const r = Math.sqrt(disc);
-    out.push([(-B - r) / (2 * A), (-B + r) / (2 * A)]);
+/**
+ * Wieviel Land dieser Endpunkt sich als ANSTEUERUNG anrechnen darf.
+ *
+ * Nicht pauschal `APPROACH_NM`, sondern so tief, wie der Punkt selbst hinter
+ * der Küstenlinie sitzt. Das ist der ganze Grund für die Ausnahme: eine Bucht,
+ * die die 250-m-Auflösung zugeschnitten hat, macht aus dem Hafen einen
+ * Landpunkt, und der Weg aus dieser gedachten Bucht heraus ist Pilotage.
+ *
+ * Ein pauschaler Betrag hat genau diese Begründung überdehnt. Grammata liegt im
+ * Wasser (Einbettung 0) und bekam trotzdem 1,5 sm gutgeschrieben — genug, um
+ * die 0,6 sm breite Landzunge davor zu verschlucken. Dasselbe vor Ornos: 1,3 sm
+ * quer über Mykonos, gemeldet als 0,000. Wer im Wasser liegt, braucht keine
+ * Ansteuerung durch Land; ihm bleibt die Auflösungstoleranz und sonst nichts.
+ */
+function approachAllowanceNm(p: Pt): number {
+  for (const ring of RINGS) {
+    if (pointInRing(p, ring)) {
+      return Math.min(distanceToRing(p, ring) + TOUCH_TOLERANCE_NM, APPROACH_NM);
+    }
   }
-  return out;
+  return TOUCH_TOLERANCE_NM;
 }
 
 /**
- * Seemeilen dieses Schlags, die über Land laufen — ohne die
- * Ansteuerungszonen um `exempt` (normalerweise Start und Ziel des Schlags).
+ * Dasselbe, gemerkt. Die Sichtbarkeitssuche fragt für dieselben zwei Endpunkte
+ * quadratisch oft; der Wert hängt nur am Punkt.
  */
-function landCrossingPlanar(a: Pt, b: Pt, exempt: Pt[]): number {
-  const len = dist(a, b);
-  if (len === 0) return 0;
+const allowanceCache = new WeakMap<Pt, number>();
+function allowanceOf(p: Pt): number {
+  const hit = allowanceCache.get(p);
+  if (hit !== undefined) return hit;
+  const nm = approachAllowanceNm(p);
+  allowanceCache.set(p, nm);
+  return nm;
+}
+
+/**
+ * Die Landstücke auf a→b, als Parameterintervalle [t0,t1], vereinigt über alle
+ * Ringe.
+ *
+ * Vereinigt, nicht je Ring gezählt: zwei aneinanderstossende Ringe (Insel und
+ * vorgelagerter Felsen) sind ein Hindernis, und nur als EIN Intervall lässt
+ * sich sagen, ob es am Endpunkt klebt oder mitten im Schlag liegt.
+ */
+function landIntervals(a: Pt, b: Pt): [number, number][] {
   const vx = b.x - a.x;
   const vy = b.y - a.y;
-  const zones = approachIntervals(a, b, exempt);
-  let total = 0;
+  const raw: [number, number][] = [];
   for (const ring of RINGS) {
     if (!segmentHitsBox(a, b, ring.minX, ring.minY, ring.maxX, ring.maxY)) continue;
-    const ts = ringCrossings(a, b, ring);
-    const marks = [0, ...ts, 1];
+    const marks = [0, ...ringCrossings(a, b, ring), 1];
     for (let i = 0; i < marks.length - 1; i++) {
       const t0 = marks[i]!;
       const t1 = marks[i + 1]!;
       if (t1 - t0 < 1e-12) continue;
       const mid = (t0 + t1) / 2;
-      if (!pointInRing({ x: a.x + vx * mid, y: a.y + vy * mid }, ring)) continue;
-      let inside = (t1 - t0) * len;
-      for (const [z0, z1] of zones) {
-        const o0 = Math.max(t0, z0);
-        const o1 = Math.min(t1, z1);
-        if (o1 > o0) inside -= (o1 - o0) * len;
-      }
-      if (inside > 0) total += inside;
+      if (pointInRing({ x: a.x + vx * mid, y: a.y + vy * mid }, ring)) raw.push([t0, t1]);
     }
+  }
+  raw.sort((m, n) => m[0] - n[0]);
+  const merged: [number, number][] = [];
+  for (const [t0, t1] of raw) {
+    const last = merged[merged.length - 1];
+    if (last && t0 <= last[1] + 1e-9) last[1] = Math.max(last[1], t1);
+    else merged.push([t0, t1]);
+  }
+  return merged;
+}
+
+/**
+ * Darf dieses Landstück als Ansteuerung durchgehen?
+ *
+ * Zwei Bedingungen, und beide sind nötig:
+ *   1. Der Endpunkt klebt daran — er liegt darin oder höchstens einen
+ *      Toleranzabstand davor. Land, das erst nach einem Stück offenem Wasser
+ *      beginnt, ist ein Hindernis auf dem Weg, keine Ansteuerung.
+ *   2. Das Landstück ist von diesem Endpunkt aus in beide Richtungen kürzer
+ *      als seine Ansteuerung (`approachAllowanceNm`). Sonst wäre der Weg quer
+ *      über die eigene Insel eine Ansteuerung: Ermoupoli liegt selbst knapp
+ *      hinter der Küstenlinie, und ohne diese Schranke dürfte ein Kurs von dort
+ *      quer über Syros laufen.
+ */
+function isApproach(t0: number, t1: number, anchor: Anchor, len: number): boolean {
+  const gap = len > 0 ? TOUCH_TOLERANCE_NM / len : 0;
+  const tp = anchor.t;
+  if (tp < t0 - gap || tp > t1 + gap) return false;
+  return Math.max(t1 - tp, tp - t0, 0) * len <= anchor.allowance;
+}
+
+/** Ein Endpunkt auf der Strecke: wo er liegt und wieviel Land er sich anrechnet. */
+interface Anchor {
+  t: number;
+  allowance: number;
+}
+
+/**
+ * Der Parameter t, unter dem `e` auf a→b liegt — oder null, wenn `e` nicht auf
+ * dieser Strecke liegt. Im Sichtbarkeitsgraphen laufen Kanten zwischen Ecken,
+ * die mit Start und Ziel nichts zu tun haben; für die gibt es keine
+ * Ansteuerung.
+ */
+function parameterOn(a: Pt, b: Pt, e: Pt): number | null {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const l2 = vx * vx + vy * vy;
+  if (l2 === 0) return null;
+  const t = ((e.x - a.x) * vx + (e.y - a.y) * vy) / l2;
+  const off = Math.hypot(e.x - (a.x + t * vx), e.y - (a.y + t * vy));
+  return off <= 1e-9 ? t : null;
+}
+
+/**
+ * Seemeilen dieses Schlags, die über Land laufen — ohne die Ansteuerung der
+ * Punkte in `exempt` (normalerweise Start und Ziel des Schlags).
+ */
+function landCrossingPlanar(a: Pt, b: Pt, exempt: Pt[]): number {
+  const len = dist(a, b);
+  if (len === 0) return 0;
+  const anchors: Anchor[] = [];
+  for (const e of exempt) {
+    const t = parameterOn(a, b, e);
+    if (t !== null) anchors.push({ t, allowance: allowanceOf(e) });
+  }
+  let total = 0;
+  for (const [t0, t1] of landIntervals(a, b)) {
+    if (anchors.some((anchor) => isApproach(t0, t1, anchor, len))) continue;
+    total += (t1 - t0) * len;
   }
   return total;
 }
 
 /**
- * Seemeilen Land auf dem direkten Schlag von `a` nach `b`. Die
- * Ansteuerungszonen um `a` und `b` selbst zählen nicht mit (siehe
- * `APPROACH_NM`) — sonst wäre jeder Hafen in einer Bucht unerreichbar.
+ * Seemeilen Land auf dem direkten Schlag von `a` nach `b`. Die Ansteuerung von
+ * `a` und `b` selbst zählt nicht mit (siehe `APPROACH_NM`) — sonst wäre jeder
+ * Hafen in einer Bucht unerreichbar.
  */
 export function landCrossingNm(a: Coordinates, b: Coordinates): number {
   const pa = project(a);
@@ -409,11 +485,14 @@ function routeAround(a: Pt, b: Pt): Pt[] | null {
       for (const corner of cornersOf(ring)) {
         const detour = dist(a, corner) + dist(corner, b);
         if (detour > budget) continue;
-        // Eine Ecke, die im Land eines ANDEREN Rings liegt (Nachbarinsel,
-        // Felsen davor), ist kein Wegpunkt.
+        // Eine Ecke, die an Land liegt, ist kein Wegpunkt — auch nicht im Land
+        // des EIGENEN Rings. Der Versatz nach aussen führt normalerweise aus
+        // der Insel heraus, aber in einer zerklüfteten Bucht zeigt die
+        // Winkelhalbierende einer für sich konvexen Ecke zurück ins Land: bei
+        // Vourkari (Kea) landete der Umfahrungspunkt so 14 m INNERHALB der
+        // Küstenlinie.
         let onLand = false;
         for (const other of RINGS) {
-          if (other === ring) continue;
           if (pointInRing(corner, other)) {
             onLand = true;
             break;

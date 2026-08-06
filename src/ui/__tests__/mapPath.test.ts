@@ -72,6 +72,10 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
         avgTwdDeg: 0,
         avgSpeedKn: 6,
         upwind: false,
+        kreuzHours: 0,
+        kreuzExtraNm: 0,
+        wenden: 0,
+        kreuzTrack: [],
         basis: 'forecast',
         reasons: [],
         nightLeg: false,
@@ -153,5 +157,65 @@ describe('stageEndMarkers — Hin- und Rückweg teilen sich einen Ort', () => {
     const { stages, snapshot } = roundTrip();
     // Leere Leg-Bibliothek: es gibt keine Koordinaten für die Etappen.
     expect(stageEndMarkers(stages, {}, snapshot)).toEqual([]);
+  });
+});
+
+/**
+ * Story 1.3, AC 7 — die Kapsel ist tastaturbedienbar und öffnet das
+ * Platzdetail ihres Zielhafens: `endPlaceId` ist der Platz, an dem die
+ * Geometrie des ERSTEN Anlaufs endet; null, wenn sie nicht an einem Platz
+ * endet (dann bleibt die Kapsel nicht-interaktiv).
+ */
+describe('stageEndMarkers — endPlaceId als Aktivierungsziel der Kapsel', () => {
+  it('trägt den Zielhafen des ersten Anlaufs', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    const markers = stageEndMarkers(stages, buildLegsById(legs), snapshot);
+    expect(markers.find((m) => m.islandId === 'kea')!.endPlaceId).toBe(
+      'kea-vourkari',
+    );
+    expect(markers.find((m) => m.islandId === 'serifos')!.endPlaceId).toBe(
+      'serifos-livadi',
+    );
+  });
+
+  it('bleibt beim ersten Anlauf, auch wenn die Rückreise anders endet', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    // Rückreise zuerst hereingereicht — chronologisch gewinnt trotzdem Tag 1.
+    const markers = stageEndMarkers(
+      [...stages].reverse(),
+      buildLegsById(legs),
+      snapshot,
+    );
+    expect(markers.find((m) => m.islandId === 'kea')!.endPlaceId).toBe(
+      'kea-vourkari',
+    );
+  });
+
+  it('ist null, wenn die Geometrie nicht an einem Platz endet', () => {
+    const { stages, legs, snapshot } = roundTrip();
+    // Zielplatz nicht in der Bibliothek: die Etappe endet auf ihrem letzten
+    // Wegpunkt statt an einem Platz.
+    const ghostLeg = makeLeg({
+      id: 'kea--geisterinsel',
+      fromIslandId: 'kea',
+      toIslandId: 'geisterinsel',
+      fromPlaceId: 'kea-vourkari',
+      toPlaceId: 'geist-bucht',
+      waypoints: [{ lat: 37.5, lon: 24.4 }],
+    });
+    const ghostStage: StageAssessment = {
+      ...stages[0]!,
+      day: 5,
+      stageNumber: 5,
+      toIslandId: 'geisterinsel',
+      legs: [{ ...stages[0]!.legs[0]!, legId: 'kea--geisterinsel', day: 5 }],
+    };
+    const markers = stageEndMarkers(
+      [ghostStage],
+      buildLegsById([...legs, ghostLeg]),
+      snapshot,
+    );
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.endPlaceId).toBeNull();
   });
 });

@@ -28,8 +28,13 @@ export const PLAN_SCHEMA_VERSION = 1;
  * v2 (2026-08-05): Doppelschlag-Deckel pro Törn, Hafentage-Verteilung,
  * Rangfolge firm/assumed getrennt — Pläne der v1-Rangfolge (Doppelschlag-
  * Serien, Hafentage-Halde am Ende) gelten als veraltet.
+ *
+ * v3 (2026-08-06): Kreuz-Modell (50° TWA als engster segelbarer Winkel) —
+ * Etappen unter dem Am-Wind-Winkel dauern länger als bisher gerechnet, und die
+ * Rangfolge zieht anliegende Kurse vor. Pläne der v2-Rangfolge sind damit
+ * Pläne, die der Solver so nicht mehr vorschlagen würde.
  */
-export const SOLVER_ALGORITHM_VERSION = 2;
+export const SOLVER_ALGORITHM_VERSION = 3;
 
 /** Who put this day into the plan. `skipper` days are pins (AD-12). */
 export const PlanSourceSchema = z.enum(['solver', 'skipper']);

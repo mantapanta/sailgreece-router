@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { isOnLand, landCrossingNm, pathCrossesLand } from '../searoute.ts';
 import { reverseLeg } from '../legs.ts';
+import { distanceNm } from '../geo.ts';
 import { sailedLegsByDay } from '../legGeometry.ts';
 import type { Place } from '../schema/place.ts';
 import type { Leg } from '../schema/route.ts';
@@ -109,6 +110,74 @@ describe('Etappen-Bibliothek: kein Kurs führt über Land', () => {
         if (nm > 0.15) {
           crossing.push(`${leg.id} Abschnitt ${i}: ${nm.toFixed(1)} sm über Land`);
         }
+      }
+    }
+    expect(crossing).toEqual([]);
+  });
+
+  /**
+   * Die Gegenprobe OHNE `landCrossingNm` — der Wächter, der zweimal gefehlt hat.
+   *
+   * Die Prüfung darüber validiert die Daten mit derselben Funktion, die sie
+   * erzeugt hat. Genau darin konnten sich zwei Fehler verstecken: erst der
+   * Kreis um die Endpunkte (jeder Schlag bis 3 sm galt als landfrei), dann der
+   * pauschale Ansteuerungsbetrag (1,5 sm Landzunge je Endpunkt galten als
+   * Ansteuerung). Beide Male meldete `landCrossingNm` 0,000 sm für einen Kurs,
+   * der sichtbar über die Insel lief.
+   *
+   * Dieser Test tastet die Landmaske stattdessen direkt ab und unterscheidet
+   * dabei, was die Ausnahme decken DARF: Land am Anfang oder Ende des Kurses
+   * ist die Ansteuerung einer Bucht, die die 250-m-Auflösung zugeschnitten hat.
+   * Land MITTEN im Kurs ist ein Landweg, egal was die Ausnahme dazu sagt.
+   */
+  it('führt auch nach direkter Abtastung der Landmaske über kein Land', () => {
+    /** Zusammenhängende Landstücke eines Kurses, mit Abstand zum nächsten Ende. */
+    const landRuns = (points: Coordinates[]): { nm: number; vomEnde: number }[] => {
+      const samples: { s: number; land: boolean }[] = [];
+      let s = 0;
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i]!;
+        const b = points[i + 1]!;
+        const len = distanceNm(a, b);
+        const steps = Math.max(80, Math.ceil(len * 200)); // ~9 m Raster
+        for (let k = 0; k < steps; k++) {
+          const t = k / steps;
+          samples.push({
+            s: s + len * t,
+            land: isOnLand({
+              lat: a.lat + (b.lat - a.lat) * t,
+              lon: a.lon + (b.lon - a.lon) * t,
+            }),
+          });
+        }
+        s += len;
+      }
+      const out: { nm: number; vomEnde: number }[] = [];
+      for (let i = 0; i < samples.length; ) {
+        if (!samples[i]!.land) {
+          i++;
+          continue;
+        }
+        const start = samples[i]!.s;
+        while (i < samples.length && samples[i]!.land) i++;
+        const end = samples[i - 1]!.s;
+        out.push({ nm: end - start, vomEnde: Math.min(start, s - end) });
+      }
+      return out;
+    };
+
+    const crossing: string[] = [];
+    for (const leg of [...legs, ...legs.map(reverseLeg)]) {
+      const points = pathOf(leg);
+      if (!points) continue;
+      for (const run of landRuns(points)) {
+        // Am Kursende: Ansteuerung einer zugeschnittenen Bucht.
+        if (run.vomEnde < 0.05) continue;
+        // Mitten im Kurs: nur die Auflösung der Quelle selbst ist entschuldbar.
+        if (run.nm <= 0.15) continue;
+        crossing.push(
+          `${leg.id}: ${run.nm.toFixed(2)} sm Land, ${run.vomEnde.toFixed(2)} sm vom nächsten Endpunkt`,
+        );
       }
     }
     expect(crossing).toEqual([]);

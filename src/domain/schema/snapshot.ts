@@ -1,4 +1,4 @@
-import type { Ampel } from './common.ts';
+import type { Ampel, Coordinates } from './common.ts';
 import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
@@ -147,9 +147,23 @@ export interface LegHourBreakdown {
   twdDeg: number;
   twsKn: number;
   twaDeg: number;
-  /** Boat speed used — from the polar (+offset) or the motor parameter. */
+  /**
+   * Fahrt auf dem ANLIEGENDEN KURS — aus der Polare (+Offset) oder vom Motor.
+   * Beim Kreuzen ist das die Fahrt über der Ideallinie, nicht die durchs
+   * Wasser (`boatSpeedKn`): sonst behauptete die Zeile eine Fahrt, die das
+   * Boot zwar läuft, die die Etappe aber nicht vorankommt.
+   */
   speedKn: number;
   motoring: boolean;
+  /**
+   * Diese Stunde muss GEKREUZT werden: der Kurs liegt enger am Wind als
+   * `params.beatTwaDeg`, das Schiff segelt Schläge über `sailedTwaDeg`.
+   */
+  kreuzen: boolean;
+  /** Der Winkel, der wirklich gesegelt wird — beim Kreuzen `params.beatTwaDeg`. */
+  sailedTwaDeg: number;
+  /** Fahrt durchs Wasser auf `sailedTwaDeg`; beim Kreuzen höher als `speedKn`. */
+  boatSpeedKn: number;
   /** Nautical miles covered in this step (may be a partial hour at the end). */
   distanceNm: number;
   /** True when this hour used the Meltemi worst case instead of the forecast. */
@@ -200,6 +214,11 @@ export interface PointPassage {
     twaDeg: number;
     speedKn: number;
     motoring: boolean;
+    /**
+     * Dieser Abschnitt muss gekreuzt werden (Kurs enger am Wind als
+     * `params.beatTwaDeg`) — `speedKn` ist dann die Fahrt über der Ideallinie.
+     */
+    kreuzen: boolean;
     /** Diese Stunde rechnete gegen den Meltemi-Worst-Case (AD-13). */
     worstCase: boolean;
   } | null;
@@ -246,6 +265,42 @@ export interface LegAssessment {
   avgSpeedKn: number | null;
   upwind: boolean;
   /**
+   * Stunden, in denen GEKREUZT werden muss — der Kurs liegt enger am Wind als
+   * `params.beatTwaDeg` (50°), das Ziel wird also nicht angelegen.
+   *
+   * Eigene Kennzahl und nicht aus `avgTwaDeg` ableitbar: der Mittelwert einer
+   * Etappe, die zwei Stunden kreuzt und danach raumschots läuft, liegt weit
+   * über 50° — die Kreuz-Stunden verschwänden darin. Sie sind das Mass, mit
+   * dem die Rangfolge Kreuzen vermeidet (solver.ts) und mit dem die Etappe es
+   * ausweist, statt eine anliegende Fahrt zu behaupten. Null, wenn die Etappe
+   * nicht simuliert werden konnte.
+   */
+  kreuzHours: number | null;
+  /**
+   * Der UMWEG des Kreuzens in sm: gesegelte Strecke durchs Wasser minus
+   * Strecke über der Ideallinie. Das ist die Zahl, die "gekreuzt" konkret
+   * macht — 4 sm mehr durchs Wasser sind eine Stunde mehr an Bord.
+   */
+  kreuzExtraNm: number | null;
+  /**
+   * Zahl der WENDEN des geplanten Zickzacks — die Kreuz als Handgriff gezählt.
+   * 0, wenn nichts zu kreuzen ist; null, wenn die Etappe nicht simuliert
+   * werden konnte.
+   */
+  wenden: number | null;
+  /**
+   * DER ZICKZACK, wie er gesegelt wird (domain/kreuz.ts): Schlag auf dem einen
+   * Bug, wenden, Schlag auf dem anderen — der Weg, den die Karte zeichnen muss,
+   * weil die gerade Linie zum Ziel keiner ist, den das Boot fahren kann.
+   *
+   * Leer, wenn nichts gekreuzt wird ODER kein landfreier Zickzack gefunden
+   * wurde. Es ist eine SKIZZE des Umwegs, keine Wendeanweisung: wo wirklich
+   * gewendet wird, entscheiden Dreher und Welle. Die Strecke durchs Wasser
+   * behauptet der Track deshalb nicht — die steht in `kreuzExtraNm` und kommt
+   * aus der stündlichen Simulation.
+   */
+  kreuzTrack: Coordinates[];
+  /**
    * Whether this verdict rests on real model hours or partly on the
    * persistence assumption beyond the forecast horizon.
    */
@@ -275,6 +330,20 @@ export interface LegAssessment {
 
 export type OptionState = 'offen' | 'offen-horizont' | 'schliesst' | 'zu';
 
+/**
+ * EMPFEHLUNGS-EBENE über der Machbarkeit (Skipper 2026-08-06: "andere
+ * Best-Practice-Routen wie West-Kykladen trotzdem erlauben und lediglich davon
+ * abraten, wenn der Wind zu stark ist").
+ *
+ * Die Achse ist bewusst von `OptionState` GETRENNT: der State beantwortet
+ * "existiert ein tragfähiger Plan?", die Empfehlung beantwortet "rät die App
+ * dazu?". Starkwind darf die zweite Frage beantworten — er darf keine
+ * kuratierte Route aus dem Angebot nehmen. Jede Option behält deshalb ihren
+ * besten Plan (`plan`), bleibt ansehbar und übernehmbar; abgeraten heisst
+ * abgeraten, nicht verboten.
+ */
+export type RoutenEmpfehlung = 'empfohlen' | 'moeglich' | 'abgeraten';
+
 export interface RouteOptionAssessment {
   routeId: string;
   /** Kuratierter Name der Route — die View soll keine Ids anzeigen müssen. */
@@ -290,6 +359,17 @@ export interface RouteOptionAssessment {
    * Revier-Empfehlung steht sichtbar daneben, nie stumm.
    */
   konzeptWarnung: string | null;
+  /**
+   * Rät die App zu dieser Route? 'abgeraten' bei gekipptem Konzept oder wenn
+   * der beste Plan Sicherheits-Befunde trägt — die Route bleibt trotzdem
+   * wählbar. 'moeglich' bei grenzwertiger Lage. Nie ein Ausschluss.
+   */
+  empfehlung: RoutenEmpfehlung;
+  /**
+   * Die Sätze, mit denen abgeraten wird (Wind-Lage, Sicherheits-Befunde des
+   * besten Versuchs). Leer bei 'empfohlen'.
+   */
+  abratenGruende: string[];
   state: OptionState;
   /** Set when state === 'schliesst': last day the option can still be started. */
   closesOnDay: number | null;
@@ -315,7 +395,14 @@ export interface RouteOptionAssessment {
   costNote: string | null;
   /**
    * Der konkrete Plan zu dieser Option — damit "verfolgen" nicht heisst, dass
-   * der Skipper ihn sich selbst zusammensucht. Null, wenn es keinen gibt.
+   * der Skipper ihn sich selbst zusammensucht.
+   *
+   * Gesetzt, SOBALD der Solver überhaupt etwas bauen kann — auch wenn der
+   * beste Versuch Sicherheits-Befunde trägt (`state: 'zu'`,
+   * `empfehlung: 'abgeraten'`). Genau das ist der Unterschied zwischen
+   * abraten und verbieten: der Skipper sieht die Route, ihre Befunde und
+   * kann sie gegen die Empfehlung übernehmen. Null nur, wenn sich zu diesem
+   * Ziel gar keine Etappenkette bilden lässt.
    */
   plan: Plan | null;
   /** Tag, an dem dieser Plan den Wendepunkt erreicht (früher = mehr Luft). */
