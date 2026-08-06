@@ -43,6 +43,7 @@ import { PositionPopover } from '../components/PositionPopover.tsx';
 import { TripStatusLine } from '../components/TripStatusLine.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
+import { StageThumb } from '../components/StageThumb.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
 import { altRouteColor } from '../altRouteColors.ts';
 import {
@@ -589,18 +590,37 @@ function StageCard({
         <AmpelBadge ampel={stage.ampel} />
       </div>
 
-      {from && <div className="route-from">{from} →</div>}
-      {hero ? (
-        <h1 className="route-dest">{headline}</h1>
-      ) : (
-        <h3 className="route-dest-sm">{headline}</h3>
-      )}
-      {!isHarbour && (
-        <div className="route-sub">
-          {placeName(snapshot, stage.placeId)}
-          {via.length > 0 && ` · über ${via.join(' · ')}`}
+      {/* Ziel links, Etappen-Schnipsel rechts oben (Skipper 2026-08-06): die
+          Strecke stand bisher nur in der aufgeklappten Rechnung, und damit war
+          die Frage „liegt das um die Ecke oder quer übers Revier?“ zwei Klicks
+          entfernt. Der Schnipsel beantwortet sie im selben Blick wie den Namen
+          — und klappt angetippt genau die Karte auf, deren Vorschau er ist. */}
+      <div className="stage-head">
+        <div className="stage-head-text">
+          {from && <div className="route-from">{from} →</div>}
+          {hero ? (
+            <h1 className="route-dest">{headline}</h1>
+          ) : (
+            <h3 className="route-dest-sm">{headline}</h3>
+          )}
+          {!isHarbour && (
+            <div className="route-sub">
+              {placeName(snapshot, stage.placeId)}
+              {via.length > 0 && ` · über ${via.join(' · ')}`}
+            </div>
+          )}
         </div>
-      )}
+        {!isHarbour && (
+          <StageThumb
+            points={points}
+            ampel={stage.ampel}
+            label={`${from ?? '–'} → ${headline}`}
+            size={hero ? 'hero' : 'row'}
+            expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          />
+        )}
+      </div>
 
       {(!isHarbour || stage.pinned) && (
         <div className="chip-list">
