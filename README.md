@@ -123,8 +123,9 @@ Alles über die CLI — die Konsole braucht es nur für den Sign-in-Provider.
    Hosting-Domain, z. B. `sailgreece-router.web.app/*`) **und**
    **API-Restriction** (nur Maps JavaScript API). Der Key liegt als
    `VITE_`-Variable im Bundle — öffentlich by design, darum die Restriktionen.
-3. Optional: eine **Map ID** anlegen (Map Management) für AdvancedMarker;
-   `DEMO_MAP_ID` funktioniert für die Entwicklung.
+3. Pflicht für die Karte: eine **Map ID** anlegen (Map Management) für
+   AdvancedMarker. Ohne echte Map-ID zeigt die App einen benannten Hinweis
+   statt der Karte — es gibt keinen Demo-Fallback.
 
 ### 3. Umgebungsvariablen
 
@@ -133,7 +134,7 @@ Alles über die CLI — die Konsole braucht es nur für den Sign-in-Provider.
 ```bash
 VITE_DATA_SOURCE=firestore          # 'local' = Staging-JSONs statt Firestore
 VITE_GOOGLE_MAPS_API_KEY=<dein Key>
-VITE_GOOGLE_MAPS_MAP_ID=<Map-ID oder DEMO_MAP_ID>
+VITE_GOOGLE_MAPS_MAP_ID=<Map-ID>     # Pflicht für die Karte, kein Demo-Fallback
 
 # Pflicht (Login-Gate), Werte aus `apps:sdkconfig WEB`:
 VITE_FIREBASE_API_KEY=<apiKey>

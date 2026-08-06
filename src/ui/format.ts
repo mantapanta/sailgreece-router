@@ -22,6 +22,31 @@ export function formatTripDayDate(tripStartDate: string, day: number): string {
   return dayFmt.format(new Date(`${dateForTripDay(tripStartDate, day)}T12:00:00Z`));
 }
 
+const weekdayShortFmt = new Intl.DateTimeFormat('de-DE', {
+  weekday: 'short',
+  timeZone: 'Europe/Athens',
+});
+
+/** Kurzer Wochentag eines Törntags ("Mi") — für die Hafentag-Weiterfahrt-Zeile. */
+export function formatTripDayWeekdayShort(
+  tripStartDate: string,
+  day: number,
+): string {
+  return weekdayShortFmt.format(
+    new Date(`${dateForTripDay(tripStartDate, day)}T12:00:00Z`),
+  );
+}
+
+/**
+ * "Sa 8.8." — Karten-Etappenkarten (Story 1.3). Zusammengesetzt aus dem
+ * bestehenden Kurz-Wochentag und "d.M." ohne führende Nullen — kein neues
+ * Intl-Muster (die ICU liefert den de-DE-Kurz-Wochentag ohne Punkt).
+ */
+export function formatTripDayShort(tripStartDate: string, day: number): string {
+  const [, m, d] = dateForTripDay(tripStartDate, day).split('-');
+  return `${formatTripDayWeekdayShort(tripStartDate, day)} ${Number(d)}.${Number(m)}.`;
+}
+
 const rangeFmt = new Intl.DateTimeFormat('de-DE', {
   day: 'numeric',
   month: 'long',
@@ -87,6 +112,12 @@ export function formatHourOfDay(h: number | null): string {
 export function formatKn(v: number | null): string {
   if (v === null) return '–';
   return `${Math.round(v)} kn`;
+}
+
+/** Wellenhöhe/-grenze mit deutschem Dezimalkomma ("0,3 m") — "–" ohne Wert. */
+export function formatWaveM(m: number | null): string {
+  if (m === null) return '–';
+  return `${m.toFixed(1).replace('.', ',')} m`;
 }
 
 export function formatDeg(v: number | null): string {

@@ -84,14 +84,17 @@
 }
 
 /* ---- transitional aliases — legacy sections only; new code uses the real
-       tokens. Each alias dies when its consuming section is restyled
-       (Stories 1.2+). Do not use in new code. ---- */
+       tokens. Each alias dies when its consuming section is restyled.
+       After Story 1.4 (epic close) the survivors below are owned by the
+       FROZEN DayView sub-surfaces: calc panel (stage-map, wind-basis,
+       breakdown), option/alt-route rows, badges/leg-chips/state-chips,
+       .versal and .reasons. --ink/--serif/--sans retired in 1.4.
+       Do not use in new code. ---- */
 :root {
   --creme: var(--surface-page);        /* legacy page canvas */
   --creme-card: var(--surface-card);   /* legacy card creme — cards go pure white */
   --navy: var(--ink-primary);          /* legacy chrome/headline ink */
   --navy-soft: var(--ink-secondary);   /* legacy supporting ink */
-  --ink: var(--ink-primary);
   --muted: var(--ink-secondary);
   --hairline: var(--border-hairline);
   --gruen: var(--ampel-gruen);
@@ -99,8 +102,6 @@
                                           GRAPHIC variant per DESIGN.md */
   --rot: var(--ampel-rot);
   --grau: var(--ampel-unbewertet);
-  --serif: var(--font-sans);           /* serif is eliminated — no serif anywhere */
-  --sans: var(--font-sans);
 }
 
 * {
@@ -434,7 +435,7 @@ main.content {
 h1,
 h2,
 h3 {
-  font-family: var(--serif);
+  font-family: var(--font-sans);
   color: var(--navy);
   font-weight: 500;
   margin: 0.2rem 0 0.6rem;
@@ -477,20 +478,31 @@ hr.hairline,
   white-space: nowrap;
 }
 
+/* Ampel-Badge-Pille (DESIGN components.ampel-badge): Zustands-Tint als Grund,
+   9px-Punkt in der Grafik-Farbe, Wort in der Zustands-Textfarbe. Punkt und
+   deutsches Wort stehen IMMER zusammen — kein Bare-Dot-Modus. */
 .ampel {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font: 700 13px/1.3 var(--font-sans); /* = typography.overline */
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
+.ampel-gruen { background: var(--ampel-gruen-tint); color: var(--ampel-gruen-text); }
+.ampel-gelb { background: var(--ampel-gelb-tint); color: var(--ampel-gelb-text); }
+.ampel-rot { background: var(--ampel-rot-tint); color: var(--ampel-rot-text); }
+.ampel-unbewertet { background: var(--ampel-unbewertet-tint); color: var(--ampel-unbewertet-text); }
+
 .ampel .dot {
-  width: 0.72rem;
-  height: 0.72rem;
-  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
   display: inline-block;
+  flex: none;
 }
 
 .ampel-gruen .dot { background: var(--gruen); }
@@ -499,56 +511,6 @@ hr.hairline,
 .ampel-unbewertet .dot { background: var(--grau); }
 
 /* ---- day view ------------------------------------------------------------ */
-
-.options-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
-  align-items: stretch;
-}
-
-.card {
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  padding: 1.1rem 1.2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.card .headline {
-  font-family: var(--serif);
-  font-size: 1.15rem;
-  color: var(--navy);
-}
-
-.card .beschreibung {
-  font-size: 0.85rem;
-  color: var(--muted);
-  font-style: italic;
-}
-
-.card .platz-zeile {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  border-top: 1px dashed var(--hairline);
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  font-size: 0.85rem;
-}
-
-.card .platz-zeile button {
-  background: none;
-  border: none;
-  color: var(--navy);
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0;
-  text-align: left;
-}
 
 .reasons {
   margin: 0.3rem 0 0;
@@ -596,170 +558,118 @@ hr.hairline,
   border-radius: 50%;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem 1.2rem;
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  padding: 0.7rem 1rem;
-  margin-bottom: 1.4rem;
-  font-size: 0.85rem;
-}
-
-.controls label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.controls select,
-.controls input {
-  font-size: 0.85rem;
-  padding: 0.2rem 0.35rem;
-  border: 1px solid var(--hairline);
-  background: #fff;
-}
-
-.controls button {
-  background: var(--navy);
-  color: var(--creme);
-  border: none;
-  padding: 0.35rem 0.8rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.controls button.secondary {
-  background: transparent;
-  color: var(--navy);
-  border: 1px solid var(--navy-soft);
-}
-
+/* ---- error / hint split (DESIGN State Patterns): errors are rot-tinted and
+        carry role="alert" in the markup; hints sit on the track and never do. */
 .error-panel {
   background: var(--ampel-rot-tint);
-  border: 1px solid #ddb3b1;
-  color: var(--rot);
-  padding: 0.8rem 1rem;
-  margin-bottom: 1.2rem;
-  font-size: 0.85rem;
+  color: var(--ampel-rot-text);
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font: 400 14px/1.45 var(--font-sans);
+  margin-bottom: var(--space-4);
 }
 
 .hint-panel {
-  background: var(--creme-card);
-  border: 1px dashed var(--hairline);
-  padding: 1.2rem;
-  color: var(--muted);
-  font-size: 0.9rem;
+  background: var(--surface-track);
+  color: var(--ink-secondary);
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font: 400 14px/1.45 var(--font-sans);
 }
 
-/* ---- auth (login gate + account chip) ------------------------------------ */
+/* ---- auth (redesign, Story 1.4 — replaces the navy/serif gate; the AuthGate
+        "Anmeldung wird geprüft …" card in App.tsx shares these classes) ---- */
 
 .auth-gate {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1.4rem;
-  background: var(--creme);
+  padding: var(--space-7) var(--space-page-margin);
+  background: var(--surface-page);
 }
 
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  padding: 2.2rem 2rem;
-  text-align: center;
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-7) var(--space-6);
+  text-align: center; /* gate screen — sanctioned centering exception */
 }
 
 .auth-brand {
-  font-family: var(--serif);
-  font-size: 1.4rem;
-  color: var(--navy);
-  letter-spacing: 0.02em;
+  font: 800 19px/1.2 var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--ink-primary);
 }
 
 .auth-brand small {
   display: block;
-  margin-top: 0.35rem;
-  font-family: var(--sans);
-  font-size: 0.62rem;
-  letter-spacing: 0.24em;
+  margin-top: var(--space-2);
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink-secondary);
 }
 
 .auth-lead {
-  margin: 1.6rem 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.6;
+  margin: var(--space-5) 0;
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
 }
 
+/* Width/gap supplement to the .btn-secondary recipe (the button carries both classes). */
 .google-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.7rem;
+  gap: var(--space-3);
   width: 100%;
-  background: var(--navy);
-  border: 1px solid var(--navy);
-  color: var(--creme);
-  font-family: var(--sans);
-  font-size: 0.74rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 0.8rem 1rem;
-  cursor: pointer;
-}
-
-.google-button:hover {
-  background: var(--navy-soft);
-}
-
-.google-button svg {
-  background: #fff;
-  border-radius: 2px;
-  padding: 2px;
-  box-sizing: content-box;
 }
 
 .auth-card .error-panel {
-  margin: 1.2rem 0 0;
+  margin: var(--space-4) 0 0;
   text-align: left;
 }
 
 .auth-card code {
-  font-size: 0.78rem;
+  font-size: 12.5px;
   word-break: break-all;
 }
 
-/* ---- map view (sticky split, stacked on mobile) --------------------------- */
+/* ===================================================================== */
+/* ---- map view (redesign, Story 1.3) ---------------------------------- */
+/* ===================================================================== */
+
+/* ---- layout: desktop split (≥861px default), mobile full-bleed + sheet ---- */
+.map-view {
+  position: relative;
+}
 
 .map-split {
   display: grid;
   grid-template-columns: minmax(280px, 380px) 1fr;
-  gap: 1.2rem;
+  gap: var(--space-5);
   align-items: start;
 }
 
 .map-itinerary {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
+  min-width: 0;
 }
 
 .map-sticky {
   position: sticky;
-  /* Below the sticky header, not under it. */
+  /* Below the sticky header, not under it (1.1 fix — keep). */
   top: calc(var(--header-h) + 1rem);
   height: min(78vh, 720px);
-  border: 1px solid var(--hairline);
-  background: var(--creme-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden; /* imagery clips to the card radius */
+  box-shadow: var(--shadow-2);
+  background: var(--surface-track);
 }
 
 .map-sticky .map-container {
@@ -767,54 +677,423 @@ hr.hairline,
   height: 100%;
 }
 
-.itinerary-card {
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  border-left: 3px solid transparent;
-  padding: 0.7rem 0.9rem;
-  cursor: pointer;
-}
-
-.itinerary-card.active {
-  border-left-color: var(--navy);
-  background: #fffef9;
-}
-
-.route-toggles {
+.sheet-head {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  background: var(--creme-card);
-  border: 1px solid var(--hairline);
-  padding: 0.6rem 0.8rem;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0 var(--space-2);
 }
 
-.route-toggles label {
+.sheet-head .section-title {
+  margin: 0;
+}
+
+/* CC-BY-SA attribution — visible whenever the seamark layer is on (AC 4). */
+.map-attrib {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 4;
+  font: 400 10.5px/1.3 var(--font-sans);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+
+.map-attrib a {
+  color: var(--ink-secondary);
+}
+
+/* ---- floating layer chips ---- */
+.layer-chips {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 4;
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.layer-chip {
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font: 650 12.5px/1.35 var(--font-sans);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink-secondary);
+  box-shadow: var(--shadow-1);
+}
+
+.layer-chip[aria-pressed='true'] {
+  background: var(--accent-tint);
+  color: var(--accent-text);
+}
+
+/* ---- legend affordance + popover ---- */
+.legend-btn {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 4;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink-secondary);
+  font: 700 13px/1 var(--font-sans); /* sans "i" — never the mock's Georgia italic */
+  box-shadow: var(--shadow-1);
+}
+
+.legend-pop {
+  position: absolute;
+  right: var(--space-3);
+  bottom: calc(var(--space-3) + 52px);
+  /* Über dem .menu-backdrop (110) — sonst finge der Backdrop die Klicks
+     auf den Quellen-Link der Legende ab. */
+  z-index: 120;
+  width: min(320px, calc(100vw - 2 * var(--space-page-margin)));
+  max-height: calc(100% - 2 * var(--space-3) - 52px);
+  overflow-y: auto;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.lg-title {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.lg-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--space-2);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  padding: 3px 0;
 }
 
-.route-swatch {
-  width: 1.4rem;
+.lg-row.lg-wind {
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.lg-row.lg-wind > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.lg-line {
+  width: 24px;
   height: 0;
+  flex: none;
+  border-radius: 2px;
+}
+
+.lg-line.solid {
+  border-top: 3px solid currentColor; /* color via inline style (tokens) */
+}
+
+.lg-line.dashed {
   border-top: 3px dashed currentColor;
-  display: inline-block;
+}
+
+.lg-caption {
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin: var(--space-1) 0;
+}
+
+/* ---- itinerary cards ---- */
+.itin-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.itin-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-1);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.itin-card[aria-pressed='true'] {
+  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
+}
+
+.itin-card[aria-pressed='true'] .itin-day {
+  color: var(--accent-text);
+}
+
+.itin-card.past {
+  opacity: 0.75;
+}
+
+.itin-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.itin-day {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.itin-route {
+  font: 700 15.5px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--ink-primary);
+  margin-top: 2px;
+}
+
+.itin-meta {
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.harbour-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  min-height: 44px;
+  background: var(--surface-card);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  box-shadow: var(--shadow-1);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.harbour-row[aria-pressed='true'] {
+  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
+}
+
+.harbour-row .hd {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- markers ---- */
+/* ≥44px hit area around the visual pin/capsule (AC 6/7); position: relative
+   anchors the armed mini chip. */
+.marker-hit {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .marker-pin {
-  width: 1.05rem;
-  height: 1.05rem;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  width: 13px;
+  height: 13px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--map-line-casing, #fff); /* casing ring — mandatory on imagery */
+  box-shadow: 0 1px 4px rgba(30, 25, 20, 0.4);
+}
+
+.marker-pin.muted {
+  opacity: 0.5;
+  transform: scale(0.75);
+}
+
+/* armed mini label (touch two-step, AC 6) */
+.marker-chip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 4px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--surface-card);
+  color: var(--ink-primary);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  font: 600 12.5px/1.35 var(--font-sans);
+  box-shadow: var(--shadow-1);
+}
+
+.boat-marker {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+
+.boat-marker .halo {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  opacity: 0.18; /* accent fill via inline style (tokens.ts) */
+}
+
+.boat-marker .core {
+  position: absolute;
+  inset: 9px;
+  border-radius: var(--radius-full);
+  border: 2.5px solid var(--map-line-casing, #fff);
+}
+
+/* Karte-only; .stage-number stays untouched for RouteMap (AC 7). */
+.stage-capsule {
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--ink-primary);
+  font: 700 11px/18px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1.5px 4px rgba(30, 25, 20, 0.3);
+  letter-spacing: 0.02em;
   cursor: pointer;
 }
 
-.marker-pin.highlight {
-  transform: scale(1.5);
-  border-color: var(--navy);
+.stage-capsule.past {
+  color: var(--ink-secondary); /* NOT tertiary — ink rule */
+}
+
+.stage-capsule.highlight {
+  transform: scale(1.25);
+}
+
+/* ---- map skeleton caption (MapViewSkeleton) ---- */
+.map-skeleton-caption {
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+/* ---- mobile: full-bleed map + bottom sheet ---- */
+@media (max-width: 860px) {
+  .map-view {
+    /* cancel main.content's ≤860px padding (1rem 0.9rem 2.4rem) */
+    margin: -1rem -0.9rem -2.4rem;
+    height: calc(100vh - var(--header-h));
+    height: calc(100dvh - var(--header-h));
+    overflow: hidden;
+  }
+
+  .map-split {
+    display: block;
+    height: 100%;
+  }
+
+  .map-sticky {
+    position: absolute;
+    inset: 0;
+    top: 0;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* becomes the bottom sheet (AC 1: two-state toggle, no gesture physics) */
+  .map-itinerary {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    background: var(--surface-page);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* Level-3 shadow (see Elevation), offsets mirrored upward — a sheet
+       casts against the map ABOVE it, not below. No new shadow values. */
+    box-shadow: 0 -2px 6px rgba(30, 25, 20, 0.1), 0 -16px 40px rgba(30, 25, 20, 0.16);
+    padding: 0 var(--space-4) env(safe-area-inset-bottom);
+    height: 232px; /* collapsed: head + ~1.5 cards */
+    display: flex;
+    flex-direction: column;
+    transition: height 0.2s ease;
+  }
+
+  .map-itinerary.open {
+    height: 75vh;
+    height: 75dvh;
+  }
+
+  .drag-handle {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    min-height: 44px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+
+  .drag-handle .bar {
+    width: 40px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--ampel-unbewertet);
+  }
+
+  .itin-list {
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: var(--space-4);
+  }
+
+  .legend-btn {
+    bottom: 244px; /* clear of the collapsed sheet peek */
+  }
+
+  .legend-pop {
+    /* über dem hochgesetzten "i" verankert, frei vom Sheet-Peek */
+    bottom: calc(244px + 52px);
+    max-height: calc(100% - 244px - 52px - var(--space-3));
+  }
+
+  .map-attrib {
+    bottom: 244px; /* ditto — attribution must stay visible (AC 4) */
+  }
+}
+
+@media (min-width: 861px) {
+  .drag-handle {
+    display: none;
+  }
 }
 
 /* Windfiedern: die SVG traegt einen weissen Halo, damit der Schaft auch ueber
@@ -835,38 +1114,6 @@ hr.hairline,
    Stärke schon (halbe Fieder = 5 kn), die Ziffer war dieselbe Aussage ein
    zweites Mal — und über einem Feld von Fiedern war genau das die Überladung.
    Der Wert steht weiter im Tooltip. */
-
-.wind-toggle {
-  border-top: 1px solid var(--hairline);
-  margin-top: 0.35rem;
-  padding-top: 0.45rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.wind-legende {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.1rem 0.5rem;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.wind-legende > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.1rem;
-}
-
-.wind-legende .beschreibung {
-  flex-basis: 100%;
-  font-size: 0.68rem;
-  font-style: italic;
-  margin: 0;
-}
 
 /* ---- Tageskarte im Rechnungs-Panel (FR30) --------------------------------- */
 
@@ -929,90 +1176,297 @@ hr.hairline,
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
-/* ---- place detail ---------------------------------------------------------- */
+/* ---- place detail (redesign, Story 1.4) ------------------------------------ */
 
-.place-hero {
+/* ≥44px hit area for the Zurück .btn-text without a new button recipe
+   (accessibility floor — the bare text recipe alone is shorter). */
+.back-row .btn-text {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+/* ---- fused place card + hero ladder ---- */
+.place-card {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  overflow: hidden; /* imagery clips to the 20px radius (DESIGN Shapes) */
+  margin-top: var(--space-3);
+}
+
+.hero {
+  position: relative;
   height: 240px;
-  background: linear-gradient(140deg, var(--navy) 0%, var(--navy-soft) 55%, #4e6b8c 100%);
-  color: var(--creme);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 1.2rem 1.4rem;
+  overflow: hidden;
+}
+
+.hero.fallback {
+  height: 190px;
+}
+
+.hero-photo {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
 }
 
-.place-hero .headline {
-  font-family: var(--serif);
-  font-size: 1.7rem;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-}
-
-/* --- Luftbild als Kopfbild ------------------------------------------------
-   Die Karte füllt den Kopf, die Beschriftung liegt darüber. Das Padding wandert
-   dabei vom Kasten in die Beschriftung: läge es weiter aussen, bliebe rund um
-   die Karte ein blauer Rahmen stehen. */
-.place-hero-map {
-  position: relative;
-  padding: 0;
-  overflow: hidden;
-}
-
-.place-hero-canvas {
+.hero-map-canvas {
   position: absolute;
   inset: 0;
 }
 
-/* Im Foto- und Verlaufs-Kopf trägt `.place-hero` selbst das Padding — die
-   Beschriftung bringt hier keins mit, sonst stünde es doppelt. */
-.place-hero-caption {
-  position: relative;
-  z-index: 2;
+/* IMAGERY values (mock keyscreen-ortsdetail hex block "Hero-Fallback"), not UI
+   chrome: navy-warm gradient + a whisper of accent-gradient-end warmth. */
+.hero-fallback-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 78% 18%, rgba(229, 137, 60, 0.18) 0%, rgba(229, 137, 60, 0) 65%),
+    linear-gradient(160deg, #22303e 0%, #31424f 55%, #4a5561 100%);
 }
 
-.place-hero-map .place-hero-caption {
-  padding: 2.2rem 1.4rem 1.2rem;
-  /* Ohne dies fängt die Beschriftung die Gesten ab, die der Karte gelten. */
+.hero-scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 96px;
+  background: linear-gradient(180deg, rgba(20, 32, 40, 0) 0%, rgba(20, 32, 40, 0.55) 100%);
   pointer-events: none;
-  background: linear-gradient(to top, rgba(20, 32, 50, 0.88), rgba(20, 32, 50, 0));
 }
 
-.place-hero-caption .versal {
-  color: #d7dfea;
+/* Die Beschriftung liegt ÜBER dem Bild, nimmt aber keine Klicks an — sonst
+   liesse sich im Satelliten-Kopf genau der Ausschnitt nicht verschieben, für
+   den das Bild überhaupt dasteht. */
+.hero-caption {
+  position: absolute;
+  left: var(--space-5);
+  right: var(--space-5);
+  bottom: var(--space-4);
+  color: #fff;
+  font: 600 13px/1.35 var(--font-sans);
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(20, 32, 40, 0.5);
+  pointer-events: none; /* the satellite tier's gestures belong to the map */
 }
 
-.place-hero-legende {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
+.hero-fallback-chip {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: 600 12.5px/1.35 var(--font-sans);
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(2px);
+  white-space: nowrap;
 }
 
-table.shelter-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.85rem;
+.hero-legende { /* satellite honesty note, in-card footnote */
+  padding: var(--space-3) var(--space-5) 0;
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
 }
 
-table.shelter-table th,
-table.shelter-table td {
-  border-bottom: 1px solid var(--hairline);
-  text-align: left;
-  padding: 0.35rem 0.6rem 0.35rem 0;
+/* ---- title block ---- */
+.place-head {
+  padding: var(--space-4) var(--space-5) 0;
 }
 
-table.shelter-table th {
-  font-weight: 400;
-  color: var(--muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
+.place-kicker {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--ink-secondary);
 }
 
-/* Kuratiert, aber ohne Wirkung auf die Ampel (Wellen-Sektoren). Zurückgenommen
-   statt versteckt: das Wissen bleibt lesbar, der Anspruch verschwindet. */
-table.shelter-table tr.sektor-inaktiv td {
-  color: var(--muted);
-  font-style: italic;
+.place-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.place-title {
+  font: 800 30px/1.05 var(--font-sans);
+  letter-spacing: -0.03em;
+  color: var(--ink-primary);
+  margin: 0;
+}
+
+.place-title-row .ampel {
+  flex: none;
+  margin-top: var(--space-1);
+}
+
+.ampel-sub {
+  margin-top: var(--space-2);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ampel-sub strong {
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.place-desc {
+  padding: var(--space-3) var(--space-5) 0;
+  font: 400 15px/1.5 var(--font-sans);
+  color: var(--ink-primary);
+  margin: 0;
+}
+
+/* Scoped margin — 1.2's hero-card .warn-note margins stay untouched. */
+.place-card .warn-note {
+  margin: var(--space-3) var(--space-5) 0;
+}
+
+.place-card-pad {
+  height: var(--space-5);
+}
+
+/* ---- night section head ---- */
+.night-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.night-window {
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.night-caption {
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.wave-note {
+  margin-top: var(--space-3);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+/* ---- quality meters (NEVER Ampel/coral — qualities are not verdicts) ---- */
+.quality-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.quality-row:first-of-type {
+  padding-top: var(--space-1);
+}
+
+.quality-row:last-of-type {
+  border-bottom: 0;
+  padding-bottom: var(--space-1);
+}
+
+.quality-name {
+  font: 600 14.5px/1.35 var(--font-sans);
+  width: 108px;
+  flex: none;
+  color: var(--ink-primary);
+}
+
+.meter {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.meter i {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  background: var(--surface-track);
+}
+
+.meter i.fill {
+  background: var(--ink-primary);
+}
+
+.quality-value {
+  margin-left: auto;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- shelter sector grid ---- */
+.shelter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.sector {
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  text-align: center;
+}
+
+.sector .dir {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.sector .word {
+  font: 700 12.5px/1.35 var(--font-sans);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sector .wave {
+  font: 400 11.5px/1.4 var(--font-sans);
+  margin-top: var(--space-1);
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.sector.gruen { background: var(--ampel-gruen-tint); color: var(--ampel-gruen-text); }
+.sector.gelb  { background: var(--ampel-gelb-tint);  color: var(--ampel-gelb-text); }
+.sector.rot   { background: var(--ampel-rot-tint);   color: var(--ampel-rot-text); }
+
+.shelter-legend {
+  margin-top: var(--space-3);
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.shelter-legend strong {
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.shelter-sectors {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.1rem;
+  font: 400 11.5px/1.5 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.shelter-source {
+  margin-top: var(--space-3);
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
 }
 
 /* Eine Abweichung von der Regel "eine Verbindung pro Tag" — sichtbar, aber
@@ -1053,67 +1507,40 @@ table.shelter-table tr.sektor-inaktiv td {
 
 /* "Früh los, 15:00 vor Anker" — die Abfahrtsempfehlung des Etappentags. */
 .abfahrt-zeile {
-  font-size: 0.85rem;
-  border-radius: 4px;
-  padding: 0.45rem 0.7rem;
-  margin: 0.5rem 0;
-  border: 1px solid var(--hairline);
-  background: #eef3ee;
+  font: 400 14px/1.45 var(--font-sans);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+  border: 1px solid var(--border-hairline);
+  background: var(--ampel-gruen-tint);
+  color: var(--ampel-gruen-text);
 }
 .abfahrt-zeile.verfehlt {
-  background: #f7ecd7;
-  color: #8a6414;
-  border-color: #e4cf9f;
+  background: var(--ampel-gelb-tint);
+  color: var(--ampel-gelb-text);
+  border-color: var(--ampel-gelb-tint);
 }
 .abfahrt-zeile button {
-  margin-left: 0.6rem;
-  margin-top: 0.3rem;
+  margin-left: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 /* Entscheidungstor: Festlegung dahinter — gedeckt oder nicht. */
 .tor-zeile {
-  font-size: 0.85rem;
-  border-radius: 4px;
-  padding: 0.45rem 0.7rem;
-  margin: 0.5rem 0;
-  border: 1px solid var(--hairline);
+  font: 400 14px/1.45 var(--font-sans);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+  border: 1px solid var(--border-hairline);
 }
 .tor-zeile.ok {
-  border-left: 4px solid var(--gruen);
+  border-left: 4px solid var(--ampel-gruen);
 }
 .tor-zeile.offen {
-  background: #f6e2df;
-  color: #8c2f24;
-  border-color: #e3b6af;
-  border-left: 4px solid var(--rot);
-}
-
-/* Ein Wert, der informiert statt zu bewerten. */
-.badge-info {
-  border-style: dashed;
-  color: var(--muted);
-  cursor: help;
-  white-space: normal;
-}
-
-.warnung {
-  background: var(--ampel-gelb-tint);
-  border: 1px solid #e4cf9f;
-  color: var(--ampel-gelb-text);
-  padding: 0.5rem 0.8rem;
-  font-size: 0.83rem;
-  margin: 0.4rem 0;
-}
-
-.back-link {
-  background: none;
-  border: none;
-  color: var(--navy);
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0;
-  margin-bottom: 0.8rem;
+  background: var(--ampel-rot-tint);
+  color: var(--ampel-rot-text);
+  border-color: var(--ampel-rot-tint);
+  border-left: 4px solid var(--ampel-rot);
 }
 
 /* ---- footer (provenance, contentinfo) ---------------------------------------- */
@@ -1173,79 +1600,17 @@ table.shelter-table tr.sektor-inaktiv td {
 /* ---- responsive: stacked on mobile (NFR2) ------------------------------------ */
 
 @media (max-width: 860px) {
-  .map-split {
-    grid-template-columns: 1fr;
-  }
-
-  .map-sticky {
-    position: relative;
-    top: 0;
-    height: 60vh;
-    order: -1;
-  }
-
+  /* Die Karten-Stapelregeln von früher sind ersetzt: das Sheet-Layout steht
+     im Map-View-Block (Story 1.3). Das Padding bleibt — alle Views nutzen es;
+     die Karte hebt es dort per Negativ-Margin wieder auf. */
   main.content {
     padding: 1rem 0.9rem 2.4rem;
   }
 }
 
 /* ===================================================================== */
-/* Round-Trip-Umbau: Rest-Trip-Banner, Etappen-Cards, FR30-Rechnung      */
+/* Round-Trip-Umbau: Etappen-Cards, FR30-Rechnung                        */
 /* ===================================================================== */
-
-.resttrip-banner {
-  border: 1px solid var(--hairline);
-  border-left-width: 4px;
-  border-radius: 4px;
-  background: var(--creme-card);
-  padding: 0.8rem 1rem;
-  margin: 1rem 0 1.5rem;
-}
-.resttrip-banner.ampel-gruen { border-left-color: var(--gruen); }
-.resttrip-banner.ampel-gelb { border-left-color: var(--gelb); }
-.resttrip-banner.ampel-rot { border-left-color: var(--rot); }
-.resttrip-banner.ampel-unbewertet { border-left-color: var(--grau); }
-
-.resttrip-head {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-}
-
-/* --- Etappen-Cards ---------------------------------------------------- */
-
-.stage-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.stage-card.today {
-  border-color: var(--navy);
-  box-shadow: 0 1px 0 var(--navy);
-}
-
-.stage-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.pin-chip,
-.suggestion-chip {
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border: 1px solid var(--hairline);
-  border-radius: 2px;
-  padding: 0.1rem 0.35rem;
-  margin-left: 0.5rem;
-  white-space: nowrap;
-  color: var(--navy-soft);
-}
 
 .stage-actions,
 .editor-actions {
@@ -1350,14 +1715,10 @@ table.shelter-table tr.sektor-inaktiv td {
   font-size: 0.75rem;
 }
 
-.past-list {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  opacity: 0.7;
-}
-
-/* --- Karte: Etappen-Nummern und Legende ------------------------------- */
+/* --- Etappen-Nummern der Routen-VORSCHAU (RouteMap.tsx / AltPreview) ---
+   Die grosse Karte nutzt seit Story 1.3 die neue .stage-capsule; diese
+   Rezepte bleiben UNVERÄNDERT für die eingefrorene Tagesansicht-Vorschau
+   (Migration ist eine spätere Story). */
 
 .stage-number {
   width: 1.55rem;
@@ -1392,52 +1753,9 @@ table.shelter-table tr.sektor-inaktiv td {
   letter-spacing: 0.02em;
 }
 
-.marker-pin.muted {
-  background: var(--grau);
-  opacity: 0.5;
-  transform: scale(0.7);
-}
-
-.legend {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-  font-size: 0.78rem;
-  color: var(--navy-soft);
-}
-.legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.legend-line {
-  display: inline-block;
-  width: 1.6rem;
-  height: 0;
-}
-.legend-line.solid {
-  height: 3px;
-  border-radius: 2px;
-}
-.legend-line.dashed {
-  border-top: 3px dashed currentColor;
-}
-
-.itinerary-card.past {
-  opacity: 0.6;
-}
-.itinerary-card.harbour {
-  border-style: dashed;
-}
-
 /* ---- Persistenz-Annahme (AD-13 revised) ------------------------------------
    Gestrichelt und zurückhaltend: die Annahme ist eine Einschränkung der
    Aussage, keine Warnung — sie darf das Ampelbild nicht überschreien. */
-
-.hint-annahme {
-  border-left: 3px solid var(--navy-soft);
-}
 
 .badge-annahme {
   border-style: dashed;
@@ -1534,7 +1852,7 @@ table.shelter-table tr.sektor-inaktiv td {
 }
 
 .option-name {
-  font-family: var(--serif);
+  font-family: var(--font-sans);
   font-size: 1.05rem;
   color: var(--navy);
 }
@@ -1663,15 +1981,6 @@ table.shelter-table tr.sektor-inaktiv td {
   cursor: pointer;
 }
 
-/* Verschmelzung Optionsraum + Alternativen: auch die Options-Zeile trägt
-   jetzt den Vorschau-Umschalter — gleiche Zweitrangigkeit wie drüben. */
-.alt-route button.secondary,
-.option-row button.secondary {
-  background: transparent;
-  color: var(--navy);
-  border: 1px solid var(--navy-soft);
-}
-
 .alt-preview {
   margin-top: 0.6rem;
   padding-top: 0.6rem;
@@ -1711,23 +2020,6 @@ table.shelter-table tr.sektor-inaktiv td {
 
 .route-map {
   margin: 0.4rem 0 0.8rem;
-}
-
-/* Einblend-Schalter der Alternativen in der Karten-Seitenleiste — gleicher
-   Block wie die Windfiedern: Blickentscheidung, keine Törnentscheidung. */
-.alt-toggles {
-  border-top: 1px solid var(--hairline);
-  margin-top: 0.35rem;
-  padding-top: 0.45rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.alt-toggles .beschreibung {
-  font-size: 0.68rem;
-  font-style: italic;
-  margin: 0;
 }
 
 /* --- Aufklappbare Belege ------------------------------------------------
@@ -1771,4 +2063,427 @@ details.lesehilfe {
 details.lesehilfe > summary {
   font-style: normal;
   letter-spacing: 0.03em;
+}
+
+/* ===================================================================== */
+/* ---- day view (redesign, Story 1.2) --------------------------------- */
+/* ===================================================================== */
+
+/* ---- trip status line ---- */
+.trip-status { margin: var(--space-3) 0 0; }
+.trip-status-trigger {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  padding: var(--space-2) 0;
+  min-height: 44px;
+  width: 100%;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.trip-status-trigger strong { color: var(--ink-primary); font-weight: 600; }
+.trip-status-trigger .chev {
+  margin-left: auto;
+  color: var(--ink-secondary);
+  transition: transform 0.15s;
+}
+.trip-status-trigger[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.status-dot {
+  flex: none;
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  margin-top: 4px;
+}
+.status-dot.gruen { background: var(--ampel-gruen); }
+.status-dot.gelb { background: var(--ampel-gelb-graphic); }
+.status-dot.rot { background: var(--ampel-rot); }
+.status-dot.unbewertet { background: var(--ampel-unbewertet); }
+.trip-status .stale { color: var(--ampel-gelb-text); font-weight: 600; }
+/* footer refresh + provenance while the forecast is stale (AC 2) */
+.icon-button.stale { color: var(--accent-text); }
+.provenance .stale { color: var(--ampel-gelb-text); font-weight: 600; }
+.trip-status-detail {
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-4);
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-2);
+}
+.trip-status-detail h3 {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  margin: var(--space-3) 0 var(--space-1);
+}
+.trip-status-detail .caption {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+/* ---- day context ---- */
+.day-context { margin: var(--space-5) 0 var(--space-2); }
+.day-kicker {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.day-where {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+/* ---- popover (position control) ---- */
+.popover-wrap { position: relative; display: inline-flex; }
+.popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 120;
+  width: min(320px, calc(100vw - 2 * var(--space-page-margin)));
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.popover label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font: 600 14px/1.3 var(--font-sans);
+  color: var(--ink-primary);
+}
+
+/* ---- form primitives ---- */
+/* iOS zoom floor (deferred from Story 1.1). */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
+}
+.select {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  font: 400 16px/1.4 var(--font-sans);
+  color: var(--ink-primary);
+}
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.stepper button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  font: 700 19px/1 var(--font-sans);
+  color: var(--ink-primary);
+  cursor: pointer;
+}
+.stepper button:disabled {
+  color: var(--ink-tertiary);
+  cursor: default;
+}
+
+/* ---- hero / row stage card ---- */
+.hero-card { margin-top: var(--space-2); }
+/* New card recipe — the legacy .card keeps serving the old views. */
+.card-surface {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-card-padding);
+}
+.card-overline {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.route-from {
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-2);
+}
+.route-dest {
+  font: 800 30px/1.05 var(--font-sans);
+  letter-spacing: -0.03em;
+  color: var(--ink-primary);
+  margin: 2px 0 0;
+}
+/* Zeilen-Variante (Rest-Trip): Headline statt Display — ein Display-Element
+   pro Screen, und das gehört dem Hero. */
+.route-dest-sm {
+  font: 700 19px/1.2 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--ink-primary);
+  margin: 2px 0 0;
+}
+.route-sub {
+  font: 500 14px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-1);
+}
+.warn-note {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font: 400 14px/1.45 var(--font-sans);
+}
+.warn-note.gelb { background: var(--ampel-gelb-tint); color: var(--ampel-gelb-text); }
+.warn-note.rot { background: var(--ampel-rot-tint); color: var(--ampel-rot-text); }
+.warn-note ul { margin: 0; padding-left: 1.1em; }
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-hairline);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-top: var(--space-4);
+}
+.stat-tile {
+  background: var(--surface-inset);
+  padding: var(--space-3) var(--space-4);
+}
+.stat-tile .label {
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+.stat-tile .value {
+  font: 700 19px/1.2 var(--font-sans);
+  letter-spacing: -0.01em;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-primary);
+}
+.stat-tile .btn-text { font-size: 12.5px; }
+.berth-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-height: 44px;
+  background: var(--surface-inset);
+  border: 0;
+  border-radius: var(--radius-md);
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-primary);
+  cursor: pointer;
+  text-align: left;
+}
+.berth-line .name {
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.berth-line .role { color: var(--ink-secondary); }
+.berth-line .ampel { margin-left: auto; }
+/* Hafentag-Hero: Zeiger auf den nächsten Segeltag (Caption). */
+.next-sailing {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-3);
+}
+.cta-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+/* Zielmodell v2 — Heimweg-Status als Caption-Zeile (ohne Emoji). */
+.return-note {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: var(--space-2);
+}
+.return-note.status-wetterfenster { color: var(--ampel-gelb-text); }
+.return-note.status-kritisch { color: var(--ampel-rot-text); }
+
+/* ---- chips ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--surface-track);
+  color: var(--ink-secondary);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  font: 400 12.5px/1.35 var(--font-sans);
+  white-space: nowrap;
+}
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ---- section titles + list card ---- */
+.section-title {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+  margin: var(--space-6) 0 var(--space-2);
+}
+.section-title > button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: var(--space-2) 0;
+  min-height: 44px;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.section-title .chev {
+  color: var(--ink-secondary);
+  transition: transform 0.15s;
+}
+.section-title button[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.list-card {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.trip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--border-hairline);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: 400 14.5px/1.45 var(--font-sans);
+  color: var(--ink-primary);
+}
+.list-card > :last-child,
+.list-card > :last-child > :last-child {
+  border-bottom: 0;
+}
+.trip-row .tag {
+  flex: none;
+  width: 48px;
+  font-size: 13px;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.trip-row .place { font-weight: 600; }
+.trip-row .verdict {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+.trip-row .verdict .status-dot { margin-top: 0; }
+.trip-row .chev { color: var(--ink-secondary); transition: transform 0.15s; }
+.trip-row[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.trip-row.more {
+  justify-content: center;
+  color: var(--accent-text);
+  font: 600 13.5px/1.3 var(--font-sans);
+}
+.trip-row-body {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+.summary-row > span:first-child { flex: 1; }
+.summary-row .meta {
+  display: block;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+.optionsraum-body { padding: var(--space-3) var(--space-4); }
+.trip-caption {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-secondary);
+  margin: var(--space-1) 0 0;
+}
+
+/* ---- info chip ---- */
+.info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  font: 400 12.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+  text-align: left;
+}
+.info-chip .i {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--surface-track);
+  color: var(--ink-secondary);
+  font: 700 10.5px/1 var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.info-chip u {
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+/* ---- skeleton (pulse killed by the global reduced-motion rule) ---- */
+.skeleton {
+  border-radius: var(--radius-md);
+  background: var(--surface-track);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  50% { opacity: 0.55; }
 }

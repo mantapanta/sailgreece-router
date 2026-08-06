@@ -1,16 +1,20 @@
 /**
  * FR21/FR22/FR28/FR29/FR30 — Tagesansicht "Was machen wir heute?".
  *
- * The round trip IS the view: one main route over all trip days, today's stage
- * up front, every stage editable (FR28) and every duration explainable (FR30).
- * There is no header select for route options — there is one main route, and
- * alternatives are checked in explicitly (FR29).
+ * Consumer-Warm spine (Story 1.2): one trip status line with an expandable
+ * rest-trip detail, a day-context block with the position popover, ONE hero
+ * StageCard for the open decision of the day (hero-switch rule), a collapsed
+ * rest-trip list card, the collapsed Optionsraum summary, the assumption info
+ * chip and the collapsed "Bereits gefahren" chips. There is no header select
+ * for route options — there is one main route, and alternatives are checked
+ * in explicitly (FR29).
  *
  * All values come from the assessment (AD-2: views never compute domain
- * values, not even the stage number — that comes from domain/schema/plan.ts).
+ * values); display aggregation (hero switch, options summary, staleness)
+ * lives in the tested pure helpers of dayViewModel.ts.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
@@ -25,8 +29,10 @@ import type {
 import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
 import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
 import { planKey } from '../../domain/solver.ts';
-import { departureHourForDay } from '../../domain/scoring.ts';
-import { AmpelBadge } from '../components/AmpelBadge.tsx';
+import { departureHourChoices, departureHourForDay } from '../../domain/scoring.ts';
+import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
+import { PositionPopover } from '../components/PositionPopover.tsx';
+import { TripStatusLine } from '../components/TripStatusLine.tsx';
 import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
@@ -37,7 +43,10 @@ import {
   stagePoints,
 } from '../mapPath.ts';
 import { usePlanning } from '../../app/planningContext.tsx';
+import { useTrip } from '../../app/tripContext.tsx';
+import { STALE_TIME_MS } from '../../app/usePlanning.ts';
 import {
+  compass,
   formatAthensTime,
   formatDeg,
   formatHourOfDay,
@@ -45,10 +54,36 @@ import {
   formatKn,
   formatStamp,
   formatTripDayDate,
+  formatTripDayWeekdayShort,
   formatWindFrom,
   pointOfSail,
 } from '../format.ts';
-import { islandName, islandWithPlace, placeName, stageTitle, stageVia } from '../stageText.ts';
+import {
+  dayViewStages,
+  optionsSummary,
+  pickupDay,
+  staleForecastLabel,
+} from '../dayViewModel.ts';
+import { resolveMapsEnv } from '../mapsEnv.ts';
+import {
+  islandName,
+  islandWithPlace,
+  placeName,
+  stageFrom,
+  stageTitle,
+  stageVia,
+} from '../stageText.ts';
+
+/**
+ * Maps-Konfiguration — EINMAL pro View gelesen (Story 1.3, AC 9). Statisch,
+ * weil Vite `import.meta.env` zur Buildzeit ersetzt; die Hinweistexte der
+ * Karten-Fallbacks nennen darüber die tatsächlich fehlenden Variablen.
+ */
+const MAPS_ENV = resolveMapsEnv(
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined,
+  import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined,
+);
+const MAPS_MISSING = MAPS_ENV.ok ? '' : MAPS_ENV.missing.join(', ');
 
 /**
  * Die Annahme in einem Satz: mit WELCHEM Wind, WELCHEM Kurs zum Wind und
@@ -211,17 +246,6 @@ function Breakdown({
   );
 }
 
-/**
- * Ampel als Textsymbol für native <option>-Einträge, die kein Markup können.
- * Dieselben vier Zustände wie AmpelBadge, nur als Unicode.
- */
-const AMPEL_SYMBOL: Record<string, string> = {
-  gruen: '🟢',
-  gelb: '🟡',
-  rot: '🔴',
-  unbewertet: '⚪',
-};
-
 /** FR28 — change this day's target: another island, another berth, or stay. */
 function StageEditor({
   stage,
@@ -236,6 +260,7 @@ function StageEditor({
 }) {
   const { editStage, releasePin, setStopHours, removeStopover } = usePlanning();
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
   const placesOnIsland = snapshot.library.places.filter(
     (p) => p.islandId === stage.toIslandId,
   );
@@ -257,6 +282,9 @@ function StageEditor({
       setError(
         'Mit diesem Ziel lässt sich kein Round-Trip bauen — es führt keine Etappe der Bibliothek dorthin.',
       );
+      // Fokus auf die Fehlermeldung, sobald sie gerendert ist (EXPERIENCE
+      // StageEditor: aria-describedby + Fokus zum Fehler).
+      requestAnimationFrame(() => errorRef.current?.focus());
       return;
     }
     onClose();
@@ -269,6 +297,7 @@ function StageEditor({
         <select
           value={stage.kind === 'harbour' ? '' : stage.toIslandId}
           onChange={(e) => apply(e.target.value || null)}
+          aria-describedby={error ? 'stage-editor-error' : undefined}
         >
           <option value="">— Hafentag: hier bleiben —</option>
           {selectableIslands.map((i) => (
@@ -291,12 +320,13 @@ function StageEditor({
             onChange={(e) =>
               apply(stage.toIslandId, e.target.value || undefined)
             }
+            aria-describedby={error ? 'stage-editor-error' : undefined}
           >
             <option value="">— Vorschlag der App übernehmen —</option>
             {placesOnIsland.map((p) => (
               <option key={p.id} value={p.id}>
-                {AMPEL_SYMBOL[nightAmpeln[p.id]?.[stage.day]?.ampel ?? 'unbewertet']}{' '}
-                {p.name}
+                {p.name} —{' '}
+                {AMPEL_LABEL[nightAmpeln[p.id]?.[stage.day]?.ampel ?? 'unbewertet']}
               </option>
             ))}
           </select>
@@ -318,11 +348,10 @@ function StageEditor({
           />
           <button
             type="button"
-            className="secondary"
-            title={`Zurück auf den Standardwert (${snapshot.params.stopHoursDefault} h)`}
+            className="btn-secondary"
             onClick={() => setStopHours(stage.day, null)}
           >
-            Standard
+            Standard ({snapshot.params.stopHoursDefault} h)
           </button>
         </label>
       )}
@@ -356,7 +385,7 @@ function StageEditor({
             den Anlauf von {stageVia(snapshot, stage).join(' und ')}. Kennt die
             Bibliothek keine direkte Verbindung, berechnet die App den
             kürzesten landfreien Kurs selbst (Distanz aus der Geometrie, nicht
-            kuratiert). Der Tag gilt danach als festgelegt (📌).
+            kuratiert). Der Tag gilt danach als festgelegt.
           </p>
         </>
       )}
@@ -364,7 +393,7 @@ function StageEditor({
         {stage.pinned && (
           <button
             type="button"
-            className="secondary"
+            className="btn-secondary"
             onClick={() => {
               releasePin(stage.day);
               onClose();
@@ -373,37 +402,63 @@ function StageEditor({
             Festlegung lösen
           </button>
         )}
-        <button type="button" className="secondary" onClick={onClose}>
+        <button type="button" className="btn-secondary" onClick={onClose}>
           Schließen
         </button>
       </div>
-      {error && <div className="hint-panel">{error}</div>}
+      {error && (
+        <div
+          className="error-panel"
+          role="alert"
+          id="stage-editor-error"
+          tabIndex={-1}
+          ref={errorRef}
+        >
+          {error}
+        </div>
+      )}
     </div>
   );
 }
 
+/**
+ * Etappen-Card, Consumer-Warm (Story 1.2): als HERO trägt sie das Display-Ziel
+ * (die h1 der Ansicht), die Stat-Kacheln, den Abfahrt-Stepper (nur heute,
+ * [ASSUMPTION: OQ5]) und die korallene Primär-CTA; als Zeilen-Variante im
+ * Rest-Trip dieselbe Komposition in Headline-Typo mit Sekundär-CTA (ein
+ * Display-Element und eine korallene CTA pro Screen). StageEditor und das
+ * FR30-Rechnungs-Panel (StageMap → WindBasis → Breakdown) bleiben unverändert
+ * in der Card montiert.
+ */
 function StageCard({
   stage,
   snapshot,
   nightAmpeln,
-  isToday,
+  hero,
+  currentDay,
   onOpenPlace,
   mapId,
   returnCheck,
+  harbourPointer,
 }: {
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
   nightAmpeln: Assessment['nightAmpeln'];
-  isToday: boolean;
+  /** True for the ONE hero card of the view (display type, stepper, primary CTA). */
+  hero: boolean;
+  currentDay: number;
   onOpenPlace: (placeId: string) => void;
   /** Null when no Maps key is configured — the panel then stays text-only. */
   mapId: string | null;
   /** Zielmodell v2 — der Heimweg-Status dieses Tages (Abbruch-Notation). */
   returnCheck?: DayReturnCheck | null;
+  /** Hafentag-Hero: Hinweis auf den nächsten Segeltag ("Weiter am Mi: …"). */
+  harbourPointer?: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const { params } = snapshot;
+  const { state: trip, dispatch } = useTrip();
   const { setDepartureHour } = usePlanning();
   /** Die heute WIRKSAME Abfahrt (eine Quelle: scoring.departureHourForDay) —
       für den Übernehmen-Knopf der Empfehlung. */
@@ -420,39 +475,81 @@ function StageCard({
   // Tag 0 sm — und sie kannte die Verankerung an einem anderen Hafen nicht.
   const distance = stage.legs.reduce((s, l) => s + (l.sailedLeg?.distanceNm ?? 0), 0);
 
+  const isHarbour = stage.kind === 'harbour';
+  const isToday = stage.day === currentDay;
+  const from = isHarbour ? null : stageFrom(snapshot, stage);
+  const via = isHarbour ? [] : stageVia(snapshot, stage);
+  const legReasons = stage.legs.flatMap((l) => l.reasons);
+  const warn = stage.ampel === 'gelb' || stage.ampel === 'rot';
+
+  const stageWord = isHarbour ? 'Hafentag' : `Etappe ${stage.stageNumber ?? '–'}`;
+  const dayTag = hero
+    ? isToday
+      ? `Heute · ${stageWord}`
+      : `Als Nächstes · Tag ${stage.day} · ${stageWord}`
+    : `${stageWord} · Tag ${stage.day} · ${formatTripDayDate(params.tripStartDate, stage.day)}`;
+
+  const headline = isHarbour
+    ? `Hafentag in ${islandName(snapshot, stage.toIslandId)}`
+    : islandName(snapshot, stage.toIslandId);
+
+  // FR15 — der Override gilt nur für HEUTE; künftige Tage rechnen mit dem
+  // Standard, und die Kachel sagt genau das.
+  const departureHour = isToday
+    ? (trip.departureHourOverride ?? params.departureHourAthens)
+    : params.departureHourAthens;
+  /**
+   * Nachbarstunden im ERLAUBTEN Fenster des Törntags — der Stepper läuft die
+   * Domänenliste ab statt ±1 zu rechnen: Tag 1 bietet zusätzlich das
+   * Übernahme-Fenster 14–17 Uhr, und zwischen 12 und 14 klafft eine Lücke,
+   * die ein reines Inkrement überschreiben würde (scoring.departureHourChoices).
+   */
+  const departureStep = useMemo(() => {
+    const choices = departureHourChoices(stage.day);
+    const idx = choices.indexOf(departureHour);
+    return {
+      earlier: idx > 0 ? (choices[idx - 1] ?? null) : null,
+      later: idx >= 0 && idx < choices.length - 1 ? (choices[idx + 1] ?? null) : null,
+    };
+  }, [stage.day, departureHour]);
+  const lastLeg = stage.legs[stage.legs.length - 1];
+  const lastEta =
+    lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
+  const windLeg = stage.legs[0];
+
   return (
-    <article className={`card stage-card${isToday ? ' today' : ''}`}>
-      <div className="stage-head">
-        <span className="versal">
-          {stage.kind === 'harbour'
-            ? 'Hafentag'
-            : `Etappe ${stage.stageNumber ?? '–'}`}
-          {' · '}
-          Tag {stage.day} · {formatTripDayDate(params.tripStartDate, stage.day)}
-          {isToday && ' · HEUTE'}
-        </span>
+    <article className={hero ? 'card-surface hero-card' : 'card-surface'}>
+      <div className="hero-top">
+        <span className="card-overline">{dayTag}</span>
         <AmpelBadge ampel={stage.ampel} />
       </div>
 
-      <div className="headline">
-        {stage.kind === 'harbour'
-          ? `Bleiben: ${islandWithPlace(snapshot, stage.toIslandId, stage.placeId)}`
-          : stageTitle(snapshot, stage)}
-        {stage.pinned && <span className="pin-chip" title="Vom Skipper festgelegt">📌 festgelegt</span>}
-      </div>
-      {stage.kind === 'stage' && stageVia(snapshot, stage).length > 0 && (
-        <div className="beschreibung">über {stageVia(snapshot, stage).join(' · ')}</div>
+      {from && <div className="route-from">{from} →</div>}
+      {hero ? (
+        <h1 className="route-dest">{headline}</h1>
+      ) : (
+        <h3 className="route-dest-sm">{headline}</h3>
+      )}
+      {!isHarbour && (
+        <div className="route-sub">
+          {placeName(snapshot, stage.placeId)}
+          {via.length > 0 && ` · über ${via.join(' · ')}`}
+        </div>
       )}
 
-      {stage.kind === 'stage' && (
-        <div className="badges">
-          {distance > 0 && <span className="badge">{Math.round(distance)} sm</span>}
-          <span className="badge" title="Stunden unter Segeln und Motor">
-            {formatHours(totalHours || null)} Fahrt
-          </span>
-          {stage.stopHoursTotal > 0 && (
+      {(!isHarbour || stage.pinned) && (
+        <div className="chip-list">
+          {!isHarbour && distance > 0 && (
+            <span className="chip">{Math.round(distance)} sm</span>
+          )}
+          {!isHarbour && (
+            <span className="chip" title="Stunden unter Segeln und Motor">
+              {formatHours(totalHours || null)} Fahrt
+            </span>
+          )}
+          {!isHarbour && stage.stopHoursTotal > 0 && (
             <span
-              className="badge"
+              className="chip"
               title="Geplante Liegezeit an den Zwischenstopps — verschiebt die Abfahrt der Folge-Etappe"
             >
               {formatHours(stage.stopHoursTotal)} Liegezeit
@@ -462,35 +559,134 @@ function StageCard({
               eine Verbindung pro Tag. Steht hier trotzdem einer, hat eine harte
               Bedingung ihn erzwungen, und der Tag sagt das statt es zu
               verschweigen (params.maxLegsPerDay / RELAXATION_ORDER). */}
-          {stage.legs.length > 1 && (
+          {!isHarbour && stage.legs.length > 1 && (
             <span
-              className="badge badge-doppelschlag"
+              className="chip"
               title="Normalerweise plant die App eine Verbindung pro Tag. Zwei Schläge an einem Tag kommen nur, wenn ein Tag je Verbindung den Stichtag oder den Gäste-Zustiegstag nicht mehr erreicht."
             >
               {stage.legs.length} Schläge an einem Tag — Ausnahme
             </span>
           )}
+          {stage.pinned && <span className="chip">Festgelegt</span>}
         </div>
       )}
 
-      <div className="platz-zeile">
-        <span>
-          Platz:{' '}
-          {stage.placeId ? (
-            <button type="button" onClick={() => onOpenPlace(stage.placeId!)}>
-              {placeName(snapshot, stage.placeId)}
-            </button>
-          ) : (
-            '–'
-          )}
-          {stage.placeIsSuggestion && stage.placeId && (
-            <span className="suggestion-chip" title="Aktueller Vorschlag — ändert sich mit dem Forecast">
+      {/* Gelb/Rot trägt die Begründung als Warn-Note im Ampel-Tint; ruhige
+          Zustände als leise Liste (AC 6v). */}
+      {legReasons.length > 0 &&
+        (warn ? (
+          <div className={`warn-note ${stage.ampel}`}>
+            <ul>
+              {legReasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <ul className="reasons">
+            {legReasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        ))}
+
+      {!isHarbour && (
+        <div className="stat-grid">
+          <div className="stat-tile">
+            <div className="label">Abfahrt</div>
+            <div className="value">{departureHour}:00</div>
+            {/* [ASSUMPTION: OQ5] — Abfahrt-Stepper in der Hero-Kachel statt
+                als ständig sichtbares Control; nur für den HEUTIGEN Tag. */}
+            {hero && isToday && (
+              <>
+                <div className="stepper">
+                  <button
+                    type="button"
+                    aria-label="Abfahrt früher"
+                    disabled={departureStep.earlier === null}
+                    onClick={() =>
+                      dispatch({
+                        type: 'SET_DEPARTURE_HOUR',
+                        hour: departureStep.earlier,
+                      })
+                    }
+                  >
+                    −
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Abfahrt später"
+                    disabled={departureStep.later === null}
+                    onClick={() =>
+                      dispatch({
+                        type: 'SET_DEPARTURE_HOUR',
+                        hour: departureStep.later,
+                      })
+                    }
+                  >
+                    +
+                  </button>
+                </div>
+                {trip.departureHourOverride !== null && (
+                  <button
+                    type="button"
+                    className="btn-text"
+                    onClick={() => dispatch({ type: 'SET_DEPARTURE_HOUR', hour: null })}
+                  >
+                    Standard ({params.departureHourAthens}:00)
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          <div className="stat-tile">
+            <div className="label">Fahrtzeit</div>
+            <div className="value">{formatHours(totalHours || null)}</div>
+          </div>
+          <div className="stat-tile">
+            <div className="label">Ankunft</div>
+            <div className="value">
+              {lastEta ? `ca. ${formatAthensTime(lastEta)}` : '–'}
+            </div>
+          </div>
+          <div className="stat-tile">
+            <div className="label">Wind</div>
+            <div className="value">
+              {windLeg && windLeg.avgTwsKn !== null
+                ? `${windLeg.avgTwdDeg !== null ? `${compass(windLeg.avgTwdDeg)} ` : ''}${formatKn(windLeg.avgTwsKn)}`
+                : '–'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Die ganze Zeile öffnet das Platzdetail — der Liegeplatz ist das Ziel
+          des Tages, kein Fussnoten-Link. */}
+      {stage.placeId ? (
+        <button
+          type="button"
+          className="berth-line"
+          onClick={() => onOpenPlace(stage.placeId!)}
+        >
+          <span className="name">{placeName(snapshot, stage.placeId)}</span>
+          <span className="role">· Liegeplatz</span>
+          {stage.placeIsSuggestion && (
+            <span
+              className="chip"
+              title="Aktueller Vorschlag — ändert sich mit dem Forecast"
+            >
               Vorschlag
             </span>
           )}
-        </span>
-        <AmpelBadge ampel={stage.placeAmpel} />
-      </div>
+          <AmpelBadge ampel={stage.placeAmpel} />
+        </button>
+      ) : (
+        <div className="berth-line" style={{ cursor: 'default' }}>
+          <span className="name">–</span>
+          <span className="role">· Liegeplatz</span>
+          <AmpelBadge ampel={stage.placeAmpel} />
+        </div>
+      )}
 
       {/* "Früh los, 15:00 vor Anker" (Crowd-Strategie): die späteste Abfahrt,
           deren simulierte Ankunft das Ankerziel noch hält — gerechnet gegen
@@ -529,10 +725,11 @@ function StageCard({
 
       {/* ENTSCHEIDUNGSTOR (Törnanalyse): legt sich der Plan an diesem Tag
           hinter ein Tor fest, steht hier, ob 48-h-Fenster und Rückweg die
-          Festlegung decken — die Entscheidung am Tag der Entscheidung. */}
+          Festlegung decken — die Entscheidung am Tag der Entscheidung. Der
+          Status steht als Farbe UND im Text ("gedeckt" / "NICHT gedeckt" aus
+          konzept.ts) — kein Emoji als Bedeutungsträger. */}
       {stage.torCheck && (
         <div className={`tor-zeile${stage.torCheck.erfuellt ? ' ok' : ' offen'}`}>
-          {stage.torCheck.erfuellt ? '🚪 ' : '⛔ '}
           {stage.torCheck.note}
         </div>
       )}
@@ -540,34 +737,42 @@ function StageCard({
       {/* Zielmodell v2 — die Abbruch-Notation: geplant wird auf das
           Wetterfenster, abgesichert wird täglich. Diese Zeile sagt für DIESEN
           Tag, ob der Heimweg auch im Worst-Case hält oder woran der Skipper
-          den Abbruch erkennt. Neu gerechnet mit jedem Forecast. */}
+          den Abbruch erkennt. Neu gerechnet mit jedem Forecast. Der Status
+          steht als Farbe UND im Text — kein Emoji als Bedeutungsträger. */}
       {returnCheck && (
-        <div className={`rueckweg-zeile status-${returnCheck.status}`}>
-          {returnCheck.status === 'meltemi-fest' && '⚓ '}
-          {returnCheck.status === 'wetterfenster' && '⚠ '}
-          {returnCheck.status === 'kritisch' && '⛔ '}
+        <div className={`return-note status-${returnCheck.status}`}>
           {returnCheck.note}
         </div>
       )}
 
-      {stage.legs.some((l) => l.reasons.length > 0) && (
-        <ul className="reasons">
-          {stage.legs.flatMap((l) => l.reasons).map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
+      {isHarbour && harbourPointer && (
+        <div className="next-sailing">{harbourPointer}</div>
       )}
 
-      <div className="stage-actions">
-        <button type="button" className="secondary" onClick={() => setEditing((v) => !v)}>
-          {editing ? 'Bearbeiten abbrechen' : 'Etappe ändern'}
-        </button>
-        {stage.kind === 'stage' && (
-          <button type="button" className="secondary" onClick={() => setExpanded((v) => !v)}>
-            {expanded ? 'Rechnung ausblenden' : 'Wie kommt die Zeit zustande?'}
+      {/* Hafentag-HERO: bewusst OHNE Kacheln, Stepper und CTA (EXPERIENCE-
+          Variante) — Umplanung bleibt über die Rest-Trip-Zeilen und den
+          Optionsraum erreichbar. */}
+      {!(hero && isHarbour) && (
+        <div className="cta-column">
+          <button
+            type="button"
+            className={hero ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setEditing((v) => !v)}
+          >
+            {editing ? 'Bearbeiten abbrechen' : 'Etappe ändern'}
           </button>
-        )}
-      </div>
+          {!isHarbour && (
+            <button
+              type="button"
+              className="btn-ghost"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? 'Rechnung ausblenden' : 'Wie kommt die Zeit zustande?'}
+            </button>
+          )}
+        </div>
+      )}
 
       {editing && (
         <StageEditor stage={stage} snapshot={snapshot} nightAmpeln={nightAmpeln} onClose={() => setEditing(false)} />
@@ -585,8 +790,8 @@ function StageCard({
             />
           ) : (
             <p className="beschreibung">
-              Tageskarte nicht verfügbar — kein <code>VITE_GOOGLE_MAPS_API_KEY</code>{' '}
-              gesetzt. Die Rechnung unten ist davon unberührt.
+              Tageskarte nicht verfügbar — es fehlt: <code>{MAPS_MISSING}</code>.
+              Die Rechnung unten ist davon unberührt.
             </p>
           )}
           {stage.legs.map((l) => (
@@ -730,9 +935,8 @@ function AltPreview({
         <RouteMap stages={alt.stages} snapshot={snapshot} color={color} mapId={mapId} />
       ) : (
         <p className="beschreibung">
-          Routenkarte nicht verfügbar — kein{' '}
-          <code>VITE_GOOGLE_MAPS_API_KEY</code> gesetzt. Die Etappenliste
-          unten ist davon unberührt.
+          Routenkarte nicht verfügbar — es fehlt: <code>{MAPS_MISSING}</code>.
+          Die Etappenliste unten ist davon unberührt.
         </p>
       )}
       <div className="alt-stage-list">
@@ -776,9 +980,9 @@ function AltPreview({
       <p className="beschreibung">
         Auf der Karten-Ansicht lässt sich diese Route in derselben Farbe über
         die Hauptroute legen. Übernehmen macht sie zur neuen Hauptroute —
-        bisherige Festlegungen (📌) werden dabei gelöst.
+        bisherige Festlegungen werden dabei gelöst.
       </p>
-      <button type="button" onClick={() => checkIn(alt.plan)}>
+      <button type="button" className="btn-secondary" onClick={() => checkIn(alt.plan)}>
         Als Hauptroute übernehmen
       </button>
     </div>
@@ -893,7 +1097,7 @@ function OptionRow({
           <div className="stage-actions">
             <button
               type="button"
-              className="secondary"
+              className="btn-secondary"
               onClick={() => setOpen((v) => !v)}
             >
               {open ? 'Vorschau schließen' : 'Route ansehen'}
@@ -945,7 +1149,7 @@ function AlternativeRow({
         {stages.length > 6 && <span className="leg-chip">…</span>}
       </span>
       <div className="stage-actions">
-        <button type="button" className="secondary" onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="btn-secondary" onClick={() => setOpen((v) => !v)}>
           {open ? 'Vorschau schließen' : 'Route ansehen'}
         </button>
       </div>
@@ -968,22 +1172,52 @@ export function DayView({
   const { checkIn } = usePlanning();
   const hereName = assessment.currentIslandId
     ? islandName(snapshot, assessment.currentIslandId)
-    : 'Position unbekannt';
+    : null;
 
   const main = assessment.mainRoute;
-  const todayStage = main?.stages.find((s) => s.day === day) ?? null;
-  const restStages = main?.stages.filter((s) => s.day > day) ?? [];
-  const pastStages = main?.stages.filter((s) => s.day < day) ?? [];
+  /** Hero-Switch + Listen-Split — pure helper (AC 8/9), kein eigenes Branching. */
+  const { hero, rest, past } = dayViewStages(main, day, assessment.currentIslandId);
   /** Abbruch-Notation je Tag (Zielmodell v2) — für die Etappen-Cards. */
   const returnCheckByDay = new Map(
     (main?.returnChecks ?? []).map((c) => [c.day, c]),
   );
 
+  // Staleness (FR13/AD-7): geprüft höchstens einmal pro Minute; das Label
+  // selbst kommt aus dem getesteten Helper (AC 2/14).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const staleLabel = staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS);
+
+  // AC 3 — nach jeder Neuberechnung des ganzen Plans (Editor-Apply, Check-in,
+  // Refresh mit neuem Verdikt) landet der Fokus auf der Statuszeile, die das
+  // neue Verdikt über ihre Live-Region ansagt. Erst-Render übersprungen.
+  const statusRef = useRef<HTMLButtonElement>(null);
+  const planStamp = main ? `${planKey(main.plan)}|${assessment.restTripAmpel}` : null;
+  const prevStamp = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      prevStamp.current !== null &&
+      planStamp !== null &&
+      prevStamp.current !== planStamp
+    ) {
+      statusRef.current?.focus();
+    }
+    prevStamp.current = planStamp;
+  }, [planStamp]);
+
+  const [assumptionOpen, setAssumptionOpen] = useState(false);
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
+  const [showAllRest, setShowAllRest] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [pastOpen, setPastOpen] = useState(false);
+
   /**
-   * PPR-Hinweise für den Banner (Feedback 2026-08-05): die frühere
-   * "Point of Return"-Sektion am Seitenende ist in den Rest-Trip-Banner
-   * gewandert. An der Basis trägt der einzige Hinweis ("Bereits an der
-   * Basis") nichts — dort bleibt die Liste leer.
+   * PPR-Hinweise für das Statuszeilen-Detail (Feedback 2026-08-05): an der
+   * Basis trägt der einzige Hinweis ("Bereits an der Basis") nichts — dort
+   * bleibt die Liste leer.
    */
   const atBase = assessment.currentIslandId === params.baseIslandId;
   const pprHinweise = atBase ? [] : assessment.ppr.reasons;
@@ -1003,117 +1237,59 @@ export function DayView({
     .map((alt, index) => ({ alt, index }))
     .filter(({ index }) => !referencedAlts.has(index));
 
+  const summary = optionsSummary(assessment.routeOptions);
+  const hasOptionContent =
+    assessment.routeOptions.length > 0 || extraAlternatives.length > 0;
+  const pickupDayN = pickupDay(params);
+  const visibleRest = showAllRest ? rest : rest.slice(0, 3);
+
+  // Hafentag-Hero: Zeiger auf den nächsten Segeltag ("Weiter am Mi: A → B").
+  const nextSailing =
+    hero && hero.kind === 'harbour' && main
+      ? (main.stages.find((s) => s.day > hero.day && s.kind === 'stage') ?? null)
+      : null;
+  const harbourPointer =
+    hero && nextSailing
+      ? `Weiter am ${formatTripDayWeekdayShort(params.tripStartDate, nextSailing.day)}: ${islandName(snapshot, hero.toIslandId)} → ${islandName(snapshot, nextSailing.toIslandId)}`
+      : null;
+
   // Exactly ONE APIProvider for the whole view: several expanded stage cards
   // then share a single Maps script load instead of each mounting its own.
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const mapId = apiKey
-    ? (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || 'DEMO_MAP_ID'
-    : null;
+  // Story 1.3, AC 9: fehlende Konfiguration ist ein benannter Fehler — kein
+  // stiller Demo-Map-Fallback (mapsEnv.ts, MAPS_ENV oben im Modul).
+  const mapId = MAPS_ENV.ok ? MAPS_ENV.env.mapId : null;
 
   const content = (
     <div>
-      <span className="versal">
-        Tag {day} · {formatTripDayDate(params.tripStartDate, day)}
-      </span>
-      <p className="beschreibung">
-        Aktuelle Position: <strong>{hereName}</strong>
-        {snapshot.trip.position?.source === 'manual' && ' (manuell gesetzt)'}
-        {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
-        {' · '}Abfahrt {departureHourForDay(snapshot, day)}:00 Uhr (Athen)
-        {' · '}Ankerziel {params.zielAnkunftHourAthens}:00
-      </p>
-      {assessment.positionNote && (
-        <div className="hint-panel">{assessment.positionNote}</div>
-      )}
+      <TripStatusLine
+        assessment={assessment}
+        main={main}
+        pprHinweise={pprHinweise}
+        staleLabel={staleLabel}
+        triggerRef={statusRef}
+      />
 
-      {/* AD-13 revised: the app always routes — where the forecast runs out it
-          says so instead of falling silent. This is the ONE place that states
-          the extent of the assumption for the whole plan; the per-day cards
-          only carry the short marker. */}
-      {assessment.assumedFromDay !== null && (
-        /* Eingeklappt statt ausgebreitet: die AUSSAGE ist ein Satz — ab
-           welchem Tag die Planung auf einer Annahme beruht. Alles andere ist
-           Beleg, und Belege gehören dorthin, wo man sie sucht, nicht an den
-           Anfang der Seite. Verloren geht nichts: ein Klick, und es steht da. */
-        <details className="hint-panel hint-annahme">
-          <summary>
-            <strong>Ab Tag {assessment.assumedFromDay} beruht die Planung auf einer Annahme.</strong>
-          </summary>
-          <p className="beschreibung">{assessment.assumptionNote}</p>
-          <ul className="reasons">
-            <li>
-              Windvorhersage ({assessment.model}) verlässlich bis Tag{' '}
-              {snapshot.trip.currentDay + snapshot.params.reliableHorizonDays}, Werte
-              bis {formatStamp(assessment.forecastHorizonIso)}.
-            </li>
-            <li>
-              Wellenvorhersage bis {formatStamp(assessment.waveHorizonIso)} — endet
-              früher als der Wind, zieht die Nacht-Ampeln aber nicht mit: Wellenwerte
-              gelten für die offene See.
-            </li>
-            <li>
-              Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:
-              sie warnt, sie verurteilt nicht.
-            </li>
-          </ul>
-        </details>
-      )}
-
-      {/* FR2 — the rest-trip light governs the whole view. */}
-      <div className={`resttrip-banner ampel-${assessment.restTripAmpel}`}>
-        <div className="resttrip-head">
-          <AmpelBadge
-            ampel={assessment.restTripAmpel}
-            label={
-              assessment.restTripAmpel === 'gruen'
-                ? 'Round-Trip trägt'
-                : assessment.restTripAmpel === 'gelb'
-                  ? 'Round-Trip unter Vorbehalt'
-                  : assessment.restTripAmpel === 'rot'
-                    ? 'Kein tragfähiger Round-Trip'
-                    : 'Round-Trip unbewertet'
-            }
-          />
-          <span className="beschreibung">
-            Rückkehr Alimos bis Tag {assessment.ppr.effectiveDeadlineDay} (inkl.
-            Puffertag)
-          </span>
+      <div className="day-context">
+        <div className="day-kicker">
+          Tag {day} · {formatTripDayDate(params.tripStartDate, day)}
         </div>
-        {/* FR19/Zielmodell v2 — die beiden tragenden Rückweg-Angaben stehen
-            HIER, wo die Rückkehr-Frist ohnehin steht, statt in einer eigenen
-            Sektion am Seitenende (Feedback 2026-08-05). */}
-        <div className="badges">
-          <span
-            className="badge"
-            title="Letzter Törntag, an dem die Umkehr über die Rückfallkette noch rechtzeitig nach Alimos führt (Worst-Case gerechnet)."
-          >
-            Spätester Umkehrtag:{' '}
-            <strong>
-              {assessment.ppr.latestReturnStartDay !== null
-                ? `Tag ${assessment.ppr.latestReturnStartDay}`
-                : 'nicht mehr erreichbar'}
-            </strong>
+        <div className="day-where">
+          <span>
+            {hereName ? (
+              <>
+                Position: <strong>{hereName}</strong>
+                {snapshot.trip.position?.source === 'manual' &&
+                  ' (manuell gesetzt)'}
+                {snapshot.trip.position?.source === 'gps' && ' (GPS)'}
+              </>
+            ) : (
+              'Position unbekannt'
+            )}
           </span>
-          {main && main.returnChecks.length > 0 && (
-            <span
-              className="badge"
-              title="Bis zu diesem Törntag ist die Umkehr auch unter dem Meltemi-Worst-Case jederzeit möglich. Danach trägt der aktuelle Forecast den Heimweg — die Tageskarten sagen, woran der Abbruch zu erkennen ist."
-            >
-              Meltemi-fest bis:{' '}
-              <strong>
-                {main.meltemiSafeUntilDay !== null
-                  ? `Tag ${main.meltemiSafeUntilDay}`
-                  : 'heute nicht'}
-              </strong>
-            </span>
-          )}
+          <PositionPopover />
         </div>
-        {(assessment.restTripReasons.length > 0 || pprHinweise.length > 0) && (
-          <ul className="reasons">
-            {[...assessment.restTripReasons, ...pprHinweise].map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
+        {assessment.positionNote && (
+          <div className="hint-panel">{assessment.positionNote}</div>
         )}
       </div>
 
@@ -1122,11 +1298,23 @@ export function DayView({
       <KonzeptPanel assessment={assessment} />
 
       {!main && assessment.proposal && (
-        <div className="hint-panel">
-          Noch keine Hauptroute festgelegt.{' '}
-          <button type="button" onClick={() => checkIn(assessment.proposal!.plan)}>
-            Vorschlag der App übernehmen
-          </button>
+        <div className="card-surface hero-card">
+          <h1 className="route-dest-sm">Noch keine Hauptroute festgelegt.</h1>
+          <p>
+            Vorschlag der App:{' '}
+            {islandName(snapshot, assessment.proposal.turnIslandId)} und zurück,{' '}
+            {assessment.proposal.stages.filter((s) => s.kind === 'stage').length}{' '}
+            Etappen.
+          </p>
+          <div className="cta-column">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => checkIn(assessment.proposal!.plan)}
+            >
+              Vorschlag übernehmen
+            </button>
+          </div>
         </div>
       )}
 
@@ -1141,120 +1329,259 @@ export function DayView({
             Der Planer wurde verbessert — die gespeicherte Hauptroute stammt aus
             einer älteren Version und würde so nicht mehr vorgeschlagen.
             Übernehmen ersetzt sie durch den aktuellen Vorschlag; bisherige
-            Festlegungen (📌) werden dabei gelöst.{' '}
-            <button type="button" onClick={() => checkIn(assessment.proposal!.plan)}>
+            Festlegungen werden dabei gelöst.{' '}
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => checkIn(assessment.proposal!.plan)}
+            >
               Route neu berechnen
             </button>
           </div>
         )}
 
-      {todayStage && (
-        <section className="section">
-          <span className="versal">Heute</span>
-          <StageCard
-            nightAmpeln={assessment.nightAmpeln}
-            stage={todayStage}
-            snapshot={snapshot}
-            isToday
-            onOpenPlace={onOpenPlace}
-            mapId={mapId}
-            returnCheck={returnCheckByDay.get(todayStage.day) ?? null}
-          />
-        </section>
+      {hero && (
+        <StageCard
+          stage={hero}
+          snapshot={snapshot}
+          nightAmpeln={assessment.nightAmpeln}
+          hero
+          currentDay={day}
+          onOpenPlace={onOpenPlace}
+          mapId={mapId}
+          returnCheck={returnCheckByDay.get(hero.day) ?? null}
+          harbourPointer={harbourPointer}
+        />
       )}
 
-      {restStages.length > 0 && (
-        <section className="section">
-          <span className="versal">Rest-Trip · bis zurück nach Alimos</span>
-          <h2>Die weiteren Etappen</h2>
-          <div className="stage-list">
-            {restStages.map((s) => (
-              <StageCard
-                key={s.day}
-                stage={s}
-                snapshot={snapshot}
-                nightAmpeln={assessment.nightAmpeln}
-                isToday={false}
-                onOpenPlace={onOpenPlace}
-                mapId={mapId}
-                returnCheck={returnCheckByDay.get(s.day) ?? null}
-              />
+      {/* AD-13 revised: the app always routes — where the forecast runs out it
+          says so instead of falling silent. This is the ONE place that states
+          the extent of the assumption for the whole plan; the per-day cards
+          only carry the short marker. */}
+      {assessment.assumedFromDay !== null && (
+        <div>
+          <button
+            type="button"
+            className="info-chip"
+            aria-expanded={assumptionOpen}
+            aria-controls="assumption-detail"
+            onClick={() => setAssumptionOpen((o) => !o)}
+          >
+            <span className="i" aria-hidden="true">
+              i
+            </span>
+            <span>
+              Ab Tag {assessment.assumedFromDay} beruht die Planung auf einer{' '}
+              <u>Annahme</u>.
+            </span>
+          </button>
+          {assumptionOpen && (
+            <div id="assumption-detail" className="trip-status-detail">
+              <p>{assessment.assumptionNote}</p>
+              <ul className="reasons">
+                <li>
+                  Windvorhersage ({assessment.model}) verlässlich bis Tag{' '}
+                  {snapshot.trip.currentDay + snapshot.params.reliableHorizonDays}, Werte
+                  bis {formatStamp(assessment.forecastHorizonIso)}.
+                </li>
+                <li>
+                  Wellenvorhersage bis {formatStamp(assessment.waveHorizonIso)} — endet
+                  früher als der Wind, zieht die Nacht-Ampeln aber nicht mit: Wellenwerte
+                  gelten für die offene See.
+                </li>
+                <li>
+                  Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:
+                  sie warnt, sie verurteilt nicht.
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {rest.length > 0 && (
+        <section>
+          <h2 className="section-title">Rest-Trip</h2>
+          <div className="list-card">
+            {visibleRest.map((s) => (
+              <div key={s.day}>
+                <button
+                  type="button"
+                  className="trip-row"
+                  aria-expanded={expandedDay === s.day}
+                  onClick={() =>
+                    setExpandedDay((d) => (d === s.day ? null : s.day))
+                  }
+                >
+                  <span className="tag">Tag {s.day}</span>
+                  <span className="place">
+                    {s.kind === 'harbour' ? 'Hafentag: ' : ''}
+                    {islandWithPlace(snapshot, s.toIslandId, s.placeId)}
+                  </span>
+                  {s.day === pickupDayN && <span className="chip">Pickup</span>}
+                  <span className="verdict">
+                    <span className={`status-dot ${s.ampel}`} aria-hidden="true" />{' '}
+                    {AMPEL_LABEL[s.ampel]}
+                  </span>
+                  <span className="chev" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+                {expandedDay === s.day && (
+                  <div className="trip-row-body">
+                    <StageCard
+                      stage={s}
+                      snapshot={snapshot}
+                      nightAmpeln={assessment.nightAmpeln}
+                      hero={false}
+                      currentDay={day}
+                      onOpenPlace={onOpenPlace}
+                      mapId={mapId}
+                      returnCheck={returnCheckByDay.get(s.day) ?? null}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
+            {rest.length > 3 && (
+              <button
+                type="button"
+                className="trip-row more"
+                aria-expanded={showAllRest}
+                onClick={() => setShowAllRest((v) => !v)}
+              >
+                {showAllRest
+                  ? 'Weniger anzeigen'
+                  : `Alle ${rest.length} Tage anzeigen`}
+              </button>
+            )}
           </div>
         </section>
       )}
 
       {/* FR9/FR18/FR20/FR29 — Optionsraum und Alternativ-Routen VERSCHMOLZEN
-          (Feedback 2026-08-05): zwei Sektionen beantworteten dieselbe Frage,
-          und dieselben Ziele standen doppelt da — oben mit Preis und Frist,
-          darunter noch einmal als "anderer Round-Trip" mit Vorschau. Jetzt
-          EINE Liste: jede Option trägt Reichweite, Preis, Frist UND ihre
-          ansehbare Route (previewIndex → assessment.alternatives, gleiche
-          Farbe wie auf der Karten-Ansicht). Die FR20-Fristen stehen
-          weiterhin hier: das Frist-Badge je Option ist der Entscheidungs-
-          punkt, dort wo die Entscheidung ansteht. */}
-      {(assessment.routeOptions.length > 0 || extraAlternatives.length > 0) && (
-        <section className="section">
-          <span className="versal">Optionen & Alternativ-Routen</span>
-          <h2>Wie weit kommen wir noch?</h2>
-          <p className="beschreibung">
-            Reichweite, Preis und Frist je Route — eine Option schliesst an dem
-            Tag, ab dem kein tragfähiger Restplan mehr existiert. „Route
-            ansehen“ zeigt Etappen und Karte, bevor etwas passiert; übernommen
-            wird erst per Knopf in der Vorschau. Jede ansehbare Route trägt
-            ihre Farbe, in der Karten-Ansicht lässt sie sich damit über die
-            Hauptroute legen.
-          </p>
-          {assessment.routeOptions.map((o) => (
-            <OptionRow
-              key={o.routeId}
-              option={o}
-              snapshot={snapshot}
-              today={day}
-              preview={
-                o.previewIndex !== null
-                  ? (assessment.alternatives[o.previewIndex] ?? null)
-                  : null
-              }
-              color={o.previewIndex !== null ? altRouteColor(o.previewIndex) : null}
-              mapId={mapId}
-            />
-          ))}
-          {extraAlternatives.map(({ alt, index }) => (
-            <AlternativeRow
-              key={`${alt.variantId}-${alt.turnIslandId}`}
-              alt={alt}
-              snapshot={snapshot}
-              color={altRouteColor(index)}
-              mapId={mapId}
-            />
-          ))}
-        </section>
-      )}
-
-      {pastStages.length > 0 && (
-        <section className="section">
-          <span className="versal">Bereits gefahren</span>
-          <div className="past-list">
-            {pastStages.map((s) => (
-              <span className="badge" key={s.day}>
-                {s.stageNumber !== null ? `Etappe ${s.stageNumber}: ` : ''}
-                {islandName(snapshot, s.toIslandId)} (Tag {s.day})
+          (Feedback 2026-08-05), jetzt hinter einer eingeklappten Summenzeile:
+          "{N} Optionen offen · Nächste Deadline: Tag X". Die Sektion ist NIE
+          versteckt — null offene Optionen sind eine Aussage, kein Leerraum. */}
+      <section>
+        <h2 className="section-title">Optionsraum</h2>
+        <div className="list-card">
+          {hasOptionContent ? (
+            <button
+              type="button"
+              className="trip-row summary-row"
+              aria-expanded={optionsOpen}
+              onClick={() => setOptionsOpen((o) => !o)}
+            >
+              <span>
+                <span className="place">
+                  {summary.openCount === 0
+                    ? 'Keine Optionen mehr offen — Rückweg fixiert.'
+                    : summary.openCount === 1
+                      ? '1 Option offen'
+                      : `${summary.openCount} Optionen offen`}
+                </span>
+                {summary.openCount === 0 ? (
+                  <span className="meta">
+                    Der Plan folgt der festgelegten Rückroute; neue Fenster
+                    meldet der nächste Forecast-Lauf.
+                  </span>
+                ) : (
+                  summary.nextDeadlineDay !== null && (
+                    <span className="meta">
+                      Nächste Deadline: Tag {summary.nextDeadlineDay}
+                    </span>
+                  )
+                )}
               </span>
-            ))}
-          </div>
+              <span className="chev" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          ) : (
+            <div className="optionsraum-body">
+              <strong>Keine Optionen mehr offen — Rückweg fixiert.</strong>
+              <p className="trip-caption">
+                Der Plan folgt der festgelegten Rückroute; neue Fenster meldet
+                der nächste Forecast-Lauf.
+              </p>
+            </div>
+          )}
+          {optionsOpen && hasOptionContent && (
+            <div className="optionsraum-body">
+              <p className="beschreibung">
+                Reichweite, Preis und Frist je Route — eine Option schliesst an dem
+                Tag, ab dem kein tragfähiger Restplan mehr existiert. „Route
+                ansehen“ zeigt Etappen und Karte, bevor etwas passiert; übernommen
+                wird erst per Knopf in der Vorschau. Jede ansehbare Route trägt
+                ihre Farbe, in der Karten-Ansicht lässt sie sich damit über die
+                Hauptroute legen.
+              </p>
+              {assessment.routeOptions.map((o) => (
+                <OptionRow
+                  key={o.routeId}
+                  option={o}
+                  snapshot={snapshot}
+                  today={day}
+                  preview={
+                    o.previewIndex !== null
+                      ? (assessment.alternatives[o.previewIndex] ?? null)
+                      : null
+                  }
+                  color={o.previewIndex !== null ? altRouteColor(o.previewIndex) : null}
+                  mapId={mapId}
+                />
+              ))}
+              {extraAlternatives.map(({ alt, index }) => (
+                <AlternativeRow
+                  key={`${alt.variantId}-${alt.turnIslandId}`}
+                  alt={alt}
+                  snapshot={snapshot}
+                  color={altRouteColor(index)}
+                  mapId={mapId}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {past.length > 0 && (
+        <section>
+          <h2 className="section-title">
+            <button
+              type="button"
+              aria-expanded={pastOpen}
+              onClick={() => setPastOpen((o) => !o)}
+            >
+              Bereits gefahren ({past.length})
+              <span className="chev" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          </h2>
+          {pastOpen && (
+            <div className="chip-list">
+              {past.map((s) => (
+                <span className="chip" key={s.day}>
+                  {s.stageNumber !== null ? `Etappe ${s.stageNumber}: ` : ''}
+                  {islandName(snapshot, s.toIslandId)} (Tag {s.day})
+                </span>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
       {/* Die früheren Sektionen "Point of Return" und "Entscheidungspunkte"
           sind bewusst ENTFERNT (Feedback 2026-08-05): am Seitenende trugen
-          sie nichts — alles stand dort doppelt. Der spätere Umkehrtag und
-          "Meltemi-fest bis" stehen jetzt als Badges im Rest-Trip-Banner oben
+          sie nichts — alles stand dort doppelt. Der späteste Umkehrtag und
+          "Meltemi-fest bis" stehen jetzt im Detail der Trip-Statuszeile oben
           (neben der Rückkehr-Frist, zu der sie gehören), die PPR-Hinweise in
-          dessen Begründungsliste. Die Options-Fristen aus FR20 zeigt die
-          Sektion "Optionen & Alternativ-Routen" weiterhin je Option
-          (Frist-Badge inkl. Dringlichkeit und Preis);
-          `assessment.decisionPoints` bleibt als Domain-Ergebnis bestehen. */}
+          dessen Begründungsliste — und `assessment.decisionPoints` rendert
+          seit Story 1.2 ebenfalls dort (FR20 sichtbar). Die Options-Fristen
+          aus FR20 zeigt der Optionsraum weiterhin je Option (Frist-Badge
+          inkl. Dringlichkeit und Preis). */}
 
       {/* Die frühere Sektion "Platzbibliothek — Alle Plätze mit Nacht-Ampel"
           ist bewusst ENTFERNT (Feedback 2026-08-05): ~60 Plätze des ganzen
@@ -1265,8 +1592,8 @@ export function DayView({
     </div>
   );
 
-  // No key: render the view unchanged. The day cards then explain the missing
-  // map in place, exactly as the map view does — never a crash (NFR).
-  if (!apiKey) return content;
-  return <APIProvider apiKey={apiKey}>{content}</APIProvider>;
+  // Missing config: render the view unchanged. The day cards then explain the
+  // missing map in place, exactly as the map view does — never a crash (NFR).
+  if (!MAPS_ENV.ok) return content;
+  return <APIProvider apiKey={MAPS_ENV.env.apiKey}>{content}</APIProvider>;
 }
