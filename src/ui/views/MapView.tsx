@@ -198,7 +198,7 @@ function LegendPopover({
   turnLabel: string | null;
   windCount: { shown: number; hidden: number };
   /** Je Alternative: Identitätsfarbe + "Wendepunkt {Insel} · {n} Etappen". */
-  alternatives: { key: string; color: string; label: string }[];
+  alternatives: { key: string; color: string; label: string; shown: boolean }[];
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -299,12 +299,16 @@ function LegendPopover({
                 {alternatives.map((alt) => (
                   <div key={alt.key} className="lg-row" style={{ color: alt.color }}>
                     <span className="lg-line dashed" aria-hidden="true" />
-                    <span style={{ color: 'inherit' }}>{alt.label}</span>
+                    <span style={{ color: 'inherit' }}>
+                      {alt.label}
+                      {alt.shown && ' · wird gezeigt'}
+                    </span>
                   </div>
                 ))}
                 <p className="lg-caption">
-                  Zum Vergleich über die Hauptroute gelegt — übernommen wird in
-                  der Tagesansicht.
+                  Eine Alternative ersetzt die Hauptroute im Bild, sie liegt
+                  nicht darüber — sichtbar ist immer genau eine Route.
+                  Übernommen wird in der Tagesansicht.
                 </p>
               </>
             )}
@@ -357,11 +361,17 @@ export function MapView({
   /**
    * FEEDBACK 2026-08-05: die Alternativ-Routen waren auf der Karte unsichtbar.
    * Jetzt sind sie EINBLENDBAR — gestrichelt, jede in ihrer Farbe (dieselbe
-   * wie in der Vorschau der Tagesansicht, altRouteColors.ts). Story 1.3: EIN
-   * Chip schaltet ALLE Alternativen (Spine); die Identität je Alternative
-   * steht in der Legende, inspiziert wird in der Tagesansicht.
+   * wie in der Vorschau der Tagesansicht, altRouteColors.ts). Die Identität je
+   * Alternative steht in der Legende, inspiziert wird in der Tagesansicht.
+   *
+   * FEEDBACK 2026-08-06: sie lagen ÜBER der Hauptroute — zwei Routen im selben
+   * Bild, und wo sie sich decken, war nicht mehr zu sehen, welche Linie welche
+   * ist. Jetzt ist es ein UMSCHALTER statt eines Overlays: sichtbar ist immer
+   * genau EINE Route — die Hauptroute, oder STATT ihrer eine Alternative.
+   * Darum ein Index und kein Boolean: bei mehreren Alternativen wäre "alle an"
+   * dasselbe Übereinanderlegen, nur zwischen den Alternativen.
    */
-  const [showAlts, setShowAlts] = useState(false);
+  const [shownAltIndex, setShownAltIndex] = useState<number | null>(null);
   /** Touch-Zweischritt (AC 6): erster Tipp "bewaffnet" den Pin (Mini-Chip). */
   const [armedPlaceId, setArmedPlaceId] = useState<string | null>(null);
   /** Gesetzt in onPointerDown, gelesen im onClick — unterscheidet Touch. */
@@ -380,6 +390,38 @@ export function MapView({
     [main],
   );
 
+  /**
+   * Die eingeblendete Alternative — oder null für die Hauptroute. Der Index
+   * wird beim Lesen geprüft: jedes neue Assessment rechnet die Alternativen neu
+   * und kann weniger davon liefern; ein Index ins Leere würde die Karte ohne
+   * Route zurücklassen, statt auf die Hauptroute zurückzufallen.
+   */
+  const shownAlt =
+    shownAltIndex === null ? null : (assessment.alternatives[shownAltIndex] ?? null);
+  const shownAltColor = shownAlt ? altRouteColor(shownAltIndex!) : null;
+  useEffect(() => {
+    // Verschwundene Alternative: Chip zurücksetzen, sonst bliebe er gedrückt,
+    // während die Hauptroute gezeichnet wird.
+    if (shownAltIndex !== null && shownAltIndex >= assessment.alternatives.length) {
+      setShownAltIndex(null);
+    }
+  }, [shownAltIndex, assessment.alternatives.length]);
+
+  /**
+   * Die Route, die die Karte ZEIGT — Hauptroute oder eingeblendete Alternative.
+   * Alles Routenbezogene hängt hieran (Linien, Etappennummern, Kontextmenge der
+   * Pins und Windfiedern), damit die Karte nie eine Route zeichnet und die
+   * Nummern einer anderen dazu.
+   */
+  const displayRouteStages = useMemo(
+    () => (shownAlt ? shownAlt.stages : (main?.stages ?? [])),
+    [shownAlt, main],
+  );
+  const displayStages = useMemo(
+    () => displayRouteStages.filter((s) => s.kind === 'stage'),
+    [displayRouteStages],
+  );
+
   // FR1: only the current island and today's target carry an ampel marker.
   const todayStage = main?.stages.find((s) => s.day === day) ?? null;
   const ampelIslands = useMemo(() => {
@@ -394,12 +436,15 @@ export function MapView({
   // aktuelle Position. Plätze abseits davon sind kein Besprechungsbild,
   // sondern Rauschen — sie bekommen weder Pin noch Windfieder. Die Menge
   // besteht aus Assessment-Werten (AD-2: hier wird nichts gerechnet).
+  // Sie folgt der GEZEIGTEN Route: eine eingeblendete Alternative läuft
+  // womöglich über Inseln, die die Hauptroute nicht anfährt — ohne Pin und ohne
+  // Windfieder wäre dort nur eine Linie ins Leere.
   const planIslands = useMemo(() => {
     const ids = new Set<string>();
     if (assessment.currentIslandId) ids.add(assessment.currentIslandId);
-    for (const st of assessment.mainRoute?.stages ?? []) ids.add(st.toIslandId);
+    for (const st of displayRouteStages) ids.add(st.toIslandId);
     return ids;
-  }, [assessment.currentIslandId, assessment.mainRoute]);
+  }, [assessment.currentIslandId, displayRouteStages]);
   const contextPlaces = useMemo(
     () => snapshot.library.places.filter((p) => planIslands.has(p.islandId)),
     [snapshot.library.places, planIslands],
@@ -408,28 +453,29 @@ export function MapView({
   const nowIdx = useMemo(() => hourIndexAt(Date.now(), snapshot.times), [snapshot.times]);
 
   /**
-   * Wendetag der Hauptroute — Domänenwert (AD-2), hier nur gelesen. Null ohne
-   * Segeltage; dann ist alles Hinweg-Farbe, und die Legende lässt den
-   * Wende-Hinweis weg statt einen zu erfinden.
+   * Wendetag der GEZEIGTEN Route — Domänenwert (AD-2), hier nur gelesen. Null
+   * ohne Segeltage; dann ist alles Hinweg-Farbe, und die Legende lässt den
+   * Wende-Hinweis weg statt einen zu erfinden. Blendet eine Alternative die
+   * Hauptroute aus, nennt die Legende deren Wende — nie die der verborgenen.
    */
-  const turnDay = main?.turnDay ?? null;
+  const turnDay = (shownAlt ?? main)?.turnDay ?? null;
   const turnIsland =
     turnDay === null
       ? null
-      : (sailingStages.find((s) => s.day === turnDay)?.toIslandId ?? null);
+      : (displayStages.find((s) => s.day === turnDay)?.toIslandId ?? null);
   const isRueckweg = (stageDay: number) => turnDay !== null && stageDay > turnDay;
 
   const endMarkers = useMemo(
-    () => stageEndMarkers(sailingStages, legsById, snapshot),
-    [sailingStages, legsById, snapshot],
+    () => stageEndMarkers(displayStages, legsById, snapshot),
+    [displayStages, legsById, snapshot],
   );
 
-  /** Inseln, über die die Hauptroute führt — sie stehen vor dem übrigen Revier. */
+  /** Inseln, über die die gezeigte Route führt — sie stehen vor dem Revier. */
   const routeIslands = useMemo(() => {
     const ids = new Set<string>();
-    for (const s of main?.stages ?? []) ids.add(s.toIslandId);
+    for (const s of displayRouteStages) ids.add(s.toIslandId);
     return ids;
-  }, [main]);
+  }, [displayRouteStages]);
 
   /**
    * Kandidaten für Windfiedern: der Wind der aktuellen Stunde an jedem Platz
@@ -498,6 +544,7 @@ export function MapView({
     label: `Wendepunkt ${islandName(alt.turnIslandId)} · ${
       alt.stages.filter((s) => s.kind === 'stage').length
     } Etappen`,
+    shown: i === shownAltIndex,
   }));
 
   const turnLabel =
@@ -663,31 +710,30 @@ export function MapView({
                     die Ebene kann Route und Ampeln nie zudecken. */}
                 {showSeamarks && <SeamarkLayer />}
 
-                {/* Eingeblendete Alternativ-Routen: gestrichelt in ihrer Farbe,
-                    UNTER der Hauptroute (zIndex) — sie sind Vergleichsbild, nicht
-                    Plan. Wo Alternative und Hauptroute dieselbe Etappe nutzen,
-                    deckt die Hauptroute die Alternative ab; das ist die ehrliche
-                    Aussage: dort unterscheiden sich die Routen nicht. */}
-                {showAlts &&
-                  assessment.alternatives.map((alt, i) =>
-                    alt.stages
-                      .filter((s) => s.kind === 'stage')
-                      .map((stage) => {
-                        const path = stagePath(stage, legsById, snapshot);
-                        if (path.length < 2) return null;
-                        return (
-                          <Polyline
-                            key={`alt-${alt.variantId}-${alt.turnIslandId}-${stage.day}`}
-                            path={path}
-                            strokeColor={altRouteColor(i)}
-                            dashed
-                            directionArrows
-                            strokeWeight={3}
-                            zIndex={12}
-                          />
-                        );
-                      }),
-                  )}
+                {/* Eingeblendete Alternative — ANSTELLE der Hauptroute
+                    (Feedback 2026-08-06), gestrichelt in ihrer Identitätsfarbe
+                    und mit Fahrtrichtungspfeilen, weil die EINE Farbe der
+                    Alternative Hin- und Rückweg nicht trennen kann. Kein
+                    Übereinanderlegen mehr: die Hauptroute ist so lange
+                    ausgeblendet, und deshalb trägt die Linie hier auch die
+                    Strichstärke und den zIndex einer Route, nicht die eines
+                    Overlays darunter. */}
+                {shownAlt &&
+                  displayStages.map((stage) => {
+                    const path = stagePath(stage, legsById, snapshot);
+                    if (path.length < 2) return null;
+                    return (
+                      <Polyline
+                        key={`alt-${shownAlt.variantId}-${shownAlt.turnIslandId}-${stage.day}`}
+                        path={path}
+                        strokeColor={shownAltColor!}
+                        dashed
+                        directionArrows
+                        strokeWeight={activeDay === stage.day ? 6 : 4}
+                        zIndex={activeDay === stage.day ? 60 : 20}
+                      />
+                    );
+                  })}
 
                 {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
                     gefahren durchgezogen, geplant gestrichelt, Pfeile in
@@ -697,39 +743,48 @@ export function MapView({
                     Etappe nutzen, scheint der Hinweg durch die Lücken der oberen
                     Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
                     Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
-                    dashOffset). */}
-                {sailingStages.map((stage) => {
-                  const path = stagePath(stage, legsById, snapshot);
-                  if (path.length < 2) return null;
-                  const isPast = stage.day < day;
-                  const rueck = isRueckweg(stage.day);
-                  return (
-                    <Polyline
-                      key={`line-${stage.day}`}
-                      path={path}
-                      strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
-                      dashed={!isPast}
-                      dashOffset={rueck ? '9px' : undefined}
-                      directionArrows
-                      // Kräftiger als bisher: über dem Satellitenbild geht eine
-                      // 3-px-Linie im Blau der Ägäis unter (dazu der helle Saum
-                      // in Polyline.tsx).
-                      strokeWeight={activeDay === stage.day ? 6 : 4}
-                      zIndex={activeDay === stage.day ? 60 : rueck ? 21 : 20}
-                    />
-                  );
-                })}
+                    dashOffset).
+
+                    Ausgeblendet, solange eine Alternative gezeigt wird: zwei
+                    Routen im selben Bild waren nicht mehr auseinanderzuhalten. */}
+                {!shownAlt &&
+                  sailingStages.map((stage) => {
+                    const path = stagePath(stage, legsById, snapshot);
+                    if (path.length < 2) return null;
+                    const isPast = stage.day < day;
+                    const rueck = isRueckweg(stage.day);
+                    return (
+                      <Polyline
+                        key={`line-${stage.day}`}
+                        path={path}
+                        strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
+                        dashed={!isPast}
+                        dashOffset={rueck ? '9px' : undefined}
+                        directionArrows
+                        // Kräftiger als bisher: über dem Satellitenbild geht
+                        // eine 3-px-Linie im Blau der Ägäis unter (dazu der
+                        // helle Saum in Polyline.tsx).
+                        strokeWeight={activeDay === stage.day ? 6 : 4}
+                        zIndex={activeDay === stage.day ? 60 : rueck ? 21 : 20}
+                      />
+                    );
+                  })}
 
                 {/* FR2 — Etappennummern am Tagesziel, EINE Markierung je Insel.
                     Der Round-Trip läuft hin und zurück über dieselbe Kette; je
                     Etappe eine Markierung hiesse, dass die Rücktour die Hintour
                     zudeckt und die Karte nur noch die halbe Reise zeigt.
                     Kapseln sind tastaturbedienbar (AC 7): Enter/Space/Klick
-                    öffnet das Platzdetail des ersten Anlaufs (endPlaceId). */}
+                    öffnet das Platzdetail des ersten Anlaufs (endPlaceId).
+
+                    Sie zählen die GEZEIGTE Route: bei eingeblendeter
+                    Alternative deren Etappen, in deren Farbe — Nummern der
+                    ausgeblendeten Hauptroute an einer Alternativ-Linie wären
+                    eine zweite, unsichtbare Behauptung. */}
                 {endMarkers.map((marker) => {
                   const active = marker.stops.some((s) => s.day === activeDay);
                   const allPast = marker.stops.every((s) => s.day < day);
-                  const label = `${islandName(marker.islandId)} — ${marker.stops
+                  const label = `${shownAlt ? 'Alternative — ' : ''}${islandName(marker.islandId)} — ${marker.stops
                     .map(
                       (s) =>
                         `Etappe ${s.stageNumber ?? '–'} (Tag ${s.day})${s.day === day ? ', heute' : ''}`,
@@ -765,6 +820,11 @@ export function MapView({
                       >
                         <span
                           className={`stage-capsule${active ? ' highlight' : ''}${allPast ? ' past' : ''}`}
+                          style={
+                            shownAltColor
+                              ? { background: shownAltColor, color: COLORS.onAccent }
+                              : undefined
+                          }
                           aria-hidden="true"
                         >
                           {marker.label}
@@ -882,16 +942,30 @@ export function MapView({
                 >
                   Windfiedern
                 </button>
-                {assessment.alternatives.length > 0 && (
+                {/* Ein Chip JE Alternative, und immer nur einer gedrückt: der
+                    Chip schaltet nicht eine Ebene an, er tauscht die gezeigte
+                    Route. Erneut antippen holt die Hauptroute zurück. Bei genau
+                    einer Alternative bleibt es beim schlichten "Alternative",
+                    sonst nennt der Chip den Wendepunkt — der Punkt, in dem sich
+                    die Alternativen unterscheiden. */}
+                {assessment.alternatives.map((alt, i) => (
                   <button
+                    key={`${alt.variantId}-${alt.turnIslandId}`}
                     type="button"
                     className="layer-chip"
-                    aria-pressed={showAlts}
-                    onClick={() => setShowAlts((v) => !v)}
+                    aria-pressed={shownAltIndex === i}
+                    onClick={() => setShownAltIndex((cur) => (cur === i ? null : i))}
                   >
-                    Alternativen
+                    <span
+                      className="chip-dot"
+                      style={{ background: altRouteColor(i) }}
+                      aria-hidden="true"
+                    />
+                    {assessment.alternatives.length === 1
+                      ? 'Alternative'
+                      : `Alt. ${islandName(alt.turnIslandId)}`}
                   </button>
-                )}
+                ))}
                 <button
                   type="button"
                   className="layer-chip"
@@ -900,6 +974,15 @@ export function MapView({
                 >
                   Seezeichen
                 </button>
+                {/* Keine stille Ersetzung: solange eine Alternative gezeigt
+                    wird, sagt die Karte, dass die Hauptroute fehlt — live, weil
+                    der Wechsel per Chip passiert, ohne dass sich sonst etwas
+                    beschriftet. Leer = kein Kasten (CSS :empty). */}
+                <p className="alt-note" aria-live="polite">
+                  {shownAlt
+                    ? `Hauptroute ausgeblendet — gezeigt wird die Alternative mit Wendepunkt ${islandName(shownAlt.turnIslandId)}. Chip erneut antippen zeigt die Hauptroute.`
+                    : ''}
+                </p>
               </div>
               {/* CC-BY-SA verlangt SICHTBARE Attribution, solange die Ebene an
                   ist — der volle Satz steht zusätzlich in der Legende. */}

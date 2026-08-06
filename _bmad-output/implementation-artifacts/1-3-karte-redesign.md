@@ -1380,3 +1380,23 @@ claude-fable-5 (BMad dev-story)
   `resolveMapsEnv` named config errors (DEMO-Fallback removed repo-wide),
   `MapViewSkeleton` cold-load state. Tests 433 green, build green, DoD
   greps clean. Status → review.
+
+- 2026-08-06 (Feedback Philipp, VERIFY-3 beantwortet): die eingeblendete
+  Alternative lag ÜBER der Hauptroute — zwei Routen im selben Bild, und auf
+  gemeinsamen Etappen war nicht mehr zu sehen, welche Linie welche ist. Das
+  Overlay ist jetzt ein UMSCHALTER: `showAlts: boolean` → `shownAltIndex:
+  number | null`, sichtbar ist immer genau EINE Route — die Hauptroute, oder
+  STATT ihrer eine Alternative (die Hauptroutenlinien werden so lange nicht
+  gezeichnet). Damit kommt das per-Alternative-Umschalten zurück, das im
+  Redesign zugunsten des einen Chips gestrichen war (VERIFY-3): ein Chip je
+  Alternative mit Identitätspunkt in ihrer Farbe, immer nur einer gedrückt,
+  erneutes Antippen holt die Hauptroute zurück; bei genau einer Alternative
+  heisst der Chip schlicht "Alternative", sonst nennt er den Wendepunkt.
+  Alles Routenbezogene folgt der GEZEIGTEN Route (`displayRouteStages`):
+  Etappennummern (in der Alternativfarbe), Kontextmenge der Pins und
+  Windfiedern, Wende-Hinweis der Legende — nie Nummern der ausgeblendeten
+  Route an einer Alternativlinie. Keine stille Ersetzung: eine aria-live-Zeile
+  unter den Chips nennt die gezeigte Alternative und sagt, dass die
+  Hauptroute ausgeblendet ist; die Legende markiert die gezeigte Zeile mit
+  "wird gezeigt". Neu in styles.css: `.layer-chip .chip-dot`,
+  `.layer-chips .alt-note` (+ `:empty`). Tests 592 green, build green.

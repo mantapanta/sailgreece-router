@@ -739,6 +739,33 @@ hr.hairline,
   color: var(--accent-text);
 }
 
+/* Identitätspunkt eines Alternativ-Chips — dieselbe Farbe wie die Linie auf der
+   Karte und die Zeile in der Legende (altRouteColors.ts, inline gesetzt). */
+.layer-chip .chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex: 0 0 auto;
+}
+
+/* Hinweis, solange eine Alternative die Hauptroute im Bild ersetzt. Liegt als
+   eigene Flex-Zeile UNTER den Chips — auch wenn die Chips umbrechen. */
+.layer-chips .alt-note {
+  flex: 0 0 100%;
+  max-width: 17rem;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-1);
+  font: 400 11.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.layer-chips .alt-note:empty {
+  display: none;
+}
+
 /* ---- legend affordance + popover ---- */
 .legend-btn {
   position: absolute;
