@@ -2753,8 +2753,10 @@ button.stage-thumb {
   margin-top: 3px;
   text-align: left;
 }
-/* Der Chip in der Etappenliste der Karte — Ruhe statt Signalfarbe: er nennt
-   eine Zahl, er urteilt nicht. */
+/* Die kompakte Chip-Form des AbfahrtMenu (`variant="chip"`) — Ruhe statt
+   Signalfarbe: sie nennt eine Zahl, sie urteilt nicht. Gebaut für die
+   Etappenliste der Karte, die am 2026-08-06 entfallen ist; der Baustein bleibt
+   für einen Wirt ohne Kachel. */
 .abfahrt-chip {
   display: inline-flex;
   align-items: center;

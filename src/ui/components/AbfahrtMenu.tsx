@@ -48,7 +48,8 @@ export function AbfahrtMenu({
   standard: number;
   /** `null` = zurück auf den Default (Empfehlung, sonst Standard). */
   onPick: (hour: number | null) => void;
-  /** 'tile' sitzt in der Abfahrt-Kachel, 'chip' in der Etappenliste. */
+  /** 'tile' sitzt in der Abfahrt-Kachel (Etappenkarte), 'chip' ist die
+   *  kompakte Form für einen Wirt ohne Kachel. */
   variant?: 'tile' | 'chip';
 }) {
   const [open, setOpen] = useState(false);

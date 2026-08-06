@@ -747,7 +747,7 @@ export function MapView({
     (t) => t.eignung === 'passt',
   ).length;
 
-  // Statuszeile am Listenkopf (AC 2): dieselbe Ableitung wie die Tagesansicht —
+  // Statuszeile über der Karte (AC 2): dieselbe Ableitung wie die Tagesansicht —
   // Minutentakt für die Stale-Prüfung, PPR-Hinweise nur abseits der Basis.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {

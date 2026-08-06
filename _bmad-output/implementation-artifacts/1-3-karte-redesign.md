@@ -1459,3 +1459,17 @@ claude-fable-5 (BMad dev-story)
   steht jetzt in der Tag-Zeile der Tagesansicht (`.day-kicker .zeitraum`).
   Legende neu mit der Zeile "Etappe — antippen öffnet sie in „Heute“".
   Tests 631 green, build green.
+
+- 2026-08-06 (Merge origin/main — Kite-Ebene und Abfahrt-Default): main hatte
+  parallel IN der Etappenliste der Karte gearbeitet, die dieser Stand entfernt.
+  Übernommen ist die Kite-Ebene vollständig (Marker-Raute mit Touch-Zweischritt
+  zwischen Platz-Pins und Bootsposition, Chip „Kite-Spots · N heute", zwei
+  Legendenzeilen samt Vorbehalt, `onOpenPlace(placeId, kiteSpotId)`) — sie hing
+  nicht an der Liste. WEGGEFALLEN sind die Abfahrt-Chips, die main je Etappenzeile
+  in die Liste gesetzt hatte (`.itin-item`, `.itin-abfahrt`, `AbfahrtMenu`
+  `variant="chip"`): dieselbe Entscheidung sitzt in der Abfahrt-Kachel jeder
+  Etappenkarte der Tagesansicht (`variant="tile"`), und die Etappennummer auf der
+  Karte führt jetzt genau dorthin — EIN Bedienelement je Entscheidung statt
+  zweier. Die Chip-Variante von `AbfahrtMenu` bleibt als Baustein erhalten (ihre
+  Kommentare nennen kein „scrollendes Etappen-Sheet" mehr); README an zwei
+  Stellen nachgezogen. Tests 671 green, tsc und build green.
