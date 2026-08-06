@@ -8,8 +8,9 @@
  * ein gelbes "Stand vor {h} h"-Segment die Zeile an (Story 1.2, AC 2).
  *
  * Story 1.3: aus DayView.tsx extrahiert (unverändert), damit die Karte
- * dieselbe Zeile am Kopf der Etappenliste rendert statt einer zweiten
- * Implementierung. `triggerRef` ist optional — nur die Tagesansicht braucht
+ * dieselbe Zeile rendert statt einer zweiten Implementierung — seit dem
+ * Feedback vom 2026-08-06 steht sie dort über der Karte (die Etappenliste, an
+ * deren Kopf sie saß, ist entfallen). `triggerRef` ist optional — nur die Tagesansicht braucht
  * ihren Fokus-nach-Neuberechnung-Effekt. Das statische `id="resttrip-detail"`
  * bleibt gültig: AD-11 mountet genau eine View zur Zeit.
  */

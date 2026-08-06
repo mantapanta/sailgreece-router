@@ -28,7 +28,13 @@ const queryClient = new QueryClient({
 
 /** View switching is plain UI state — no router (AD-11). */
 type View =
-  | { kind: 'tag' }
+  /**
+   * `focusDay` ist der Sprung von einer Etappennummer der Karte auf ihre
+   * Etappen-Card (Feedback 2026-08-06): die Tagesansicht klappt den Tag auf und
+   * scrollt ihn an. Nur beim Ansichtswechsel gesetzt — der Reiter "Heute"
+   * öffnet die Ansicht wie immer oben.
+   */
+  | { kind: 'tag'; focusDay?: number }
   | { kind: 'karte' }
   | { kind: 'platz'; placeId: string; returnTo: 'tag' | 'karte' };
 
@@ -113,6 +119,13 @@ function Shell() {
       returnTo: v.kind === 'karte' ? 'karte' : 'tag',
     }));
 
+  /**
+   * Etappennummer auf der Karte → Etappen-Card in "Heute". Die Karte zeigt WO,
+   * die Card sagt WAS — seit die Etappenliste unter der Karte entfallen ist,
+   * ist das der Weg dorthin.
+   */
+  const openStageDay = (day: number) => setView({ kind: 'tag', focusDay: day });
+
   // Place detail keeps the tab of the view it was opened from active.
   const activeTab: 'tag' | 'karte' = view.kind === 'platz' ? view.returnTo : view.kind;
 
@@ -177,9 +190,19 @@ function Shell() {
             )
           ) : null
         ) : view.kind === 'tag' ? (
-          <DayView snapshot={snapshot} assessment={assessment} onOpenPlace={openPlace} />
+          <DayView
+            snapshot={snapshot}
+            assessment={assessment}
+            onOpenPlace={openPlace}
+            focusDay={view.focusDay ?? null}
+          />
         ) : view.kind === 'karte' ? (
-          <MapView snapshot={snapshot} assessment={assessment} onOpenPlace={openPlace} />
+          <MapView
+            snapshot={snapshot}
+            assessment={assessment}
+            onOpenPlace={openPlace}
+            onOpenStageDay={openStageDay}
+          />
         ) : (
           <PlaceDetailView
             placeId={view.placeId}

@@ -1,10 +1,12 @@
 /**
- * Cold-load skeleton of the Karte (Story 1.3, AC 10): one status-line bar, a
- * flat surface-track map block with the visible caption "Karte lädt …", three
- * list-row bars. The pulse animation is killed by the global reduced-motion
- * rule; the state itself is announced via role="status" + visually hidden
- * text (the visible caption sits inside the aria-hidden block — same pattern
- * as DayViewSkeleton).
+ * Cold-load skeleton of the Karte (Story 1.3, AC 10): one status-line bar and
+ * the flat surface-track map block with the visible caption "Karte lädt …".
+ * Die drei Listenzeilen sind mit der Etappenliste entfallen (Feedback
+ * 2026-08-06) — der Ladezustand zeigt, was danach kommt, und danach kommt nur
+ * die Karte. The pulse animation is killed by the global reduced-motion rule;
+ * the state itself is announced via role="status" + visually hidden text (the
+ * visible caption sits inside the aria-hidden block — same pattern as
+ * DayViewSkeleton).
  */
 
 export function MapViewSkeleton() {
@@ -16,7 +18,7 @@ export function MapViewSkeleton() {
         <div
           className="skeleton"
           style={{
-            height: '55vh',
+            height: '72vh',
             borderRadius: 'var(--radius-lg)',
             display: 'flex',
             alignItems: 'center',
@@ -25,9 +27,6 @@ export function MapViewSkeleton() {
         >
           <span className="map-skeleton-caption">Karte lädt …</span>
         </div>
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="skeleton" style={{ height: 48, marginTop: 12 }} />
-        ))}
       </div>
     </div>
   );

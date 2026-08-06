@@ -148,13 +148,13 @@ export interface StageEndMarker {
   islandId: string;
   /** Alle Etappen, die hier enden — chronologisch. */
   stops: { day: number; stageNumber: number | null }[];
-  /** "4 · 8" — was auf der Markierung steht. */
-  label: string;
   /**
-   * Zielhafen des ERSTEN Anlaufs — das Aktivierungsziel der Kapsel
-   * (Story 1.3); null, wenn die Geometrie nicht an einem Platz endet.
+   * "4·8" — die Nummern als EIN Text. Die grosse Karte (MapView) rendert seit
+   * dem Feedback vom 2026-08-06 je Stopp einen eigenen Knopf und liest dafür
+   * `stops`; die Vorschaukarte einer Alternative (RouteMap) zeigt weiter diesen
+   * Text, denn dort ist die Nummer nur Beschriftung.
    */
-  endPlaceId: string | null;
+  label: string;
 }
 
 export function stageEndMarkers(
@@ -166,8 +166,6 @@ export function stageEndMarkers(
   const order: string[] = [];
 
   for (const stage of [...stages].sort((a, b) => a.day - b.day)) {
-    // stagePoints statt stagePath: dieselben Positionen, aber der letzte
-    // Punkt trägt sein `placeId` — das Aktivierungsziel der Kapsel.
     const pts = stagePoints(stage, legsById, snapshot);
     const end = pts[pts.length - 1];
     if (!end) continue;
@@ -184,7 +182,6 @@ export function stageEndMarkers(
       islandId: stage.toIslandId,
       stops: [{ day: stage.day, stageNumber: stage.stageNumber }],
       label: '',
-      endPlaceId: end.kind === 'platz' ? (end.placeId ?? null) : null,
     };
     order.push(stage.toIslandId);
   }

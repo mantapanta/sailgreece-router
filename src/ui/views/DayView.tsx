@@ -67,12 +67,14 @@ import {
   formatStamp,
   formatTripDayDate,
   formatTripDayWeekdayShort,
+  formatTripRange,
   formatWindFrom,
   pointOfSail,
 } from '../format.ts';
 import {
   dayViewStages,
   optionsSummary,
+  stageFocusPlacement,
   staleForecastLabel,
 } from '../dayViewModel.ts';
 import { resolveMapsEnv } from '../mapsEnv.ts';
@@ -1503,10 +1505,18 @@ export function DayView({
   snapshot,
   assessment,
   onOpenPlace,
+  focusDay = null,
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
   onOpenPlace: (placeId: string) => void;
+  /**
+   * Törntag, der beim Öffnen angesprungen werden soll — gesetzt, wenn der
+   * Skipper auf der Karte eine Etappennummer angetippt hat (App.tsx, View
+   * `{ kind: 'tag'; focusDay }`). Die Ansicht klappt den Tag auf, scrollt ihn
+   * an und setzt den Fokus dorthin; null heisst "normal öffnen, oben".
+   */
+  focusDay?: number | null;
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
@@ -1559,6 +1569,47 @@ export function DayView({
   // hier oben, nicht im Panel.
   const [konzeptOpen, setKonzeptOpen] = useState(false);
   const konzeptRef = useRef<HTMLElement>(null);
+
+  /**
+   * ANSPRINGEN EINER ETAPPE (Feedback 2026-08-06): die Etappennummern der
+   * Karte führen hierher. Der Tag kann an drei Stellen stehen, und jede
+   * braucht einen eigenen Handgriff, damit die Card wirklich sichtbar wird:
+   * der Hero steht offen da, eine Rest-Trip-Zeile muss aufgeklappt werden
+   * (und die Liste zeigt normalerweise nur drei Tage), ein gefahrener Tag
+   * steht als Chip in der eingeklappten Sektion "Bereits gefahren".
+   *
+   * Zwei Effekte, weil das Ziel im ersten Durchgang noch nicht im DOM ist: der
+   * erste öffnet, was zu öffnen ist, der zweite scrollt und fokussiert, sobald
+   * das Element existiert. `focusDone` macht daraus einen EINMALIGEN Sprung —
+   * sonst würde jedes spätere Auf- und Zuklappen erneut dorthin scrollen.
+   */
+  const focusTargets = useRef<Record<number, HTMLElement | null>>({});
+  const focusDone = useRef<number | null>(null);
+  useEffect(() => {
+    if (focusDay === null) return;
+    focusDone.current = null;
+    // Welche Stelle es ist, entscheidet der getestete Helper (AC-Muster der
+    // Story: Anordnung für einen Schirm gehört in dayViewModel.ts).
+    const placement = stageFocusPlacement({ hero, rest, past }, focusDay);
+    if (placement === 'rest') {
+      setShowAllRest(true);
+      setExpandedDay(focusDay);
+    }
+    if (placement === 'past') setPastOpen(true);
+    // Nur der Zieltag ist die Eingabe: `rest`/`past` sind bei jedem Render neue
+    // Arrays, und ihre Inhalte ändern den Sprung nicht mehr, wenn er getan ist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusDay]);
+  useEffect(() => {
+    if (focusDay === null || focusDone.current === focusDay) return;
+    const el = focusTargets.current[focusDay];
+    if (!el) return; // noch nicht gerendert — der nächste Durchgang holt es
+    focusDone.current = focusDay;
+    // Optional gerufen wie in der Konzept-Alarm-Zeile: scrollIntoView fehlt in
+    // jsdom, und daran darf die Ansicht nicht zerbrechen.
+    el.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    el.focus?.({ preventScroll: true });
+  });
 
   /**
    * PPR-Hinweise für das Statuszeilen-Detail (Feedback 2026-08-05): an der
@@ -1617,6 +1668,15 @@ export function DayView({
       <div className="day-context">
         <div className="day-kicker">
           Tag {day} · {formatTripDayDate(params.tripStartDate, day)}
+          {/* Der Törnzeitraum stand bis zum 2026-08-06 am Kopf der
+              Etappenliste der Karte. Die Liste ist entfallen, die Angabe
+              nicht: sie gehört zu "welcher Tag ist heute" und steht deshalb
+              hier, in derselben Zeile, als leise Fortsetzung. */}
+          <span className="zeitraum">
+            {' · '}
+            {formatTripRange(params.tripStartDate, params.tripLengthDays)} ·{' '}
+            {params.tripLengthDays} Tage
+          </span>
         </div>
         <div className="day-where">
           <span>
@@ -1709,17 +1769,27 @@ export function DayView({
         )}
 
       {hero && (
-        <StageCard
-          stage={hero}
-          snapshot={snapshot}
-          nightAmpeln={assessment.nightAmpeln}
-          hero
-          currentDay={day}
-          onOpenPlace={onOpenPlace}
-          mapId={mapId}
-          returnCheck={returnCheckByDay.get(hero.day) ?? null}
-          harbourPointer={harbourPointer}
-        />
+        // tabIndex -1: Sprungziel für eine angetippte Etappennummer der Karte
+        // (kein Tab-Stop) — der Fokus landet auf der Card, nicht irgendwo oben.
+        <div
+          tabIndex={-1}
+          className="focus-anchor"
+          ref={(el) => {
+            focusTargets.current[hero.day] = el;
+          }}
+        >
+          <StageCard
+            stage={hero}
+            snapshot={snapshot}
+            nightAmpeln={assessment.nightAmpeln}
+            hero
+            currentDay={day}
+            onOpenPlace={onOpenPlace}
+            mapId={mapId}
+            returnCheck={returnCheckByDay.get(hero.day) ?? null}
+            harbourPointer={harbourPointer}
+          />
+        </div>
       )}
 
       {/* AD-13 revised: the app always routes — where the forecast runs out it
@@ -1792,6 +1862,11 @@ export function DayView({
                   type="button"
                   className="trip-row"
                   aria-expanded={expandedDay === s.day}
+                  // Sprungziel einer angetippten Etappennummer (Karte): die
+                  // Zeile ist ohnehin fokussierbar, sie braucht kein Extra-Ziel.
+                  ref={(el) => {
+                    focusTargets.current[s.day] = el;
+                  }}
                   onClick={() =>
                     setExpandedDay((d) => (d === s.day ? null : s.day))
                   }
@@ -1956,7 +2031,17 @@ export function DayView({
           {pastOpen && (
             <div className="chip-list">
               {past.map((s) => (
-                <span className="chip" key={s.day}>
+                // Ein gefahrener Tag hat keine Card mehr — angesprungen wird
+                // deshalb sein Chip: aufgeklappte Sektion, Fokus auf dem Chip
+                // (tabIndex -1) und die Umrandung sagt, welcher gemeint ist.
+                <span
+                  className={`chip${focusDay === s.day ? ' angesprungen' : ''}`}
+                  key={s.day}
+                  tabIndex={-1}
+                  ref={(el) => {
+                    focusTargets.current[s.day] = el;
+                  }}
+                >
                   {s.stageNumber !== null ? `Etappe ${s.stageNumber}: ` : ''}
                   {islandName(snapshot, s.toIslandId)} (Tag {s.day})
                 </span>

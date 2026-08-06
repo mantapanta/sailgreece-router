@@ -648,27 +648,33 @@ hr.hairline,
 /* ---- map view (redesign, Story 1.3) ---------------------------------- */
 /* ===================================================================== */
 
-/* ---- layout: desktop split (≥861px default), mobile full-bleed + sheet ---- */
+/* ---- layout: Statuszeile über der Karte, darunter nur Karte ---------------
+   Die Etappenliste (Desktop-Split links, Bottom-Sheet ≤860px) ist mit dem
+   Feedback vom 2026-08-06 ENTFALLEN — sie wiederholte die Tagesansicht. Damit
+   fallen `.map-split`, `.map-itinerary`, `.drag-handle`, `.sheet-head` und die
+   `.itin-*`/`.harbour-row`-Karten weg; von der Karte in den Klartext führen
+   jetzt die Etappennummern (`.capsule-group` unten). */
 .map-view {
   position: relative;
 }
 
-.map-split {
-  display: grid;
-  grid-template-columns: minmax(280px, 380px) 1fr;
-  gap: var(--space-5);
-  align-items: start;
+/* Das Verdikt über der Karte. Auf dem Telefon ist es die einzige Zeile, die der
+   Karte Höhe nimmt — deshalb ohne Kasten und ohne oberen Abstand. */
+.map-status {
+  min-width: 0;
 }
 
-.map-itinerary {
-  min-width: 0;
+.map-status .trip-status {
+  margin-top: 0;
 }
 
 .map-sticky {
   position: sticky;
   /* Below the sticky header, not under it (1.1 fix — keep). */
   top: calc(var(--header-h) + 1rem);
-  height: min(78vh, 720px);
+  /* Höher als im Split (78vh), weil die Karte jetzt die ganze Breite und die
+     ganze Ansicht trägt — sie IST das Bild dieser Seite. */
+  height: min(82vh, 820px);
   border-radius: var(--radius-lg);
   overflow: hidden; /* imagery clips to the card radius */
   box-shadow: var(--shadow-2);
@@ -678,18 +684,6 @@ hr.hairline,
 .map-sticky .map-container {
   width: 100%;
   height: 100%;
-}
-
-.sheet-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-1) 0 var(--space-2);
-}
-
-.sheet-head .section-title {
-  margin: 0;
 }
 
 /* CC-BY-SA attribution — visible whenever the seamark layer is on (AC 4). */
@@ -941,94 +935,6 @@ hr.hairline,
   margin: var(--space-1) 0;
 }
 
-/* ---- itinerary cards ---- */
-.itin-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.itin-card {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  cursor: pointer;
-  background: var(--surface-card);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  box-shadow: var(--shadow-1);
-  font: 400 12.5px/1.35 var(--font-sans);
-  color: var(--ink-secondary);
-}
-
-.itin-card[aria-pressed='true'] {
-  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
-}
-
-.itin-card[aria-pressed='true'] .itin-day {
-  color: var(--accent-text);
-}
-
-.itin-card.past {
-  opacity: 0.75;
-}
-
-.itin-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.itin-day {
-  font: 600 11px/1.3 var(--font-sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.itin-route {
-  font: 700 15.5px/1.3 var(--font-sans);
-  letter-spacing: -0.01em;
-  color: var(--ink-primary);
-  margin-top: 2px;
-}
-
-.itin-meta {
-  margin-top: 3px;
-  font-variant-numeric: tabular-nums;
-}
-
-.harbour-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  text-align: left;
-  border: 0;
-  cursor: pointer;
-  min-height: 44px;
-  background: var(--surface-card);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-4);
-  box-shadow: var(--shadow-1);
-  font: 400 12.5px/1.35 var(--font-sans);
-  color: var(--ink-secondary);
-}
-
-.harbour-row[aria-pressed='true'] {
-  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
-}
-
-.harbour-row .hd {
-  font: 600 11px/1.3 var(--font-sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ---- markers ---- */
 /* ≥44px hit area around the visual pin/capsule (AC 6/7); position: relative
    anchors the armed mini chip. */
@@ -1090,11 +996,24 @@ hr.hairline,
   border: 2.5px solid var(--map-line-casing, #fff);
 }
 
+/* JEDE ZAHL EIN EIGENES ZIEL (Feedback 2026-08-06): läuft der Round-Trip
+   zweimal über dieselbe Insel, trägt die Markierung zwei Nummern ("4 8") — und
+   beide meinen einen anderen Tag. Sie stehen deshalb als zwei Knöpfe
+   nebeneinander; die Gruppe hält sie im 44px-Trefferfeld des Markers zusammen.
+   Der Punkt zwischen den Zahlen ist der Abstand, kein Zeichen: zwei Knöpfe mit
+   einem Trennzeichen dazwischen liest ein Screenreader als drei Dinge. */
+.capsule-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 /* Karte-only; .stage-number stays untouched for RouteMap (AC 7). */
 .stage-capsule {
   min-width: 22px;
   height: 18px;
   padding: 0 6px;
+  border: 0;
   border-radius: var(--radius-sm);
   background: var(--surface-card);
   color: var(--ink-primary);
@@ -1106,6 +1025,25 @@ hr.hairline,
   box-shadow: 0 1.5px 4px rgba(30, 25, 20, 0.3);
   letter-spacing: 0.02em;
   cursor: pointer;
+  /* Der Marker braucht die Kapsel klein, der Finger braucht 44px: die sichtbare
+     Kapsel bleibt 18px hoch, die Trefferfläche wächst unsichtbar nach oben und
+     unten (Rezept der .layer-chip). Seitlich nur 1px, damit sich die Flächen
+     zweier Nachbarzahlen (Abstand 3px) nicht überlappen. */
+  position: relative;
+}
+
+button.stage-capsule::after {
+  content: '';
+  position: absolute;
+  inset: -13px -1px; /* 18px + 2×13px = 44px hoch */
+}
+
+/* Steht die Zahl allein — der Normalfall —, wächst die Fläche auch in die
+   Breite auf 44px. Bei zwei Zahlen nebeneinander kann sie das nicht, ohne der
+   Nachbarzahl die Hälfte ihrer Treffer wegzunehmen: dort bleibt es bei 24px
+   Breite, und die 3px Abstand halten die beiden Flächen auseinander. */
+button.stage-capsule:only-child::after {
+  inset: -13px -11px; /* 22px + 2×11px = 44px breit */
 }
 
 .stage-capsule.past {
@@ -1122,7 +1060,10 @@ hr.hairline,
   color: var(--ink-secondary);
 }
 
-/* ---- mobile: full-bleed map + bottom sheet ---- */
+/* ---- mobile: Statuszeile oben, darunter die Karte bis zum Rand ------------
+   Ohne Bottom-Sheet braucht die Karte keine Freihaltung mehr am unteren Rand:
+   "i", Attribution und Legende sitzen wieder in der Ecke, und die Karte
+   bekommt die 232px des eingeklappten Sheets als Bild zurück. */
 @media (max-width: 860px) {
   .map-view {
     /* cancel main.content's ≤860px padding (1rem 0.9rem 2.4rem) */
@@ -1130,89 +1071,30 @@ hr.hairline,
     height: calc(100vh - var(--header-h));
     height: calc(100dvh - var(--header-h));
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
-  .map-split {
-    display: block;
-    height: 100%;
+  /* Die Zeile behält den Seitenrand, den die Karte selbst nicht braucht. Das
+     aufgeklappte Rest-Trip-Detail kann lang werden: es scrollt in der Zeile,
+     statt die Karte aus der Ansicht zu schieben. */
+  .map-status {
+    flex: 0 0 auto;
+    max-height: 55%;
+    overflow-y: auto;
+    padding: 0 0.9rem;
   }
 
   .map-sticky {
-    position: absolute;
-    inset: 0;
-    top: 0;
-    height: 100%;
+    /* relative statt sticky/absolute: die Karte füllt, was die Statuszeile
+       übrig lässt — und bleibt Bezugsrahmen für Chips, "i" und Attribution. */
+    position: relative;
+    top: auto;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
     border-radius: 0;
     box-shadow: none;
-  }
-
-  /* becomes the bottom sheet (AC 1: two-state toggle, no gesture physics) */
-  .map-itinerary {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 6;
-    background: var(--surface-page);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    /* Level-3 shadow (see Elevation), offsets mirrored upward — a sheet
-       casts against the map ABOVE it, not below. No new shadow values. */
-    box-shadow: 0 -2px 6px rgba(30, 25, 20, 0.1), 0 -16px 40px rgba(30, 25, 20, 0.16);
-    padding: 0 var(--space-4) env(safe-area-inset-bottom);
-    height: 232px; /* collapsed: head + ~1.5 cards */
-    display: flex;
-    flex-direction: column;
-    transition: height 0.2s ease;
-  }
-
-  .map-itinerary.open {
-    height: 75vh;
-    height: 75dvh;
-  }
-
-  .drag-handle {
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-    min-height: 44px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-  }
-
-  .drag-handle .bar {
-    width: 40px;
-    height: 5px;
-    border-radius: 3px;
-    background: var(--ampel-unbewertet);
-  }
-
-  .itin-list {
-    overflow-y: auto;
-    flex: 1;
-    padding-bottom: var(--space-4);
-  }
-
-  .legend-btn {
-    bottom: 244px; /* clear of the collapsed sheet peek */
-  }
-
-  .legend-pop {
-    /* über dem hochgesetzten "i" verankert, frei vom Sheet-Peek */
-    bottom: calc(244px + 52px);
-    max-height: calc(100% - 244px - 52px - var(--space-3));
-  }
-
-  .map-attrib {
-    bottom: 244px; /* ditto — attribution must stay visible (AC 4) */
-  }
-}
-
-@media (min-width: 861px) {
-  .drag-handle {
-    display: none;
   }
 }
 
@@ -2501,6 +2383,12 @@ details.lesehilfe > summary {
   text-transform: uppercase;
   color: var(--accent-text);
 }
+/* Der Törnzeitraum in derselben Overline-Zeile — leiser als der heutige Tag:
+   er beantwortet "wie lange noch", nicht "was heute". */
+.day-kicker .zeitraum {
+  font-weight: 400;
+  color: var(--ink-secondary);
+}
 .day-where {
   display: flex;
   align-items: center;
@@ -2710,17 +2598,6 @@ button.stage-thumb {
   content: '·';
   margin-right: var(--space-1);
 }
-/* Kartenansicht: dieselbe Zeile, aber in der Etappenliste — kleiner, damit sie
-   die Route und den Tag nicht überschreit. */
-.kurs-mini {
-  font-size: 11.5px;
-  padding: 2px 8px;
-  gap: 5px;
-}
-.kurs-mini .dot {
-  width: 7px;
-  height: 7px;
-}
 .berth-line {
   display: flex;
   align-items: center;
@@ -2777,6 +2654,16 @@ button.stage-thumb {
   font: 400 12.5px/1.35 var(--font-sans);
   white-space: nowrap;
 }
+/* Der angesprungene gefahrene Tag (Etappennummer der Karte): ein gefahrener Tag
+   hat keine Card mehr, also muss der Chip sagen, dass ER gemeint ist. */
+.chip.angesprungen {
+  box-shadow: 0 0 0 1.5px var(--accent);
+  color: var(--ink-primary);
+}
+/* Sprungziel der Hero-Card: kein Tab-Stop (tabIndex -1), nur programmatisch
+   fokussiert. Der globale Fokusring bleibt bewusst zugelassen — wer per Tastatur
+   von der Etappennummer hierher gesprungen ist, soll sehen, wo er gelandet ist;
+   bei einem Tipp greift :focus-visible ohnehin nicht. */
 .chip-list {
   display: flex;
   flex-wrap: wrap;
