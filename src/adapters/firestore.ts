@@ -15,12 +15,14 @@ import {
   PlaceSchema,
   LegSchema,
   VariantSchema,
+  KiteSpotSchema,
   ParamsSchema,
   PolarSchema,
   DEFAULT_PARAMS,
   IslandStagingFileSchema,
   LegsStagingFileSchema,
   VariantsStagingFileSchema,
+  KiteSpotsStagingFileSchema,
   ConfigStagingFileSchema,
   PolarStagingFileSchema,
   polarFromFirestore,
@@ -32,6 +34,7 @@ import type {
   InvalidPlace,
   Leg,
   Variant,
+  KiteSpot,
   Params,
   Polar,
   Library,
@@ -156,6 +159,26 @@ async function loadFromLocal(): Promise<LibraryBundle> {
     console.error('variants.json fehlt oder nicht ladbar:', e);
   }
 
+  // Kite-Spots sind eine EIGENE Bibliothek (schema/kite.ts) und rein
+  // informativ: fehlt die Datei, fehlt die Ebene — nichts anderes darf daran
+  // scheitern, deshalb wie legs/variants tolerant und ohne Fehlerpanel.
+  let kiteSpots: KiteSpot[] = [];
+  try {
+    const mod = (await import('../../seeding/data/kitespots.json')) as { default: unknown };
+    const file = KiteSpotsStagingFileSchema.safeParse(mod.default);
+    if (file.success) {
+      kiteSpots = file.data.kiteSpots;
+    } else {
+      console.error('kitespots.json ungültig:', file.error.issues);
+      const loose = mod.default as { kiteSpots?: unknown[] };
+      kiteSpots = (loose?.kiteSpots ?? [])
+        .map((s) => parseTolerant(KiteSpotSchema, s, 'Kite-Spot'))
+        .filter((s): s is KiteSpot => s !== null);
+    }
+  } catch (e) {
+    console.warn('kitespots.json fehlt oder nicht ladbar — Kite-Ebene leer:', e);
+  }
+
   let params: Params = DEFAULT_PARAMS;
   try {
     const mod = (await import('../../seeding/data/config.json')) as { default: unknown };
@@ -176,7 +199,11 @@ async function loadFromLocal(): Promise<LibraryBundle> {
     console.warn('polar.json fehlt — Fallback-Pauschalen aktiv');
   }
 
-  return { library: { islands, places, invalidPlaces, legs, variants }, params, polar };
+  return {
+    library: { islands, places, invalidPlaces, legs, variants, kiteSpots },
+    params,
+    polar,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -194,17 +221,44 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
   const db = await getFirestoreDb();
   const { collection, getDocs, doc, getDoc } = await import('firebase/firestore');
 
-  const [islandsSnap, placesSnap, legsSnap, variantsSnap, paramsSnap, polarSnap] =
-    await Promise.all([
-      getDocs(collection(db, 'islands')),
-      getDocs(collection(db, 'places')),
-      // Legs are their own top-level collection since the leg/variant split
-      // (AD-4/AD-5); variants reference them by id.
-      getDocs(collection(db, 'legs')),
-      getDocs(collection(db, 'routes')),
-      getDoc(doc(db, 'config', 'parameters')),
-      getDoc(doc(db, 'config', 'polar')),
-    ]);
+  const [
+    islandsSnap,
+    placesSnap,
+    legsSnap,
+    variantsSnap,
+    kiteSpotsSnap,
+    paramsSnap,
+    polarSnap,
+  ] = await Promise.all([
+    getDocs(collection(db, 'islands')),
+    getDocs(collection(db, 'places')),
+    // Legs are their own top-level collection since the leg/variant split
+    // (AD-4/AD-5); variants reference them by id.
+    getDocs(collection(db, 'legs')),
+    getDocs(collection(db, 'routes')),
+    /**
+     * Kite-Spots: eigene Sammlung, weil ein Spot nicht zum Hafen gehört
+     * (schema/kite.ts). Eine noch nicht importierte Sammlung ist leer, kein
+     * Fehler — die Ebene fehlt dann einfach.
+     *
+     * ABGEFANGEN, und das ist Absicht: solange die neuen Security Rules nicht
+     * deployt sind, lehnt Firestore diesen Lesezugriff ab
+     * (`permission-denied`). In einem `Promise.all` würde das die GANZE
+     * Bibliothek scheitern lassen — die App zeigte statt der Törnplanung ein
+     * Fehlerpanel, wegen einer Ebene, die nichts bewertet. Der Preis ist
+     * genannt: ohne Regel bleibt die Kite-Ebene leer, mit einer Meldung in der
+     * Konsole.
+     */
+    getDocs(collection(db, 'kiteSpots')).catch((e) => {
+      console.warn(
+        'Kite-Spots nicht lesbar — Ebene bleibt leer. Sind die Firestore-Rules deployt (Collection kiteSpots)?',
+        e,
+      );
+      return null;
+    }),
+    getDoc(doc(db, 'config', 'parameters')),
+    getDoc(doc(db, 'config', 'polar')),
+  ]);
 
   const islands = islandsSnap.docs
     .map((d) => parseTolerant(IslandSchema, { id: d.id, ...d.data() }, 'Insel'))
@@ -222,6 +276,10 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     .map((d) => parseTolerant(VariantSchema, { id: d.id, ...d.data() }, 'Variante'))
     .filter((v): v is Variant => v !== null);
 
+  const kiteSpots = (kiteSpotsSnap?.docs ?? [])
+    .map((d) => parseTolerant(KiteSpotSchema, { id: d.id, ...d.data() }, 'Kite-Spot'))
+    .filter((s): s is KiteSpot => s !== null);
+
   let params: Params = DEFAULT_PARAMS;
   if (paramsSnap.exists()) {
     const parsed = parseTolerant(ParamsSchema, paramsSnap.data(), 'Parameter');
@@ -234,5 +292,9 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     polar = parseTolerant(PolarSchema, polarFromFirestore(polarSnap.data()), 'Polar');
   }
 
-  return { library: { islands, places, invalidPlaces, legs, variants }, params, polar };
+  return {
+    library: { islands, places, invalidPlaces, legs, variants, kiteSpots },
+    params,
+    polar,
+  };
 }

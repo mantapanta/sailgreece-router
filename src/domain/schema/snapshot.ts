@@ -1,5 +1,6 @@
 import type { Ampel, Coordinates } from './common.ts';
 import type { Island } from './island.ts';
+import type { KiteHinweis, KiteSpot, KiteSpotTag } from './kite.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
 import type { DayReturnCheck, Plan, PlanValidity, RelaxationLevel } from './plan.ts';
@@ -113,6 +114,17 @@ export interface Library {
   legs: Leg[];
   /** Curated round-trip variants as ordered leg-id sequences (FR9). */
   variants: Variant[];
+  /**
+   * Kite-Spots des Reviers (schema/kite.ts) — eigene Bibliothek, weil ein Spot
+   * regelmässig NICHT am Hafen liegt und eine eigene Koordinate braucht.
+   *
+   * OPTIONAL, und zwar aus demselben Grund wie `PlanningSnapshot.provenance`:
+   * ein Bundle von vor der Umstellung kann noch im Query-Cache liegen, und die
+   * Fixturen der Domain-Tests brauchen keine leere Liste, um eine Ampel zu
+   * prüfen, die von Kite-Spots ohnehin nichts weiss. Fehlend heisst hier "keine
+   * Kite-Bibliothek geladen", nicht "keine Spots im Revier".
+   */
+  kiteSpots?: KiteSpot[];
 }
 
 export interface PlanningSnapshot {
@@ -543,6 +555,16 @@ export interface StageAssessment {
    * Tagen ohne Tor-Durchfahrt.
    */
   torCheck: TorCheck | null;
+  /**
+   * KITE-HINWEISE dieses Tages (domain/kite.ts): die kuratierten Spots auf der
+   * Start- oder Ziel-Insel und am Kurs, jeder mit dem Urteil des Kite-Fensters.
+   *
+   * Leer, wenn keiner an diesem Tag liegt — und leer heisst hier wirklich
+   * "keiner", nicht "nicht geprüft". Bewertet wird davon nichts: die Liste
+   * ändert weder `ampel` noch `abfahrtsEmpfehlung` noch die Gültigkeit des
+   * Plans (schema/kite.ts, Modulkopf).
+   */
+  kiteHinweise: KiteHinweis[];
 }
 
 /**
@@ -650,6 +672,13 @@ export interface Assessment {
   restTripAmpel: Ampel;
   restTripReasons: string[];
   ppr: PprResult;
+  /**
+   * ALLE kuratierten Kite-Spots, bewertet für HEUTE (domain/kite.ts) — die
+   * Ebene der Karte. Die Etappen tragen ihre eigenen Hinweise
+   * (`StageAssessment.kiteHinweise`); diese Liste ist die Revier-Sicht und
+   * folgt keinem Plan. Leer ohne Kite-Bibliothek.
+   */
+  kiteSpotsHeute: KiteSpotTag[];
   decisionPoints: DecisionPoint[];
   /** Island the boat is currently at (derived from position). */
   currentIslandId: string | null;

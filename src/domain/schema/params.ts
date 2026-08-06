@@ -241,6 +241,40 @@ const ParamsObjectSchema = z.object({
    */
   torFensterStunden: z.number().int().min(24).default(48),
 
+  // --- Kite-Spots (Skipper-Wunsch 2026-08-06) --------------------------------
+  /**
+   * DAS KITE-BAND: zwischen diesen Windstärken ist ein Spot fahrbar.
+   *
+   * Ein Regler wie die Konzept-Schwellen, kein Urteil — und bewusst GLOBAL statt
+   * je Spot: die kuratierten Spots liefern die Windrichtung (dafür braucht es
+   * Ortskenntnis), die Stärke hängt am Material und am Können der Crew, und das
+   * ist eine Eigenschaft dieses Törns, nicht des Strandes. 12 kn ist die
+   * untere Kante für einen grossen Kite auf Flachwasser, 30 kn die Grenze, ab
+   * der es für eine Familiencrew mit Beiboot-Sicherung nichts mehr zu holen
+   * gibt.
+   *
+   * Keine Sicherheitsschwelle: Kite-Werte gehen in keine Ampel und in keinen
+   * Plan ein (domain/kite.ts, Modulkopf).
+   */
+  kiteMinKn: z.number().positive().default(12),
+  kiteMaxKn: z.number().positive().default(30),
+  /**
+   * Wie weit ein Spot von der gesegelten Linie entfernt sein darf, um noch als
+   * "am Kurs" zu gelten. 5 sm ist der Radius, den ein Umweg von einer knappen
+   * Stunde deckt — weiter weg ist kein Zwischenstopp mehr, sondern ein anderes
+   * Tagesziel, und das gehört in die Etappenwahl, nicht in einen Hinweis.
+   */
+  kiteKorridorNm: z.number().positive().default(5),
+  /**
+   * DAS KITE-FENSTER in Athen-Zeit: die Stunden, in denen gekitet wird. Deckt
+   * das Meltemi-Maximum (13–17 Uhr) und den ausklingenden Abendwind ab —
+   * dieselbe Tageszeit, die die Crowd-Strategie meiden will, ist für den Kiter
+   * genau die richtige. Bewertet wird mit der GÜNSTIGSTEN Stunde des Fensters,
+   * nicht mit dem Worst Case: eine Session sucht man sich aus.
+   */
+  kiteFensterStartHourAthens: z.number().int().min(0).max(23).default(12),
+  kiteFensterEndeHourAthens: z.number().int().min(1).max(24).default(19),
+
   // --- forecast horizon & worst case (AD-13) --------------------------------
   /**
    * Stages beyond this many days from the current day are computed on the
@@ -466,6 +500,21 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
       code: 'custom',
       message:
         'fruehesteAbfahrtHourAthens muss vor zielAnkunftHourAthens liegen — sonst gibt es kein Abfahrtsfenster',
+      input: p,
+    });
+  }
+  if (p.kiteMinKn >= p.kiteMaxKn) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'kiteMinKn muss unter kiteMaxKn liegen — sonst ist das Kite-Band leer',
+      input: p,
+    });
+  }
+  if (p.kiteFensterStartHourAthens >= p.kiteFensterEndeHourAthens) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'kiteFensterStartHourAthens muss vor kiteFensterEndeHourAthens liegen — sonst gibt es kein Kite-Fenster (es endet am selben Tag, kein Wrap über Mitternacht)',
       input: p,
     });
   }

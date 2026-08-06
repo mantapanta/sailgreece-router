@@ -50,6 +50,11 @@ export const COLORS = {
   mapThumbSea: '#d7e7ef',
   mapThumbLand: '#ece7dd',
   mapThumbCoast: '#c9c1b3',
+  /* Kite-Spot-Ebene: ein eigener Ton, bewusst WEDER Ampel (der Spot bewertet
+     nichts) noch Akzent (das ist die Handlungsfarbe der App) noch eine
+     Alternativ-Farbe. Türkis liest sich auf dem Satellitenbild als "Wasser-
+     Thema" und ist gegen die drei Ampel-Töne unterscheidbar; ≥3:1 auf Weiss. */
+  kiteSpot: '#0f7f8c',
 } as const;
 
 /** Ampel hues — badges-on-tint context (raw hue). */
@@ -76,6 +81,9 @@ export const ALT_ROUTE_COLORS = [
   COLORS.altRoute2,
   COLORS.altRoute3,
 ] as const;
+
+/** Kite-Spot-Marker der Karte (MapView) — siehe Begründung an COLORS.kiteSpot. */
+export const KITE_SPOT_COLOR = COLORS.kiteSpot;
 
 export const MAP_LINE_SAILED = COLORS.mapLineSailed;
 export const MAP_LINE_CASING = COLORS.mapLineCasing;

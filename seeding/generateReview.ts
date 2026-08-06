@@ -13,6 +13,7 @@ import {
   IslandStagingFileSchema,
   LegsStagingFileSchema,
   VariantsStagingFileSchema,
+  KiteSpotsStagingFileSchema,
   PolarStagingFileSchema,
 } from '../src/domain/schema/seeding.ts';
 import type { Place } from '../src/domain/schema/place.ts';
@@ -262,6 +263,79 @@ function main() {
     }
   } catch (e) {
     console.error('legs.json/variants.json nicht lesbar:', e);
+  }
+
+  /**
+   * Kite-Spots (schema/kite.ts). Eigene Review-Sicht, weil die Quellenlage eine
+   * andere ist als bei den Liegeplätzen: hier steht Revierwissen ohne
+   * Revierführer. Die Tabelle zeigt darum Konfidenz und Quelle je Spot in
+   * derselben Zeile wie die Windrichtung — der Reviewer soll beim Lesen sehen,
+   * wie belastbar der Eintrag ist, und nicht erst in der Datei nachsehen.
+   */
+  try {
+    const raw = JSON.parse(readFileSync(join(DATA, 'kitespots.json'), 'utf8'));
+    const parsed = KiteSpotsStagingFileSchema.safeParse(raw);
+    if (parsed.success) {
+      const { kiteSpots, approved, sourceNote } = parsed.data;
+      const md: string[] = ['# Review: Kite-Spots', ''];
+      md.push(`Status: **${approved ? 'FREIGEGEBEN' : 'NICHT freigegeben'}** (\`approved: ${approved}\`)`);
+      md.push('');
+      md.push(`Quelle der Datei: ${sourceNote}`);
+      md.push('');
+      md.push(
+        '> Kite-Spots bewerten NICHTS: keine Ampel, kein Solver, kein Budget liest ' +
+          'ein Feld. Sektorsemantik wie beim Liegeplatz, aber umgekehrt gemeint — ' +
+          '„der Spot funktioniert mit Wind KOMMEND AUS fromDeg° im Uhrzeigersinn ' +
+          'bis toDeg°". Zu prüfen sind vor allem: Windrichtung, `refPlaceId` ' +
+          '(Forecast-Bezug UND Anzeigeort) und die Gefahren-Liste.',
+      );
+      md.push('');
+      md.push(`## Spots (${kiteSpots.length})`);
+      md.push('');
+      md.push('| Spot | Insel | Wind aus | Wasser | Start | Level | Bezugsplatz | Konfidenz |');
+      md.push('|---|---|---|---|---|---|---|---|');
+      for (const s of [...kiteSpots].sort((a, b) => a.id.localeCompare(b.id))) {
+        const sectors = s.windSectors
+          .map((w) => `${w.fromDeg}°–${w.toDeg}°${w.fromDeg > w.toDeg ? ' (Wrap über Nord)' : ''}`)
+          .join(' / ');
+        md.push(
+          `| ${s.name} (\`${s.id}\`) | ${s.islandId} | ${sectors} | ${s.water} | ` +
+            `${s.launch.join(', ')} | ${s.level} | \`${s.refPlaceId}\` | ${s.confidence} |`,
+        );
+      }
+      md.push('');
+      for (const s of [...kiteSpots].sort((a, b) => a.id.localeCompare(b.id))) {
+        md.push(`### ${s.name} (\`${s.id}\`)`);
+        md.push('');
+        md.push(
+          `Koordinaten: ${s.coordinates.lat.toFixed(4)}, ${s.coordinates.lon.toFixed(4)}`,
+        );
+        md.push('');
+        md.push(`Weg vom Bezugsplatz: ${s.accessInfo}`);
+        md.push('');
+        if (s.hazards.length > 0) {
+          md.push(`Gefahren: ${s.hazards.map((h) => `⚠ ${h}`).join(' · ')}`);
+          md.push('');
+        }
+        if (s.localNote) {
+          md.push(`Vor Ort: ${s.localNote}`);
+          md.push('');
+        }
+        md.push(`Quellen: ${s.sources.join('; ')}`);
+        md.push('');
+      }
+      md.push('---');
+      md.push(
+        'Freigabe: in `seeding/data/kitespots.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.',
+      );
+      md.push('');
+      writeFileSync(join(REVIEW, 'kite-spots.md'), md.join('\n'));
+      count++;
+    } else {
+      console.error('kitespots.json ungültig:', parsed.error.issues);
+    }
+  } catch (e) {
+    console.error('kitespots.json nicht lesbar:', e);
   }
 
   // Polar overview
