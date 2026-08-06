@@ -9,10 +9,16 @@ export const IslandSchema = z.object({
   /** Short atmospheric sentence (German, Y.CO narrative tone). */
   description: z.string().optional(),
   /**
-   * FR31 guest pickup: can the guests reach this island by ferry on
-   * `params.pickupDate`? Curated data (AD-4) — a MISSING field counts as NOT
-   * reachable, never as silent optimism, because reaching the pickup is a
-   * hard validity condition that is never relaxed (AD-13).
+   * Fähranbindung der Insel: erreichen Gäste sie per Fähre? Kuratierte Angabe
+   * (AD-4), rein informativ.
+   *
+   * Bis 2026-08-06 war das die Datengrundlage der FR31-Gästewechsel-Bedingung:
+   * ein Plan galt nur als gültig, wenn der Zustiegstag auf einer Insel mit
+   * `ferryReachable: true` endete, und ein FEHLENDES Feld zählte als „nicht
+   * erreichbar". Die Bedingung ist auf Skipper-Entscheid entfallen. Die Daten
+   * bleiben — sie sind recherchiert, richtig und für die Hand am Ruder nützlich
+   * —, aber KEINE Bewertung liest sie mehr. Ein fehlendes Feld heisst deshalb
+   * heute schlicht „nicht recherchiert" und hat keine Wirkung.
    */
   guestPickup: z
     .object({

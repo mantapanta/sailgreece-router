@@ -97,7 +97,7 @@ export function packLegs(
     startIslandId?: string;
     /**
      * Hard per-day requirement: where must the boat be when day N ends?
-     * Checked INSIDE the DP, because pins and the FR31 pickup pick a specific
+     * Checked INSIDE the DP, because a pin picks a specific
      * DAY while the packer chooses the days — verifying afterwards would
      * discard almost every packing instead of steering the search.
      */
@@ -162,7 +162,7 @@ export function packLegs(
     if (legIdx >= legs.length) {
       // All legs placed: the boat lies at the last island for every remaining
       // day. Those days still have to satisfy the day constraints — otherwise
-      // a pin or the FR31 pickup falling AFTER the last leg would never be
+      // a pin falling AFTER the last leg would never be
       // checked, and the plan would quietly park on the wrong island.
       const island = islandBefore(legIdx);
       for (let d = day; d <= deadlineDay; d++) {
@@ -203,7 +203,7 @@ export function packLegs(
       // The second leg starts at the REAL arrival time of the first one, not
       // at the morning departure again — afternoon wind build-up (Meltemi)
       // must hit the second leg's simulation.
-      // Checked SEPARATELY from the single-leg move: a pin or the pickup that
+      // Checked SEPARATELY from the single-leg move: a pin that
       // is only reachable via a double leg must not be blocked by the
       // single-leg destination failing the constraint.
       if (

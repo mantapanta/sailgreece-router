@@ -2,7 +2,7 @@
  * AD-12 — the round trip is a persisted entity, not a derived value.
  *
  * A plan covers every trip day exactly once: 11 stages plus exactly one
- * harbour day (default the guest-pickup day). Recomputation only ever
+ * harbour day. Recomputation only ever
  * RE-ASSESSES this plan — it never mutates it. Mutation happens solely
  * through the enumerated TripContext actions (AD-11/AD-12).
  */
@@ -134,7 +134,6 @@ export type ViolationKind =
   | 'upwind'
   | 'deadline'
   | 'return'
-  | 'pickup'
   | 'incomplete'
   /**
    * Zielmodell v2 — die Liegeplatz-Regel: kein Übernachtungsplatz zweimal
@@ -172,7 +171,6 @@ export const SAFETY_VIOLATION_KINDS: ViolationKind[] = [
   'upwind',
   'deadline',
   'return',
-  'pickup',
 ];
 
 /**
@@ -268,11 +266,14 @@ export function islandAtEndOfDay(plan: Plan, day: number): string | null {
 /**
  * AD-13 — die feste Eskalationsleiter, in Reihenfolge steigender Zugeständnisse.
  *
- * Liegt im Schema und nicht im Solver, weil sie normativ ist: `upwind` und
- * `pickup` fehlen hier ABSICHTLICH, und dass sie fehlen, ist die strukturelle
- * Garantie, dass sie nie gelockert werden können — keine Laufzeitprüfung, die
+ * Liegt im Schema und nicht im Solver, weil sie normativ ist: `upwind` fehlt
+ * hier ABSICHTLICH, und dass es fehlt, ist die strukturelle Garantie, dass die
+ * 65°/25-kn-Schwelle nie gelockert werden kann — keine Laufzeitprüfung, die
  * jemand vergessen könnte. Ausserdem trägt jede Bewertung einer Route die
  * erreichte Stufe als Preisschild mit (`RouteOptionAssessment.costLevel`).
+ *
+ * `pickup` stand hier bis 2026-08-06 aus demselben Grund; die
+ * FR31-Gästewechsel-Bedingung ist auf Skipper-Entscheid entfallen.
  */
 export const RELAXATION_ORDER = [
   'none',

@@ -73,16 +73,6 @@ describe('params schema — cross-field validation (AD-8: config editable withou
     ).toBe(false);
   });
 
-  it('rejects a pickup date outside the trip window (FR31 is a hard condition)', () => {
-    expect(
-      ParamsSchema.safeParse({
-        tripStartDate: '2026-08-08',
-        returnDeadlineDate: '2026-08-19',
-        pickupDate: '2026-08-25',
-      }).success,
-    ).toBe(false);
-  });
-
   it('rejects a worst case that is not worse than the upwind threshold', () => {
     expect(
       ParamsSchema.safeParse({

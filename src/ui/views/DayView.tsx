@@ -465,7 +465,7 @@ function StageCard({
           {stage.legs.length > 1 && (
             <span
               className="badge badge-doppelschlag"
-              title="Normalerweise plant die App eine Verbindung pro Tag. Zwei Schläge an einem Tag kommen nur, wenn ein Tag je Verbindung den Stichtag oder den Gäste-Zustiegstag nicht mehr erreicht."
+              title="Normalerweise plant die App eine Verbindung pro Tag. Zwei Schläge an einem Tag kommen nur, wenn ein Tag je Verbindung den Stichtag oder einen festgesetzten Tag nicht mehr erreicht."
             >
               {stage.legs.length} Schläge an einem Tag — Ausnahme
             </span>
