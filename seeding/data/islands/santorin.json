@@ -68,7 +68,21 @@
           "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.",
           "Deep-Research Lauf 3: CruisersWiki Santorini"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "santorin-vlychada-psaraki",
+          "name": "To Psaraki",
+          "qualityRating": 4.6,
+          "cuisineType": "Fischtaverne oberhalb der Marina",
+          "signatureDishes": [],
+          "accessInfo": "Oberhalb des Marinabeckens von Vlychada, kurzer Weg vom Muring-Platz",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,6/5 (2.133 Bewertungen, #2 von 8 in Vlychada) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar"
+          ]
+        }
+      ]
     },
     {
       "id": "santorin-akrotiri",

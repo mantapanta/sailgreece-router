@@ -151,5 +151,13 @@ Warnungen: ⚠ Platzangebot für Gastyachten stark limitiert (ca. 12 Boote) · �
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 255 (Seitenangabe unverifiziert)
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Markakis Restaurant (`paros-piso-livadi-markakis`) | 4.5/5 | Griechische Küche am Hafenbecken | — | Direkt am Hafen von Piso Livadi, fußläufig von der Kaimauer; Beiboot am Molenkopf | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,5/5 (#23 von 412 auf Paros) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ---
 Freigabe: in `seeding/data/islands/paros.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

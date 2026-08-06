@@ -50,6 +50,14 @@ Warnungen: ⚠ Seegras im Hafengrund — Anker gründlich einfahren, Kette lang 
 
 Quellen: Deep-Research Lauf 1: CruisersWiki Attika Coast (Abruf 2026-08)
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Taverna tou Veletakou (`attika-lavrion-veletakou`) | 4.9/5 | Familien-Fischtaverne — der Wirt fischt selbst | — | Im Ort Lavrio, kurzer Weg von der Kaimauer des Yachthafens | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,9/5 (nur 22 Bewertungen — dünne Basis, #8 von 53 in Lavrio) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar; Culinary Backstreets Athen, Porträt der Taverne (Yiannis fischt selbst, Despina kocht) — redaktionelle Quelle, stützt die dünne Bewertungsbasis; Befund des Laufs: Anemokoiti tou Tarsanas am selben Ort liegt bei 3,2/5 (66 Bewertungen) und ist deshalb NICHT aufgenommen
+
 ### Kap Sounion (`attika-sounion`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
