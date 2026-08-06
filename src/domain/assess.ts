@@ -614,6 +614,7 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     offPlan,
     forecastHorizonIso: persistence.horizonIso,
     waveHorizonIso: persistence.waveHorizonIso,
+    provenance: snapshot.provenance,
     // Taken from the verdicts themselves rather than re-derived from the
     // horizon timestamp: the leg basis already folds in BOTH reasons a day can
     // be untrusted (extrapolated hours, and days past reliableHorizonDays).

@@ -3,6 +3,7 @@ import { WindSectorSchema, WaveSectorSchema } from '../schema/shelter.ts';
 import { PolarSchema } from '../schema/polar.ts';
 import { ParamsSchema, DEFAULT_PARAMS } from '../schema/params.ts';
 import { TEST_POLAR } from './fixtures.ts';
+import CONFIG_JSON from '../../../seeding/data/config.json' with { type: 'json' };
 
 describe('shelter schema — point sectors are rejected (silent full circle!)', () => {
   it('rejects a point sector like 350-350 (typo would mean all-round shelter)', () => {
@@ -88,5 +89,88 @@ describe('params schema — cross-field validation (AD-8: config editable withou
         meltemiWorstCase: { twsKn: 30, fromDeg: 0, toDeg: 45, waveM: 2 },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('params schema — Forecast-Modelle (Nahfeld/Fernfeld)', () => {
+  it('hat den gewollten Hybrid als Default', () => {
+    expect(DEFAULT_PARAMS.forecastModel).toBe('ecmwf_ifs025');
+    expect(DEFAULT_PARAMS.forecastModelNear).toBe('dwd_icon_eu');
+    expect(DEFAULT_PARAMS.waveModel).toBe('best_match');
+    expect(DEFAULT_PARAMS.waveModelNear).toBe('ewam');
+  });
+
+  it('nimmt ein Alt-Dokument, das nur forecastModel kennt (Rückwärtskompatibilität)', () => {
+    const parsed = ParamsSchema.safeParse({ forecastModel: 'ecmwf_ifs025' });
+    expect(parsed.success).toBe(true);
+    // Die neuen Schlüssel kommen aus den Defaults — der Hybrid ist damit nach
+    // dem Deploy AN, ohne dass das Firestore-Dokument angefasst wurde.
+    expect(parsed.success && parsed.data.forecastModelNear).toBe('dwd_icon_eu');
+  });
+
+  it('akzeptiert den Aus-Schalter: Leerstring im Nahfeld', () => {
+    expect(
+      ParamsSchema.safeParse({ forecastModelNear: '', waveModelNear: '' }).success,
+    ).toBe(true);
+  });
+
+  // Eine UNBEKANNTE Id darf das Schema NICHT scheitern lassen: parseTolerant
+  // würde sonst das ganze Parameter-Dokument verwerfen und stumm die gesamte
+  // Abstimmung auf die Defaults zurücksetzen. Sie fängt der Adapter sichtbar ab
+  // (siehe adapters/__tests__/openMeteo.test.ts).
+  it('lässt eine unbekannte Id durch — sie ist Sache des Adapters, nicht des Schemas', () => {
+    const parsed = ParamsSchema.safeParse({
+      forecastModel: 'icon_eu',
+      konzeptOstMaxKn: 19,
+    });
+    expect(parsed.success).toBe(true);
+    // Der Punkt: die übrige Abstimmung überlebt.
+    expect(parsed.success && parsed.data.konzeptOstMaxKn).toBe(19);
+  });
+
+  it('lehnt ein Wellenmodell im Wind-Feld ab (und umgekehrt)', () => {
+    expect(ParamsSchema.safeParse({ forecastModel: 'ewam' }).success).toBe(false);
+    expect(ParamsSchema.safeParse({ waveModel: 'dwd_icon_eu' }).success).toBe(false);
+  });
+
+  it('lehnt ICON-2I ab — 2 km, aber das Gitter endet vor den Kykladen', () => {
+    const parsed = ParamsSchema.safeParse({
+      forecastModelNear: 'italia_meteo_arpae_icon_2i',
+    });
+    expect(parsed.success).toBe(false);
+    expect(JSON.stringify(parsed.success ? [] : parsed.error.issues)).toContain('22');
+  });
+
+  it('lehnt zwei gleiche Modelle ab und nennt den echten Aus-Schalter', () => {
+    const parsed = ParamsSchema.safeParse({
+      forecastModel: 'ecmwf_ifs025',
+      forecastModelNear: 'ecmwf_ifs025',
+    });
+    expect(parsed.success).toBe(false);
+    const messages = parsed.success ? [] : parsed.error.issues.map((i) => i.message);
+    expect(messages.some((m) => m.includes('forecastModelNear: ""'))).toBe(true);
+  });
+
+  it('lehnt ein leeres Fernfeld ab — es trägt die Achse', () => {
+    expect(ParamsSchema.safeParse({ forecastModel: '' }).success).toBe(false);
+    expect(ParamsSchema.safeParse({ waveModel: '' }).success).toBe(false);
+  });
+
+  it('deckt ein vertauschtes Nah/Fern-Paar auf (sonst unsichtbar)', () => {
+    // ICON-EU (120 h) als Fernfeld, ECMWF (360 h) als Nahfeld: das Fernfeld
+    // käme nie zum Tragen.
+    expect(
+      ParamsSchema.safeParse({
+        forecastModel: 'dwd_icon_eu',
+        forecastModelNear: 'ecmwf_ifs025',
+      }).success,
+    ).toBe(false);
+  });
+
+  // Der Wächter, der eine kaputte Id nicht in einen Deploy kommen lässt.
+  it('die echte seeding/data/config.json erfüllt das Schema', () => {
+    const parsed = ParamsSchema.safeParse(CONFIG_JSON.parameters);
+    if (!parsed.success) console.error(parsed.error.issues);
+    expect(parsed.success).toBe(true);
   });
 });

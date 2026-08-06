@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { forecastModelInfo, type ForecastKind } from './models.ts';
 
 /**
  * AD-8: all tuning parameters live in the Firestore `config` document
@@ -325,11 +326,75 @@ const ParamsObjectSchema = z.object({
   /** Nights ahead of the current day assessed for display (AD-8: config, not code). */
   nightLookaheadDays: z.number().int().positive().default(10),
 
-  // --- forecast (FR11) --------------------------------------------------------
-  /** Open-Meteo model id; default ECMWF. Model choice is a config parameter. */
+  // --- forecast (FR11) — NAHFELD/FERNFELD-HYBRID ------------------------------
+  /**
+   * FERNFELD-Windmodell: es besitzt die Stundenachse und damit den Horizont.
+   * Behält Id UND Bedeutung, damit bestehende Config-Dokumente unverändert
+   * weitergelten. Die gültigen Ids stehen in schema/models.ts.
+   */
   forecastModel: z.string().default('ecmwf_ifs025'),
+  /**
+   * NAHFELD-Windmodell — hochauflösend, kurzer Horizont. Es liefert die
+   * Stunden, die es abdeckt; danach übernimmt `forecastModel`.
+   *
+   * LEERSTRING = Hybrid aus; dann verhält sich die App exakt wie vor der
+   * Umstellung. Kein `null`, weil sich im Firestore-Editor ein Leerstring
+   * leichter tippt und der Typ `string` bleibt. Zwei GLEICHE Modelle sind NICHT
+   * der Aus-Schalter — das wären zwei identische HTTP-Abrufe und wird unten
+   * abgelehnt.
+   *
+   * Default ICON-EU: 7 km statt 25 km über den Kykladen-Kanälen, wo ein globales
+   * Gitter die Düsen glattbügelt. Das griechische Poseidon-Modell (HCMR) wäre
+   * feiner, ist aber nicht anbindbar — siehe Modulkopf schema/models.ts.
+   */
+  forecastModelNear: z.string().default('dwd_icon_eu'),
+  /**
+   * FERNFELD-Wellenmodell. `best_match` ist genau das, was die Marine-API
+   * bisher OHNE `models=`-Parameter geliefert hat — die stille Wahl wird nur
+   * explizit gemacht, das Verhalten bleibt gleich.
+   */
+  waveModel: z.string().default('best_match'),
+  /** NAHFELD-Wellenmodell; Leerstring = aus. */
+  waveModelNear: z.string().default('ewam'),
   forecastDays: z.number().int().min(1).max(16).default(10),
 });
+
+/**
+ * Prüft ein Modell-Feld — aber NUR, wenn die Id in der Registry BEKANNT ist.
+ *
+ * Warum diese Grenze: eine unbekannte Id darf das Schema NICHT scheitern lassen.
+ * `parseTolerant` (adapters/firestore.ts) verwirft bei einem Schemafehler das
+ * GANZE Parameter-Dokument und fällt auf DEFAULT_PARAMS zurück — ein Tippfehler
+ * in einer Modell-Id würde also stumm die gesamte Abstimmung wegwerfen
+ * (Meltemi-Schwellen, Stichtag, Budgets). Dazu driftet der Katalog eines fremden
+ * Anbieters: `icon_eu` hiess einmal so und heisst heute `dwd_icon_eu`. Eine
+ * Allowlist im Schema würde bedeuten: Open-Meteo benennt ein Modell um, und die
+ * nächste Config-Bearbeitung verwirft die Abstimmung.
+ *
+ * Unbekannte Ids fängt darum der ADAPTER ab (adapters/openMeteo.ts) — dort ist
+ * der Fehler eingegrenzt, im Fehlerpanel sichtbar und benennt die Id, während
+ * alle anderen Parameter weiterwirken.
+ *
+ * Was hier geprüft wird, kann NICHT driften, weil es die Id als bekannt
+ * voraussetzt: ein Wellenmodell im Wind-Feld, ein Modell ohne Ägäis-Abdeckung,
+ * ein vertauschtes Nah/Fern-Paar.
+ */
+function knownModelIssue(
+  field: string,
+  id: string,
+  want: ForecastKind,
+): string | null {
+  const info = forecastModelInfo(id);
+  if (!info) return null; // unbekannt -> Sache des Adapters, siehe oben
+  if (info.kind !== want) {
+    const other = want === 'wind' ? 'waveModel' : 'forecastModel';
+    return `${field}: '${id}' ist ein ${info.kind === 'wave' ? 'Wellen' : 'Wind'}modell und gehört nach ${other}`;
+  }
+  if (!info.coversAegean) {
+    return `${field}: '${id}' deckt das Revier nicht ab — ${info.coverageNote}`;
+  }
+  return null;
+}
 
 /**
  * Cross-field validation: the config document is editable in Firestore
@@ -429,6 +494,59 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
       input: p,
     });
   }
+  // --- Forecast-Modelle (Nahfeld/Fernfeld) ---------------------------------
+  // Nur BEKANNTE Ids werden geprüft; unbekannte fängt der Adapter sichtbar ab
+  // (Begründung im Kommentar von knownModelIssue).
+  for (const [field, id, kind] of [
+    ['forecastModel', p.forecastModel, 'wind'],
+    ['forecastModelNear', p.forecastModelNear, 'wind'],
+    ['waveModel', p.waveModel, 'wave'],
+    ['waveModelNear', p.waveModelNear, 'wave'],
+  ] as const) {
+    if (id === '') continue; // Leerstring = Hybrid aus; nur bei den Nah-Feldern sinnvoll
+    const msg = knownModelIssue(field, id, kind);
+    if (msg) ctx.issues.push({ code: 'custom', message: msg, input: p });
+  }
+  // Ein Fernfeld MUSS gesetzt sein — es besitzt die Achse.
+  for (const [field, id] of [
+    ['forecastModel', p.forecastModel],
+    ['waveModel', p.waveModel],
+  ] as const) {
+    if (id === '') {
+      ctx.issues.push({
+        code: 'custom',
+        message: `${field} darf nicht leer sein — das Fernfeld trägt die Stundenachse und den Horizont`,
+        input: p,
+      });
+    }
+  }
+  // Zwei gleiche Modelle sind nicht der Aus-Schalter, sondern zwei identische
+  // HTTP-Abrufe. Der Aus-Schalter ist der Leerstring — das sagt die Meldung, weil
+  // sie an der Stelle gelesen wird, an der jemand es falsch macht.
+  for (const [nearField, near, farField, far] of [
+    ['forecastModelNear', p.forecastModelNear, 'forecastModel', p.forecastModel],
+    ['waveModelNear', p.waveModelNear, 'waveModel', p.waveModel],
+  ] as const) {
+    if (near !== '' && near === far) {
+      ctx.issues.push({
+        code: 'custom',
+        message: `${nearField} ist identisch mit ${farField} — der Hybrid wird mit ${nearField}: "" abgeschaltet, nicht durch zwei gleiche Modelle (das wären zwei identische Abrufe)`,
+        input: p,
+      });
+    }
+    if (near === '') continue;
+    const nearInfo = forecastModelInfo(near);
+    const farInfo = forecastModelInfo(far);
+    // Vertauschtes Paar — sonst unsichtbar: das Fernfeld käme nie zum Tragen.
+    if (nearInfo && farInfo && nearInfo.horizonHours > farInfo.horizonHours) {
+      ctx.issues.push({
+        code: 'custom',
+        message: `${nearField} ('${near}', ${nearInfo.horizonHours} h) reicht weiter als ${farField} ('${far}', ${farInfo.horizonHours} h) — dann ist es kein Nahfeld, und das Fernfeld käme nie zum Tragen (Werte vermutlich vertauscht)`,
+        input: p,
+      });
+    }
+  }
+
   // The worst-case sector is read CLOCKWISE from fromDeg to toDeg. A full
   // circle has no meaningful middle, and swapped bounds would silently turn
   // the northerly Meltemi into a harmless southerly — both must fail loudly

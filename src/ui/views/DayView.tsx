@@ -28,6 +28,7 @@ import type {
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
 import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
+import { forecastModelLabel } from '../../domain/schema/models.ts';
 import type { KonzeptEignung, KonzeptId } from '../../domain/schema/konzept.ts';
 import {
   KONZEPT_REGLER,
@@ -1690,6 +1691,21 @@ export function DayView({
                   früher als der Wind, zieht die Nacht-Ampeln aber nicht mit: Wellenwerte
                   gelten für die offene See.
                 </li>
+                {/* Die EINE Stelle, an der die Nahtstelle erklärt wird: ohne sie
+                    liest sich der Sprung in der Stundentabelle (FR30) wie ein
+                    Fehler, statt wie zwei Modelle, die sich uneins sind. */}
+                {assessment.provenance?.wind.near && (
+                  <li>
+                    Nahfeld {forecastModelLabel(assessment.provenance.wind.near)} trägt
+                    die ersten {assessment.provenance.wind.nearReachHours} Stunden (bis{' '}
+                    {formatStamp(
+                      snapshot.times[assessment.provenance.wind.nearReachHours - 1] ?? null,
+                    )}
+                    ), danach {forecastModelLabel(assessment.provenance.wind.far)} — harte
+                    Übergabe, es wird nichts geglättet. Ein Sprung an dieser Stunde ist
+                    keine Störung, sondern der Abstand zwischen zwei Modellen.
+                  </li>
+                )}
                 <li>
                   Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:
                   sie warnt, sie verurteilt nicht.
