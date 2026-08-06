@@ -3,6 +3,7 @@ import {
   crossesLand,
   isOnLand,
   landCrossingNm,
+  landInsetNm,
   pathCrossesLand,
   pathLengthNm,
   seaRoute,
@@ -73,6 +74,39 @@ describe('Landmaske', () => {
    */
   it('lässt die eigene Insel nicht als Ansteuerung durchgehen', () => {
     expect(crossesLand(SYROS_ERMOUPOLI, { lat: 37.4425, lon: 24.85 })).toBe(true);
+  });
+
+  /**
+   * Die Ansteuerung ist so tief wie der Endpunkt selbst im Land sitzt, nicht
+   * pauschal `APPROACH_NM`. Als pauschaler Betrag deckte sie ganze Landzungen:
+   * Grammata liegt IM WASSER und bekam trotzdem 1,5 sm gutgeschrieben — die
+   * 0,6 sm breite Zunge davor wurde als 0,000 sm gemeldet, und die Karte führte
+   * weiter über Land.
+   */
+  it('rechnet einem Platz im Wasser keine Landzunge als Ansteuerung an', () => {
+    const nordVonSyros = { lat: 37.5118, lon: 24.9059 };
+    const grammata = { lat: 37.498, lon: 24.8911 };
+    expect(landInsetNm(grammata)).toBe(0);
+    expect(landCrossingNm(nordVonSyros, grammata)).toBeGreaterThan(0.4);
+    expect(crossesLand(nordVonSyros, grammata)).toBe(true);
+  });
+
+  it('sieht die Landzunge vor Ornos', () => {
+    // 1,3 sm quer über Mykonos, gemeldet als 0,000 sm.
+    const nordOestlich = { lat: 37.52, lon: 25.1865 };
+    expect(landCrossingNm(nordOestlich, MYKONOS_ORNOS)).toBeGreaterThan(1);
+  });
+
+  /**
+   * Die Gegenprobe: enger gefasst darf die Ansteuerung nicht heissen, dass der
+   * tiefste kuratierte Platz des Reviers unerreichbar wird. Russian Bay (Poros)
+   * liegt 1,03 sm hinter der Küstenlinie — die Bucht schneidet die Auflösung ab.
+   */
+  it('lässt den am tiefsten liegenden Hafen erreichbar', () => {
+    const russianBay = { lat: 37.4862, lon: 23.432 };
+    expect(landInsetNm(russianBay)).toBeGreaterThan(1);
+    const r = seaRoute([russianBay, { lat: 37.55, lon: 23.55 }]);
+    expect(r.unresolved).toBe(false);
   });
 });
 
