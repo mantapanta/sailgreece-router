@@ -51,6 +51,44 @@ function curatedKey(leg: Leg, n: number): string {
   return leg.waypointKeys?.[n] ?? legWaypointKey(leg.id, n);
 }
 
+/** Ein kuratierter Wegpunkt mit seinem Forecast-Key. */
+interface KeyedPoint {
+  key: string;
+  coordinates: Coordinates;
+}
+
+/**
+ * Schneidet die Wegpunkte ab, die nur zur ERSETZTEN Ansteuerung gehörten.
+ *
+ * `kea--syros` endet in Ermoupoli auf der Ostseite von Syros und trägt dessen
+ * Ansteuerungspunkte. Verankert ein Plan den Tag stattdessen in Grammata
+ * (Nordwestseite), blieben sie im Kurs stehen: das Boot fuhr an Grammata
+ * vorbei, 2,8 sm weiter bis vor Ermoupoli, und über dieselben Punkte wieder
+ * zurück — eine tote Spitze von 5,6 sm, auf der Karte zweimal übereinander
+ * gezeichnet. Quer über die Insel, denn Hin- und Rückweg dieser Spitze sind
+ * genau der Schlag, den `searoute.ts` um Syros herumlegen muss.
+ *
+ * Abgeschnitten wird streng nur, was vom neuen Endpunkt WEGführt: ein Punkt,
+ * der weiter von ihm entfernt liegt als sein Vorgänger, gehört zur Ansteuerung
+ * eines Hafens, der nicht mehr angelaufen wird. Punkte, die Fortschritt machen,
+ * bleiben stehen — der recherchierte Korridor wird nicht wegoptimiert, es fällt
+ * nur die Spitze weg, die ohne ihren Hafen keinen Sinn mehr hat.
+ */
+function trimApproach(
+  points: KeyedPoint[],
+  target: Coordinates,
+  opposite: Coordinates,
+): KeyedPoint[] {
+  const kept = [...points];
+  while (kept.length > 0) {
+    const last = kept[kept.length - 1]!;
+    const prev = kept[kept.length - 2]?.coordinates ?? opposite;
+    if (distanceNm(last.coordinates, target) <= distanceNm(prev, target)) break;
+    kept.pop();
+  }
+  return kept;
+}
+
 /**
  * Forecast-Key eines EINGEFÜGTEN Umfahrungspunkts.
  *
@@ -117,7 +155,25 @@ export function sailedLeg(
   // Plätze meldet scoring.assessLeg als 'unbewertet'.
   if (!from || !to || !curatedFrom || !curatedTo) return leg;
 
-  const routed = seaRoute(legPath(leg, from.coordinates, to.coordinates));
+  // Die kuratierten Wegpunkte, um die Ansteuerung eines ersetzten Endpunkts
+  // bereinigt. Steht ein Endpunkt unverändert, bleibt seine Ansteuerung auch
+  // unverändert — getrimmt wird nur dort, wo der Anker die Etappe verschoben hat.
+  let curated: KeyedPoint[] = leg.waypoints.map((w, n) => ({
+    key: curatedKey(leg, n),
+    coordinates: w,
+  }));
+  if (toPlaceId !== leg.toPlaceId) {
+    curated = trimApproach(curated, to.coordinates, from.coordinates);
+  }
+  if (fromPlaceId !== leg.fromPlaceId) {
+    curated = trimApproach([...curated].reverse(), from.coordinates, to.coordinates).reverse();
+  }
+
+  const routed = seaRoute([
+    from.coordinates,
+    ...curated.map((c) => c.coordinates),
+    to.coordinates,
+  ]);
   const inner = routed.path.slice(1, -1);
   if (routed.unresolved) {
     // Kein landfreier Kurs gefunden: dann steht dort die Luftlinie, und das
@@ -149,15 +205,19 @@ export function sailedLeg(
   // Keys: kuratierte Wegpunkte behalten ihren, eingefügte leihen sich einen.
   const curatedPoints = [
     { key: from.id, coordinates: from.coordinates },
-    ...leg.waypoints.map((w, n) => ({ key: curatedKey(leg, n), coordinates: w })),
+    ...curated,
     { key: to.id, coordinates: to.coordinates },
   ];
   const curatedWaypointPoints = curatedPoints.slice(1, -1);
   let nextCurated = 0;
   const waypointKeys = inner.map((w) => {
-    const original = leg.waypoints[nextCurated];
-    if (original && original.lat === w.lat && original.lon === w.lon) {
-      return curatedKey(leg, nextCurated++);
+    const original = curated[nextCurated];
+    if (
+      original &&
+      original.coordinates.lat === w.lat &&
+      original.coordinates.lon === w.lon
+    ) {
+      return curated[nextCurated++]!.key;
     }
     return borrowedKey(
       w,

@@ -188,6 +188,18 @@
       "distanceNm": 34,
       "waypoints": [
         {
+          "lat": 37.668,
+          "lon": 24.3097
+        },
+        {
+          "lat": 37.6785,
+          "lon": 24.3173
+        },
+        {
+          "lat": 37.6866,
+          "lon": 24.3356
+        },
+        {
           "lat": 37.6899,
           "lon": 24.3608
         },
@@ -198,6 +210,10 @@
         {
           "lat": 37.4879,
           "lon": 24.9528
+        },
+        {
+          "lat": 37.4441,
+          "lon": 24.9541
         }
       ],
       "windWarnings": [
@@ -268,6 +284,10 @@
       "toPlaceId": "serifos-livadi",
       "distanceNm": 17,
       "waypoints": [
+        {
+          "lat": 37.3595,
+          "lon": 24.3775
+        },
         {
           "lat": 37.3147,
           "lon": 24.3617
@@ -362,6 +382,10 @@
         {
           "lat": 36.93,
           "lon": 25.6
+        },
+        {
+          "lat": 36.8329,
+          "lon": 25.8331
         }
       ],
       "windWarnings": [
@@ -385,12 +409,20 @@
           "lon": 25.2683
         },
         {
+          "lat": 37.16,
+          "lon": 25.225
+        },
+        {
           "lat": 37.15,
           "lon": 25.21
         },
         {
           "lat": 37.105,
           "lon": 25.125
+        },
+        {
+          "lat": 37.0851,
+          "lon": 25.1307
         }
       ],
       "windWarnings": [
@@ -416,6 +448,10 @@
         {
           "lat": 36.72,
           "lon": 25.4
+        },
+        {
+          "lat": 36.7073,
+          "lon": 25.4052
         },
         {
           "lat": 36.48,
@@ -461,6 +497,14 @@
         {
           "lat": 36.7536,
           "lon": 25.2534
+        },
+        {
+          "lat": 36.7279,
+          "lon": 25.2469
+        },
+        {
+          "lat": 36.7094,
+          "lon": 25.2624
         }
       ],
       "windWarnings": []
@@ -474,12 +518,20 @@
       "distanceNm": 12,
       "waypoints": [
         {
+          "lat": 37.0851,
+          "lon": 25.1307
+        },
+        {
           "lat": 37.105,
           "lon": 25.125
         },
         {
           "lat": 37.15,
           "lon": 25.21
+        },
+        {
+          "lat": 37.16,
+          "lon": 25.225
         },
         {
           "lat": 37.154,
@@ -530,7 +582,16 @@
       "fromPlaceId": "paros-naoussa",
       "toPlaceId": "syros-ermoupoli",
       "distanceNm": 24,
-      "waypoints": [],
+      "waypoints": [
+        {
+          "lat": 37.136,
+          "lon": 25.2341
+        },
+        {
+          "lat": 37.1507,
+          "lon": 25.2128
+        }
+      ],
       "windWarnings": []
     },
     {
@@ -541,6 +602,14 @@
       "toPlaceId": "paros-parikia",
       "distanceNm": 33,
       "waypoints": [
+        {
+          "lat": 36.7813,
+          "lon": 24.5979
+        },
+        {
+          "lat": 36.7925,
+          "lon": 24.6126
+        },
         {
           "lat": 36.7918,
           "lon": 24.6399
@@ -596,6 +665,10 @@
         {
           "lat": 37.3147,
           "lon": 24.3617
+        },
+        {
+          "lat": 37.3595,
+          "lon": 24.3775
         }
       ],
       "windWarnings": []
@@ -608,6 +681,10 @@
       "toPlaceId": "sifnos-kamares",
       "distanceNm": 13,
       "waypoints": [
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        },
         {
           "lat": 37.122,
           "lon": 24.532
@@ -678,6 +755,10 @@
         {
           "lat": 37.122,
           "lon": 24.532
+        },
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
         }
       ],
       "windWarnings": []
@@ -690,6 +771,10 @@
       "toPlaceId": "kythnos-loutra",
       "distanceNm": 27,
       "waypoints": [
+        {
+          "lat": 37.4441,
+          "lon": 24.9541
+        },
         {
           "lat": 37.4879,
           "lon": 24.9528
@@ -716,6 +801,10 @@
         {
           "lat": 37.5361,
           "lon": 25.1606
+        },
+        {
+          "lat": 37.52,
+          "lon": 25.1865
         }
       ],
       "windWarnings": [
