@@ -260,9 +260,9 @@ Staging-JSONs direkt gelesen werden — das `approved`-Flag gilt nur für den
 Import, nicht für den local-Modus. Wer die Ebene im Deploy vermisst, geht
 diese vier Schritte der Reihe nach durch:
 
-1. **Freigabe:** trägt die Staging-Datei `approved: true`? Kite-Spots stehen
-   bewusst auf `false` (siehe unten, `seeding/review/kite-spots.md`) und
-   werden bis zur Freigabe bei jedem Import übersprungen.
+1. **Freigabe:** trägt die Staging-Datei `approved: true`? Eine Datei ohne
+   Freigabe wird bei *jedem* Import stillschweigend übersprungen — der Lauf
+   endet trotzdem mit Exit 0.
 2. **Import:** `npm run seed:import` erneut laufen lassen und die Schlusszeile
    lesen. Restaurants haben **kein eigenes Dokument** — sie stecken in den
    `places`-Dokumenten und wandern nur mit einem erneuten Insel-Import mit.
@@ -583,10 +583,12 @@ Liegeplätze ist diese Bibliothek Revierwissen, nicht Revierführer: keine
 Windstatistik, keine Ortsbegehung, und **behördliche Kite-Verbote,
 Badezonen-Auflagen und Schutzgebiete (Delos/Rinia, Despotiko, Polyaigos) sind
 nicht recherchiert**. Jeder Eintrag trägt darum `confidence: 'mittel'` oder
-`'niedrig'` samt Vorbehalt in der Anzeige, und die Datei steht auf
-`approved: false` — sie wird also erst importiert, nachdem
-`seeding/review/kite-spots.md` geprüft und die Freigabe gesetzt ist (dieselbe
-Regel wie für jede andere Staging-Datei, FR24/AD-10).
+`'niedrig'` samt Vorbehalt in der Anzeige. Die Datei ist nach Sichtung von
+`seeding/review/kite-spots.md` freigegeben (`approved: true`, 2026-08-06) —
+**trotz** dieser Lage, nicht weil sie sich geändert hätte: die Ebene bewertet
+nichts, und ein Hinweis, den man vor Ort prüft, ist mehr wert als eine leere
+Karte. Der Vorbehalt liegt damit in der Anzeige, nicht im Import. Sektor,
+Koordinate und Zulässigkeit eines Spots gehören vor Ort geprüft.
 
 ## Attribution
 
