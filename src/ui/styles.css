@@ -1417,9 +1417,27 @@ button.stage-capsule:only-child::after {
 .quality-row {
   display: flex;
   align-items: center;
+  /* Umbruch, damit die Gastro-Notiz unter der Zeile stehen kann, ohne das
+     Meter zu quetschen: sie ist ein Flex-Item mit voller Breite. */
+  flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-3) 0;
   border-bottom: 1px solid var(--border-hairline);
+}
+
+/* Zweite Zeile der Qualitaeten-Zeile „Restaurant": entweder der Sprung zur
+   Gastro-Karte oder die offene Auskunft, dass nichts recherchiert ist. Ruhig
+   gesetzt — sie fuehrt zu einer Liste, die nichts bewertet. */
+.quality-note {
+  flex-basis: 100%;
+  margin-top: calc(-1 * var(--space-2));
+  padding-left: 108px; /* Breite von .quality-name — buendig zum Zeilentext */
+  font: 400 12.5px/1.35 var(--font-sans);
+  text-align: left;
+}
+
+.quality-note.leer {
+  color: var(--ink-tertiary);
 }
 
 .quality-row:first-of-type {
