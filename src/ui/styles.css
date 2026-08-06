@@ -713,25 +713,49 @@ hr.hairline,
   position: absolute;
   top: var(--space-3);
   left: var(--space-3);
+  /* Nie breiter als die Karte — der Hinweis darunter ist so lang, wie er ist. */
+  max-width: calc(100% - 2 * var(--space-3));
   z-index: 4;
   display: flex;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.chip-row {
+  display: flex;
+  /* Zeilenabstand grösser als der Spaltenabstand: die Chips sind visuell 30px
+     hoch und holen sich ihre 44px Tippfläche über ::after (siehe unten) — bei
+     8px Zeilenabstand würden sich die Flächen zweier Reihen überlappen. */
+  gap: var(--space-4) var(--space-2);
   flex-wrap: wrap;
 }
 
+/* Feiner als im Redesign (Feedback 2026-08-06): auf dem Telefon nahmen die
+   44px hohen Chips der Karte zu viel Höhe. Sichtbar sind jetzt 30px, die
+   Tippfläche bleibt bei 44px — sie wächst unsichtbar über ::after nach oben
+   und unten (7px je Seite), damit die Karte Fläche zurückbekommt, ohne dass ein
+   Ziel unter das Minimum fällt. */
 .layer-chip {
+  position: relative;
   border: 0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  min-height: 44px;
-  padding: 0 var(--space-3);
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
   border-radius: var(--radius-full);
-  font: 650 12.5px/1.35 var(--font-sans);
-  background: rgba(255, 255, 255, 0.92);
+  font: 600 12px/1.3 var(--font-sans);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--ink-secondary);
   box-shadow: var(--shadow-1);
+}
+
+.layer-chip::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0; /* 30px + 2×7px = 44px Tippfläche */
 }
 
 .layer-chip[aria-pressed='true'] {
@@ -739,31 +763,97 @@ hr.hairline,
   color: var(--accent-text);
 }
 
+/* Chip der gezeigten Alternative: der Akzent-Tint der Ebenen-Chips würde sie
+   wie einen Schalter aussehen lassen — sie ist eine Auswahl. Ihre Identität ist
+   der Farbpunkt (dieselbe Farbe wie Linie und Legendenzeile). */
+.layer-chip.active {
+  color: var(--ink-primary);
+  font-weight: 650;
+}
+
 /* Identitätspunkt eines Alternativ-Chips — dieselbe Farbe wie die Linie auf der
    Karte und die Zeile in der Legende (altRouteColors.ts, inline gesetzt). */
 .layer-chip .chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  flex: 0 0 auto;
+}
+
+/* Hinweis, solange eine Alternative die Hauptroute im Bild ersetzt: eine kurze
+   Zeile UNTER den Chips (eigene Flex-Zeile, auch wenn die Chips umbrechen). */
+.layer-chips .alt-note {
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.9);
+  font: 400 10.5px/1.5 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+.layer-chips .alt-note:empty {
+  display: none;
+}
+
+/* Routenwahl-Menü am Chip (AltRouteMenu) — Rezept des .avatar-menu, links am
+   Auslöser verankert und schmal genug fürs Telefon. */
+.alt-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 120;
+  width: max-content;
+  min-width: 200px;
+  max-width: calc(100vw - 2 * var(--space-4));
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-1) 0;
+}
+
+.alt-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 var(--space-3);
+  font: 400 13px/1.35 var(--font-sans);
+  color: var(--ink-primary);
+  text-align: left;
+}
+
+.alt-menu button:hover {
+  background: var(--surface-inset);
+}
+
+/* Die gewählte Zeile ist nicht nur farbig markiert (Farbe ist hier Identität,
+   nicht Zustand): sie trägt Fettung und Fläche. */
+.alt-menu button[aria-checked='true'] {
+  background: var(--surface-inset);
+  font-weight: 600;
+}
+
+.alt-menu .am-dot {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-full);
   flex: 0 0 auto;
 }
 
-/* Hinweis, solange eine Alternative die Hauptroute im Bild ersetzt. Liegt als
-   eigene Flex-Zeile UNTER den Chips — auch wenn die Chips umbrechen. */
-.layer-chips .alt-note {
-  flex: 0 0 100%;
-  max-width: 17rem;
-  margin: 0;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--shadow-1);
-  font: 400 11.5px/1.35 var(--font-sans);
-  color: var(--ink-secondary);
+.alt-menu .am-label {
+  flex: 1 1 auto;
 }
 
-.layer-chips .alt-note:empty {
-  display: none;
+.alt-menu .am-meta {
+  flex: 0 0 auto;
+  font: 400 11px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
 }
 
 /* ---- legend affordance + popover ---- */
