@@ -396,7 +396,8 @@ describe('Entscheidungspunkte — Vorwarnung statt Nachruf', () => {
   const option = (
     over: Partial<RouteOptionAssessment>,
   ): RouteOptionAssessment => ({
-    routeId: 'sued', name: 'Süd-Route', state: 'schliesst', closesOnDay: 7,
+    routeId: 'sued', name: 'Süd-Route', konzeptId: 'klassik', konzeptWarnung: null,
+    state: 'schliesst', closesOnDay: 7,
     ampel: 'gruen', legAssessments: [], reasons: [],
     turnIslandId: 'fern', reachNm: 100, costLevel: 'none',
     costNote: null, plan: null, turnDay: 3, previewIndex: null, ...over,

@@ -56,6 +56,8 @@ import {
   type PackedLeg,
 } from './ppr.ts';
 import { legIndexWithReverses, legsOfVariant } from './legs.ts';
+import { konzeptLageFor, konzeptOfPlan, rueckwegAbweichung } from './konzept.ts';
+import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import { enumerateRoundTrips } from './roundTrips.ts';
 import { deadlineFrame, tripDayForDate } from './time.ts';
@@ -933,6 +935,18 @@ export interface PlanMetrics {
   /** Abstand der Hafentagszahl vom Zielband [harbourDays, harbourDaysTargetMax]. */
   harbourDev: number;
   /**
+   * ROUTEN-KONZEPTE (konzept.ts) — trägt die Wetterlage das Konzept dieses
+   * Plans? Ein Plan, der Ost-Marker anläuft, während das Ost-Konzept
+   * ungeeignet ist, verliert gegen JEDEN Plan in tragendem Konzept — noch
+   * vor der Reichweite. Das ist die zentrale, alles überschreibende Logik.
+   */
+  konzeptTraegt: boolean;
+  /**
+   * Rückweg-Inseln außerhalb des westlichen Lee-Korridors (nach der Wende).
+   * Weniger ist besser: die Rückweg-Empfehlung der Törnanalyse als Rangmaß.
+   */
+  rueckwegAbweichung: number;
+  /**
    * Längster ZUSAMMENHÄNGENDER Hafentage-Lauf ab dem aktuellen Törntag —
    * die Verteilungs-Kennzahl, die harbourDev nicht hat: fünf Hafentage am
    * Stück (egal ob am Ende oder mitten im Törn) sind ein anderer Törn als
@@ -950,6 +964,8 @@ export function planMetricsFor(
     snapshot.library.islands.find((i) => i.id === islandId)?.coordinates ?? null;
   const legs = legLibrary(snapshot);
   const { stageHoursBandMinH, stageHoursBandMaxH } = snapshot.params;
+  // Die Konzept-Lage gilt je Snapshot, nicht je Plan — einmal beurteilen.
+  const konzeptLage = konzeptLageFor(snapshot);
   // preferred vergleicht jeden Kandidaten gegen den bisherigen Besten — der
   // Beste würde ohne Memo bei jedem Vergleich neu durchgerechnet.
   const memo = new WeakMap<SolveResult, PlanMetrics>();
@@ -1004,6 +1020,8 @@ export function planMetricsFor(
     const hi = snapshot.params.harbourDaysTargetMax;
     const harbourDev = harbourDays < lo ? lo - harbourDays : harbourDays > hi ? harbourDays - hi : 0;
 
+    const turnDay = turnDayOf(r);
+
     // Nur ab dem aktuellen Tag: vergangene Hafentage sind gesegelte
     // Geschichte (AD-12) und keine Qualität des Restplans.
     let maxHarbourRun = 0;
@@ -1020,11 +1038,18 @@ export function planMetricsFor(
       reachNm: reach(r.turnIslandId),
       distinctIslands: new Set(islands).size,
       clockwise: isClockwise(ring),
-      turnDay: turnDayOf(r),
+      turnDay,
       harbourDays,
       stages: stages.length,
       bandDevTenths,
       harbourDev,
+      konzeptTraegt:
+        konzeptLage.eignung[konzeptOfPlan(r.plan)] !== 'ungeeignet',
+      rueckwegAbweichung: rueckwegAbweichung(
+        r.plan,
+        stages.length > 0 ? turnDay : null,
+        snapshot.params.baseIslandId,
+      ),
       maxHarbourRun,
     };
     memo.set(r, m);
@@ -1062,16 +1087,22 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  *   1. FEST gültig vor ungültig, und unter den ungültigen zuerst weniger
  *      Sicherheitsverletzungen, dann weniger FESTE Verletzungen. Die App
  *      muss auch im Meltemi antworten (FR18) — aber nie mit etwas Unsicherem.
- *      FEST heisst: ohne die Annahme-Befunde (`Violation.assumed`). Die
- *      zählten hier früher mit — und weil jeder Segeltag jenseits des
- *      verlässlichen Horizonts Annahme-Befunde trägt, Tage an der Basis aber
- *      keine, gewann "an Tag 7 heim und fünf Tage liegen" gegen jeden Törn,
- *      der die zweite Woche nutzt, bevor Reichweite oder Inseln je verglichen
- *      wurden. Die Annahme warnt, sie verurteilt nicht (schema/plan.ts) —
- *      als Rangkriterium steht sie deshalb NACHRANGIG (Kriterium 6), nicht
- *      im Gültigkeits-Tor.
- *   2. WEITER vor näher. Das ist die Törnfrage.
- *   3. Weniger Nachgeben auf der Eskalationsleiter — VOR der Inselvielfalt
+ *   2. TRAGENDES KONZEPT vor gekipptem (konzept.ts) — VOR der Reichweite,
+ *      mit Absicht: das ist die zentrale, alles überschreibende Logik
+ *      (Skipper 2026-08-05). Steht ein anhaltendes Starkwindfeld über den
+ *      Ost-Kykladen im Forecast, zieht kein noch so ferner Wendepunkt den
+ *      Törn nach Osten — Route 2 verliert dann gegen jede Route-1-Runde.
+ *
+ *      FEST heisst in Kriterium 1: ohne die Annahme-Befunde
+ *      (`Violation.assumed`). Die zählten dort früher mit — und weil jeder
+ *      Segeltag jenseits des verlässlichen Horizonts Annahme-Befunde trägt,
+ *      Tage an der Basis aber keine, gewann "an Tag 7 heim und fünf Tage
+ *      liegen" gegen jeden Törn, der die zweite Woche nutzt, bevor
+ *      Reichweite oder Inseln je verglichen wurden. Die Annahme warnt, sie
+ *      verurteilt nicht (schema/plan.ts) — als Rangkriterium steht sie
+ *      deshalb NACHRANGIG (Kriterium 6), nicht im Gültigkeits-Tor.
+ *   3. WEITER vor näher. Das ist die Törnfrage.
+ *   4. Weniger Nachgeben auf der Eskalationsleiter — VOR der Inselvielfalt
  *      und dem Wegstunden-Band, mit Absicht: der Doppelschlag ist eine
  *      NACHGABE (Skipper 2026-08-05, "ein Tag, eine Verbindung") und darf
  *      weder zum Normalfall werden, weil er die Stunden hübscher verteilt,
@@ -1079,26 +1110,30 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  *      Inselvielfalt hatte er sich zurückgekämpft: sechs Doppelschlag-Tage
  *      hintereinander erreichten mehr Inseln und gewannen — die Ausnahme als
  *      Serie. Ein Doppelschlag, der WEITER trägt, gewinnt weiterhin
- *      (Kriterium 2); zusätzlich deckelt params.doppelschlagMaxPerTrip die
+ *      (Kriterium 3); zusätzlich deckelt params.doppelschlagMaxPerTrip die
  *      Zahl der Doppelschlag-Tage im Packer selbst.
- *   4. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
+ *   5. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
  *      Törn, der zwölf Tage dieselbe Kette auf und ab fährt, genauso gut wie
  *      eine Runde — er erreicht denselben Wendepunkt und ist leichter gültig.
  *      (Runde vor Pendeln bleibt erhalten: beide lösen ohne Eskalation, also
  *      entscheidet weiterhin die Vielfalt.)
- *   5. Weniger Annahme-Befunde: der abgestufte Rest des alten Kriteriums 1.
+ *   6. Weniger Annahme-Befunde: der abgestufte Rest des alten Kriteriums 1.
  *      Bei gleicher Reichweite und Vielfalt ist der Plan vorzuziehen, der
  *      weniger auf der Persistenz-Annahme ruht.
- *   6. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
+ *   7. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
  *      verschenken oder zu überziehen.
- *   7. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
+ *   8. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
  *      ohne Ruhetag ist der Törn so wenig gewollt wie mit vier.
- *   8. Kürzester Hafentage-LAUF: verteilte Ruhetage vor der Halde — fünf am
+ *   9. Kürzester Hafentage-LAUF: verteilte Ruhetage vor der Halde — fünf am
  *      Stück sind ein anderer Törn als fünf verteilte (maxHarbourRun).
- *   9. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
+ *  10. Rückweg im westlichen LEE-KORRIDOR (konzept.ts): unter sonst gleichen
+ *      Plänen gewinnt der, dessen Heimweg nach der Wende in der Abdeckung
+ *      Milos–Sifnos–Serifos–Kythnos läuft — die Rückweg-Empfehlung der
+ *      Törnanalyse, präziser als der reine Umlaufsinn.
+ *  11. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
  *      Westseite zurück — die Empfehlung fürs Revier.
- *  10. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
- *  11. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
+ *  12. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
+ *  13. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
  *      die Variante alphabetisch — gleiche Lage, gleiche Antwort.
  */
 export function preferred(
@@ -1115,6 +1150,8 @@ export function preferred(
     [firmA === 0 ? 1 : 0, firmB === 0 ? 1 : 0],
     [-a.validity.safetyViolations.length, -b.validity.safetyViolations.length],
     [-firmA, -firmB],
+    // Das Routen-Konzept überschreibt die Reichweite (konzept.ts).
+    [ma.konzeptTraegt ? 1 : 0, mb.konzeptTraegt ? 1 : 0],
     // Wie weit kommen wir — die Törnfrage.
     [Math.round(ma.reachNm), Math.round(mb.reachNm)],
     [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
@@ -1123,6 +1160,8 @@ export function preferred(
     [-ma.bandDevTenths, -mb.bandDevTenths],
     [-ma.harbourDev, -mb.harbourDev],
     [-ma.maxHarbourRun, -mb.maxHarbourRun],
+    // Rückweg im Lee-Korridor vor dem groben Umlaufsinn.
+    [-ma.rueckwegAbweichung, -mb.rueckwegAbweichung],
     [ma.clockwise ? 1 : 0, mb.clockwise ? 1 : 0],
     [-ma.turnDay, -mb.turnDay],
     [ma.stages, mb.stages],
@@ -1315,19 +1354,26 @@ export function completePlan(
        * Beschneidung, die das Ergebnis nicht verändert: steht bereits ein
        * FEST-GÜLTIGER Plan (Kriterium 1: keine festen Verletzungen), kann eine
        * höhere Eskalationsstufe nur noch gewinnen, wenn sie mindestens GLEICH
-       * WEIT kommt — bei ECHT geringerer Reichweite verliert sie an Kriterium
-       * 2, egal was sonst passiert. (Fest-gültig, nicht voll-gültig: seit die
-       * Annahme-Befunde nachrangig ranken, ist das das Tor, das preferred
-       * selbst prüft — die Beschneidung muss dasselbe Tor benutzen.)
+       * WEIT kommt — bei ECHT geringerer Reichweite verliert sie an der
+       * Reichweite, egal was sonst passiert. (Fest-gültig, nicht voll-gültig:
+       * seit die Annahme-Befunde nachrangig ranken, ist das das Tor, das
+       * preferred selbst prüft — die Beschneidung muss dasselbe Tor benutzen.)
        *
        * Nur strikt kleiner, nicht kleiner-gleich: bei gleicher Reichweite kann
        * eine höhere Stufe durchaus noch gewinnen (etwa ein Doppelschlag, der
        * eine vielfältigere Runde packbar macht) und muss durchgerechnet werden.
+       *
+       * SEIT DEN ROUTEN-KONZEPTEN nur, wenn der bisherige Beste in einem
+       * TRAGENDEN Konzept steht: das Konzept rangiert VOR der Reichweite
+       * (preferred), ein näherer Kandidat in tragendem Konzept kann einen
+       * ferneren in gekipptem also noch schlagen — der darf nicht
+       * weggeschnitten werden.
        */
       if (
         levelIdx > 0 &&
         best &&
         firmValid(best) &&
+        metrics(best).konzeptTraegt &&
         Math.round(reach(candidate.turnIslandId)) <
           Math.round(reach(best.turnIslandId))
       ) {
@@ -1460,6 +1506,88 @@ export function planKey(plan: Plan): string {
     .sort((a, b) => a.day - b.day)
     .map((d) => `${d.day}:${d.kind === 'stage' ? d.toIslandId : `~${d.islandId}`}`)
     .join('|');
+}
+
+/** Ergebnis von `planWithoutStopover` — Plan plus ggf. erzeugte Direktroute. */
+export interface StopoverRemoval {
+  plan: Plan;
+  /**
+   * Die dabei ERZEUGTE Direktroute — null, wenn die Bibliothek die direkte
+   * Verbindung schon kannte (auch als Gegenrichtung). Der Aufrufer persistiert
+   * sie als Custom-Etappe des Geräts (tripContext DELETE_STOPOVER), damit der
+   * Plan sie über jeden Neustart hinweg auflösen kann.
+   */
+  customLeg: Leg | null;
+}
+
+/**
+ * FR28 — den Zwischenstopp eines Doppelschlag-Tages löschen: derselbe Tag,
+ * dasselbe Tagesziel, aber als EINE direkte Etappe gesegelt.
+ *
+ * Zuerst wird im Bibliotheks-Index inklusive Gegenrichtungen (legLibrary)
+ * nach einer direkten Verbindung gesucht. Kennt die Bibliothek keine, wird
+ * sie ERZEUGT: der kürzeste landfreie Kurs zwischen dem Startplatz des Tages
+ * und dem Zielplatz (searoute.ts), mit der sphärisch gerechneten Kurslänge
+ * als Distanz. Das ist keine freie Geometrie zur Laufzeit der SUCHE — der
+ * Solver-Suchraum bleibt kuratiert —, sondern eine bewusste Skipper-
+ * Entscheidung, die als benannte Etappe in die Bibliothek dieses Geräts
+ * eingeht (usePlanning injiziert `customLegs` in den Snapshot; kuratierte
+ * Etappen gewinnen bei gleicher Id, first-writer-wins in legIndex).
+ *
+ * Null nur noch, wenn der Tag keinen Zwischenstopp trägt, eine Referenz tot
+ * ist oder KEIN landfreier Kurs gefunden wird (`SeaRoute.unresolved`) — eine
+ * Luftlinie über Land wird nie stillschweigend behauptet.
+ *
+ * Der Tag wird als Skipper-Entscheidung gestempelt (Pin, AD-12), damit eine
+ * spätere Neuberechnung das Tagesziel nicht wieder verwirft. Alle anderen
+ * Tage bleiben unberührt — Start- und Zielinsel des Tages ändern sich nicht,
+ * die Kette bleibt geschlossen.
+ */
+export function planWithoutStopover(
+  plan: Plan,
+  day: number,
+  snapshot: PlanningSnapshot,
+): StopoverRemoval | null {
+  const entry = planDay(plan, day);
+  if (!entry || entry.kind !== 'stage' || entry.legIds.length < 2) return null;
+  const legs = legLibrary(snapshot);
+  const first = legs.get(entry.legIds[0]!);
+  const last = legs.get(entry.legIds[entry.legIds.length - 1]!);
+  if (!first || !last) return null;
+
+  const replaceDay = (legId: string): Plan => ({
+    ...plan,
+    days: plan.days.map((d) =>
+      d.day === day && d.kind === 'stage'
+        ? { ...d, legIds: [legId], source: 'skipper' as const }
+        : d,
+    ),
+  });
+
+  const direct = [...legs.values()].find(
+    (l) => l.fromIslandId === first.fromIslandId && l.toIslandId === entry.toIslandId,
+  );
+  if (direct) return { plan: replaceDay(direct.id), customLeg: null };
+
+  // Erzeugen: landfreier Kurs vom Startplatz des Tages zum Zielplatz.
+  const from = snapshot.library.places.find((p) => p.id === first.fromPlaceId);
+  const to = snapshot.library.places.find((p) => p.id === last.toPlaceId);
+  if (!from || !to) return null;
+  const routed = seaRoute([from.coordinates, to.coordinates]);
+  if (routed.unresolved || routed.nm <= 0) return null;
+  const customLeg: Leg = {
+    id: `${first.fromIslandId}--${entry.toIslandId}`,
+    fromIslandId: first.fromIslandId,
+    toIslandId: entry.toIslandId,
+    fromPlaceId: from.id,
+    toPlaceId: to.id,
+    distanceNm: Math.round(routed.nm * 10) / 10,
+    waypoints: routed.path.slice(1, -1),
+    windWarnings: [
+      'Direktroute, vom Skipper erzeugt (Zwischenstopp gelöscht): Kurs landfrei gerechnet, Distanz aus der Geometrie — nicht kuratiert',
+    ],
+  };
+  return { plan: replaceDay(customLeg.id), customLeg };
 }
 
 /** Stages of a plan that could not be assessed — for display (AD-12). */

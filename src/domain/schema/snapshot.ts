@@ -3,6 +3,7 @@ import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
 import type { DayReturnCheck, Plan, PlanValidity, RelaxationLevel } from './plan.ts';
+import type { KonzeptEntscheid, KonzeptId, TorCheck } from './konzept.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
 
@@ -56,7 +57,11 @@ export interface TripFrame {
    * only ever RE-ASSESSES this plan — it never mutates it.
    */
   plan: Plan | null;
-  /** Athens local departure hour override for today (FR15). */
+  /**
+   * Athens local departure hour override for today (FR15). Späte Stunden aus
+   * dem Übernahme-Fenster (14–17 Uhr) gelten nur an Törntag 1 — aufgelöst
+   * wird der Wert ausschliesslich über `scoring.departureHourForDay`.
+   */
   departureHourOverride: number | null;
   /**
    * Liegezeit an den Zwischenstopps, pro Törntag überschrieben. Fehlt ein Tag,
@@ -274,6 +279,17 @@ export interface RouteOptionAssessment {
   routeId: string;
   /** Kuratierter Name der Route — die View soll keine Ids anzeigen müssen. */
   name: string;
+  /**
+   * ROUTEN-KONZEPT dieser Option (domain/konzept.ts): Route 1 (klassik) oder
+   * Route 2 (ost). Die Tagesansicht ordnet jede Option ihrem Konzept zu.
+   */
+  konzeptId: KonzeptId;
+  /**
+   * Gesetzt, wenn das Konzept dieser Option die aktuelle Wetterlage nicht
+   * trägt — die Option bleibt ehrlich bepreist (Solver-Machbarkeit), aber die
+   * Revier-Empfehlung steht sichtbar daneben, nie stumm.
+   */
+  konzeptWarnung: string | null;
   state: OptionState;
   /** Set when state === 'schliesst': last day the option can still be started. */
   closesOnDay: number | null;
@@ -342,6 +358,23 @@ export interface DecisionPoint {
   text: string;
 }
 
+/**
+ * ABFAHRTSEMPFEHLUNG eines Etappentags (domain/abfahrt.ts) — "früh los,
+ * früh ankommen": die späteste volle Abfahrtsstunde, deren simulierte
+ * Ankunft das Ankerziel (params.zielAnkunftHourAthens, 15:00) noch hält.
+ * Gerechnet mit derselben Stundensimulation wie die Bewertung (AD-3).
+ */
+export interface AbfahrtsEmpfehlung {
+  /** Empfohlene Abfahrt, Athen, volle Stunde. */
+  abfahrtHourAthens: number;
+  /** Erwartete Ankunft bei dieser Abfahrt (Athen-Dezimalstunden). */
+  ankunftHourAthens: number;
+  /** True = Ankunft liegt vor dem Ankerziel. */
+  zielErreicht: boolean;
+  /** Warnsatz, wenn das Ziel auch mit der frühesten Abfahrt fällt. */
+  hinweis: string | null;
+}
+
 /** One assessed day of a plan — what the day card and the map render. */
 export interface StageAssessment {
   day: number;
@@ -371,11 +404,25 @@ export interface StageAssessment {
   stopHoursTotal: number;
   /**
    * Inseln, die von der VORHERIGEN Plan-Insel aus als Tagesziel in Frage
-   * kommen (domain/reach.ts): 100 sm raumschots, 50 sm gegenan. Das
+   * kommen (domain/reach.ts): 100 sm raumschots, 50 sm gegenan — UND von
+   * dort mit Etappen der Bibliothek an einem Tag erreichbar. Das
    * Ziel-Dropdown zeigt NUR diese — eine Insel drei Tagesreisen entfernt ist
-   * kein Tagesziel (Feedback 2026-08-05).
+   * kein Tagesziel (Feedback 2026-08-05), und eine ohne Bibliotheks-Weg
+   * würde die Übernahme immer ablehnen (Bug-Report 2026-08-05).
    */
   reachableIslandIds: string[];
+  /**
+   * "Früh los, 15:00 vor Anker" — die empfohlene Abfahrt dieses Tages
+   * (domain/abfahrt.ts). Null an Hafentagen, für vergangene Tage und wenn
+   * keine Abfahrtsstunde simulierbar ist.
+   */
+  abfahrtsEmpfehlung: AbfahrtsEmpfehlung | null;
+  /**
+   * Entscheidungstor, hinter das sich der Plan AN DIESEM TAG festlegt —
+   * samt 48-h-Fenster- und Rückweg-Prüfung (domain/konzept.ts). Null an
+   * Tagen ohne Tor-Durchfahrt.
+   */
+  torCheck: TorCheck | null;
 }
 
 /**
@@ -414,6 +461,12 @@ export interface PlanAssessment {
    * schon der erste geprüfte Tag am Forecast hängt oder nichts zu prüfen ist.
    */
   meltemiSafeUntilDay: number | null;
+  /**
+   * ENTSCHEIDUNGSTORE dieses Plans (domain/konzept.ts): je natürlichem
+   * Knoten, hinter den sich der Plan festlegt, die 48-h-Fenster- und
+   * Rückweg-Prüfung. Leer, wenn der Plan kein Tor durchfährt.
+   */
+  torChecks: TorCheck[];
 }
 
 export interface Assessment {
@@ -425,6 +478,23 @@ export interface Assessment {
   /** bestPlaceByIsland[islandId][nightDay] = placeId | null (AD-2: ranking is domain). */
   bestPlaceByIsland: Record<string, Record<number, string | null>>;
   dayOptions: DayOption[];
+  /**
+   * ROUTEN-KONZEPTE — die zentrale, alles überschreibende Logik (Skipper
+   * 2026-08-05, domain/konzept.ts): welches der beiden Revier-Konzepte
+   * (Route 1 Klassik / Route 2 Ost) trägt die Lage, welchem folgt die
+   * Hauptroute, welches empfiehlt die App — und der Konzeptwechsel-Hinweis,
+   * wenn das aktive Konzept kippt. Der Solver hat dieselbe Beurteilung
+   * bereits als Vorrang-Kriterium angewendet (PlanMetrics.konzeptTraegt);
+   * hier steht sie sichtbar für den Skipper.
+   */
+  konzeptEntscheid: KonzeptEntscheid;
+  /**
+   * Die RÜCKWEG-EMPFEHLUNG der Törnanalyse, angewendet auf die Hauptroute:
+   * Lee-Korridor-Treue, Zeitreserve nach der Wende, Früh-Auslaufen auf
+   * Am-Wind-Etappen. Sätze für die Anzeige; vor dem ersten Check-in auf den
+   * Vorschlag angewendet, leer ganz ohne Plan.
+   */
+  rueckwegEmpfehlung: string[];
   /**
    * Route options ORDERED by escalation rank (conservative first) — ordering
    * by domain criteria is computing (AD-2), so it happens here, not in views.

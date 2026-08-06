@@ -10,11 +10,13 @@ import {
   planKey,
   planMetricsFor,
   planTurnDay,
+  planWithoutStopover,
   preferred,
   relaxParams,
   validatePlan,
 } from '../solver.ts';
 import { packLegs, packLegsFeasible } from '../ppr.ts';
+import { pathCrossesLand } from '../searoute.ts';
 import { stagesOf } from '../schema/plan.ts';
 import { assessPlanning } from '../assess.ts';
 import type { Island } from '../schema/island.ts';
@@ -1099,5 +1101,101 @@ describe('Verschmelzung: Optionen tragen ihre Alternative', () => {
     for (const alt of adopted.alternatives) {
       expect(planKey(alt.plan)).not.toBe(planKey(opt.plan!));
     }
+  });
+});
+
+/**
+ * FR28 — Zwischenstopp löschen: ein Doppelschlag-Tag wird zur EINEN direkten
+ * Etappe auf dasselbe Tagesziel. Zuerst zählt die Bibliothek (inkl.
+ * Gegenrichtungen); kennt sie keine direkte Verbindung, wird sie ERZEUGT —
+ * der kürzeste landfreie Kurs zwischen den Plätzen des Tages (searoute.ts).
+ */
+describe('solver — planWithoutStopover (Zwischenstopp löschen)', () => {
+  /** Doppelschlag-Tag athen → mitte → sued, danach heim. */
+  const doppelschlagPlan = () =>
+    makePlan([
+      makeStage(1, ['athen--mitte', 'mitte--sued'], 'sued'),
+      makeStage(2, ['sued--mitte'], 'mitte'),
+      makeStage(3, ['mitte--athen'], 'athen'),
+      makeHarbourDay(4, 'athen'),
+      makeHarbourDay(5, 'athen'),
+    ]);
+
+  it('ersetzt den Doppelschlag durch die Bibliotheks-Etappe und pinnt den Tag', () => {
+    const snapshot = roundTripSnapshot();
+    const direct = makeLeg({
+      id: 'athen--sued',
+      fromIslandId: 'athen',
+      toIslandId: 'sued',
+      fromPlaceId: 'athen-alimos',
+      toPlaceId: 'sued-hafen',
+      distanceNm: 38,
+    });
+    snapshot.library.legs = [...snapshot.library.legs, direct];
+
+    const removal = planWithoutStopover(doppelschlagPlan(), 1, snapshot);
+    expect(removal).not.toBeNull();
+    // Bibliothek kannte die Verbindung — nichts wurde erzeugt.
+    expect(removal!.customLeg).toBeNull();
+    const day1 = removal!.plan.days.find((d) => d.day === 1)!;
+    expect(day1.kind).toBe('stage');
+    if (day1.kind === 'stage') {
+      expect(day1.legIds).toEqual(['athen--sued']);
+      expect(day1.toIslandId).toBe('sued');
+    }
+    expect(day1.source).toBe('skipper');
+    // Alle anderen Tage bleiben unangetastet — die Kette ist weiter geschlossen.
+    expect(removal!.plan.days.filter((d) => d.day !== 1)).toEqual(
+      doppelschlagPlan().days.filter((d) => d.day !== 1),
+    );
+  });
+
+  it('findet die direkte Verbindung auch als Gegenrichtung einer gespeicherten Etappe', () => {
+    const snapshot = roundTripSnapshot();
+    // Gespeichert ist nur sued--athen; athen--sued existiert als Umkehrung.
+    const stored = makeLeg({
+      id: 'sued--athen',
+      fromIslandId: 'sued',
+      toIslandId: 'athen',
+      fromPlaceId: 'sued-hafen',
+      toPlaceId: 'athen-alimos',
+      distanceNm: 38,
+    });
+    snapshot.library.legs = [...snapshot.library.legs, stored];
+
+    const removal = planWithoutStopover(doppelschlagPlan(), 1, snapshot);
+    expect(removal).not.toBeNull();
+    expect(removal!.customLeg).toBeNull();
+    const day1 = removal!.plan.days.find((d) => d.day === 1)!;
+    if (day1.kind === 'stage') expect(day1.legIds).toEqual(['athen--sued']);
+  });
+
+  it('ohne Bibliotheks-Verbindung wird die Direktroute landfrei ERZEUGT', () => {
+    // Die Grundwelt kennt athen↔sued nur über mitte — in keiner Richtung direkt.
+    const removal = planWithoutStopover(doppelschlagPlan(), 1, roundTripSnapshot());
+    expect(removal).not.toBeNull();
+    const leg = removal!.customLeg!;
+    expect(leg).not.toBeNull();
+    expect(leg.id).toBe('athen--sued');
+    expect(leg.fromPlaceId).toBe('athen-alimos');
+    expect(leg.toPlaceId).toBe('sued-hafen');
+    expect(leg.distanceNm).toBeGreaterThan(0);
+    // Der erzeugte Kurs ist landfrei — nie eine behauptete Luftlinie über Land.
+    const snapshot = roundTripSnapshot();
+    const from = snapshot.library.places.find((p) => p.id === 'athen-alimos')!;
+    const to = snapshot.library.places.find((p) => p.id === 'sued-hafen')!;
+    expect(
+      pathCrossesLand([from.coordinates, ...leg.waypoints, to.coordinates]),
+    ).toBe(false);
+    // Und der Plan referenziert genau diese Etappe, als Skipper-Entscheidung.
+    const day1 = removal!.plan.days.find((d) => d.day === 1)!;
+    if (day1.kind === 'stage') expect(day1.legIds).toEqual([leg.id]);
+    expect(day1.source).toBe('skipper');
+  });
+
+  it('null an Tagen ohne Zwischenstopp (eine Etappe oder Hafentag)', () => {
+    const snapshot = roundTripSnapshot();
+    expect(planWithoutStopover(doppelschlagPlan(), 2, snapshot)).toBeNull();
+    expect(planWithoutStopover(doppelschlagPlan(), 4, snapshot)).toBeNull();
   });
 });

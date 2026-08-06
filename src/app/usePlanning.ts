@@ -14,7 +14,13 @@ import { useQuery } from '@tanstack/react-query';
 import { loadLibraryBundle } from '../adapters/firestore.ts';
 import { collectLocations, fetchForecastBundle } from '../adapters/openMeteo.ts';
 import { assessPlanning } from '../domain/assess.ts';
-import { completePlan, planKey, type Pin } from '../domain/solver.ts';
+import { isLateDeparture } from '../domain/scoring.ts';
+import {
+  completePlan,
+  planKey,
+  planWithoutStopover,
+  type Pin,
+} from '../domain/solver.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
 import { planOutdated, type Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
@@ -42,25 +48,41 @@ export function usePlanningEngine() {
 
   const bundle = libraryQuery.data;
 
+  /**
+   * Die Bibliothek DIESES Geräts: kuratierte Etappen plus die vom Skipper
+   * erzeugten Direktrouten (FR28 Zwischenstopp löschen). EIN Einfügepunkt,
+   * damit Plan-Auflösung, Karte, Reichweite und Forecast-Abruf dieselbe
+   * Etappenmenge sehen. Kuratierte Etappen gewinnen bei gleicher Id
+   * (first-writer-wins in legIndex) — liefert die Kuration die Verbindung
+   * später nach, ersetzt sie die erzeugte stillschweigend.
+   */
+  const library = useMemo(() => {
+    if (!bundle) return null;
+    if (trip.customLegs.length === 0) return bundle.library;
+    return { ...bundle.library, legs: [...bundle.library.legs, ...trip.customLegs] };
+  }, [bundle, trip.customLegs]);
+
   // The forecast cache key must change when the LIBRARY changes: a new place
   // or waypoint enlarges the normative location set (AD-3) — without the hash
-  // the stale cached response would leave new locations 'unbewertet'.
+  // the stale cached response would leave new locations 'unbewertet'. Das
+  // schliesst erzeugte Direktrouten ein: ihre Umfahrungspunkte werden wie
+  // kuratierte Wegpunkte abgerufen, nicht geliehen.
   const libHash = useMemo(
     () =>
-      bundle
+      library
         ? libraryLocationsHash(
-            collectLocations(bundle.library).map(
+            collectLocations(library).map(
               (l) => `${l.key}@${l.coordinates.lat},${l.coordinates.lon}`,
             ),
           )
         : null,
-    [bundle],
+    [library],
   );
 
   const forecastQuery = useQuery({
     queryKey: ['forecast', bundle?.params.forecastModel, libHash],
-    queryFn: () => fetchForecastBundle(bundle!.library, bundle!.params),
-    enabled: !!bundle,
+    queryFn: () => fetchForecastBundle(library!, bundle!.params),
+    enabled: !!bundle && !!library,
     staleTime: STALE_TIME_MS,
     refetchInterval: STALE_TIME_MS,
   });
@@ -74,10 +96,10 @@ export function usePlanningEngine() {
       : deriveCurrentDay(bundle?.params.tripStartDate, tripLengthDays);
 
   const snapshot: PlanningSnapshot | null = useMemo(() => {
-    if (!bundle || !forecastQuery.data) return null;
+    if (!bundle || !library || !forecastQuery.data) return null;
     return {
       ...forecastQuery.data,
-      library: bundle.library,
+      library,
       polar: bundle.polar,
       params: bundle.params,
       trip: {
@@ -90,6 +112,7 @@ export function usePlanningEngine() {
     };
   }, [
     bundle,
+    library,
     forecastQuery.data,
     currentDay,
     trip.position,
@@ -149,6 +172,23 @@ export function usePlanningEngine() {
   }, [trip.plan, currentDay, pins, assessment?.proposal, dispatch]);
 
   /**
+   * Späte Abfahrt (Übernahme-Fenster 14–17 Uhr) gilt nur an Törntag 1
+   * (scoring.departureHourForDay). Die Rechnung ignoriert einen späten
+   * Override an anderen Tagen ohnehin — hier wird zusätzlich der PERSISTIERTE
+   * Wert gelöst, sobald der Törn Tag 1 verlässt, damit Auswahl und Zustand
+   * nicht auseinanderlaufen (das Abfahrt-Select kennt 14–17 nur an Tag 1).
+   */
+  useEffect(() => {
+    if (
+      trip.departureHourOverride !== null &&
+      isLateDeparture(trip.departureHourOverride) &&
+      currentDay !== 1
+    ) {
+      dispatch({ type: 'SET_DEPARTURE_HOUR', hour: null });
+    }
+  }, [trip.departureHourOverride, currentDay, dispatch]);
+
+  /**
    * FR28 — the skipper sets a day's target; the rest of the trip is recomputed
    * SYNCHRONOUSLY here and dispatched as one finished plan, so pin and
    * completion always come from the same snapshot (AD-12, one mutation path).
@@ -168,6 +208,29 @@ export function usePlanningEngine() {
       return true;
     },
     [snapshot, assessment?.currentIslandId, pins, dispatch],
+  );
+
+  /**
+   * FR28 — den Zwischenstopp eines Doppelschlag-Tages löschen: der Tag wird
+   * zur EINEN direkten Etappe auf dasselbe Tagesziel (solver.planWithoutStopover).
+   * Kennt die Bibliothek keine direkte Verbindung, wird sie dort landfrei
+   * ERZEUGT und hier zusammen mit dem Plan als EIN Payload persistiert
+   * (DELETE_STOPOVER) — nie ein Plan ohne seine Etappe. False nur, wenn kein
+   * landfreier Kurs berechenbar ist oder der Tag keinen Zwischenstopp trägt.
+   */
+  const removeStopover = useCallback(
+    (day: number): boolean => {
+      if (!snapshot || !trip.plan) return false;
+      const removal = planWithoutStopover(trip.plan, day, snapshot);
+      if (!removal) return false;
+      dispatch({
+        type: 'DELETE_STOPOVER',
+        plan: removal.plan,
+        customLeg: removal.customLeg,
+      });
+      return true;
+    },
+    [snapshot, trip.plan, dispatch],
   );
 
   /** FR29 — adopt a proposal or alternative as the new main route. */
@@ -194,6 +257,19 @@ export function usePlanningEngine() {
     [dispatch],
   );
 
+  /**
+   * FR15 — Abfahrtszeit für HEUTE setzen (null = zurück auf den Standard).
+   * Hier verdrahtet, damit die Tagesansicht die Abfahrtsempfehlung
+   * ("früh los, 15:00 vor Anker") mit einem Klick übernehmen kann.
+   */
+  const setDepartureHour = useCallback(
+    (hour: number | null) => {
+      if (hour !== null && (!Number.isInteger(hour) || hour < 0 || hour > 23)) return;
+      dispatch({ type: 'SET_DEPARTURE_HOUR', hour });
+    },
+    [dispatch],
+  );
+
   return {
     libraryQuery,
     forecastQuery,
@@ -203,9 +279,11 @@ export function usePlanningEngine() {
     currentDay,
     pins,
     editStage,
+    removeStopover,
     checkIn,
     releasePin,
     setStopHours,
+    setDepartureHour,
   };
 }
 

@@ -84,6 +84,8 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
     pinned: false,
     stopHoursPerStop: 3,
     stopHoursTotal: 0,
+    abfahrtsEmpfehlung: null,
+    torCheck: null,
   });
 
   return {

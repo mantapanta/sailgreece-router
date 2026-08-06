@@ -99,6 +99,45 @@ export function stopHoursForDay(snapshot: PlanningSnapshot, day: number): number
   return snapshot.trip.stopHoursByDay[day] ?? snapshot.params.stopHoursDefault;
 }
 
+/**
+ * Wählbare Abfahrtsstunden (Athen). Das Standardfenster gilt an jedem Törntag;
+ * am ERSTEN Tag kommt das Übernahme-Fenster 14–17 Uhr dazu: die Boots-Übergabe
+ * an der Basis liegt am Nachmittag, eine Vormittags-Abfahrt gibt es an Tag 1
+ * gar nicht. NUR dort — an jedem anderen Tag würde eine Nachmittags-Abfahrt
+ * die Etappe in den aufgebauten Nachmittags-Meltemi und in die Nacht schieben.
+ */
+export const DEPARTURE_HOURS_ATHENS = [6, 7, 8, 9, 10, 11, 12] as const;
+export const FIRST_DAY_DEPARTURE_HOURS_ATHENS = [14, 15, 16, 17] as const;
+
+/** Die Abfahrtsstunden, die ein Törntag zur Wahl stellt (UI-Liste). */
+export function departureHourChoices(day: number): number[] {
+  return day === 1
+    ? [...DEPARTURE_HOURS_ATHENS, ...FIRST_DAY_DEPARTURE_HOURS_ATHENS]
+    : [...DEPARTURE_HOURS_ATHENS];
+}
+
+/** Später als das Standardfenster — nur an Törntag 1 zulässig. */
+export function isLateDeparture(hourAthens: number): boolean {
+  return hourAthens > DEPARTURE_HOURS_ATHENS[DEPARTURE_HOURS_ATHENS.length - 1]!;
+}
+
+/**
+ * Wirksame Abfahrtsstunde eines Törntags — die EINE Quelle (AD-2/AD-3):
+ * Anzeige (DayView) und Rechnung (assessLeg) lesen denselben Wert.
+ *
+ * Der Override ist die HEUTIGE Entscheidung (AD-11) und verschiebt nie die
+ * simulierte Abfahrt zukünftiger Törntage. Eine späte Abfahrt aus dem
+ * Übernahme-Fenster gilt zusätzlich NUR an Törntag 1 — an jedem anderen Tag
+ * fällt sie auf den Standard zurück, statt den Tag in die Nacht zu rechnen.
+ */
+export function departureHourForDay(snapshot: PlanningSnapshot, day: number): number {
+  const override =
+    day === snapshot.trip.currentDay ? snapshot.trip.departureHourOverride : null;
+  if (override === null) return snapshot.params.departureHourAthens;
+  if (isLateDeparture(override) && day !== 1) return snapshot.params.departureHourAthens;
+  return override;
+}
+
 function legPoints(leg: Leg, snapshot: PlanningSnapshot): LegPoint[] | null {
   const from = snapshot.library.places.find((p) => p.id === leg.fromPlaceId);
   const to = snapshot.library.places.find((p) => p.id === leg.toPlaceId);
@@ -296,10 +335,9 @@ export function assessLeg(
   const segments = segGeo.map((s) => ({ ...s, nm: s.nm * scale }));
 
   // AD-11 / snapshot.ts: the departure override is TODAY's decision — it
-  // must not shift the simulated departure of future trip days.
-  const departureHour =
-    (day === snapshot.trip.currentDay ? snapshot.trip.departureHourOverride : null) ??
-    params.departureHourAthens;
+  // must not shift the simulated departure of future trip days; späte
+  // Abfahrten (Übernahme-Fenster) bindet departureHourForDay an Törntag 1.
+  const departureHour = departureHourForDay(snapshot, day);
   const window = legWindow(params.tripStartDate, day, departureHour);
   const departureMs =
     window.startMs + (opts.departureOffsetHours ?? 0) * 3600_000;
@@ -496,15 +534,22 @@ export function assessLeg(
     });
   }
 
-  // FR16 night leg (AD-9 window bounds): the passage starts before the night
-  // window ends or reaches past its start, i.e. it sails into darkness. Athens
-  // hours from midnight of the departure day; an arrival past 24 is the next
-  // morning and therefore always a night leg.
+  // FR16 night leg: the passage reaches past the night-window start or
+  // departs before the earliest normal departure, i.e. it sails in darkness.
+  // Athens hours from midnight of the departure day; an arrival past 24 is
+  // the next morning and therefore always a night leg.
+  //
+  // Die UNTERE Grenze ist bewusst `fruehesteAbfahrtHourAthens` (06:00), nicht
+  // das Ende des Nachtfensters (09:00): das Nachtfenster bewertet LIEGEPLÄTZE
+  // (FR8, die Familie schläft bis 9), aber eine 06:00-Abfahrt ist die
+  // empfohlene Crowd-/Meltemi-Taktik (früh los, 15:00 vor Anker) und darf
+  // nicht als Nachtetappe in die FR16-Quote fallen — sonst bestrafte die
+  // Gültigkeit genau das Verhalten, das die App selbst vorschlägt.
   const departureAthens = departureHour + (opts.departureOffsetHours ?? 0);
   const arrivalAthens = departureAthens + sailHours + motorHours;
   const nightLeg =
     arrivalAthens > params.nightStartHourAthens ||
-    departureAthens < params.nightEndHourAthens;
+    departureAthens < params.fruehesteAbfahrtHourAthens;
 
   const avgTwsKn = samples > 0 ? twsSum / samples : null;
   const avgTwaDeg = samples > 0 ? twaSum / samples : null;

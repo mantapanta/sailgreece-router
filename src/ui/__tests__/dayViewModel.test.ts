@@ -35,6 +35,8 @@ function makeStage(
     stopHoursPerStop: 0,
     stopHoursTotal: 0,
     reachableIslandIds: [],
+    abfahrtsEmpfehlung: null,
+    torCheck: null,
     ...over,
   };
 }
