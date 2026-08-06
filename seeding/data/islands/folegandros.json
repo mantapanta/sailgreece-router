@@ -60,7 +60,26 @@
         "vhfChannel": "12",
         "confidence": "hoch",
         "sources": ["Deep-Research Lauf 2: CruisersWiki Folegandros"]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "folegandros-karavostasi-dal-capo",
+          "name": "Dal Capo del porto",
+          "qualityRating": 4.4,
+          "cuisineType": "Fisch der Insel, italienisch beeinflusst",
+          "signatureDishes": [
+            "Schwertfisch",
+            "Thunfisch",
+            "Calamari"
+          ],
+          "accessInfo": "Oberhalb des Hafenbeckens, kurzer Anstieg von der Kaimauer",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (196 Bewertungen, #11 von 68 in Karavostasis) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar",
+            "Befund des Laufs: Kali Kardia am selben Hafen liegt bei 3,1/5 (24 Bewertungen) und ist deshalb NICHT aufgenommen"
+          ]
+        }
+      ]
     }
   ]
 }

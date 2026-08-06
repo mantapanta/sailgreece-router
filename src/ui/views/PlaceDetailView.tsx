@@ -153,14 +153,27 @@ function LiegeplatzKarte({ berthing }: { berthing: BerthingDetails }) {
  * Der Reservierungskontakt trägt sichtbar seinen Vorbehalt, wenn die
  * Kuratierung ihn nicht bestätigen konnte: eine veraltete Nummer, die wie eine
  * gesicherte aussieht, kostet den Abend.
+ *
+ * `titelRef` hängt am Zwischentitel, damit die Qualitäten-Zeile „Restaurant"
+ * hierher springen kann: die Karte steht bewusst weit unten (sie bewertet
+ * nichts), und ohne den Sprung sucht der Skipper die Tavernen unterhalb von
+ * Sektorenraster und Liegeplatz-Details.
  */
-function GastroKarte({ restaurants }: { restaurants: Restaurant[] }) {
+function GastroKarte({
+  restaurants,
+  titelRef,
+}: {
+  restaurants: Restaurant[];
+  titelRef?: React.Ref<HTMLHeadingElement>;
+}) {
   const sortiert = [...restaurants].sort((a, b) => b.qualityRating - a.qualityRating);
   const quellen = [...new Set(sortiert.flatMap((r) => r.sources))];
 
   return (
     <>
-      <h2 className="section-title">Gastronomie an Land</h2>
+      <h2 className="section-title" ref={titelRef} tabIndex={-1}>
+        Gastronomie an Land
+      </h2>
       <section className="card-surface">
         <ul className="gastro-liste">
           {sortiert.map((r) => {
@@ -481,6 +494,37 @@ export function PlaceDetailView({
   // Zuordnung ist kuratiert, hier wird nur gefiltert.
   const kiteSpots = kiteSpotsOfPlace(snapshot.library.kiteSpots ?? [], place.id);
 
+  /**
+   * Die Zeile „Restaurant n von 5" ist eine VERDICHTUNG und nennt keinen Namen
+   * (schema/place.ts). Ohne Zusatz las sie sich wie ein Versprechen, das die
+   * Seite nicht einlöst — der Skipper sucht die Tavernen und findet nichts.
+   *
+   * Deshalb sagt die Zeile jetzt, was dahinter liegt, und unterscheidet dabei
+   * die beiden Fälle, die das Schema ausdrücklich auseinanderhält: kuratierte
+   * Tavernen (dann führt ein Sprung zur Gastro-Karte) gegen einen Platz, für
+   * den die Gastronomie schlicht nicht recherchiert ist. Das ist etwas anderes
+   * als „dort gibt es nichts", und genau so steht es da — sonst liest sich eine
+   * Lücke in der Kuratierung wie ein Befund über den Ort.
+   */
+  const gastroTitelRef = useRef<HTMLHeadingElement>(null);
+  const restaurants = place.restaurants ?? [];
+  const gastroNotiz =
+    restaurants.length > 0 ? (
+      <button
+        type="button"
+        className="btn-text quality-note"
+        onClick={() => gastroTitelRef.current?.scrollIntoView({ block: 'start' })}
+      >
+        {restaurants.length === 1
+          ? '1 Taverne kuratiert — ansehen'
+          : `${restaurants.length} Tavernen kuratiert — ansehen`}
+      </button>
+    ) : (
+      <span className="quality-note leer">
+        Keine Tavernen recherchiert — das ist kein Urteil über den Ort.
+      </span>
+    );
+
   return (
     <div>
       <div className="back-row">
@@ -561,11 +605,11 @@ export function PlaceDetailView({
       <section className="card-surface">
         {(
           [
-            ['Schönheit', place.qualities.schoenheit],
-            ['Restaurant', place.qualities.restaurant],
-            ['Badestrand', place.qualities.badestrand],
+            ['Schönheit', place.qualities.schoenheit, null],
+            ['Restaurant', place.qualities.restaurant, gastroNotiz],
+            ['Badestrand', place.qualities.badestrand, null],
           ] as const
-        ).map(([name, n]) => (
+        ).map(([name, n, notiz]) => (
           <div className="quality-row" key={name}>
             <span className="quality-name">{name}</span>
             <span className="meter" role="img" aria-label={`${name}: ${n} von 5`}>
@@ -574,6 +618,7 @@ export function PlaceDetailView({
               ))}
             </span>
             <span className="quality-value">{n} von 5</span>
+            {notiz}
           </div>
         ))}
       </section>
@@ -632,8 +677,8 @@ export function PlaceDetailView({
 
       {place.berthingDetails && <LiegeplatzKarte berthing={place.berthingDetails} />}
 
-      {place.restaurants && place.restaurants.length > 0 && (
-        <GastroKarte restaurants={place.restaurants} />
+      {restaurants.length > 0 && (
+        <GastroKarte restaurants={restaurants} titelRef={gastroTitelRef} />
       )}
 
       {kiteSpots.length > 0 && (

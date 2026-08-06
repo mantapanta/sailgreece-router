@@ -133,7 +133,39 @@
         "vhfChannel": "12",
         "confidence": "hoch",
         "sources": ["Deep-Research Lauf 2: CruisersWiki Syros"]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "syros-ermoupoli-mirsinis",
+          "name": "To Tsipouradiko tis Mirsinis",
+          "qualityRating": 4.4,
+          "cuisineType": "Tsipouradiko — Meze und Tsipouro am Wasser",
+          "signatureDishes": [
+            "Kritharaki mit Meeresfrüchten",
+            "Auberginenröllchen"
+          ],
+          "accessInfo": "Fußläufig von der Kaimauer, am Wasser nahe der Pier",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (597 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar"
+          ]
+        },
+        {
+          "id": "syros-ermoupoli-mazi",
+          "name": "Mazi",
+          "qualityRating": 4.3,
+          "cuisineType": "Moderne griechische Küche",
+          "signatureDishes": [
+            "Ceviche",
+            "Tatar"
+          ],
+          "accessInfo": "Nicht am Wasser: im Ort, in einer alten Keramikfabrik mit Innenhof — kurzer Weg von der Kaimauer",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,3/5 (431 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar"
+          ]
+        }
+      ]
     },
     {
       "id": "syros-grammata",

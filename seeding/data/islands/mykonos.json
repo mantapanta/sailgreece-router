@@ -58,7 +58,33 @@
         "vhfChannel": null,
         "confidence": "hoch",
         "sources": ["Deep-Research Lauf 3: CruisersWiki Mykonos"]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "mykonos-ornos-kostantis",
+          "name": "Kostantis",
+          "qualityRating": 4.4,
+          "cuisineType": "Fischtaverne",
+          "signatureDishes": [],
+          "accessInfo": "Die Bucht wird frei geankert — mit dem Beiboot an den Strand von Ornos, von dort fussläufig",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (1.076 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar"
+          ]
+        },
+        {
+          "id": "mykonos-ornos-apaggio",
+          "name": "Apaggio",
+          "qualityRating": 4.4,
+          "cuisineType": "Mediterrane Küche am Strand",
+          "signatureDishes": [],
+          "accessInfo": "Die Bucht wird frei geankert — mit dem Beiboot an den Strand von Ornos, von dort fussläufig",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (1.185 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar"
+          ]
+        }
+      ]
     },
     {
       "id": "mykonos-tourlos",

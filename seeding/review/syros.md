@@ -100,6 +100,15 @@ Warnungen: ⚠ Starke Fallwinde von den Altstadthügeln · ⚠ Intensiver Verkeh
 
 Quellen: Deep-Research Lauf 2: CruisersWiki Syros
 
+**Gastronomie (2)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| To Tsipouradiko tis Mirsinis (`syros-ermoupoli-mirsinis`) | 4.4/5 | Tsipouradiko — Meze und Tsipouro am Wasser | Kritharaki mit Meeresfrüchten, Auberginenröllchen | Fußläufig von der Kaimauer, am Wasser nahe der Pier | — | niedrig |
+| Mazi (`syros-ermoupoli-mazi`) | 4.3/5 | Moderne griechische Küche | Ceviche, Tatar | Nicht am Wasser: im Ort, in einer alten Keramikfabrik mit Innenhof — kurzer Weg von der Kaimauer | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (597 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar; Web-Recherche 2026-08-06: Tripadvisor 4,3/5 (431 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ### Grammata (`syros-grammata`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
