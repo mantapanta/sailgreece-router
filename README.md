@@ -439,6 +439,42 @@ Vermieden wird Kreuzen an zwei Stellen — beide raten ab, keine verbietet:
   Ziele anliegen kann. Bewusst UNTER Reichweite und Inselvielfalt: Kreuzen ist
   ein Preis, kein Ausschluss.
 
+### Problematische Abschnitte in der Etappenkarte
+
+„Ich will bei den Etappenkarten erkennen, ob problematische Abschnitte mit dabei
+sind" (Skipper 2026-08-06). Die Kacheln nennen EINEN Wind für den ganzen Tag,
+und ein mittlerer TWA verschluckt genau das, wonach gefragt wird: vier Meilen
+gegenan verschwinden im Mittel einer Etappe, die danach raumschots läuft — an
+Bord sind sie die Stunde, über die geredet wird.
+
+Deshalb fasst `src/domain/kursAbschnitte.ts` die **Abschnitte** der Durchfahrten
+(`pointPassages`, dieselben Zeilen wie in der aufgeklappten Rechnung — AD-3)
+nach Kurs zum Wind zusammen und hängt sie als `kursAbschnitte` an Etappe und
+Tag. Die Karte zeigt daraus je eine Zeile:
+
+```
+● ca. 4 sm Kreuz (16 kn) · GELB
+● ca. 10 sm Halbwind (9 kn) · GRÜN
+```
+
+Gemeldet werden nur Kreuz (bis 60° TWA, plus alles, was gekreuzt werden muss)
+und Halbwind (bis 100°) — raumschots trägt der Wind, und ein Abschnitt, über den
+nichts zu sagen ist, gehört nicht in eine Warnliste. Die Meilen werden je
+Kategorie addiert, gemeldet wird der **stärkste** Wind über ihnen (dieselbe
+Doktrin wie bei der Platz-Ampel: die schlechteste Stunde trägt das Urteil). Die
+Schwellen stehen in der Konfiguration (AD-8), Grenzwerte zählen zum milderen
+Band:
+
+| Kurs     | grün      | gelb                | rot        |
+| -------- | --------- | ------------------- | ---------- |
+| Kreuz    | < 10 kn   | 10–20 kn            | > 20 kn    |
+| Halbwind | < 20 kn   | 20–30 kn            | > 30 kn    |
+
+Zwei Bänder, weil derselbe Wind auf den beiden Kursen nicht dasselbe bedeutet.
+Und wie überall in dieser App ist das eine **Meldung, kein Urteil**: diese
+Ampeln gehen NICHT in `StageAssessment.ampel` ein — über die Gültigkeit
+entscheiden weiterhin FR16-Windregel und Fahrtbudgets.
+
 ## Attribution
 
 - Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0)

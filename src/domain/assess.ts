@@ -28,6 +28,7 @@ import {
   rueckwegEmpfehlungFor,
 } from './konzept.ts';
 import { empfehleAbfahrt } from './abfahrt.ts';
+import { mergeKursAbschnitte } from './kursAbschnitte.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { assessLeg, stopHoursForDay } from './scoring.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
@@ -225,6 +226,7 @@ function assessPlan(
                   arrivalHourAthens: null,
                   breakdown: [],
                   pointPassages: [],
+                  kursAbschnitte: [],
                 };
               }
               const a = assessLeg(leg, entry.day, snapshot, {
@@ -275,6 +277,12 @@ function assessPlan(
           ? (placeId ? (nightAmpeln[placeId]?.[entry.day]?.ampel ?? 'unbewertet') : 'unbewertet')
           : worstAmpel(legAssessments.map((l) => l.ampel)),
       legs: legAssessments,
+      // Kreuz- und Halbwind-Anteil des ganzen Tages, über die Etappen des Tages
+      // zusammengefasst — die Etappenkarte zeigt den Tag, nicht den Schlag.
+      kursAbschnitte: mergeKursAbschnitte(
+        legAssessments.map((l) => l.kursAbschnitte),
+        snapshot.params,
+      ),
       pinned: entry.source === 'skipper',
       stopHoursPerStop,
       stopHoursTotal:
