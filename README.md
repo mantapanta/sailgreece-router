@@ -225,9 +225,17 @@ Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
    npm run seed:import             # schreibt islands/places/routes/config
    ```
 
-   Das Skript validiert strikt gegen dieselben Zod-Schemas wie die App und
-   **verweigert den Import (Exit ≠ 0), solange irgendeine Datei
-   `approved: false` trägt.**
+   Das Skript validiert strikt gegen dieselben Zod-Schemas wie die App. Das
+   Freigabe-Gate wirkt **pro Datei**: eine Staging-Datei mit `approved: false`
+   wird mit einer `ÜBERSPRUNGEN:`-Zeile ausgelassen, der Rest wird importiert
+   — eine Teil-Übernahme geprüfter Inseln ist also möglich. **Der Import
+   bricht ab (Exit ≠ 0), wenn `config.json` nicht freigegeben ist** (die
+   Parameter sind Pflicht) **oder wenn gar nichts freigegeben ist.**
+
+   Daraus folgt der häufigste Stolperstein: ein Lauf kann erfolgreich enden
+   und trotzdem eine ganze Ebene ausgelassen haben. Die Schlusszeile
+   (`Import abgeschlossen: … kiteSpots=0`) nennt die Zahlen — sie ist die
+   Kontrolle, nicht der Exit-Code.
 
    Feldkorrekturen über die Firebase-Konsole sind als Notweg erlaubt —
    müssen aber ins Staging-JSON zurückgetragen werden, sonst überschreibt
@@ -241,6 +249,30 @@ firebase deploy        # Hosting (dist/) + Rules
 ```
 
 Manuell, kein CI — reicht für einen Nutzer und 9 Tage (AD-8).
+
+### Neue Bibliotheksdaten sind in der App nicht sichtbar
+
+Ein Merge nach `main` bringt **Code**, keine **Daten**. Restaurants
+(`place.restaurants`, Subebene des Platzes) und Kite-Spots (eigene Collection
+`kiteSpots`) leben in Firestore und kommen dort nur durch einen neuen Import
+an. Im local-Modus (`VITE_DATA_SOURCE=local`) sind sie sofort da, weil die
+Staging-JSONs direkt gelesen werden — das `approved`-Flag gilt nur für den
+Import, nicht für den local-Modus. Wer die Ebene im Deploy vermisst, geht
+diese vier Schritte der Reihe nach durch:
+
+1. **Freigabe:** trägt die Staging-Datei `approved: true`? Kite-Spots stehen
+   bewusst auf `false` (siehe unten, `seeding/review/kite-spots.md`) und
+   werden bis zur Freigabe bei jedem Import übersprungen.
+2. **Import:** `npm run seed:import` erneut laufen lassen und die Schlusszeile
+   lesen. Restaurants haben **kein eigenes Dokument** — sie stecken in den
+   `places`-Dokumenten und wandern nur mit einem erneuten Insel-Import mit.
+3. **Rules:** `firebase deploy --only firestore:rules`. Eine Collection ohne
+   eigenen Block fällt in den Catch-All und ist gesperrt; der Adapter fängt
+   die Ablehnung für `kiteSpots` bewusst ab, damit eine fehlende Regel nicht
+   die ganze Bibliothek mitnimmt — die Ebene bleibt dann still leer, mit einer
+   Meldung in der Browser-Konsole.
+4. **Bundle:** `npm run build && firebase deploy` — die neuen Karten
+   (Gastro, Kite) stecken im Bundle, nicht in den Daten.
 
 ## Tuning-Parameter
 
