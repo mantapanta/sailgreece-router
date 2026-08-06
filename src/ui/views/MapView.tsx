@@ -37,6 +37,7 @@ import {
   AMPEL_GRAPHIC_HEX,
   COLORS,
   HIN_LINE_COLOR,
+  KITE_SPOT_COLOR,
   RUECK_LINE_COLOR,
 } from '../tokens.ts';
 import { Polyline } from '../components/Polyline.tsx';
@@ -190,12 +191,15 @@ function LegendPopover({
   turnLabel,
   windCount,
   alternatives,
+  kiteShown,
 }: {
   restTripAmpel: Ampel;
   turnLabel: string | null;
   windCount: { shown: number; hidden: number };
   /** Je Alternative: Identitätsfarbe + "Wendepunkt {Insel} · {n} Etappen". */
   alternatives: { key: string; color: string; label: string; shown: boolean }[];
+  /** Ist die Kite-Ebene eingeschaltet? Nur dann wird sie erklärt. */
+  kiteShown: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -300,6 +304,29 @@ function LegendPopover({
                 </p>
               )}
             </div>
+            {/* Kite-Ebene: die Raute erklärt sich nicht selbst, und "gefüllt"
+                muss als BEDEUTUNG dastehen, nicht als Grafik-Detail. */}
+            {kiteShown && (
+              <>
+                <div className="lg-row" style={{ color: KITE_SPOT_COLOR }}>
+                  <span className="kite-marker passt" aria-hidden="true" />
+                  <span style={{ color: 'inherit' }}>
+                    Kite-Spot — Wind passt heute
+                  </span>
+                </div>
+                <div className="lg-row" style={{ color: KITE_SPOT_COLOR }}>
+                  <span className="kite-marker" aria-hidden="true" />
+                  <span style={{ color: 'inherit' }}>
+                    Kite-Spot — heute nicht im Kite-Band
+                  </span>
+                </div>
+                <p className="lg-caption">
+                  Antippen nennt den Spot und öffnet seine Details. Kite-Spots
+                  bewerten nichts — keine Ampel und keine Route hängt an ihnen;
+                  Kite-Verbote und Schutzzonen sind nicht recherchiert.
+                </p>
+              </>
+            )}
             {alternatives.length > 0 && (
               <>
                 {alternatives.map((alt) => (
@@ -500,7 +527,8 @@ export function MapView({
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
-  onOpenPlace: (placeId: string) => void;
+  /** Zweiter Parameter: Kite-Spot, den das Platzdetail hervorheben soll. */
+  onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
   /**
    * Von einer Etappennummer in die Tagesansicht (Feedback 2026-08-06): die
    * Karte zeigt WO, die Etappen-Card sagt WAS — der Sprung dorthin ist der
@@ -545,8 +573,17 @@ export function MapView({
    * dasselbe Übereinanderlegen, nur zwischen den Alternativen.
    */
   const [shownAltIndex, setShownAltIndex] = useState<number | null>(null);
+  /**
+   * KITE-EBENE (Skipper-Wunsch 2026-08-06). Standard AN: die Bibliothek hat ein
+   * gutes Dutzend Spots im ganzen Revier, das deckt nichts zu — und eine Ebene,
+   * die man erst suchen muss, beantwortet die Frage nicht, für die sie gebaut
+   * wurde ("wo geht heute was?").
+   */
+  const [showKite, setShowKite] = useState(true);
   /** Touch-Zweischritt (AC 6): erster Tipp "bewaffnet" den Pin (Mini-Chip). */
   const [armedPlaceId, setArmedPlaceId] = useState<string | null>(null);
+  /** Derselbe Zweischritt für Kite-Marker — eigener Zustand, ein Chip zur Zeit. */
+  const [armedKiteId, setArmedKiteId] = useState<string | null>(null);
   /** Gesetzt in onPointerDown, gelesen im onClick — unterscheidet Touch. */
   const lastPointerType = useRef<string>('');
 
@@ -697,6 +734,19 @@ export function MapView({
   const islandName = (id: string) =>
     snapshot.library.islands.find((i) => i.id === id)?.name ?? id;
 
+  /**
+   * Heutiges Kite-Urteil je Spot — aus dem Assessment (AD-2), hier nur nach
+   * Spot-Id greifbar gemacht, damit die Marker-Schleife nicht linear sucht.
+   */
+  const kiteByspotId = useMemo(() => {
+    const byId: Record<string, (typeof assessment.kiteSpotsHeute)[number]> = {};
+    for (const t of assessment.kiteSpotsHeute) byId[t.spotId] = t;
+    return byId;
+  }, [assessment.kiteSpotsHeute]);
+  const kitePassendHeute = assessment.kiteSpotsHeute.filter(
+    (t) => t.eignung === 'passt',
+  ).length;
+
   // Statuszeile am Listenkopf (AC 2): dieselbe Ableitung wie die Tagesansicht —
   // Minutentakt für die Stale-Prüfung, PPR-Hinweise nur abseits der Basis.
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -773,7 +823,10 @@ export function MapView({
               defaultZoom={8}
               mapTypeId="hybrid"
               gestureHandling="greedy"
-              onClick={() => setArmedPlaceId(null)}
+              onClick={() => {
+                setArmedPlaceId(null);
+                setArmedKiteId(null);
+              }}
             >
               {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
                   Google-Maps-Architektur immer unter Markern und Polylinien —
@@ -980,6 +1033,75 @@ export function MapView({
                 );
               })}
 
+              {/* KITE-SPOTS (Skipper-Wunsch 2026-08-06) — eigene Ebene, eigene
+                  Farbe, eigene Form: eine Raute, damit sie auch ohne Farbe
+                  kein Ampel-Punkt ist. Gefüllt heisst "der Wind passt heute"
+                  (assessment.kiteSpotsHeute, gerechnet in domain/kite.ts —
+                  die Karte rechnet nichts, AD-2), hohl heisst "heute nicht".
+                  Die Bedeutung steht in der Legende und im aria-label, nie
+                  nur in der Füllung.
+
+                  Anders als die Platz-Pins folgen sie NICHT der Kontextmenge
+                  des Plans: ein Kite-Spot ist der Grund, eine Insel überhaupt
+                  anzulaufen — ihn erst zu zeigen, wenn die Route schon dort
+                  vorbeiführt, hätte die Reihenfolge auf den Kopf gestellt.
+                  Touch-Zweischritt wie bei den Pins: erster Tipp nennt den
+                  Spot, zweiter öffnet seine Details. */}
+              {showKite &&
+                (snapshot.library.kiteSpots ?? []).map((spot) => {
+                  const tag = kiteByspotId[spot.id];
+                  const passt = tag?.eignung === 'passt';
+                  const armed = armedKiteId === spot.id;
+                  const label = `Kite-Spot ${spot.name} — ${
+                    tag?.text ?? 'heute nicht bewertet'
+                  }`;
+                  return (
+                    <AdvancedMarker
+                      key={spot.id}
+                      position={{
+                        lat: spot.coordinates.lat,
+                        lng: spot.coordinates.lon,
+                      }}
+                      zIndex={armed ? 100 : passt ? 45 : 25}
+                    >
+                      <div
+                        className="marker-hit"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={label}
+                        title={label}
+                        onPointerDown={(e) => {
+                          lastPointerType.current = e.pointerType;
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onOpenPlace(spot.refPlaceId, spot.id);
+                          }
+                        }}
+                        onClick={() => {
+                          if (lastPointerType.current === 'touch' && !armed) {
+                            setArmedKiteId(spot.id);
+                            return;
+                          }
+                          onOpenPlace(spot.refPlaceId, spot.id);
+                        }}
+                      >
+                        <span
+                          className={passt ? 'kite-marker passt' : 'kite-marker'}
+                          aria-hidden="true"
+                        />
+                        {armed && (
+                          <span className="marker-chip" aria-hidden="true">
+                            {spot.name}
+                            {passt ? ' · Wind passt' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </AdvancedMarker>
+                  );
+                })}
+
               {/* Bootsposition (AC 8): Akzent-Punkt mit Halo — Blickanker,
                   nicht interaktiv. Über den Pins (zIndex 90), unter einem
                   bewaffneten Pin (100). */}
@@ -1047,6 +1169,25 @@ export function MapView({
                 >
                   Seezeichen
                 </button>
+                {/* Nur wenn es überhaupt eine Kite-Bibliothek gibt: ein Chip
+                    für eine leere Ebene wäre eine Zusage, die die Karte nicht
+                    hält. Der Chip nennt gleich die Zahl der heute passenden
+                    Spots — das ist die Antwort, für die man ihn antippt. */}
+                {(snapshot.library.kiteSpots ?? []).length > 0 && (
+                  <button
+                    type="button"
+                    className="layer-chip"
+                    aria-pressed={showKite}
+                    onClick={() => setShowKite((v) => !v)}
+                  >
+                    <span
+                      className="chip-dot"
+                      style={{ background: KITE_SPOT_COLOR }}
+                      aria-hidden="true"
+                    />
+                    Kite-Spots{kitePassendHeute > 0 ? ` · ${kitePassendHeute} heute` : ''}
+                  </button>
+                )}
               </div>
               {/* Keine stille Ersetzung: solange eine Alternative gezeigt
                   wird, sagt die Karte in einer Zeile, dass die Hauptroute
@@ -1076,6 +1217,7 @@ export function MapView({
               turnLabel={turnLabel}
               windCount={windCount}
               alternatives={legendAlternatives}
+              kiteShown={showKite && (snapshot.library.kiteSpots ?? []).length > 0}
             />
           </APIProvider>
         ) : (
@@ -1094,7 +1236,7 @@ export function MapView({
               Alle Bewertungen sind weiter in der Tagesansicht verfügbar.
             </p>
           </div>
-      )}
+        )}
       </div>
     </div>
   );

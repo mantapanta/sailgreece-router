@@ -36,7 +36,18 @@ type View =
    */
   | { kind: 'tag'; focusDay?: number }
   | { kind: 'karte' }
-  | { kind: 'platz'; placeId: string; returnTo: 'tag' | 'karte' };
+  | {
+      kind: 'platz';
+      placeId: string;
+      returnTo: 'tag' | 'karte';
+      /**
+       * Gesetzt, wenn der Platz über einen KITE-HINWEIS geöffnet wurde: die
+       * Kite-Karte scrollt dann heran und hebt genau diesen Spot hervor. Ohne
+       * ihn wäre der Link vom Etappen-Hinweis ein Sprung auf eine Seite, auf
+       * der der Spot irgendwo unten steht — und der Skipper sucht wieder.
+       */
+      focusKiteSpotId?: string;
+    };
 
 /**
  * Ghost refresh glyph (FR13) — used in the header and the footer provenance
@@ -112,11 +123,12 @@ function Shell() {
     ),
   );
 
-  const openPlace = (placeId: string) =>
+  const openPlace = (placeId: string, focusKiteSpotId?: string) =>
     setView((v) => ({
       kind: 'platz',
       placeId,
       returnTo: v.kind === 'karte' ? 'karte' : 'tag',
+      focusKiteSpotId,
     }));
 
   /**
@@ -208,6 +220,7 @@ function Shell() {
             placeId={view.placeId}
             snapshot={snapshot}
             assessment={assessment}
+            focusKiteSpotId={view.focusKiteSpotId}
             onBack={() => setView({ kind: view.returnTo })}
           />
         )}

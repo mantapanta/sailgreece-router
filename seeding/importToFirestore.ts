@@ -15,13 +15,14 @@
  *   npm run seed:import -- --dry   # validate + gate only, no writes
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   IslandStagingFileSchema,
   LegsStagingFileSchema,
   VariantsStagingFileSchema,
+  KiteSpotsStagingFileSchema,
   ConfigStagingFileSchema,
   PolarStagingFileSchema,
 } from '../src/domain/schema/seeding.ts';
@@ -29,6 +30,7 @@ import type {
   IslandStagingFile,
   LegsStagingFile,
   VariantsStagingFile,
+  KiteSpotsStagingFile,
   ConfigStagingFile,
   PolarStagingFile,
 } from '../src/domain/schema/seeding.ts';
@@ -156,6 +158,28 @@ async function main() {
     variants = null;
   }
 
+  /**
+   * Kite-Spots: eigene Datei, eigenes Gate (schema/seeding.ts). Sie sind rein
+   * informativ, deshalb kein Pflicht-Import — fehlt die Datei ganz, bleibt die
+   * Ebene leer, und alles andere wird unverändert importiert.
+   */
+  let kiteSpots: KiteSpotsStagingFile | null = null;
+  const kiteSpotsPath = join(DATA, 'kitespots.json');
+  if (existsSync(kiteSpotsPath)) {
+    const file = loadStrict<KiteSpotsStagingFile>(
+      KiteSpotsStagingFileSchema,
+      kiteSpotsPath,
+      'Kite-Spot-Staging',
+    );
+    kiteSpots = file;
+    if (!file.approved) {
+      skipNotice('Kite-Spot-Staging', 'kitespots.json');
+      kiteSpots = null;
+    }
+  } else {
+    console.warn('HINWEIS: kitespots.json fehlt — die Kite-Ebene bleibt leer.');
+  }
+
   const config = loadStrict<ConfigStagingFile>(
     ConfigStagingFileSchema,
     join(DATA, 'config.json'),
@@ -262,6 +286,33 @@ async function main() {
     }
   }
 
+  /**
+   * Kite-Spots gegen die freigegebene Bibliothek: Insel und Bezugsplatz müssen
+   * existieren. Ein Spot mit toter `refPlaceId` hätte weder Wind (der Forecast
+   * hängt am Platz, AD-3) noch eine Seite, auf der er erscheint — er wäre
+   * stumm importiert und nie sichtbar.
+   */
+  if (kiteSpots) {
+    const seenKiteIds = new Set<string>();
+    for (const spot of kiteSpots.kiteSpots) {
+      if (seenKiteIds.has(spot.id)) {
+        fail(`Kite-Spot '${spot.id}' ist in kitespots.json doppelt definiert.`);
+      }
+      seenKiteIds.add(spot.id);
+      if (!islandIds.has(spot.islandId)) {
+        const hint = skippedIslandIds.has(spot.islandId)
+          ? ' (Insel-Datei ist nicht freigegeben)'
+          : '';
+        fail(`Kite-Spot ${spot.id}: Insel '${spot.islandId}' fehlt${hint}.`);
+      }
+      if (!placeIds.has(spot.refPlaceId)) {
+        fail(
+          `Kite-Spot ${spot.id}: Bezugsplatz '${spot.refPlaceId}' fehlt in den freigegebenen Insel-Staging-Dateien — ohne ihn hat der Spot keinen Wind und keine Anzeige.`,
+        );
+      }
+    }
+  }
+
   // Config base references must exist in the staged library (AD-10: return
   // logic finds the base via these ids).
   if (!seenIslandIds.has(config.parameters.baseIslandId)) {
@@ -279,7 +330,8 @@ async function main() {
   const placeCount = approvedIslands.reduce((s, i) => s + i.data.places.length, 0);
   console.log(
     `Validierung OK: ${approvedIslands.length}/${islandFiles.length} Inseln freigegeben (${placeCount} Plätze), ` +
-      `Etappen: ${legs ? legs.legs.length : 'übersprungen'}, Varianten: ${variants ? variants.variants.length : 'übersprungen'}, Polare: ${polar ? `${polar.polar.twaDeg.length}×${polar.polar.twsKn.length}` : 'übersprungen'}, Config freigegeben.`,
+      `Etappen: ${legs ? legs.legs.length : 'übersprungen'}, Varianten: ${variants ? variants.variants.length : 'übersprungen'}, ` +
+      `Kite-Spots: ${kiteSpots ? kiteSpots.kiteSpots.length : 'übersprungen'}, Polare: ${polar ? `${polar.polar.twaDeg.length}×${polar.polar.twsKn.length}` : 'übersprungen'}, Config freigegeben.`,
   );
   if (DRY_RUN) {
     console.log('--dry: keine Schreibvorgänge.');
@@ -319,6 +371,12 @@ async function main() {
       writes.push({ collection: 'routes', docId: variantDocId, data: variantRest });
     }
   }
+  if (kiteSpots) {
+    for (const spot of kiteSpots.kiteSpots) {
+      const { id: spotDocId, ...spotRest } = spot;
+      writes.push({ collection: 'kiteSpots', docId: spotDocId, data: spotRest });
+    }
+  }
   writes.push({ collection: 'config', docId: 'parameters', data: config.parameters });
   if (polar) {
     // Firestore rejects arrays inside arrays — the polar matrix is stored as
@@ -350,6 +408,16 @@ async function main() {
     legs: new Set(legsFile.legs.map((l) => l.id)),
     routes: new Set(variantsFile.variants.map((v) => v.id)),
   };
+  // Nur prüfen, wenn eine Staging-Datei existiert: ohne sie wäre JEDES
+  // Remote-Dokument ein "Waise" und die Warnung schlicht falsch.
+  if (existsSync(kiteSpotsPath)) {
+    const staged = loadStrict<KiteSpotsStagingFile>(
+      KiteSpotsStagingFileSchema,
+      kiteSpotsPath,
+      'Kite-Spot-Staging',
+    );
+    stagedIds['kiteSpots'] = new Set(staged.kiteSpots.map((s) => s.id));
+  }
   for (const [coll, ids] of Object.entries(stagedIds)) {
     const remoteDocs = await db.collection(coll).listDocuments();
     const orphans = remoteDocs.map((d) => d.id).filter((id) => !ids.has(id));
@@ -362,7 +430,8 @@ async function main() {
 
   console.log(
     `Import abgeschlossen: islands=${approvedIslands.length}, places=${placeCount}, ` +
-      `legs=${legs ? legs.legs.length : 0}, routes=${variants ? variants.variants.length : 0}, config/parameters${polar ? ', config/polar' : ''}.`,
+      `legs=${legs ? legs.legs.length : 0}, routes=${variants ? variants.variants.length : 0}, ` +
+      `kiteSpots=${kiteSpots ? kiteSpots.kiteSpots.length : 0}, config/parameters${polar ? ', config/polar' : ''}.`,
   );
   console.log(
     'Hinweis (AD-5): Feldkorrekturen über die Firebase-Konsole müssen ins Staging-JSON zurückgetragen werden, sonst überschreibt der nächste Import sie.',

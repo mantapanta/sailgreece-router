@@ -1,0 +1,325 @@
+{
+  "approved": false,
+  "sourceNote": "Kite-Spots Kykladen + attische Küste (2026-08-06, Skipper-Wunsch 'Anzeige von Kite-Spots'). HERKUNFT UND IHRE GRENZE: die Spots stammen aus dem Törnkonzept des Skippers (Rhenia/Blue Lagoon, Pounda-Kanal, Despotiko-Lagune, Mikri Vigla, Kato Koufonisi, Polyaigos) und aus allgemein bekanntem Kite-Revierwissen der Kykladen (Ftelia, Kalafatis, Chrissi Akti/Golden Beach, Santa Maria, Kolymbithra, Anavyssos). Sie sind NICHT quellenbelegt kuratiert wie die Liegeplätze: keine Windstatistik, kein Revierführer, keine Ortsbegehung. Koordinaten sind aus der Lage der Bucht abgeleitet und auf ~0,5 sm genau; die Windsektoren geben die bekannte Arbeitsrichtung des Spots, nicht eine gemessene Verteilung. Behördliche Auflagen (Kite-Verbote an Badestränden, Naturschutz um Despotiko/Delos/Polyaigos, Sperrzonen der Hafenbehörde) sind NICHT recherchiert und können vor Ort anders sein. Deshalb steht die Datei auf approved: false, jeder Eintrag trägt confidence 'mittel' oder 'niedrig', und die Anzeige sagt das ungefragt dazu. Der Bezugsplatz (refPlaceId) ist kuratiert, nicht gerechnet — bei Mikri Vigla wäre der geometrisch nächste Liegeplatz Piso Livadi auf PAROS, jenseits des Kanals. Nichts hiervon bewertet etwas: weder Ampel noch Solver lesen ein Feld (src/domain/schema/kite.ts).",
+  "kiteSpots": [
+    {
+      "id": "kite-naxos-mikri-vigla",
+      "name": "Mikri Vigla (Laguna / Parthena)",
+      "islandId": "naxos",
+      "coordinates": { "lat": 37.0186, "lon": 25.3617 },
+      "windSectors": [{ "fromDeg": 320, "toDeg": 70 }],
+      "water": "flachwasser",
+      "launch": ["strand", "dinghy"],
+      "level": "einsteiger",
+      "refPlaceId": "naxos-stadt",
+      "accessInfo": "Der Spot liegt an der SW-Küste, 5 sm südlich von Naxos-Stadt — als Tagesziel planen, nicht als Beiboot-Fahrt. Vor Anker geht es davor bei Kastraki/Glyfada (nicht in der Liegeplatz-Bibliothek, kein Nachtplatz bei Meltemi), Anlandung mit dem Beiboot am Sandstrand.",
+      "hazards": [
+        "Felsnase zwischen Laguna und Parthena — die nördliche Bucht ist der Flachwasserteil, die südliche steht in der Welle",
+        "Ankern vor offener Küste: bei Meltemi Schwell, nachts nicht liegen bleiben",
+        "Badebetrieb an der Lagune im August"
+      ],
+      "localNote": "Kite-Schulen und Verleih am Strand (Saison Juni–September).",
+      "description": "Der konstanteste Meltemi-Spot der Kykladen: Stehbereich in der Lagune, Welle an der Südseite.",
+      "confidence": "mittel",
+      "sources": [
+        "Törnkonzept Kitesurfer 2026-08-06 (Skipper): 'Mikri Vigla bietet konstantesten Meltemi'",
+        "Allgemeines Kite-Revierwissen Kykladen — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-naxos-agios-georgios",
+      "name": "Agios Georgios (Naxos-Stadt)",
+      "islandId": "naxos",
+      "coordinates": { "lat": 37.0975, "lon": 25.372 },
+      "windSectors": [{ "fromDeg": 280, "toDeg": 20 }],
+      "water": "flachwasser",
+      "launch": ["strand"],
+      "level": "einsteiger",
+      "refPlaceId": "naxos-stadt",
+      "accessInfo": "Die lange Strandbucht direkt südlich der Marina — 10 Minuten zu Fuss vom Liegeplatz, kein Beiboot nötig.",
+      "hazards": [
+        "Stadtstrand: dichter Badebetrieb, Kiten oft nur ausserhalb der Badezone erlaubt",
+        "Auflagen der Hafenbehörde nicht recherchiert"
+      ],
+      "localNote": "Windsurf- und Kite-Stationen am Strand; enger Startbereich.",
+      "description": "Der Fussweg-Spot des Törns: flach und stehtief, aber voll.",
+      "confidence": "niedrig",
+      "sources": [
+        "Allgemeines Kite-Revierwissen Kykladen — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-paros-pounda-kanal",
+      "name": "Pounda (Kanal Paros–Antiparos)",
+      "islandId": "paros",
+      "coordinates": { "lat": 37.0175, "lon": 25.105 },
+      "windSectors": [{ "fromDeg": 340, "toDeg": 60 }],
+      "water": "flachwasser",
+      "launch": ["strand", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "antiparos-town",
+      "accessInfo": "Windverwöhnter Kanal zwischen Paros und Antiparos; vor Anker im Luv von Antiparos, 1,8 sm mit dem Beiboot zum Startbereich an der Paros-Seite.",
+      "hazards": [
+        "Düseneffekt im Kanal — hier steht regelmässig deutlich mehr Wind als der Forecast am Hafen zeigt (FR10-Zone paros--antiparos)",
+        "Fähr- und Autofähren-Verkehr quer durch den Kanal, dichte Frequenz",
+        "Strömung im engen Teil des Kanals"
+      ],
+      "localNote": "Kite-Station an der Paros-Seite bei Pounda.",
+      "description": "Die Kite-Autobahn des Reviers — flach, schnell, mit Fährverkehr.",
+      "confidence": "mittel",
+      "sources": [
+        "Törnkonzept Kitesurfer 2026-08-06 (Skipper): 'Session im windverwöhnten Kanal zwischen Paros und Antiparos'",
+        "Allgemeines Kite-Revierwissen Kykladen — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-paros-chrissi-akti",
+      "name": "Chrissi Akti / Golden Beach (Paros)",
+      "islandId": "paros",
+      "coordinates": { "lat": 37.0286, "lon": 25.2411 },
+      "windSectors": [{ "fromDeg": 340, "toDeg": 70 }],
+      "water": "choppy",
+      "launch": ["strand", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "paros-piso-livadi",
+      "accessInfo": "1,5 sm nördlich von Piso Livadi an der Ostküste — mit dem Beiboot erreichbar, Anlandung am Sandstrand.",
+      "hazards": [
+        "Ostküste offen gegen Meltemi-Welle — Beiboot nie unbeaufsichtigt am Strand lassen",
+        "Wettkampf- und Schulbetrieb kann Startbereiche sperren"
+      ],
+      "localNote": "Etablierte Windsurf-/Kite-Strände (Golden Beach, New Golden Beach) mit Stationen.",
+      "description": "Der bekannte Ostküsten-Spot von Paros: Sideshore-Meltemi und Kabbelwelle.",
+      "confidence": "mittel",
+      "sources": [
+        "Allgemeines Kite-Revierwissen Kykladen (Golden Beach, PWA-Revier) — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-paros-santa-maria",
+      "name": "Santa Maria (Paros)",
+      "islandId": "paros",
+      "coordinates": { "lat": 37.1394, "lon": 25.2461 },
+      "windSectors": [{ "fromDeg": 330, "toDeg": 60 }],
+      "water": "choppy",
+      "launch": ["strand", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "paros-naoussa",
+      "accessInfo": "1 sm östlich von Naoussa; mit dem Beiboot um die Landzunge, Anlandung in der Sandbucht.",
+      "hazards": [
+        "Riffe und Felsen an den Buchträndern",
+        "Ankernde Yachten und Badebetrieb in der Bucht"
+      ],
+      "localNote": "Kite-/Windsurf-Schule in der Bucht.",
+      "description": "Kurzer Sprung von Naoussa aus — der Spot für den Nachmittag im Nordosten von Paros.",
+      "confidence": "niedrig",
+      "sources": [
+        "Allgemeines Kite-Revierwissen Kykladen — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-despotiko-lagune",
+      "name": "Despotiko-Lagune",
+      "islandId": "despotiko",
+      "coordinates": { "lat": 36.96, "lon": 25.03 },
+      "windSectors": [{ "fromDeg": 330, "toDeg": 60 }],
+      "water": "flachwasser",
+      "launch": ["dinghy", "boot"],
+      "level": "fortgeschritten",
+      "refPlaceId": "despotiko-ormos",
+      "accessInfo": "Flachwasser über den Sandbänken zwischen Despotiko und Antiparos — Start direkt vom Ankerplatz per Beiboot oder von der Badeplattform.",
+      "hazards": [
+        "Unbewohnt: keine Hilfe an Land, kein Verleih, kein Ersatzmaterial",
+        "Wandernde Sandbänke und Untiefen — Tiefen wechseln mit dem Jahr",
+        "Archäologische Zone / Naturschutz auf Despotiko: Auflagen nicht recherchiert"
+      ],
+      "localNote": null,
+      "description": "Stehtiefes Flachwasser vor einer unbewohnten Insel — die Session, für die der Katamaran dabei ist.",
+      "confidence": "niedrig",
+      "sources": [
+        "Törnkonzept Kitesurfer 2026-08-06 (Skipper): 'Ankerstopp in der Lagune von Despotiko. Flachwasser-Sessions an unbewohnten Sandbänken'"
+      ]
+    },
+    {
+      "id": "kite-rinia-blue-lagoon",
+      "name": "Blue Lagoon (Rinia)",
+      "islandId": "delos-rinia",
+      "coordinates": { "lat": 37.4067, "lon": 25.23 },
+      "windSectors": [{ "fromDeg": 330, "toDeg": 60 }],
+      "water": "flachwasser",
+      "launch": ["boot", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "delos-rinia-miskanti",
+      "accessInfo": "Start von der Plattform des Katamarans in der geschützten Bucht; Wasser in Luv der Bucht spiegelglatt.",
+      "hazards": [
+        "Unbewohnt, keine Infrastruktur — Bergung nur durch das eigene Beiboot",
+        "Delos/Rinia: Schutzgebiets- und Ankerauflagen nicht recherchiert",
+        "Ausserhalb der Bucht steht der volle Kanal-Meltemi zwischen Mykonos und Tinos"
+      ],
+      "localNote": null,
+      "description": "Glattes Wasser in der geschützten Bucht, Boat-Launch direkt vom Kat.",
+      "confidence": "niedrig",
+      "sources": [
+        "Törnkonzept Kitesurfer 2026-08-06 (Skipper): 'Spiegelglattes Wasser in den geschützten Buchten. Boat-Launches direkt von der Katamaran-Plattform'"
+      ]
+    },
+    {
+      "id": "kite-mykonos-ftelia",
+      "name": "Ftelia (Mykonos)",
+      "islandId": "mykonos",
+      "coordinates": { "lat": 37.4711, "lon": 25.3517 },
+      "windSectors": [{ "fromDeg": 340, "toDeg": 60 }],
+      "water": "choppy",
+      "launch": ["strand", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "mykonos-tourlos",
+      "accessInfo": "Nordbucht von Mykonos, 1,3 sm von Tourlos über Land oder mit dem Beiboot um die Nordspitze — bei Meltemi ist der Landweg der ruhigere.",
+      "hazards": [
+        "Die Bucht liegt voll im Meltemi: onshore, ablandige Bergung nicht möglich",
+        "Kein geschützter Ankerplatz vor dem Strand"
+      ],
+      "localNote": "Etablierte Kite-Station in der Bucht.",
+      "description": "Der Kite-Strand von Mykonos — onshore Meltemi, Kabbelwasser, Betrieb.",
+      "confidence": "mittel",
+      "sources": [
+        "Allgemeines Kite-Revierwissen Kykladen (Ftelia) — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-mykonos-kalafatis",
+      "name": "Kalafatis (Mykonos)",
+      "islandId": "mykonos",
+      "coordinates": { "lat": 37.433, "lon": 25.429 },
+      "windSectors": [{ "fromDeg": 350, "toDeg": 90 }],
+      "water": "choppy",
+      "launch": ["strand", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "mykonos-kalafatis",
+      "accessInfo": "Direkt am Ankerplatz Kalafatis — Beiboot an den Strand, Startbereich am Ostende der Bucht.",
+      "hazards": [
+        "Ostküste: bei kräftigem Meltemi Welle bis in die Bucht",
+        "Wassersportbetrieb (Boote, Bojen) im Startbereich"
+      ],
+      "localNote": "Wassersportzentrum am Strand.",
+      "description": "Der Spot, an dem man ohnehin ankert — Start ohne Umweg.",
+      "confidence": "mittel",
+      "sources": [
+        "Allgemeines Kite-Revierwissen Kykladen (Kalafatis) — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-koufonisia-kato",
+      "name": "Kato Koufonisi (Flachbuchten)",
+      "islandId": "koufonisia",
+      "coordinates": { "lat": 36.9236, "lon": 25.5875 },
+      "windSectors": [{ "fromDeg": 330, "toDeg": 60 }],
+      "water": "flachwasser",
+      "launch": ["boot", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "koufonisia-chora",
+      "accessInfo": "0,8 sm südlich von Chora über den Kanal — Start vom Boot oder per Beiboot an den flachen Sandbuchten der unbewohnten Insel.",
+      "hazards": [
+        "Unbewohnt, keine Instandhaltung an Land — vollständige Eigenversorgung",
+        "Strömung im Kanal zwischen Ano und Kato Koufonisi",
+        "Untiefen und Felsköpfe in den Buchten"
+      ],
+      "localNote": null,
+      "description": "Flache Buchten ohne jede Infrastruktur — Unabhängigkeit mit dem Katamaran.",
+      "confidence": "niedrig",
+      "sources": [
+        "Törnkonzept Kitesurfer 2026-08-06 (Skipper): 'Unbewohnte Insel mit flachen Buchten. Keine Instandhaltung an Land'"
+      ]
+    },
+    {
+      "id": "kite-polyaigos-sued",
+      "name": "Polyaigos Süd-/Ostküste",
+      "islandId": "polyaigos",
+      "coordinates": { "lat": 36.755, "lon": 24.64 },
+      "windSectors": [{ "fromDeg": 340, "toDeg": 70 }],
+      "water": "tiefwasser",
+      "launch": ["boot"],
+      "level": "experte",
+      "refPlaceId": "polyaigos-mersini",
+      "accessInfo": "Tiefwasser-Launch von der Plattform in Lee der Insel; keine Anlandung, keine Stehtiefe — nur mit Beiboot als Sicherung.",
+      "hazards": [
+        "Kein Stehbereich und keine Anlandung: ein Materialschaden heisst Bergung durch das Beiboot",
+        "Unbewohnt, kein Mobilfunk-Verlass, nächste Hilfe auf Kimolos/Milos",
+        "Naturschutzgebiet (Natura 2000) — Auflagen nicht recherchiert"
+      ],
+      "localNote": null,
+      "description": "Spektakuläre Felskulisse, ideal für Foil und Tiefwasser-Launch — und ohne jede Reserve an Land.",
+      "confidence": "niedrig",
+      "sources": [
+        "Törnkonzept Kitesurfer 2026-08-06 (Skipper): 'Ideal für Hydrofoil-Kiter und Tiefwasser-Launches'"
+      ]
+    },
+    {
+      "id": "kite-kythnos-kolona",
+      "name": "Kolona-Sandbank (Kythnos)",
+      "islandId": "kythnos",
+      "coordinates": { "lat": 37.4117, "lon": 24.3833 },
+      "windSectors": [{ "fromDeg": 340, "toDeg": 60 }],
+      "water": "flachwasser",
+      "launch": ["strand", "dinghy"],
+      "level": "fortgeschritten",
+      "refPlaceId": "kythnos-kolona",
+      "accessInfo": "Die Sandzunge der Doppelbucht selbst: Start vom Strand der Leeseite, gefahren wird über der flachen Bank.",
+      "hazards": [
+        "KEIN etablierter Kite-Spot, sondern die beliebteste Ankerbucht der Insel — im August dicht belegt, Leinen und Ankerlieger im Fahrbereich",
+        "Enge Zunge: Leinen können auf die Windward-Seite treiben",
+        "Nur bei leerer Bucht und mit Rücksicht auf die Nachbarn"
+      ],
+      "localNote": null,
+      "description": "Flachwasser auf dem Weg nach Süden — als Gelegenheit, nicht als Ziel.",
+      "confidence": "niedrig",
+      "sources": [
+        "Eigene Einschätzung aus der Bucht-Geometrie (Sandzunge, Flachwasser beidseitig) — kein Spot-Beleg, vor Ort entscheiden"
+      ]
+    },
+    {
+      "id": "kite-tinos-kolymbithra",
+      "name": "Kolymbithra (Tinos)",
+      "islandId": "tinos",
+      "coordinates": { "lat": 37.6322, "lon": 25.1481 },
+      "windSectors": [{ "fromDeg": 340, "toDeg": 60 }],
+      "water": "welle",
+      "launch": ["strand", "dinghy"],
+      "level": "experte",
+      "refPlaceId": "tinos-kolimvithra",
+      "accessInfo": "Direkt am Tagesankerplatz der Nordküste — Beiboot an den Sandstrand der kleinen Bucht.",
+      "hazards": [
+        "Nordküste voll im Meltemi und im Swell: kein Nachtplatz, bei aufziehendem Wind früh abbrechen",
+        "Brandung am Strand erschwert Start und Landung",
+        "Ablandige Bergung nicht möglich"
+      ],
+      "localNote": "Surf-/Kite-Betrieb in der Saison.",
+      "description": "Der Wellenspot des Reviers — und der exponierteste Ankerplatz darunter.",
+      "confidence": "mittel",
+      "sources": [
+        "Allgemeines Kite-/Surf-Revierwissen Kykladen (Kolymbithra) — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    },
+    {
+      "id": "kite-attika-anavyssos",
+      "name": "Anavyssos (Attische Küste)",
+      "islandId": "attika",
+      "coordinates": { "lat": 37.727, "lon": 23.933 },
+      "windSectors": [{ "fromDeg": 180, "toDeg": 260 }],
+      "water": "flachwasser",
+      "launch": ["strand", "dinghy"],
+      "level": "einsteiger",
+      "refPlaceId": "attika-lavrion",
+      "accessInfo": "Flache Sandbucht an der Westseite der Halbinsel, 6 sm von Lavrion — als Zwischenstopp am ersten oder letzten Törntag, nicht als Beiboot-Ausflug.",
+      "hazards": [
+        "Arbeitet mit dem SÜDwestlichen Seewind, nicht mit dem Meltemi — bei Nordlage ablandig und damit gefährlich",
+        "Offene Bucht ohne Nachtschutz",
+        "Badebetrieb und Strandbars im August"
+      ],
+      "localNote": "Kite-Schulen an der Küste Anavyssos/Punta Zeza.",
+      "description": "Der Athener Hausspot: brauchbar auf dem Weg raus oder rein, wenn der Seewind steht.",
+      "confidence": "niedrig",
+      "sources": [
+        "Allgemeines Kite-Revierwissen attische Küste — nicht quellenbelegt, vor Ort prüfen"
+      ]
+    }
+  ]
+}

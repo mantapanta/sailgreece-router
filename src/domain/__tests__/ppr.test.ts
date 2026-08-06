@@ -101,7 +101,8 @@ function amorgosWorld(): PlanningSnapshot {
         placeId: amorgos.id,
       },
       plan: null,
-      departureHourOverride: null,
+      departureHourByDay: {},
+      empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
     },
   });

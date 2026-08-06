@@ -343,7 +343,8 @@ describe('Ende-zu-Ende: das Konzept überschreibt die Solver-Wahl', () => {
         currentDay: 1,
         position: { source: 'manual', lat: alimos.coordinates.lat, lon: alimos.coordinates.lon, placeId: alimos.id },
         plan: null,
-        departureHourOverride: null,
+        departureHourByDay: {},
+        empfohleneAbfahrtByDay: {},
         stopHoursByDay: {},
       },
     });

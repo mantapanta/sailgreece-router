@@ -7,6 +7,7 @@
  */
 
 import type { Ampel } from '../domain/schema/common.ts';
+import type { KiteHinweis } from '../domain/schema/kite.ts';
 import type {
   PlanAssessment,
   RouteOptionAssessment,
@@ -101,6 +102,30 @@ export function optionsSummary(
     openCount: open.length,
     nextDeadlineDay: deadlines.length > 0 ? Math.min(...deadlines) : null,
   };
+}
+
+/**
+ * Kite-Hinweise für EINE Etappen-Karte: welche Zeilen stehen da, und was wird
+ * zusammengefasst.
+ *
+ * Gezeigt wird, was die Richtung des Spots trifft — 'passt' ("heute geht was")
+ * und 'stark' ("Richtung ja, Wind über der Obergrenze"). Beides ist eine
+ * Entscheidung. Der Rest ist Auskunft ohne Anlass: an einem Tag mit Nordwind
+ * sagt "der Spot braucht S–W" nur, dass dieser Spot heute nicht gemeint ist,
+ * und drei solche Zeilen verdecken die eine, die zählt.
+ *
+ * Weggelassen wird deshalb, aber NICHT verschwiegen: `weitere` trägt die Zahl,
+ * die die Karte als Satz ausgibt. Eine stille Kürzung wäre in dieser App die
+ * schlechtere Lösung — sie liest sich wie "hier gibt es sonst nichts".
+ */
+export function kiteHinweisAnzeige(hinweise: KiteHinweis[]): {
+  gezeigt: KiteHinweis[];
+  weitere: number;
+} {
+  const gezeigt = hinweise.filter(
+    (h) => h.eignung === 'passt' || h.eignung === 'stark',
+  );
+  return { gezeigt, weitere: hinweise.length - gezeigt.length };
 }
 
 /** Verdict wording of the trip status line (EXPERIENCE Voice & Tone). */

@@ -51,6 +51,11 @@
   --map-thumb-sea: #d7e7ef;
   --map-thumb-land: #ece7dd;
   --map-thumb-coast: #c9c1b3;
+  /* Kite-Ebene: weder Ampel noch Akzent noch Alternativ-Farbe — ein Kite-Spot
+     ist kein Urteil, keine Handlung und keine Route (tokens.ts hält denselben
+     Wert für Marker und Legende der Google-Karte). */
+  --kite-spot: #0f7f8c;
+  --kite-spot-tint: #e3f2f4;
 
   /* typography */
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -1669,6 +1674,177 @@ button.stage-capsule:only-child::after {
   color: var(--ampel-gelb-text);
 }
 
+/* ---- Kite-Spots -------------------------------------------------------------
+   Eigene Farbe, eigene Form, KEINE Ampel-Fläche: ein Kite-Spot bewertet nichts
+   (src/domain/schema/kite.ts), und ein grüner Kasten neben einer gelben Etappe
+   würde wie ein zweites, freundlicheres Urteil über denselben Tag gelesen.
+   Was heute passt, bekommt darum die Kite-Kante und den Kite-Tint, alles andere
+   bleibt eine ruhige Zeile — die Aussage steht immer im Text. */
+
+/* Hinweiszeilen in der Etappen-Karte (Tagesansicht). Jede ist ein Knopf zum
+   Platzdetail des Bezugs-Liegeplatzes. */
+.kite-zeilen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+
+.kite-zeile {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--border-hairline);
+  border-left: 4px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--ink-secondary);
+  padding: var(--space-2) var(--space-3);
+  font: 400 13.5px/1.45 var(--font-sans);
+  min-height: 44px;
+}
+
+.kite-zeile.passt {
+  border-left-color: var(--kite-spot);
+  background: var(--kite-spot-tint);
+  color: var(--ink-primary);
+}
+
+.kite-zeile .glyph {
+  color: var(--kite-spot);
+  flex: 0 0 auto;
+}
+
+.kite-zeile .text {
+  flex: 1 1 auto;
+}
+
+.kite-zeile .link {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-weight: 650;
+  color: var(--kite-spot);
+}
+
+/* Zusammengefasste Spots: die Zahl, die die Zeilenliste weglässt. */
+.kite-weitere {
+  margin: 0;
+  padding: 0 var(--space-3);
+  font: 400 12px/1.4 var(--font-sans);
+  color: var(--ink-tertiary);
+}
+
+/* Marker der Karte: Raute, damit die Ebene auch ohne Farbe kein Ampel-Punkt
+   ist. Gefüllt = Wind passt heute (Bedeutung zusätzlich in Legende und
+   aria-label — nie nur in der Füllung). Casing-Ring wie bei allen Markern,
+   sonst geht die Form über dem Satellitenbild unter. */
+.kite-marker {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  transform: rotate(45deg);
+  border: 2px solid var(--kite-spot);
+  background: var(--map-line-casing);
+  box-shadow: 0 1px 4px rgba(30, 25, 20, 0.4);
+}
+
+.kite-marker.passt {
+  background: var(--kite-spot);
+}
+
+/* Kite-Karte im Platzdetail — Idiom der Gastro-Liste, damit die beiden
+   „bewertet nichts"-Karten gleich gelesen werden. */
+.kite-liste {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.kite-liste li {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-hairline);
+}
+
+/* Über den Hinweis der Tagesansicht angesprungener Spot: sichtbar
+   hervorgehoben, sonst landet der Link auf einer Seite, auf der man wieder
+   sucht. Kante statt Fläche — die Hervorhebung ist Navigation, kein Urteil. */
+.kite-liste li.focused {
+  border-left: 4px solid var(--kite-spot);
+  padding-left: var(--space-3);
+  background: var(--kite-spot-tint);
+  border-radius: var(--radius-md);
+}
+
+.kite-kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.kite-kopf .name {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin-right: auto;
+}
+
+.kite-profil {
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+  margin-top: var(--space-1);
+}
+
+.kite-liste .zeile {
+  font-size: 14px;
+  line-height: 1.45;
+  margin-top: var(--space-2);
+}
+
+.kite-liste .zeile .label {
+  color: var(--ink-secondary);
+}
+
+/* Konfidenz unter 'hoch': derselbe Vorbehalt-Ton wie beim unbestätigten
+   Reservierungskontakt der Gastro-Karte. */
+.kite-liste .vorbehalt {
+  color: var(--ampel-gelb-text);
+}
+
+/* Urteil des heutigen Kite-Fensters. Nur 'passt' bekommt Fläche — die anderen
+   Zustände sind Auskunft, nicht Warnung. */
+.kite-urteil {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  font: 400 13.5px/1.45 var(--font-sans);
+  color: var(--ink-secondary);
+}
+
+/* Kante zusätzlich zur Fläche: im hervorgehobenen Eintrag (`li.focused`) hat der
+   Kasten denselben Tint wie sein Untergrund und wäre sonst unsichtbar. */
+.kite-urteil.passt {
+  background: var(--kite-spot-tint);
+  color: var(--ink-primary);
+  border-left: 3px solid var(--kite-spot);
+}
+
+/* Gefahren des Spots: bewusst NICHT kleiner gesetzt als der Rest — ein
+   Tiefwasser-Launch ohne Stehbereich ist die Information, an der eine Session
+   scheitert. Warn-Ton, keine Ampel-Fläche: es ist kein bewerteter Zustand,
+   sondern eine kuratierte Eigenschaft des Ortes. */
+.kite-gefahren {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  font: 400 13.5px/1.5 var(--font-sans);
+  color: var(--ampel-gelb-text);
+}
+
 /* ---- footer (provenance, contentinfo) ---------------------------------------- */
 
 .app-footer {
@@ -2437,27 +2613,6 @@ textarea {
   font: 400 16px/1.4 var(--font-sans);
   color: var(--ink-primary);
 }
-.stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-.stepper button {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-md);
-  background: var(--surface-inset);
-  font: 700 19px/1 var(--font-sans);
-  color: var(--ink-primary);
-  cursor: pointer;
-}
-.stepper button:disabled {
-  color: var(--ink-tertiary);
-  cursor: default;
-}
-
 /* ---- hero / row stage card ---- */
 .hero-card { margin-top: var(--space-2); }
 /* New card recipe — the legacy .card keeps serving the old views. */
@@ -2550,13 +2705,19 @@ button.stage-thumb {
   background: var(--border-hairline);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  /* NICHT overflow:hidden — das Abfahrtsmenü klappt aus der ersten Kachel
+     heraus und wurde daran abgeschnitten. Die Rundung tragen stattdessen die
+     vier Eckkacheln selbst. */
   margin-top: var(--space-4);
 }
 .stat-tile {
   background: var(--surface-inset);
   padding: var(--space-3) var(--space-4);
 }
+.stat-tile:nth-child(1) { border-top-left-radius: calc(var(--radius-md) - 1px); }
+.stat-tile:nth-child(2) { border-top-right-radius: calc(var(--radius-md) - 1px); }
+.stat-tile:nth-last-child(2) { border-bottom-left-radius: calc(var(--radius-md) - 1px); }
+.stat-tile:last-child { border-bottom-right-radius: calc(var(--radius-md) - 1px); }
 .stat-tile .label {
   font: 600 11px/1.3 var(--font-sans);
   letter-spacing: 0.07em;
@@ -2571,6 +2732,63 @@ button.stage-thumb {
   color: var(--ink-primary);
 }
 .stat-tile .btn-text { font-size: 12.5px; }
+/* Die Abfahrt-Kachel IST der Auslöser (AbfahrtMenu, variant="tile"): sie liest
+   sich wie die Nachbarkacheln, verrät ihre Bedienbarkeit aber durch das
+   Caret und eine Tippfläche über die ganze Kachelbreite. */
+.stat-tile .popover-wrap { display: flex; }
+.abfahrt-trigger {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: 700 19px/1.2 var(--font-sans);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-primary);
+  margin-top: 3px;
+  text-align: left;
+}
+/* Der Chip in der Etappenliste der Karte — Ruhe statt Signalfarbe: er nennt
+   eine Zahl, er urteilt nicht. */
+.abfahrt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-full);
+  background: var(--surface-inset);
+  cursor: pointer;
+  font: 600 12.5px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-primary);
+}
+.abfahrt-trigger .caret,
+.abfahrt-chip .caret {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  opacity: 0.55;
+  flex: 0 0 auto;
+}
+/* Das Stundenmenü folgt dem Rezept von .alt-menu; es braucht nur weniger
+   Breite und tabellarische Ziffern, damit die Stunden untereinander stehen. */
+.abfahrt-menu {
+  /* fixed statt absolute: das Menü darf weder von der Kachelreihe noch vom
+     scrollenden Wirt beschnitten werden (AbfahrtMenu platziert es). */
+  position: fixed;
+  min-width: 190px;
+  max-height: min(60vh, 340px);
+  font-variant-numeric: tabular-nums;
+}
 /* Problematische Abschnitte (Kreuz/Halbwind) unter den Kacheln der
    Etappenkarte. Sie tragen den Ampel-Tint der Badge-Pille, aber Fliesstext-Typo:
    das hier ist eine ZEILE, die gelesen wird ("ca. 4 sm Kreuz (16 kn)"), kein

@@ -38,7 +38,8 @@ import {
   type KonzeptSchwellen,
 } from '../../domain/konzept.ts';
 import { planKey } from '../../domain/solver.ts';
-import { departureHourChoices, departureHourForDay } from '../../domain/scoring.ts';
+import { departureHourChoices } from '../../domain/scoring.ts';
+import { AbfahrtMenu } from '../components/AbfahrtMenu.tsx';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { PositionPopover } from '../components/PositionPopover.tsx';
 import { TripStatusLine } from '../components/TripStatusLine.tsx';
@@ -53,7 +54,6 @@ import {
   stagePoints,
 } from '../mapPath.ts';
 import { usePlanning } from '../../app/planningContext.tsx';
-import { useTrip } from '../../app/tripContext.tsx';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
 import {
   compass,
@@ -73,6 +73,7 @@ import {
 } from '../format.ts';
 import {
   dayViewStages,
+  kiteHinweisAnzeige,
   optionsSummary,
   stageFocusPlacement,
   staleForecastLabel,
@@ -553,10 +554,10 @@ function StageCard({
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
   nightAmpeln: Assessment['nightAmpeln'];
-  /** True for the ONE hero card of the view (display type, stepper, primary CTA). */
+  /** True for the ONE hero card of the view (display type, primary CTA). */
   hero: boolean;
   currentDay: number;
-  onOpenPlace: (placeId: string) => void;
+  onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
   /** Null when no Maps key is configured — the panel then stays text-only. */
   mapId: string | null;
   /** Zielmodell v2 — der Heimweg-Status dieses Tages (Abbruch-Notation). */
@@ -567,11 +568,7 @@ function StageCard({
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const { params } = snapshot;
-  const { state: trip, dispatch } = useTrip();
   const { setDepartureHour } = usePlanning();
-  /** Die heute WIRKSAME Abfahrt (eine Quelle: scoring.departureHourForDay) —
-      für den Übernehmen-Knopf der Empfehlung. */
-  const heutigeAbfahrt = departureHourForDay(snapshot, stage.day);
   // EINE Punktliste für Karte und Rechnung — daraus die Nummern für beide.
   const points = useMemo(
     () => stagePoints(stage, buildLegsById(snapshot.library.legs), snapshot),
@@ -602,29 +599,24 @@ function StageCard({
     ? `Hafentag in ${islandName(snapshot, stage.toIslandId)}`
     : islandName(snapshot, stage.toIslandId);
 
-  // FR15 — der Override gilt nur für HEUTE; künftige Tage rechnen mit dem
-  // Standard, und die Kachel sagt genau das.
-  const departureHour = isToday
-    ? (trip.departureHourOverride ?? params.departureHourAthens)
-    : params.departureHourAthens;
   /**
-   * Nachbarstunden im ERLAUBTEN Fenster des Törntags — der Stepper läuft die
-   * Domänenliste ab statt ±1 zu rechnen: Tag 1 bietet zusätzlich das
-   * Übernahme-Fenster 14–17 Uhr, und zwischen 12 und 14 klafft eine Lücke,
-   * die ein reines Inkrement überschreiben würde (scoring.departureHourChoices).
+   * FR15 — die WIRKSAME Abfahrt kommt aus der Bewertung (StageAssessment):
+   * dort steht die Stunde, gegen die dieser Tag gerechnet wurde. Die Kachel
+   * leitet sie NICHT ein zweites Mal ab — sonst könnte sie eine Abfahrt
+   * anzeigen, mit der die Ankunft darunter gar nicht gerechnet ist.
    */
-  const departureStep = useMemo(() => {
-    const choices = departureHourChoices(stage.day);
-    const idx = choices.indexOf(departureHour);
-    return {
-      earlier: idx > 0 ? (choices[idx - 1] ?? null) : null,
-      later: idx >= 0 && idx < choices.length - 1 ? (choices[idx + 1] ?? null) : null,
-    };
-  }, [stage.day, departureHour]);
+  const departureHour = stage.abfahrtHourAthens;
+  /** Die Stunden, die dieser Törntag zur Wahl stellt (Tag 1: plus 14–17 Uhr). */
+  const departureChoices = useMemo(
+    () => departureHourChoices(stage.day),
+    [stage.day],
+  );
   const lastLeg = stage.legs[stage.legs.length - 1];
   const lastEta =
     lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
   const windLeg = stage.legs[0];
+  /** Kite-Zeilen dieser Karte plus die Zahl der zusammengefassten (getestet). */
+  const kite = kiteHinweisAnzeige(stage.kiteHinweise);
 
   return (
     <article className={hero ? 'card-surface hero-card' : 'card-surface'}>
@@ -722,49 +714,24 @@ function StageCard({
         <div className="stat-grid">
           <div className="stat-tile">
             <div className="label">Abfahrt</div>
-            <div className="value">{departureHour}:00</div>
-            {/* [ASSUMPTION: OQ5] — Abfahrt-Stepper in der Hero-Kachel statt
-                als ständig sichtbares Control; nur für den HEUTIGEN Tag. */}
-            {hero && isToday && (
-              <>
-                <div className="stepper">
-                  <button
-                    type="button"
-                    aria-label="Abfahrt früher"
-                    disabled={departureStep.earlier === null}
-                    onClick={() =>
-                      dispatch({
-                        type: 'SET_DEPARTURE_HOUR',
-                        hour: departureStep.earlier,
-                      })
-                    }
-                  >
-                    −
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Abfahrt später"
-                    disabled={departureStep.later === null}
-                    onClick={() =>
-                      dispatch({
-                        type: 'SET_DEPARTURE_HOUR',
-                        hour: departureStep.later,
-                      })
-                    }
-                  >
-                    +
-                  </button>
-                </div>
-                {trip.departureHourOverride !== null && (
-                  <button
-                    type="button"
-                    className="btn-text"
-                    onClick={() => dispatch({ type: 'SET_DEPARTURE_HOUR', hour: null })}
-                  >
-                    Standard ({params.departureHourAthens}:00)
-                  </button>
-                )}
-              </>
+            {/* Die Kachel IST das Bedienelement: ein Klick öffnet die Stunden
+                dieses Tages. Der frühere ±-Stepper stand nur an der
+                Hero-Kachel von heute — an jedem anderen Tag zeigte die Karte
+                eine Abfahrt, die sich nicht anfassen liess. Vergangene Tage
+                sind gefahren und bleiben Anzeige. */}
+            {stage.day >= currentDay ? (
+              <AbfahrtMenu
+                variant="tile"
+                day={stage.day}
+                hours={departureChoices}
+                value={departureHour}
+                vomSkipper={stage.abfahrtVomSkipper}
+                empfehlung={stage.abfahrtsEmpfehlung?.abfahrtHourAthens ?? null}
+                standard={params.departureHourAthens}
+                onPick={(hour) => setDepartureHour(stage.day, hour)}
+              />
+            ) : (
+              <div className="value">{departureHour}:00</div>
             )}
           </div>
           <div className="stat-tile">
@@ -824,8 +791,9 @@ function StageCard({
 
       {/* "Früh los, 15:00 vor Anker" (Crowd-Strategie): die späteste Abfahrt,
           deren simulierte Ankunft das Ankerziel noch hält — gerechnet gegen
-          denselben Stunden-Forecast wie die Ampel. Heute mit einem Klick als
-          Abfahrtszeit übernehmbar (FR15-Override). */}
+          denselben Stunden-Forecast wie die Ampel. Sie ist der DEFAULT der
+          Abfahrt-Kachel; der Übernehmen-Knopf von früher ist damit weg. Weicht
+          der Skipper ab, sagt die Zeile es und bietet den Rückweg an. */}
       {stage.kind === 'stage' && stage.abfahrtsEmpfehlung && (
         <div
           className={`abfahrt-zeile${stage.abfahrtsEmpfehlung.zielErreicht ? '' : ' verfehlt'}`}
@@ -841,19 +809,19 @@ function StageCard({
           {stage.abfahrtsEmpfehlung.hinweis && (
             <div className="beschreibung">{stage.abfahrtsEmpfehlung.hinweis}</div>
           )}
-          {isToday &&
-            stage.abfahrtsEmpfehlung.abfahrtHourAthens !== heutigeAbfahrt && (
+          {stage.abfahrtVomSkipper && (
+            <div className="beschreibung">
+              Gerechnet wird mit deiner Abfahrt um {departureHour}:00.{' '}
               <button
                 type="button"
                 className="secondary"
-                title="Setzt die heutige Abfahrtszeit (FR15) auf die Empfehlung — die Bewertung rechnet dann ab dieser Stunde."
-                onClick={() =>
-                  setDepartureHour(stage.abfahrtsEmpfehlung!.abfahrtHourAthens)
-                }
+                title="Gibt diesen Tag an die Empfehlung zurück — die Bewertung rechnet dann wieder ab der empfohlenen Stunde."
+                onClick={() => setDepartureHour(stage.day, null)}
               >
-                Für heute übernehmen
+                Empfehlung übernehmen
               </button>
-            )}
+            </div>
+          )}
         </div>
       )}
 
@@ -876,6 +844,50 @@ function StageCard({
       {returnCheck && (
         <div className={`return-note status-${returnCheck.status}`}>
           {returnCheck.note}
+        </div>
+      )}
+
+      {/* KITE-HINWEISE des Tages (domain/kite.ts, Skipper-Wunsch 2026-08-06):
+          die kuratierten Spots auf Start- und Ziel-Insel und am Kurs. Sie
+          stehen NACH Abfahrt, Tor und Heimweg-Status, weil sie nichts
+          entscheiden — und tragen bewusst keine Ampel-Farbe: ein grüner Kasten
+          neben einer gelben Etappe würde wie ein zweites, freundlicheres
+          Urteil über denselben Tag gelesen. Was passt, trägt darum den
+          Kite-Ton als Kante, alles andere bleibt eine ruhige Zeile; die
+          Aussage steht im Text (formuliert in der Domain, AD-2).
+          Die Zeile ist ein Knopf: sie öffnet den Spot im Platzdetail seines
+          Bezugs-Liegeplatzes. */}
+      {stage.kiteHinweise.length > 0 && (
+        <div className="kite-zeilen">
+          {kite.gezeigt.map((h) => (
+            <button
+              type="button"
+              key={h.spotId}
+              className={`kite-zeile ${h.eignung}`}
+              onClick={() => onOpenPlace(h.placeId, h.spotId)}
+              title="Spot-Details im Platzdetail des Bezugs-Liegeplatzes öffnen"
+            >
+              <span className="glyph" aria-hidden="true">
+                ◆
+              </span>
+              <span className="text">
+                Kite: {h.text}
+                {h.basis === 'annahme' && ' (Annahme jenseits des Forecast-Horizonts)'}
+              </span>
+              <span className="link" aria-hidden="true">
+                Spot →
+              </span>
+            </button>
+          ))}
+          {/* Keine stille Kürzung: was nicht als Zeile steht, steht als Zahl. */}
+          {kite.weitere > 0 && (
+            <p className="kite-weitere">
+              {kite.weitere === 1
+                ? 'Ein weiterer Kite-Spot liegt an diesem Tag'
+                : `${kite.weitere} weitere Kite-Spots liegen an diesem Tag`}{' '}
+              — heute passt die Windrichtung dort nicht. Auf der Karte sichtbar.
+            </p>
+          )}
         </div>
       )}
 
@@ -1509,7 +1521,8 @@ export function DayView({
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
-  onOpenPlace: (placeId: string) => void;
+  /** Zweiter Parameter: Kite-Spot, den das Platzdetail hervorheben soll. */
+  onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
   /**
    * Törntag, der beim Öffnen angesprungen werden soll — gesetzt, wenn der
    * Skipper auf der Karte eine Etappennummer angetippt hat (App.tsx, View

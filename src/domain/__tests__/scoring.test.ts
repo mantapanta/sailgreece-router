@@ -135,7 +135,7 @@ describe('assessLeg — integration against a synthetic snapshot (AD-3)', () => 
     expect(assessLeg(leg, 1, snapshot).ampel).toBe('unbewertet');
   });
 
-  it('departureHourOverride applies ONLY to the current day, never to simulated future days', () => {
+  it('departureHourByDay wirkt GENAU an dem Tag, für den es gesetzt ist', () => {
     const { snapshot, leg } = northSouthScenario({
       windKn: 12,
       windFromDeg: 0,
@@ -151,17 +151,18 @@ describe('assessLeg — integration against a synthetic snapshot (AD-3)', () => 
       }
     }
     snapshot.trip.currentDay = 1;
-    snapshot.trip.departureHourOverride = 6; // 06:00 Athens = 03:00 UTC
-    // Today the override applies: departure into the 28-kn window => rot.
+    snapshot.trip.departureHourByDay = { 1: 6 }; // 06:00 Athens = 03:00 UTC
+    // Tag 1 trägt die Wahl: Abfahrt in das 28-kn-Fenster => rot.
     expect(assessLeg(leg, 1, snapshot).ampel).toBe('rot');
-    // Tomorrow the default 09:00 departure applies (06:00 UTC) => not rot.
+    // Tag 2 hat keine eigene Wahl und keine Empfehlung — Standard 09:00
+    // (06:00 UTC) => nicht rot.
     expect(assessLeg(leg, 2, snapshot).ampel).not.toBe('rot');
   });
 
   /**
    * Übernahme-Fenster: am ERSTEN Törntag ist eine Abfahrt 14–17 Uhr möglich
    * (Boots-Übergabe am Nachmittag) — und NUR dort. An jedem anderen Tag fällt
-   * ein später Override auf den Standard zurück, statt den Tag in die Nacht
+   * eine späte Wahl auf den Standard zurück, statt den Tag in die Nacht
    * zu rechnen.
    */
   it('späte Abfahrt (14–17 Uhr) gilt an Törntag 1 — die Rechnung startet dann nachmittags', () => {
@@ -180,7 +181,7 @@ describe('assessLeg — integration against a synthetic snapshot (AD-3)', () => 
       }
     }
     snapshot.trip.currentDay = 1;
-    snapshot.trip.departureHourOverride = 15; // 15:00 Athens = 12:00 UTC
+    snapshot.trip.departureHourByDay = { 1: 15 }; // 15:00 Athens = 12:00 UTC
     expect(departureHourForDay(snapshot, 1)).toBe(15);
     expect(assessLeg(leg, 1, snapshot).ampel).toBe('rot');
   });
@@ -199,14 +200,14 @@ describe('assessLeg — integration against a synthetic snapshot (AD-3)', () => 
       }
     }
     snapshot.trip.currentDay = 2;
-    snapshot.trip.departureHourOverride = 15;
-    // Nicht Tag 1: der späte Override greift nicht — Standard 09:00 (Athen).
+    snapshot.trip.departureHourByDay = { 2: 15 };
+    // Nicht Tag 1: die späte Wahl greift nicht — Standard 09:00 (Athen).
     expect(departureHourForDay(snapshot, 2)).toBe(
       snapshot.params.departureHourAthens,
     );
     expect(assessLeg(leg, 2, snapshot).ampel).not.toBe('rot');
-    // Ein Vormittags-Override bleibt dagegen auch an Tag 2 wirksam.
-    snapshot.trip.departureHourOverride = 10;
+    // Eine Vormittags-Wahl bleibt dagegen auch an Tag 2 wirksam.
+    snapshot.trip.departureHourByDay = { 2: 10 };
     expect(departureHourForDay(snapshot, 2)).toBe(10);
   });
 
