@@ -329,6 +329,165 @@ function LegendPopover({
   );
 }
 
+/** Eine wählbare Route für das Chip-Menü — Hauptroute ist der Index null. */
+type AltChoice = {
+  key: string;
+  color: string;
+  turnName: string;
+  stageCount: number;
+};
+
+/**
+ * Routenwahl der Karte hinter EINEM Chip (Feedback 2026-08-06, zweiter
+ * Durchgang): ein Chip je Alternative waren bei sieben Alternativen sieben
+ * Chips — auf dem Telefon brachen sie in drei Reihen um und nahmen der Karte
+ * die halbe Höhe. Jetzt nennt der Chip die gezeigte Route und öffnet die Liste;
+ * gewählt wird darin, Hauptroute inklusive.
+ *
+ * Popover-Kontrakt wie AvatarMenu (Interaction Primitives): eines zur Zeit,
+ * Esc/Backdrop/Auslöser schliessen, Fokus geht hinein und zurück zum Auslöser.
+ * Der Auslöser ist KEIN Umschalter (kein aria-pressed) — er öffnet ein Menü;
+ * welche Route gerade gilt, sagen sein Name und die aria-checked-Zeile.
+ */
+function AltRouteMenu({
+  alternatives,
+  shownIndex,
+  onPick,
+}: {
+  alternatives: AltChoice[];
+  shownIndex: number | null;
+  onPick: (index: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const close = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const items = () => menuRef.current?.querySelectorAll<HTMLElement>('button');
+    items()?.[0]?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        close();
+        return;
+      }
+      if (e.key === 'Tab') {
+        // Einfache Fokusfalle: im Menü zirkulieren, solange es offen ist.
+        const focusables = items();
+        if (!focusables || focusables.length === 0) return;
+        const first = focusables[0]!;
+        const last = focusables[focusables.length - 1]!;
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  const shown = shownIndex === null ? null : (alternatives[shownIndex] ?? null);
+
+  return (
+    <span className="popover-wrap">
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`layer-chip${shown ? ' active' : ''}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={
+          shown
+            ? `Gezeigt: Alternative über ${shown.turnName} — andere Route wählen`
+            : 'Alternative statt der Hauptroute zeigen'
+        }
+        onClick={() => (open ? close() : setOpen(true))}
+      >
+        {shown && (
+          <span
+            className="chip-dot"
+            style={{ background: shown.color }}
+            aria-hidden="true"
+          />
+        )}
+        <span aria-hidden="true">
+          {shown
+            ? shown.turnName
+            : alternatives.length === 1
+              ? 'Alternative'
+              : 'Alternativen'}
+        </span>
+      </button>
+      {open && (
+        <>
+          <div className="menu-backdrop" aria-hidden="true" onClick={close} />
+          <div
+            ref={menuRef}
+            className="alt-menu"
+            role="menu"
+            aria-label="Route auf der Karte"
+          >
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={shownIndex === null}
+              onClick={() => {
+                onPick(null);
+                close();
+              }}
+            >
+              {/* Hinweg-Blau wie ihre Linie auf der Karte (tokens.ts ist die
+                  einzige TS-Farbquelle — darum inline, nicht in styles.css). */}
+              <span
+                className="am-dot"
+                style={{ background: HIN_LINE_COLOR }}
+                aria-hidden="true"
+              />
+              <span className="am-label">Hauptroute</span>
+            </button>
+            {alternatives.map((alt, i) => (
+              <button
+                key={alt.key}
+                type="button"
+                role="menuitemradio"
+                aria-checked={shownIndex === i}
+                onClick={() => {
+                  onPick(i);
+                  close();
+                }}
+              >
+                <span
+                  className="am-dot"
+                  style={{ background: alt.color }}
+                  aria-hidden="true"
+                />
+                {/* Die Ordnungszahl trennt Alternativen, die denselben
+                    Wendepunkt haben — die Farben wiederholen sich ab der
+                    vierten (altRouteColors.ts), der Platz in der Liste nicht. */}
+                <span className="am-label">
+                  {i + 1}. Wendepunkt {alt.turnName}
+                </span>
+                <span className="am-meta">{alt.stageCount} Etappen</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </span>
+  );
+}
+
 export function MapView({
   snapshot,
   assessment,
@@ -539,13 +698,24 @@ export function MapView({
   const atBase = assessment.currentIslandId === params.baseIslandId;
   const pprHinweise = atBase ? [] : assessment.ppr.reasons;
 
-  /** Legenden-Zeilen der Alternativen — Identität bleibt benannt (VERIFY 3). */
-  const legendAlternatives = assessment.alternatives.map((alt, i) => ({
-    key: `${alt.variantId}-${alt.turnIslandId}`,
+  /**
+   * Die wählbaren Alternativen — EINE Ableitung für den Chip und die Legende,
+   * damit beide dieselbe Reihenfolge, Farbe und Bezeichnung nennen. Der
+   * Listenplatz steht im Schlüssel: zwei Alternativen können denselben
+   * Wendepunkt derselben Variante haben.
+   */
+  const altChoices: AltChoice[] = assessment.alternatives.map((alt, i) => ({
+    key: `${i}-${alt.variantId}-${alt.turnIslandId}`,
     color: altRouteColor(i),
-    label: `Wendepunkt ${islandName(alt.turnIslandId)} · ${
-      alt.stages.filter((s) => s.kind === 'stage').length
-    } Etappen`,
+    turnName: islandName(alt.turnIslandId),
+    stageCount: alt.stages.filter((s) => s.kind === 'stage').length,
+  }));
+
+  /** Legenden-Zeilen der Alternativen — Identität bleibt benannt (VERIFY 3). */
+  const legendAlternatives = altChoices.map((choice, i) => ({
+    key: choice.key,
+    color: choice.color,
+    label: `${i + 1}. Wendepunkt ${choice.turnName} · ${choice.stageCount} Etappen`,
     shown: i === shownAltIndex,
   }));
 
@@ -953,54 +1123,40 @@ export function MapView({
               </Map>
 
               <div className="layer-chips">
-                <button
-                  type="button"
-                  className="layer-chip"
-                  aria-pressed={showWind}
-                  onClick={() => setShowWind((v) => !v)}
-                >
-                  Windfiedern
-                </button>
-                {/* Ein Chip JE Alternative, und immer nur einer gedrückt: der
-                    Chip schaltet nicht eine Ebene an, er tauscht die gezeigte
-                    Route. Erneut antippen holt die Hauptroute zurück. Bei genau
-                    einer Alternative bleibt es beim schlichten "Alternative",
-                    sonst nennt der Chip den Wendepunkt — der Punkt, in dem sich
-                    die Alternativen unterscheiden. */}
-                {assessment.alternatives.map((alt, i) => (
+                <div className="chip-row">
                   <button
-                    key={`${alt.variantId}-${alt.turnIslandId}`}
                     type="button"
                     className="layer-chip"
-                    aria-pressed={shownAltIndex === i}
-                    onClick={() => setShownAltIndex((cur) => (cur === i ? null : i))}
+                    aria-pressed={showWind}
+                    onClick={() => setShowWind((v) => !v)}
                   >
-                    <span
-                      className="chip-dot"
-                      style={{ background: altRouteColor(i) }}
-                      aria-hidden="true"
-                    />
-                    {assessment.alternatives.length === 1
-                      ? 'Alternative'
-                      : `Alt. ${islandName(alt.turnIslandId)}`}
+                    Windfiedern
                   </button>
-                ))}
-                <button
-                  type="button"
-                  className="layer-chip"
-                  aria-pressed={showSeamarks}
-                  onClick={() => setShowSeamarks((v) => !v)}
-                >
-                  Seezeichen
-                </button>
+                  {/* EIN Chip für die Routenwahl statt einer Chip-Reihe: er
+                      nennt die gezeigte Route und öffnet die Liste
+                      (AltRouteMenu). */}
+                  {altChoices.length > 0 && (
+                    <AltRouteMenu
+                      alternatives={altChoices}
+                      shownIndex={shownAltIndex}
+                      onPick={setShownAltIndex}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    className="layer-chip"
+                    aria-pressed={showSeamarks}
+                    onClick={() => setShowSeamarks((v) => !v)}
+                  >
+                    Seezeichen
+                  </button>
+                </div>
                 {/* Keine stille Ersetzung: solange eine Alternative gezeigt
-                    wird, sagt die Karte, dass die Hauptroute fehlt — live, weil
-                    der Wechsel per Chip passiert, ohne dass sich sonst etwas
-                    beschriftet. Leer = kein Kasten (CSS :empty). */}
+                    wird, sagt die Karte in einer Zeile, dass die Hauptroute
+                    fehlt — welche Alternative es ist, steht im Chip daneben.
+                    Leer = kein Kasten (CSS :empty). */}
                 <p className="alt-note" aria-live="polite">
-                  {shownAlt
-                    ? `Hauptroute ausgeblendet — gezeigt wird die Alternative mit Wendepunkt ${islandName(shownAlt.turnIslandId)}. Chip erneut antippen zeigt die Hauptroute.`
-                    : ''}
+                  {shownAlt ? 'Hauptroute ausgeblendet' : ''}
                 </p>
               </div>
               {/* CC-BY-SA verlangt SICHTBARE Attribution, solange die Ebene an

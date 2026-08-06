@@ -1400,3 +1400,27 @@ claude-fable-5 (BMad dev-story)
   Hauptroute ausgeblendet ist; die Legende markiert die gezeigte Zeile mit
   "wird gezeigt". Neu in styles.css: `.layer-chip .chip-dot`,
   `.layer-chips .alt-note` (+ `:empty`). Tests 592 green, build green.
+
+- 2026-08-06 (Feedback Philipp, Nachschärfung): ein Chip je Alternative waren
+  bei sieben Alternativen sieben Chips — auf dem Telefon brachen sie in drei
+  Reihen um und versperrten der Karte die halbe Höhe. Jetzt trägt EIN Chip die
+  Routenwahl (`AltRouteMenu`, Popover-Kontrakt des AvatarMenu: eines zur Zeit,
+  Esc/Backdrop/Auslöser schliessen, Fokus hinein, Fokusfalle, zurück zum
+  Auslöser): geschlossen nennt er die gezeigte Route (Farbpunkt + Wendeinsel,
+  sonst "Alternativen"), geöffnet listet er "Hauptroute" plus die Alternativen
+  als `role="menuitemradio"` mit Ordnungszahl, Wendepunkt und Etappenzahl — die
+  Ordnungszahl trennt Alternativen mit gleichem Wendepunkt, deren Farben sich ab
+  der vierten wiederholen. Der Auslöser ist kein Umschalter mehr (kein
+  aria-pressed, `.layer-chip.active` statt Akzent-Tint: Farbe ist hier
+  Identität, nicht Zustand). Chips sind feiner: sichtbar 30px statt 44px, die
+  44px Tippfläche kommt unsichtbar über `.layer-chip::after` (inset -7px 0,
+  darum Zeilenabstand `--space-4` in `.chip-row`) — der Chipblock ist auf dem
+  Telefon von ~160px auf ~60px Höhe geschrumpft (mit Hinweiszeile), 30px ohne.
+  Der Hinweis ist auf "Hauptroute ausgeblendet" gekürzt (10,5px, eigene Zeile
+  unter der Chip-Reihe, `:empty` = kein Kasten); welche Alternative gilt, sagt
+  der Chip daneben. Legende und Chip-Menü teilen eine Ableitung (`altChoices`),
+  damit Reihenfolge, Farbe und Bezeichnung identisch sind. Neu in styles.css:
+  `.chip-row`, `.alt-menu` (+ `.am-dot`/`.am-label`/`.am-meta`). Geometrie mit
+  headless Chromium gegen die echte styles.css geprüft (Chip 30px sichtbar,
+  Treffer 6px darüber/darunter, Menü 246×328 bei 390px Viewport). Tests 592
+  green, build green.
