@@ -30,6 +30,7 @@
 import type { PlanningSnapshot, PointForecast } from './schema/snapshot.ts';
 import { normDeg } from './geo.ts';
 import { deadlineFrame, legWindow, nightWindow } from './time.ts';
+import { departureHourChoices } from './scoring.ts';
 
 const HOUR_MS = 3600_000;
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -210,7 +211,13 @@ function targetEndMs(snapshot: PlanningSnapshot): number {
     params.nightStartHourAthens,
     params.nightEndHourAthens,
   ).endMs;
-  const leg = legWindow(params.tripStartDate, lastDay, params.departureHourAthens).endMs;
+  // Die SPÄTESTE Abfahrt, die dieser Tag hergeben kann — nicht die
+  // Standardstunde: seit der Default die Abfahrtsempfehlung ist, fährt ein Tag
+  // auch mal um 12:00 los (an Törntag 1 sogar um 17:00). Mit der Standardstunde
+  // gerechnet endete die Achse dann vor dem Ende des letzten Schlags, und der
+  // fiele grundlos auf 'unbewertet'.
+  const spaeteste = Math.max(...departureHourChoices(lastDay));
+  const leg = legWindow(params.tripStartDate, lastDay, spaeteste).endMs;
   return Math.max(night, leg) + HOUR_MS;
 }
 

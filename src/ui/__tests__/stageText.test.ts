@@ -104,7 +104,8 @@ function snapshotWithJump(): PlanningSnapshot {
         makeStage(2, ['paros--sifnos'], 'sifnos'),
         makeHarbourDay(3, 'sifnos'),
       ]),
-      departureHourOverride: null,
+      departureHourByDay: {},
+      empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
     },
   });

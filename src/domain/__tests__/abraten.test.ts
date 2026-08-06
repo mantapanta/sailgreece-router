@@ -126,7 +126,8 @@ function revier(
         placeId: athen.id,
       },
       plan: null,
-      departureHourOverride: null,
+      departureHourByDay: {},
+      empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
     },
   });

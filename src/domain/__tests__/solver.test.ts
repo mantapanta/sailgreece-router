@@ -140,7 +140,8 @@ function roundTripSnapshot(
         placeId: base.id,
       },
       plan: null,
-      departureHourOverride: null,
+      departureHourByDay: {},
+      empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
     },
   });
@@ -782,7 +783,7 @@ describe('solver — umgedrehte Heimweg-Etappen sind auflösbar', () => {
       trip: {
         currentDay: 1,
         position: { source: 'manual', lat: athen.coordinates.lat, lon: athen.coordinates.lon, placeId: athen.id },
-        plan: null, departureHourOverride: null, stopHoursByDay: {},
+        plan: null, departureHourByDay: {}, empfohleneAbfahrtByDay: {}, stopHoursByDay: {},
       },
     });
     snap.params = {
