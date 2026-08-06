@@ -105,6 +105,17 @@ const MAPS_MISSING = MAPS_ENV.ok ? '' : MAPS_ENV.missing.join(', ');
 function WindBasis({ leg }: { leg: LegAssessment }) {
   if (leg.avgTwsKn === null) return null;
   const worstCase = leg.breakdown.some((h) => h.worstCase);
+  /**
+   * KREUZEN GEHÖRT IN DIE ÜBERSCHRIFT, nicht in die Tabelle darunter.
+   *
+   * "22° TWA · gegenan" hat gelesen wie ein anliegender Kurs — dabei kann das
+   * Schiff 22° gar nicht segeln (params.beatTwaDeg). Der Winkel, der wirklich
+   * gesegelt wird, steht deshalb daneben, und die Kreuz-Stunden mit ihrem
+   * Umweg stehen bei der Fahrt: das ist die Zeit, die die Etappe zusätzlich
+   * kostet. Alle Werte kommen fertig aus der Bewertung (AD-2).
+   */
+  const kreuzStunde = leg.breakdown.find((h) => h.kreuzen);
+  const kreuzt = leg.kreuzHours !== null && leg.kreuzHours > 0;
   return (
     <div className="wind-basis">
       <div className="wind-basis-row">
@@ -125,6 +136,21 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
             <dt>Kurs zum Wind (Ø)</dt>
             <dd>
               {formatDeg(leg.avgTwaDeg)} TWA · {pointOfSail(leg.avgTwaDeg)}
+              {kreuzt && kreuzStunde && (
+                <>
+                  {' · '}
+                  <strong>
+                    Kreuzen ({formatDeg(kreuzStunde.sailedTwaDeg)} am Wind)
+                  </strong>
+                  {leg.wenden !== null && leg.wenden > 0 && (
+                    <>
+                      {' · '}
+                      {leg.wenden} {leg.wenden === 1 ? 'Wende' : 'Wenden'} à{' '}
+                      {formatDeg(2 * kreuzStunde.sailedTwaDeg)}
+                    </>
+                  )}
+                </>
+              )}
             </dd>
           </div>
           <div>
@@ -138,6 +164,14 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
                   Motor
                 </>
               )}
+              {kreuzt && (
+                <>
+                  {' · '}
+                  {formatHours(leg.kreuzHours!)} davon Kreuzschläge
+                  {leg.kreuzExtraNm !== null && leg.kreuzExtraNm > 0 &&
+                    ` (+${leg.kreuzExtraNm.toFixed(1).replace('.', ',')} sm durchs Wasser)`}
+                </>
+              )}
             </dd>
           </div>
         </dl>
@@ -148,6 +182,21 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
         Winkel zwischen anliegendem Kurs und Wind: 0° von vorn, 180° von
         achtern. Maßgeblich für die Ampel ist die schlechteste Stunde, nicht der
         Durchschnitt.
+        {kreuzt && kreuzStunde && (
+          <>
+            {' '}
+            Liegt der Kurs enger am Wind als{' '}
+            {formatDeg(kreuzStunde.sailedTwaDeg)}, wird er nicht angelegen:
+            gesegelt wird ein Schlag auf dem einen Bug mit{' '}
+            {formatDeg(kreuzStunde.sailedTwaDeg)} zum Wind, dann gewendet (
+            {formatDeg(2 * kreuzStunde.sailedTwaDeg)} Kursänderung) und wieder{' '}
+            {formatDeg(kreuzStunde.sailedTwaDeg)} — Zickzack statt direkt. Die
+            Fahrt in der Tabelle ist die auf der Ideallinie; durchs Wasser läuft
+            das Boot schneller und weiter. Die gestrichelte Linie auf der Karte
+            zeigt den Zickzack als Skizze — wo wirklich gewendet wird,
+            entscheiden Dreher und Welle.
+          </>
+        )}
         {worstCase &&
           ' Stunden jenseits des Horizonts rechnen gegen den Meltemi-Worst-Case.'}
       </details>
@@ -181,12 +230,14 @@ function Breakdown({
   }
   const sailed = hours.filter((h) => !h.motoring).length;
   const motored = hours.length - sailed;
+  const gekreuzt = hours.filter((h) => h.kreuzen).length;
   return (
     <div className="breakdown">
       {hours.length > 0 && (
         <p className="beschreibung">
           {hours.length} simulierte Stunden · {sailed} unter Segeln, {motored} unter
           Motor
+          {gekreuzt > 0 && ` · ${gekreuzt} davon gekreuzt`}
           {hours.some((h) => h.worstCase) && ' · Fernbereich gegen Meltemi-Worst-Case'}
         </p>
       )}
@@ -230,13 +281,19 @@ function Breakdown({
                   <td data-label="Stärke">{formatKn(p.segment.twsKn)}</td>
                   <td
                     data-label="TWA"
-                    title="Wahrer Windeinfallswinkel: 0° von vorn, 180° von achtern"
+                    title={
+                      p.segment.kreuzen
+                        ? 'Kurs liegt enger am Wind als das Schiff segeln kann — gerechnet mit Kreuzschlägen'
+                        : 'Wahrer Windeinfallswinkel: 0° von vorn, 180° von achtern'
+                    }
                   >
-                    {formatDeg(p.segment.twaDeg)} {pointOfSail(p.segment.twaDeg)}
+                    {formatDeg(p.segment.twaDeg)}{' '}
+                    {p.segment.kreuzen ? 'Kreuzen' : pointOfSail(p.segment.twaDeg)}
                   </td>
                   <td data-label="Fahrt">
                     {p.segment.speedKn.toFixed(1)} kn
                     {p.segment.motoring ? ' (Motor)' : ''}
+                    {p.segment.kreuzen ? ' (Kurs)' : ''}
                   </td>
                 </>
               ) : (
@@ -791,6 +848,11 @@ function StageCard({
           {mapId ? (
             <StageMap
               points={points}
+              // Fertig gerechnet aus der Bewertung (AD-2) — die Karte legt
+              // keine Kurse, sie zeichnet die gelegten.
+              kreuzTracks={stage.legs.map((l) =>
+                l.kreuzTrack.map((c) => ({ lat: c.lat, lng: c.lon })),
+              )}
               ampel={stage.ampel}
               mapId={mapId}
               onOpenPlace={onOpenPlace}

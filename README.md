@@ -348,6 +348,60 @@ node seeding/tools/seaRouteLegs.ts --dry-run   # Etappenkurse gegen die neue Mas
 `src/domain/__tests__/libraryGeometry.test.ts` hält den Zustand fest: kein
 Wegpunkt an Land, kein gespeicherter Kurs über Land, keine Route mit Sprung.
 
+## Ein Boot segelt keine 22 Grad am Wind
+
+Santorin → Folegandros stand mit „22° TWA · gegenan, 6,5 kn, 3,5 h Segeln" in
+der Tagesansicht. Das ist kein Kurs, das ist eine Behauptung: bei 22° zum Wind
+steht das Vorsegel back. Das Schiff segelt höchstens `beatTwaDeg` = **50° TWA**
+(Skipper 2026-08-06); alles darunter wird **gekreuzt**.
+
+Gerechnet wird das in `src/domain/polar.ts` (`courseSpeedKn` / `kreuzFactor`):
+gesegelt wird bei 50°, und auf der Ideallinie kommt davon
+
+```
+v_kurs = v(50°) · cos(50°) / cos(TWA)
+```
+
+an — bei 22° also 69 %, umgekehrt 1,44 sm durchs Wasser je Seemeile Kurs. Die
+vorige Faltung `cos(50° − TWA)` hatte denselben Fall um rund ein Viertel zu gut
+gerechnet, weshalb eine Kreuz-Etappe fast so schnell aussah wie ein anliegender
+Am-Wind-Kurs.
+
+Gefahren wird dabei kein enger Kurs, sondern ein **Zickzack**: ein Schlag auf
+dem einen Bug mit 50° zum Wind, wenden — 100° Kursänderung —, wieder 50° auf dem
+anderen. `src/domain/kreuz.ts` legt diese Schläge: aus Kurs C, Wind aus W und
+δ = C − W folgen die beiden Bugs auf W ± 50° und ihre Längen
+
+```
+l_A = D · sin(50° + δ) / sin(100°)     l_B = D · sin(50° − δ) / sin(100°)
+```
+
+deren Summe genau `D · cos(δ) / cos(50°)` ist — der Kehrwert des Kreuz-Faktors.
+Zeit und Gestalt sagen dasselbe, an zwei Stellen; ein Test hält das fest. Der
+lange Schlag kommt zuerst (näher am Kurs), die Schlaglänge kommt aus
+`kreuzSchlagNm` (Default 5 sm), und jeder Zickzack wird gegen die Landmaske
+geprüft: passt er nicht, wird halbiert, und wenn er dann immer noch an Land
+läuft, wird **nichts** gezeichnet statt einer Linie über Land.
+
+Sichtbar wird das überall, wo die Etappe von sich erzählt: die Bewertung führt
+`kreuzHours`, `kreuzExtraNm`, `wenden` und den `kreuzTrack`, jede simulierte
+Stunde trägt `kreuzen`, `sailedTwaDeg` und die Fahrt durchs Wasser. Die
+Tagesansicht schreibt „Kreuzen (50° am Wind) · 6 Wenden à 100°" statt „gegenan",
+und die Tageskarte legt den Zickzack gestrichelt über die Ideallinie — als
+Skizze des Umwegs, nicht als Wendeanweisung: wo wirklich gewendet wird,
+entscheiden Dreher und Welle.
+
+Vermieden wird Kreuzen an zwei Stellen — beide raten ab, keine verbietet:
+
+- **Ampel**: mehr als `kreuzGelbAbStunden` (Default 0,5 h) Kreuzschläge machen
+  die Etappe gelb, mit Begründung. Gelb heisst hier nicht „gefährlich", sondern
+  „nicht der Törn, der gewollt ist"; rot bleibt der FR16-Fall (Aufkreuzen über
+  25 kn), und nur der zählt als Sicherheitsverletzung.
+- **Rangfolge**: `PlanMetrics.kreuzTenths` ist Kriterium 7 in `preferred`
+  (`src/domain/solver.ts`) — unter sonst gleichen Plänen gewinnt der, der seine
+  Ziele anliegen kann. Bewusst UNTER Reichweite und Inselvielfalt: Kreuzen ist
+  ein Preis, kein Ausschluss.
+
 ## Attribution
 
 - Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0)
