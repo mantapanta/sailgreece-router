@@ -24,6 +24,34 @@ import type { Params } from './params.ts';
  */
 export type DataBasis = 'forecast' | 'annahme';
 
+/**
+ * WOHER DIE ZAHLEN KOMMEN — je Art (Wind, Wellen) das Nah/Fern-Paar.
+ *
+ * Bewusst NICHT je Stunde und je Ort: das wäre 233 Orte × ~240 Stunden für eine
+ * Anzeige, und `PointForecast` müsste durch persistence.ts und zwei Dutzend
+ * Fixtures mitwachsen. Eine Reichweite je Art ist alles, was die Fusszeile und
+ * das Annahme-Detail brauchen.
+ */
+export interface KindProvenance {
+  /** Fernfeld-Modell-Id — besitzt die Achse und den Horizont. */
+  far: string;
+  /** Nahfeld-Id, oder null: aus, Abruf gescheitert, oder nichts beigetragen. */
+  near: string | null;
+  /**
+   * 1 + der letzte Achsindex, den das Nahfeld getragen hat (Maximum über alle
+   * Orte). Orte am Gitterrand können weniger Stunden haben — das ist die
+   * Reichweite, keine Zusage.
+   */
+  nearReachHours: number;
+  farRunIso: string | null;
+  nearRunIso: string | null;
+}
+
+export interface ForecastProvenance {
+  wind: KindProvenance;
+  wave: KindProvenance;
+}
+
 /** Hourly forecast series for one location. Missing hours are null. */
 export interface PointForecast {
   windKn: (number | null)[];
@@ -93,6 +121,11 @@ export interface PlanningSnapshot {
   /** Model run initialisation time, if the API exposes it. */
   modelRunIso: string | null;
   model: string;
+  /**
+   * Nah/Fern-Herkunft je Art. OPTIONAL — deshalb brauchen die Fixtures und ein
+   * noch im Speicher liegendes Bundle von vor der Umstellung keine Änderung.
+   */
+  provenance?: ForecastProvenance;
   /** Normative UTC hour axis: ISO strings, hourly, ascending. */
   times: string[];
   /**
@@ -639,6 +672,8 @@ export interface Assessment {
    * "assumption from day X" is traceable to the series that actually ran out.
    */
   waveHorizonIso: string | null;
+  /** Nah/Fern-Herkunft je Art — durchgereicht aus dem Snapshot. */
+  provenance?: ForecastProvenance;
   /**
    * First trip day whose assessment rests wholly or partly on the assumption —
    * either because hours were extrapolated or because the day lies beyond

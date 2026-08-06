@@ -43,6 +43,9 @@
     "baseIslandId": "athen",
     "basePlaceId": "athen-alimos",
     "forecastModel": "ecmwf_ifs025",
+    "forecastModelNear": "dwd_icon_eu",
+    "waveModel": "best_match",
+    "waveModelNear": "ewam",
     "forecastDays": 10
   }
 }

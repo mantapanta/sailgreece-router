@@ -2,16 +2,36 @@
  * AD-3 — snapshot builder (facts only, no judgements: AD-10).
  * ONE query family: the normative location set is ALL curated places (key =
  * place id) PLUS the leg waypoints of the route library (key = leg:<id>:<n>).
- * Forecast API (wind, one base model — default ECMWF) + Marine API (waves).
- * Hour axis is normatively UTC; hours the model does not cover are null
- * (marine horizon < weather horizon!). Directions are "coming from" (AD-6),
+ *
+ * NAHFELD/FERNFELD-HYBRID: je Art (Wind, Wellen) werden ZWEI Modelle abgerufen —
+ * ein hochauflösendes mit kurzem Horizont und ein globales, das den Horizont
+ * trägt. Die Verschmelzung macht domain/forecastMerge.ts (pur, dort steht auch,
+ * warum die Nahtstelle ein harter Schnitt ist). Ein leeres `*Near` schaltet den
+ * Hybrid ab und liefert bitgleich das Verhalten von vorher.
+ *
+ * Hour axis is normatively UTC and comes ALWAYS from the FAR wind model — es ist
+ * die längste Achse. Nie vom Nahfeld: eine Achse, die manchmal aus einem
+ * 5-Tage-Modell käme, würde die Abdeckung des Törns stumm halbieren.
+ * Hours no model covers are null. Directions are "coming from" (AD-6),
  * speeds in kn, wave heights in m.
  */
 
-import type { Library, PointForecast } from '../domain/schema/snapshot.ts';
+import type { Library, PointForecast, ForecastProvenance, KindProvenance } from '../domain/schema/snapshot.ts';
 import type { Params } from '../domain/schema/params.ts';
 import type { Coordinates } from '../domain/schema/common.ts';
 import { legWaypointKey } from '../domain/scoring.ts';
+import {
+  mergeNearFar,
+  type MergeGroup,
+  type TimedSeries,
+} from '../domain/forecastMerge.ts';
+import {
+  composeModelLabel,
+  forecastModelIds,
+  forecastModelInfo,
+  nearRequestDays,
+  type ForecastKind,
+} from '../domain/schema/models.ts';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
@@ -31,6 +51,7 @@ export interface ForecastBundle {
   fetchedAtIso: string;
   modelRunIso: string | null;
   model: string;
+  provenance: ForecastProvenance;
   /** Normative UTC hour axis (ISO strings). */
   times: string[];
   forecast: Record<string, PointForecast>;
@@ -84,19 +105,41 @@ function seriesOf(
   return out;
 }
 
-async function fetchJson(url: string, endpoint: 'forecast' | 'marine'): Promise<unknown> {
+/**
+ * Eine Antwort in die Domänenform bringen: eigene Achse + Serien. Das ist der
+ * einzige Ort, an dem Open-Meteos JSON-Gestalt (`hourly.<name>`) gelesen wird —
+ * die Umreihung selbst macht danach domain/forecastMerge.ts.
+ */
+function toTimedSeries(
+  resp: HourlyResponse | undefined,
+  names: readonly string[],
+): TimedSeries | null {
+  if (!resp) return null;
+  const rawTimes = (resp.hourly?.['time'] as string[] | undefined) ?? [];
+  if (rawTimes.length === 0) return null;
+  const times = rawTimes.map(toIsoUtc);
+  const values: Record<string, (number | null)[]> = {};
+  for (const n of names) values[n] = seriesOf(resp, n, times.length);
+  return { times, values };
+}
+
+async function fetchJson(
+  url: string,
+  endpoint: 'forecast' | 'marine',
+  model: string,
+): Promise<unknown> {
   let resp: Response;
   try {
     resp = await fetch(url);
   } catch (e) {
     throw new OpenMeteoError(
-      `Open-Meteo ${endpoint} nicht erreichbar: ${String(e)}`,
+      `Open-Meteo ${endpoint} (${model}) nicht erreichbar: ${String(e)}`,
       endpoint,
     );
   }
   if (!resp.ok) {
     throw new OpenMeteoError(
-      `Open-Meteo ${endpoint} antwortet mit HTTP ${resp.status}`,
+      `Open-Meteo ${endpoint} (${model}) antwortet mit HTTP ${resp.status}`,
       endpoint,
     );
   }
@@ -107,7 +150,7 @@ async function fetchJson(url: string, endpoint: 'forecast' | 'marine'): Promise<
     return await resp.json();
   } catch {
     throw new OpenMeteoError(
-      `Open-Meteo ${endpoint} liefert kein JSON (Captive Portal / Proxy?)`,
+      `Open-Meteo ${endpoint} (${model}) liefert kein JSON (Captive Portal / Proxy?)`,
       endpoint,
     );
   }
@@ -118,11 +161,17 @@ async function fetchJson(url: string, endpoint: 'forecast' | 'marine'): Promise<
  * Open-Meteo meta endpoint. Failure only degrades the FR13 model-run stamp
  * to "unbekannt"; the forecast data itself is unaffected (its errors surface
  * separately via fetchJson).
+ *
+ * Modelle ohne `metaPath` (alle Wellenmodelle) werden GAR NICHT abgerufen: der
+ * Meta-Pfad liegt auf dem Forecast-Host, die Marine-Ids sind unpräfigierte
+ * Aliase. Das wäre ein garantierter 404 je Zyklus.
  */
 async function fetchModelRunIso(model: string): Promise<string | null> {
+  const path = forecastModelInfo(model)?.metaPath ?? null;
+  if (!path) return null;
   try {
     const resp = await fetch(
-      `https://api.open-meteo.com/data/${encodeURIComponent(model)}/static/meta.json`,
+      `https://api.open-meteo.com/data/${encodeURIComponent(path)}/static/meta.json`,
     );
     if (!resp.ok) return null;
     const meta = (await resp.json()) as { last_run_initialisation_time?: number };
@@ -135,6 +184,42 @@ async function fetchModelRunIso(model: string): Promise<string | null> {
   }
 }
 
+const WIND_NAMES = ['wind_speed_10m', 'wind_direction_10m'] as const;
+const WAVE_NAMES = ['wave_height', 'wave_direction', 'wave_period'] as const;
+
+/**
+ * Die Tore der Verschmelzung. Wind: Fahrt UND Richtung müssen zusammen aus einem
+ * Modell kommen. Wellen: Höhe und Richtung entscheiden, die Periode wird
+ * mitgetragen — sie bewertet nichts (persistence.ts), darf also keine sonst gute
+ * Nah-Stunde verwerfen. Die Torpaare sind exakt die, die
+ * windHorizonIndex/waveHorizonIndex als "echte Daten" lesen.
+ */
+const WIND_GROUP: MergeGroup = { gate: [...WIND_NAMES], carry: [] };
+const WAVE_GROUP: MergeGroup = {
+  gate: ['wave_height', 'wave_direction'],
+  carry: ['wave_period'],
+};
+
+/** Antworten auf eine Liste je Ort normalisieren (Open-Meteo: Array bei n>1). */
+function asList(raw: unknown): HourlyResponse[] {
+  return Array.isArray(raw) ? (raw as HourlyResponse[]) : [raw as HourlyResponse];
+}
+
+/**
+ * Unbekannte Modell-Ids scheitern HIER, nicht im Zod-Schema: ein Schemafehler
+ * verwirft über parseTolerant das ganze Parameter-Dokument und damit stumm die
+ * gesamte Abstimmung. Hier ist der Fehler eingegrenzt, im Fehlerpanel sichtbar
+ * und benennt die Id — alle anderen Parameter wirken weiter.
+ */
+function requireModel(field: string, id: string, kind: ForecastKind): void {
+  if (forecastModelInfo(id)) return;
+  throw new OpenMeteoError(
+    `${field}: unbekanntes Modell '${id}'. Erlaubt sind: ${forecastModelIds(kind).join(', ')}. ` +
+      `Ein Tippfehler liefert sonst einen leeren Forecast, weil Open-Meteo eine unbekannte Modell-Id nicht als Fehler quittiert.`,
+    kind === 'wind' ? 'forecast' : 'marine',
+  );
+}
+
 /**
  * Fetch wind + wave forecast for the whole normative location set in one
  * query family. `now` is injected for the retrieval timestamp (FR13).
@@ -144,12 +229,44 @@ export async function fetchForecastBundle(
   params: Params,
   now: () => Date = () => new Date(),
 ): Promise<ForecastBundle> {
+  const {
+    forecastModel: windFar,
+    forecastModelNear: windNear,
+    waveModel: waveFar,
+    waveModelNear: waveNear,
+  } = params;
+
+  requireModel('forecastModel', windFar, 'wind');
+  requireModel('waveModel', waveFar, 'wave');
+  if (windNear !== '') requireModel('forecastModelNear', windNear, 'wind');
+  if (waveNear !== '') requireModel('waveModelNear', waveNear, 'wave');
+
+  const emptyProvenance = (): ForecastProvenance => ({
+    wind: {
+      far: windFar,
+      near: windNear === '' ? null : windNear,
+      nearReachHours: 0,
+      farRunIso: null,
+      nearRunIso: null,
+    },
+    wave: {
+      far: waveFar,
+      near: waveNear === '' ? null : waveNear,
+      nearReachHours: 0,
+      farRunIso: null,
+      nearRunIso: null,
+    },
+  });
+
   const locations = collectLocations(library);
   if (locations.length === 0) {
     return {
       fetchedAtIso: now().toISOString(),
       modelRunIso: null,
-      model: params.forecastModel,
+      // Fernfeld-Label: es wurde nichts abgerufen, also wird auch keine
+      // Nahfeld-Auflösung behauptet (dieselbe Regel wie unten bei reach === 0).
+      model: composeModelLabel(null, windFar),
+      provenance: emptyProvenance(),
       times: [],
       forecast: {},
     };
@@ -162,111 +279,142 @@ export async function fetchForecastBundle(
   // ist toter Ballast (NFR0). wave_period bleibt: Wellenhöhe plus Periode
   // beschreiben den Schwell-Charakter einer Bucht und sind für die Platz-Ampel
   // fachlich anschlussfähig.
-  const forecastUrl =
+  const windUrl = (model: string, days: number): string =>
     `${FORECAST_URL}?latitude=${lats}&longitude=${lons}` +
-    `&hourly=wind_speed_10m,wind_direction_10m` +
+    `&hourly=${WIND_NAMES.join(',')}` +
     `&wind_speed_unit=kn&timezone=UTC&timeformat=iso8601` +
-    `&forecast_days=${params.forecastDays}&models=${encodeURIComponent(params.forecastModel)}`;
-  const marineUrl =
+    `&forecast_days=${days}&models=${encodeURIComponent(model)}`;
+  const waveUrl = (model: string, days: number): string =>
     `${MARINE_URL}?latitude=${lats}&longitude=${lons}` +
-    `&hourly=wave_height,wave_direction,wave_period` +
-    `&timezone=UTC&timeformat=iso8601&forecast_days=${params.forecastDays}`;
+    `&hourly=${WAVE_NAMES.join(',')}` +
+    `&timezone=UTC&timeformat=iso8601` +
+    `&forecast_days=${days}&models=${encodeURIComponent(model)}`;
 
-  const [forecastRaw, marineSettled, modelRunIso] = await Promise.all([
-    fetchJson(forecastUrl, 'forecast'),
+  /**
+   * Eine NAH-Anfrage darf nie ein Fehler werden: sie ist eine Verbesserung, kein
+   * Fundament. Scheitert sie, ist das Ergebnis exakt das Fernfeld — also die
+   * Qualität von vor der Umstellung. Zusammen mit dem Tor der Verschmelzung
+   * (Teilerfolg wird ebenso ignoriert) ist die Degradation lückenlos.
+   */
+  const optional = (p: Promise<unknown>, what: string): Promise<unknown | null> =>
+    p.catch((e) => {
+      console.error(`${what} nicht verfügbar — es zählt nur das Fernfeld:`, e);
+      return null;
+    });
+
+  const [
+    windFarRaw,
+    windNearRaw,
+    waveFarSettled,
+    waveNearSettled,
+    windFarRun,
+    windNearRun,
+  ] = await Promise.all([
+    // Das Fernfeld des WINDES ist das einzige Fundament: sein Fehler bleibt
+    // ungefangen und erreicht das Fehlerpanel (unverändert zu vorher).
+    fetchJson(windUrl(windFar, params.forecastDays), 'forecast', windFar),
+    windNear === ''
+      ? Promise.resolve(null)
+      : optional(
+          fetchJson(
+            windUrl(windNear, nearRequestDays(windNear, params.forecastDays)),
+            'forecast',
+            windNear,
+          ),
+          `Nahfeld-Wind (${windNear})`,
+        ),
     // Marine failure must not kill the wind forecast: waves become null
     // and places show 'unbewertet' contributions instead of a crash.
-    fetchJson(marineUrl, 'marine').catch((e) => {
-      console.error('Marine-API-Fehler — Wellen bleiben unbewertet:', e);
-      return null;
-    }),
-    fetchModelRunIso(params.forecastModel),
+    optional(
+      fetchJson(waveUrl(waveFar, params.forecastDays), 'marine', waveFar),
+      `Wellen (${waveFar})`,
+    ),
+    waveNear === ''
+      ? Promise.resolve(null)
+      : optional(
+          fetchJson(
+            waveUrl(waveNear, nearRequestDays(waveNear, params.forecastDays)),
+            'marine',
+            waveNear,
+          ),
+          `Nahfeld-Wellen (${waveNear})`,
+        ),
+    fetchModelRunIso(windFar),
+    windNear === '' ? Promise.resolve(null) : fetchModelRunIso(windNear),
   ]);
 
-  const forecastList: HourlyResponse[] = Array.isArray(forecastRaw)
-    ? (forecastRaw as HourlyResponse[])
-    : [forecastRaw as HourlyResponse];
-  const marineList: HourlyResponse[] | null = marineSettled
-    ? Array.isArray(marineSettled)
-      ? (marineSettled as HourlyResponse[])
-      : [marineSettled as HourlyResponse]
-    : null;
+  const windFarList = asList(windFarRaw);
+  const windNearList = windNearRaw ? asList(windNearRaw) : null;
+  const waveFarList = waveFarSettled ? asList(waveFarSettled) : null;
+  const waveNearList = waveNearSettled ? asList(waveNearSettled) : null;
 
-  // Normative axis = the wind forecast's hour axis (first location).
-  const rawTimes = (forecastList[0]?.hourly?.['time'] as string[] | undefined) ?? [];
+  // Normative axis = the FAR wind forecast's hour axis (first location).
+  const rawTimes = (windFarList[0]?.hourly?.['time'] as string[] | undefined) ?? [];
   const times = rawTimes.map(toIsoUtc);
 
   const forecast: Record<string, PointForecast> = {};
+  let windReach = 0;
+  let waveReach = 0;
+
   locations.forEach((loc, li) => {
-    const wind = forecastList[li];
-    const marine = marineList?.[li];
+    // Wind: verschmelzen. Die Umreihung auf die normative Achse steckt in
+    // alignToAxis — das ersetzt die frühere per-Ort-Achsprüfung UND die
+    // Marine-Umreihung, die es hier zweimal getrennt gab.
+    const wind = mergeNearFar(
+      times,
+      toTimedSeries(windNearList?.[li], WIND_NAMES),
+      toTimedSeries(windFarList[li], WIND_NAMES),
+      WIND_GROUP,
+    );
+    const wave = mergeNearFar(
+      times,
+      toTimedSeries(waveNearList?.[li], WAVE_NAMES),
+      toTimedSeries(waveFarList?.[li], WAVE_NAMES),
+      WAVE_GROUP,
+    );
+    windReach = Math.max(windReach, wind.nearReachHours);
+    waveReach = Math.max(waveReach, wave.nearReachHours);
 
-    // Per-location axis check: the normative axis comes from location 0. If
-    // THIS location's wind axis deviates (model edge, shorter/offset series),
-    // index mapping would silently shift every hour — remap by timestamp
-    // instead, exactly like the marine series.
-    const ownTimes = (
-      (wind?.hourly?.['time'] as string[] | undefined) ?? []
-    ).map(toIsoUtc);
-    const sameAxis =
-      ownTimes.length === times.length &&
-      ownTimes[0] === times[0] &&
-      ownTimes[ownTimes.length - 1] === times[times.length - 1];
-    const windSeries = (name: string): (number | null)[] => {
-      if (!wind) return new Array(times.length).fill(null);
-      if (sameAxis) return seriesOf(wind, name, times.length);
-      const ownIndex = new Map<string, number>();
-      ownTimes.forEach((t, i) => ownIndex.set(t, i));
-      const raw = seriesOf(wind, name, ownTimes.length);
-      return times.map((t) => {
-        const i = ownIndex.get(t);
-        return i === undefined ? null : (raw[i] ?? null);
-      });
-    };
-    const windKn = windSeries('wind_speed_10m');
-    const windDirDeg = windSeries('wind_direction_10m');
-
-    // Marine responses may use a different (shorter) axis: map by timestamp,
-    // per location (not via location 0's axis).
-    const waveM: (number | null)[] = new Array(times.length).fill(null);
-    const waveDirDeg: (number | null)[] = new Array(times.length).fill(null);
-    const wavePeriodS: (number | null)[] = new Array(times.length).fill(null);
-    if (marine) {
-      const marineTimes = (
-        (marine.hourly?.['time'] as string[] | undefined) ?? []
-      ).map(toIsoUtc);
-      const marineIndex = new Map<string, number>();
-      marineTimes.forEach((t, i) => marineIndex.set(t, i));
-      const mLen = marineTimes.length;
-      const mWave = seriesOf(marine, 'wave_height', mLen);
-      const mDir = seriesOf(marine, 'wave_direction', mLen);
-      const mPer = seriesOf(marine, 'wave_period', mLen);
-      times.forEach((t, i) => {
-        const mi = marineIndex.get(t);
-        if (mi !== undefined) {
-          waveM[i] = mWave[mi] ?? null;
-          waveDirDeg[i] = mDir[mi] ?? null;
-          wavePeriodS[i] = mPer[mi] ?? null;
-        }
-      });
-    }
+    const empty = (): (number | null)[] => new Array(times.length).fill(null);
     // The adapter delivers FACTS only (AD-10): nothing here is assumed. Gaps
     // stay null; filling them is the domain's persistence step.
     forecast[loc.key] = {
-      windKn,
-      windDirDeg,
-      waveM,
-      waveDirDeg,
-      wavePeriodS,
+      windKn: wind.values['wind_speed_10m'] ?? empty(),
+      windDirDeg: wind.values['wind_direction_10m'] ?? empty(),
+      waveM: wave.values['wave_height'] ?? empty(),
+      waveDirDeg: wave.values['wave_direction'] ?? empty(),
+      wavePeriodS: wave.values['wave_period'] ?? empty(),
       windAssumed: new Array<boolean>(times.length).fill(false),
       waveAssumed: new Array<boolean>(times.length).fill(false),
     };
   });
 
+  // Ein Nahfeld, das nichts beigetragen hat, wird als 'aus' berichtet — sonst
+  // behauptete die Fusszeile eine Auflösung, die nicht in den Zahlen steckt.
+  const kind = (
+    far: string,
+    near: string,
+    reach: number,
+    farRun: string | null,
+    nearRun: string | null,
+  ): KindProvenance => ({
+    far,
+    near: near === '' || reach === 0 ? null : near,
+    nearReachHours: reach,
+    farRunIso: farRun,
+    nearRunIso: reach === 0 ? null : nearRun,
+  });
+
+  const provenance: ForecastProvenance = {
+    wind: kind(windFar, windNear, windReach, windFarRun as string | null, windNearRun as string | null),
+    wave: kind(waveFar, waveNear, waveReach, null, null),
+  };
+
   return {
     fetchedAtIso: now().toISOString(),
-    modelRunIso,
-    model: params.forecastModel,
+    modelRunIso: (windFarRun as string | null) ?? null,
+    model: composeModelLabel(provenance.wind.near, windFar),
+    provenance,
     times,
     forecast,
   };

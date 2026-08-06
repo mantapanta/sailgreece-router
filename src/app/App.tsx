@@ -14,6 +14,7 @@ import { DayViewSkeleton } from '../ui/components/DayViewSkeleton.tsx';
 import { MapViewSkeleton } from '../ui/components/MapViewSkeleton.tsx';
 import { staleForecastLabel } from '../ui/dayViewModel.ts';
 import { formatStamp } from '../ui/format.ts';
+import { attributionsFor, forecastModelLabel } from '../domain/schema/models.ts';
 import '../ui/styles.css';
 
 const queryClient = new QueryClient({
@@ -95,6 +96,15 @@ function Shell() {
   const staleLabel = assessment
     ? staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS)
     : null;
+
+  /** Nah/Fern-Herkunft — optional, weil ein Bundle von vor der Umstellung noch
+      im Query-Cache liegen kann. */
+  const prov = assessment?.provenance;
+  const modelAttributions = attributionsFor(
+    [prov?.wind.far, prov?.wind.near, prov?.wave.far, prov?.wave.near].filter(
+      (id): id is string => !!id,
+    ),
+  );
 
   const openPlace = (placeId: string) =>
     setView((v) => ({
@@ -199,8 +209,24 @@ function Shell() {
         </p>
         {detailOpen && (
           <div className="provenance-detail">
-            <p>Modell: {assessment?.model ?? '…'}</p>
+            {/* Zwei Modelle je Art — sonst behauptete "Modell: X" eine
+                Auflösung, die nur die erste Hälfte der Reihe hat. */}
+            <p>Wind Fernfeld: {forecastModelLabel(prov?.wind.far ?? assessment?.model ?? '…')}</p>
             <p>Modelllauf: {formatStamp(assessment?.modelRunIso ?? null)}</p>
+            {prov?.wind.near && (
+              <p>
+                Wind Nahfeld: {forecastModelLabel(prov.wind.near)} · Lauf{' '}
+                {formatStamp(prov.wind.nearRunIso)} · trägt{' '}
+                {prov.wind.nearReachHours} h
+              </p>
+            )}
+            <p>Wellen Fernfeld: {forecastModelLabel(prov?.wave.far ?? '…')}</p>
+            {prov?.wave.near && (
+              <p>
+                Wellen Nahfeld: {forecastModelLabel(prov.wave.near)} · trägt{' '}
+                {prov.wave.nearReachHours} h
+              </p>
+            )}
             <p>Abgerufen: {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}</p>
             <p>Cache-TTL: {Math.round(STALE_TIME_MS / 3_600_000)} h</p>
           </div>
@@ -211,6 +237,12 @@ function Shell() {
             Open-Meteo
           </a>{' '}
           (CC BY 4.0)
+          {/* Namensnennung der AKTIVEN Modelle, aus der Registry gerendert —
+              damit sie nicht auseinanderläuft, wenn das Modell in Firestore
+              umgestellt wird (DWD/GeoNutzV verlangt die Quellenangabe). Die
+              Daten werden unverändert durchgereicht (harter Schnitt, kein
+              Blending), es braucht also keinen "verändert"-Zusatz. */}
+          {modelAttributions.length > 0 && ` · ${modelAttributions.join(' · ')}`}
         </p>
         <p className="footnote">
           Sichere Liegeplätze quellenbasiert kuratiert (Heikell, CruisersWiki u. a.) —
