@@ -1424,3 +1424,22 @@ claude-fable-5 (BMad dev-story)
   headless Chromium gegen die echte styles.css geprüft (Chip 30px sichtbar,
   Treffer 6px darüber/darunter, Menü 246×328 bei 390px Viewport). Tests 592
   green, build green.
+
+- 2026-08-06 (Feedback Philipp, Verknüpfung mit der Heute-Ansicht): die
+  Routenwahl der Karte war gut („mir gefällt die einfache Logik"), endete aber
+  an der Karte — beim Wechsel auf „Heute" war die gewählte Alternative weg,
+  und sie hiess dort ausserdem anders. Jetzt liegt die Wahl im geteilten
+  `routeViewContext` (Index in `assessment.alternatives`, null = Hauptroute,
+  Klemme gegen verschwundene Alternativen im Provider statt in der View), und
+  die Namen kommen aus `ui/altRoutes.ts`: Chip, Menü und Legende nennen die
+  Route so, wie der Optionsraum sie nennt, die Menüzeile trägt darunter
+  Wendepunkt, Etappenzahl und Routen-Konzept (`.am-sub`). Die Etappenliste des
+  Sheets folgt der GEZEIGTEN Route (`displayRouteStages`) — vorher zeichnete
+  die Karte eine Alternative, während die Liste darunter die Hauptroute
+  aufzählte; Kopf und `.alt-lead` sagen, welche Route das ist, woher sie kommt
+  und führen mit „Etappen in der Heute-Ansicht öffnen" dorthin, wo sie sich
+  Tag für Tag lesen lässt (zweiter Weg: die Zeile unter den Chips). Die
+  Legende erklärt zusätzlich, dass es dieselben Routen wie im Optionsraum
+  sind. Neu in styles.css: `.alt-lead` (+ `-name`/`-actions`),
+  `.layer-chips button.alt-note`, `.alt-menu .am-sub`. Tests 641 green,
+  build green.

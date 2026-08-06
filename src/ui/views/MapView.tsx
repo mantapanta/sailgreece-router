@@ -50,9 +50,15 @@ import {
   formatTripRange,
 } from '../format.ts';
 import { islandWithPlace } from '../stageText.ts';
-import { altRouteColor } from '../altRouteColors.ts';
+import {
+  altRouteAt,
+  altRouteViews,
+  KONZEPT_KURZ,
+  type AltRouteView,
+} from '../altRoutes.ts';
 import { staleForecastLabel } from '../dayViewModel.ts';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
+import { useRouteView } from '../../app/routeViewContext.tsx';
 import { resolveMapsEnv } from '../mapsEnv.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
@@ -309,8 +315,12 @@ function LegendPopover({
                 ))}
                 <p className="lg-caption">
                   Eine Alternative ersetzt die Hauptroute im Bild, sie liegt
-                  nicht darüber — sichtbar ist immer genau eine Route.
-                  Übernommen wird in der Tagesansicht.
+                  nicht darüber — sichtbar ist immer genau eine Route. Es sind
+                  dieselben Routen wie im Optionsraum der Heute-Ansicht, unter
+                  demselben Namen: dort stehen Reichweite, Preis und Frist, hier
+                  liegt die Linie. Die gewählte Route bleibt beim Wechsel auf
+                  „Heute" stehen und lässt sich dort Etappe für Etappe ansehen;
+                  übernommen wird sie erst dort.
                 </p>
               </>
             )}
@@ -329,14 +339,6 @@ function LegendPopover({
   );
 }
 
-/** Eine wählbare Route für das Chip-Menü — Hauptroute ist der Index null. */
-type AltChoice = {
-  key: string;
-  color: string;
-  turnName: string;
-  stageCount: number;
-};
-
 /**
  * Routenwahl der Karte hinter EINEM Chip (Feedback 2026-08-06, zweiter
  * Durchgang): ein Chip je Alternative waren bei sieben Alternativen sieben
@@ -348,13 +350,19 @@ type AltChoice = {
  * Esc/Backdrop/Auslöser schliessen, Fokus geht hinein und zurück zum Auslöser.
  * Der Auslöser ist KEIN Umschalter (kein aria-pressed) — er öffnet ein Menü;
  * welche Route gerade gilt, sagen sein Name und die aria-checked-Zeile.
+ *
+ * Die Zeilen tragen den NAMEN der Route aus dem Optionsraum und darunter ihre
+ * Herkunft (altRoutes.ts). Vorher stand hier „3. Wendepunkt Amorgos" und im
+ * Optionsraum „Verlängerung Amorgos" — dieselbe Route unter zwei Namen, und
+ * damit blieb unsichtbar, dass die Alternativen die Pläne der Optionen SIND
+ * (Skipper 2026-08-06).
  */
 function AltRouteMenu({
   alternatives,
   shownIndex,
   onPick,
 }: {
-  alternatives: AltChoice[];
+  alternatives: AltRouteView[];
   shownIndex: number | null;
   onPick: (index: number | null) => void;
 }) {
@@ -409,7 +417,7 @@ function AltRouteMenu({
         aria-expanded={open}
         aria-label={
           shown
-            ? `Gezeigt: Alternative über ${shown.turnName} — andere Route wählen`
+            ? `Gezeigt: ${shown.name} — andere Route wählen`
             : 'Alternative statt der Hauptroute zeigen'
         }
         onClick={() => (open ? close() : setOpen(true))}
@@ -421,9 +429,13 @@ function AltRouteMenu({
             aria-hidden="true"
           />
         )}
-        <span aria-hidden="true">
+        {/* Der volle Name kann lang sein (er kommt aus dem Optionsraum): der
+            Chip kürzt ihn mit Ellipse, damit die Chip-Reihe nicht umbricht und
+            das Menü darunter im Bild bleibt. Ungekürzt steht er im Menü, in der
+            Etappenliste und im aria-label des Auslösers. */}
+        <span className="chip-label" aria-hidden="true">
           {shown
-            ? shown.turnName
+            ? shown.name
             : alternatives.length === 1
               ? 'Alternative'
               : 'Alternativen'}
@@ -456,14 +468,14 @@ function AltRouteMenu({
               />
               <span className="am-label">Hauptroute</span>
             </button>
-            {alternatives.map((alt, i) => (
+            {alternatives.map((alt) => (
               <button
-                key={alt.key}
+                key={`${alt.index}-${alt.plan.variantId}-${alt.turnIslandId}`}
                 type="button"
                 role="menuitemradio"
-                aria-checked={shownIndex === i}
+                aria-checked={shownIndex === alt.index}
                 onClick={() => {
-                  onPick(i);
+                  onPick(alt.index);
                   close();
                 }}
               >
@@ -472,13 +484,16 @@ function AltRouteMenu({
                   style={{ background: alt.color }}
                   aria-hidden="true"
                 />
-                {/* Die Ordnungszahl trennt Alternativen, die denselben
-                    Wendepunkt haben — die Farben wiederholen sich ab der
-                    vierten (altRouteColors.ts), der Platz in der Liste nicht. */}
+                {/* Name UND Herkunft: der Name ist der des Optionsraums, die
+                    zweite Zeile sagt, aus welcher Option und welchem
+                    Routen-Konzept die Route stammt. */}
                 <span className="am-label">
-                  {i + 1}. Wendepunkt {alt.turnName}
+                  {alt.name}
+                  <span className="am-sub">
+                    Wendepunkt {alt.turnName} · {alt.stageCount} Etappen
+                    {alt.option && ` · ${KONZEPT_KURZ[alt.option.konzeptId]}`}
+                  </span>
                 </span>
-                <span className="am-meta">{alt.stageCount} Etappen</span>
               </button>
             ))}
           </div>
@@ -492,10 +507,17 @@ export function MapView({
   snapshot,
   assessment,
   onOpenPlace,
+  onOpenDay,
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
   onOpenPlace: (placeId: string) => void;
+  /**
+   * In die Tagesansicht wechseln — die gewählte Route bleibt dabei stehen
+   * (routeViewContext) und wird dort Tag für Tag aufgeschlagen. Optional,
+   * damit die Karte auch ohne Navigationsrahmen rendert (Tests, Storybook).
+   */
+  onOpenDay?: () => void;
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
@@ -522,8 +544,7 @@ export function MapView({
   /**
    * FEEDBACK 2026-08-05: die Alternativ-Routen waren auf der Karte unsichtbar.
    * Jetzt sind sie EINBLENDBAR — gestrichelt, jede in ihrer Farbe (dieselbe
-   * wie in der Vorschau der Tagesansicht, altRouteColors.ts). Die Identität je
-   * Alternative steht in der Legende, inspiziert wird in der Tagesansicht.
+   * wie in der Vorschau der Tagesansicht, altRouteColors.ts).
    *
    * FEEDBACK 2026-08-06: sie lagen ÜBER der Hauptroute — zwei Routen im selben
    * Bild, und wo sie sich decken, war nicht mehr zu sehen, welche Linie welche
@@ -531,8 +552,14 @@ export function MapView({
    * genau EINE Route — die Hauptroute, oder STATT ihrer eine Alternative.
    * Darum ein Index und kein Boolean: bei mehreren Alternativen wäre "alle an"
    * dasselbe Übereinanderlegen, nur zwischen den Alternativen.
+   *
+   * FEEDBACK 2026-08-06 (zweiter Durchgang): die Wahl liegt nicht mehr LOKAL in
+   * dieser View, sondern im geteilten routeViewContext — beim Wechsel auf
+   * „Heute" bleibt dieselbe Route gewählt und wird dort Etappe für Etappe
+   * aufgeschlagen. Die Klemme gegen verschwundene Alternativen sitzt im
+   * Provider, hier wird nur noch gelesen.
    */
-  const [shownAltIndex, setShownAltIndex] = useState<number | null>(null);
+  const { shownAltIndex, showAlt } = useRouteView();
   /** Touch-Zweischritt (AC 6): erster Tipp "bewaffnet" den Pin (Mini-Chip). */
   const [armedPlaceId, setArmedPlaceId] = useState<string | null>(null);
   /** Gesetzt in onPointerDown, gelesen im onClick — unterscheidet Touch. */
@@ -546,45 +573,44 @@ export function MapView({
   );
 
   const main = assessment.mainRoute;
-  const sailingStages = useMemo(
-    () => (main?.stages ?? []).filter((s) => s.kind === 'stage'),
-    [main],
-  );
+
+  const islandName = (id: string) =>
+    snapshot.library.islands.find((i) => i.id === id)?.name ?? id;
 
   /**
-   * Die eingeblendete Alternative — oder null für die Hauptroute. Der Index
-   * wird beim Lesen geprüft: jedes neue Assessment rechnet die Alternativen neu
-   * und kann weniger davon liefern; ein Index ins Leere würde die Karte ohne
-   * Route zurücklassen, statt auf die Hauptroute zurückzufallen.
+   * Die wählbaren Alternativen mit ihrer EINEN Identität (altRoutes.ts) —
+   * derselbe Name, den der Optionsraum und die Tagesansicht verwenden.
    */
-  const shownAlt =
-    shownAltIndex === null ? null : (assessment.alternatives[shownAltIndex] ?? null);
-  const shownAltColor = shownAlt ? altRouteColor(shownAltIndex!) : null;
-  useEffect(() => {
-    // Verschwundene Alternative: Chip zurücksetzen, sonst bliebe er gedrückt,
-    // während die Hauptroute gezeichnet wird.
-    if (shownAltIndex !== null && shownAltIndex >= assessment.alternatives.length) {
-      setShownAltIndex(null);
-    }
-  }, [shownAltIndex, assessment.alternatives.length]);
+  const altChoices = useMemo(
+    () => altRouteViews(assessment, islandName),
+    // islandName hängt allein an der Bibliothek.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assessment, snapshot.library.islands],
+  );
+
+  /** Die eingeblendete Alternative — oder null für die Hauptroute. */
+  const shownChoice = altRouteAt(altChoices, shownAltIndex);
+  const shownAlt = shownChoice?.plan ?? null;
+  const shownAltColor = shownChoice?.color ?? null;
 
   /**
    * Die Route, die die Karte ZEIGT — Hauptroute oder eingeblendete Alternative.
-   * Alles Routenbezogene hängt hieran (Linien, Etappennummern, Kontextmenge der
-   * Pins und Windfiedern), damit die Karte nie eine Route zeichnet und die
-   * Nummern einer anderen dazu.
+   * Alles Routenbezogene hängt hieran (Linien, Etappennummern, Etappenliste,
+   * Kontextmenge der Pins und Windfiedern), damit die Karte nie eine Route
+   * zeichnet und die Nummern oder die Liste einer anderen dazu.
    */
   const displayRouteStages = useMemo(
     () => (shownAlt ? shownAlt.stages : (main?.stages ?? [])),
     [shownAlt, main],
   );
+  /** Die Segeltage der GEZEIGTEN Route — Linien, Nummern, Liste, Sync. */
   const displayStages = useMemo(
     () => displayRouteStages.filter((s) => s.kind === 'stage'),
     [displayRouteStages],
   );
 
   // FR1: only the current island and today's target carry an ampel marker.
-  const todayStage = main?.stages.find((s) => s.day === day) ?? null;
+  const todayStage = displayRouteStages.find((s) => s.day === day) ?? null;
   const ampelIslands = useMemo(() => {
     const ids = new Set<string>();
     if (assessment.currentIslandId) ids.add(assessment.currentIslandId);
@@ -684,9 +710,6 @@ export function MapView({
     [],
   );
 
-  const islandName = (id: string) =>
-    snapshot.library.islands.find((i) => i.id === id)?.name ?? id;
-
   // Statuszeile am Listenkopf (AC 2): dieselbe Ableitung wie die Tagesansicht —
   // Minutentakt für die Stale-Prüfung, PPR-Hinweise nur abseits der Basis.
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -698,25 +721,12 @@ export function MapView({
   const atBase = assessment.currentIslandId === params.baseIslandId;
   const pprHinweise = atBase ? [] : assessment.ppr.reasons;
 
-  /**
-   * Die wählbaren Alternativen — EINE Ableitung für den Chip und die Legende,
-   * damit beide dieselbe Reihenfolge, Farbe und Bezeichnung nennen. Der
-   * Listenplatz steht im Schlüssel: zwei Alternativen können denselben
-   * Wendepunkt derselben Variante haben.
-   */
-  const altChoices: AltChoice[] = assessment.alternatives.map((alt, i) => ({
-    key: `${i}-${alt.variantId}-${alt.turnIslandId}`,
-    color: altRouteColor(i),
-    turnName: islandName(alt.turnIslandId),
-    stageCount: alt.stages.filter((s) => s.kind === 'stage').length,
-  }));
-
   /** Legenden-Zeilen der Alternativen — Identität bleibt benannt (VERIFY 3). */
-  const legendAlternatives = altChoices.map((choice, i) => ({
-    key: choice.key,
+  const legendAlternatives = altChoices.map((choice) => ({
+    key: `${choice.index}-${choice.plan.variantId}-${choice.turnIslandId}`,
     color: choice.color,
-    label: `${i + 1}. Wendepunkt ${choice.turnName} · ${choice.stageCount} Etappen`,
-    shown: i === shownAltIndex,
+    label: `${choice.name} · Wendepunkt ${choice.turnName} · ${choice.stageCount} Etappen`,
+    shown: choice.index === shownAltIndex,
   }));
 
   const turnLabel =
@@ -726,7 +736,7 @@ export function MapView({
 
   /** Erster Segeltag zu einer Insel — Ziel des Pin-Tipps für den Karten-Sync. */
   const stageDayForIsland = (islandId: string): number | null =>
-    sailingStages.find((s) => s.toIslandId === islandId)?.day ?? null;
+    displayStages.find((s) => s.toIslandId === islandId)?.day ?? null;
 
   /** Pin-Tipp (Touch, Schritt 1): Karte des Tages hervorheben + heranscrollen. */
   const syncCardForIsland = (islandId: string) => {
@@ -737,9 +747,16 @@ export function MapView({
     }
   };
 
+  /**
+   * Die Etappenliste zeigt die GEZEIGTE Route (Skipper 2026-08-06): sie stand
+   * fest auf der Hauptroute, während die Karte darüber eine Alternative
+   * zeichnete — Bild und Liste behaupteten zwei verschiedene Törns. Jetzt sagen
+   * beide dasselbe, und die Liste ist der Ort, an dem sich eine Alternative
+   * Etappe für Etappe lesen lässt, ohne sie zu übernehmen.
+   */
   const stagesByDay = useMemo(
-    () => [...(main?.stages ?? [])].sort((a, b) => a.day - b.day),
-    [main],
+    () => [...displayRouteStages].sort((a, b) => a.day - b.day),
+    [displayRouteStages],
   );
 
   const itinerary = (
@@ -763,14 +780,43 @@ export function MapView({
           zugängliche Steuerelement, der Kopf nur die grössere Tippfläche.
           ≥861px ist das Sheet inert (Media Query), der Klick wirkungslos. */}
       <div className="sheet-head" onClick={() => setSheetOpen((o) => !o)}>
-        <h2 className="section-title">Etappen</h2>
+        <h2 className="section-title">
+          {shownChoice ? 'Etappen der Alternative' : 'Etappen'}
+        </h2>
         <span className="trip-caption">
           {formatTripRange(params.tripStartDate, params.tripLengthDays)} ·{' '}
           {params.tripLengthDays} Tage
         </span>
       </div>
 
-      {!main && (
+      {/* Die Liste zeigt die gezeigte Route — steht eine Alternative im Bild,
+          sagt die Zeile es, samt Herkunft und dem Weg zur ausführlichen
+          Betrachtung Tag für Tag. */}
+      {shownChoice && (
+        <div className="alt-lead" style={{ borderLeftColor: shownChoice.color }}>
+          <div className="alt-lead-name">
+            <span className="alt-farbe" style={{ background: shownChoice.color }} />
+            {shownChoice.name}
+          </div>
+          <div className="beschreibung">{shownChoice.herkunft}</div>
+          <div className="alt-lead-actions">
+            {onOpenDay && (
+              <button type="button" className="btn-secondary" onClick={onOpenDay}>
+                Etappen in der Heute-Ansicht öffnen
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => showAlt(null)}
+            >
+              Zurück zur Hauptroute
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!main && !shownChoice && (
         <div className="hint-panel">
           Noch keine Hauptroute — in der Tagesansicht den Vorschlag übernehmen.
         </div>
@@ -937,7 +983,7 @@ export function MapView({
                     Ausgeblendet, solange eine Alternative gezeigt wird: zwei
                     Routen im selben Bild waren nicht mehr auseinanderzuhalten. */}
                 {!shownAlt &&
-                  sailingStages.map((stage) => {
+                  displayStages.map((stage) => {
                     const path = stagePath(stage, legsById, snapshot);
                     if (path.length < 2) return null;
                     const isPast = stage.day < day;
@@ -1139,7 +1185,7 @@ export function MapView({
                     <AltRouteMenu
                       alternatives={altChoices}
                       shownIndex={shownAltIndex}
-                      onPick={setShownAltIndex}
+                      onPick={showAlt}
                     />
                   )}
                   <button
@@ -1154,10 +1200,18 @@ export function MapView({
                 {/* Keine stille Ersetzung: solange eine Alternative gezeigt
                     wird, sagt die Karte in einer Zeile, dass die Hauptroute
                     fehlt — welche Alternative es ist, steht im Chip daneben.
-                    Leer = kein Kasten (CSS :empty). */}
+                    Der Verweis auf die Heute-Ansicht steht HIER, weil hier die
+                    Frage aufkommt: „schön, aber taugt die Route?" — beantwortet
+                    wird sie an den einzelnen Etappen. Leer = kein Kasten
+                    (CSS :empty). */}
                 <p className="alt-note" aria-live="polite">
                   {shownAlt ? 'Hauptroute ausgeblendet' : ''}
                 </p>
+                {shownAlt && onOpenDay && (
+                  <button type="button" className="alt-note as-link" onClick={onOpenDay}>
+                    Etappen dieser Route in der Heute-Ansicht ansehen ›
+                  </button>
+                )}
               </div>
               {/* CC-BY-SA verlangt SICHTBARE Attribution, solange die Ebene an
                   ist — der volle Satz steht zusätzlich in der Legende. */}

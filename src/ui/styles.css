@@ -771,6 +771,18 @@ hr.hairline,
   font-weight: 650;
 }
 
+/* Der Routenname im Chip wird gekürzt, nicht umgebrochen: er kommt aus dem
+   Optionsraum und kann lang sein ("Verlängerung Amorgos"), und eine zweite
+   Chip-Zeile nähme der Karte wieder die Höhe zurück, die der eine Chip ihr
+   gebracht hat. Vollständig steht der Name im Menü, in der Etappenliste und im
+   aria-label des Auslösers. */
+.layer-chip .chip-label {
+  max-width: 15ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Identitätspunkt eines Alternativ-Chips — dieselbe Farbe wie die Linie auf der
    Karte und die Zeile in der Legende (altRouteColors.ts, inline gesetzt). */
 .layer-chip .chip-dot {
@@ -795,6 +807,18 @@ hr.hairline,
   display: none;
 }
 
+/* Der Weg von der Karte in die Heute-Ansicht: dieselbe leise Zeile wie der
+   Hinweis darüber, aber bedienbar (44px Tippfläche über das Padding). */
+.layer-chips button.alt-note {
+  border: 0;
+  cursor: pointer;
+  padding: 6px 10px;
+  color: var(--accent-text);
+  font-weight: 600;
+  text-align: left;
+  box-shadow: var(--shadow-1);
+}
+
 /* Routenwahl-Menü am Chip (AltRouteMenu) — Rezept des .avatar-menu, links am
    Auslöser verankert und schmal genug fürs Telefon. */
 .alt-menu {
@@ -804,7 +828,11 @@ hr.hairline,
   z-index: 120;
   width: max-content;
   min-width: 200px;
-  max-width: calc(100vw - 2 * var(--space-4));
+  /* Das Menü hängt am linken Rand des Chips, und der steht auf dem Telefon
+     schon ~124px rechts (Windfiedern-Chip davor). 258px ist die Breite, die von
+     dort aus in einen 390px-Schirm passt — längere Routennamen brechen im Menü
+     um, statt das Menü aus dem Bild zu schieben. */
+  max-width: min(258px, calc(100vw - 2 * var(--space-4)));
   max-height: 60vh;
   overflow-y: auto;
   background: var(--surface-card);
@@ -818,11 +846,11 @@ hr.hairline,
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   background: transparent;
   cursor: pointer;
-  padding: 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
   font: 400 13px/1.35 var(--font-sans);
   color: var(--ink-primary);
   text-align: left;
@@ -848,12 +876,24 @@ hr.hairline,
 
 .alt-menu .am-label {
   flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-wrap: anywhere;
+}
+
+/* Zweite Zeile im Menü: Wendepunkt, Etappenzahl und Routen-Konzept — die
+   Herkunft der Route, damit der Name aus dem Optionsraum hier nicht wie eine
+   dritte, unverbundene Bezeichnung wirkt. */
+.alt-menu .am-sub,
+.alt-menu .am-meta {
+  font: 400 11px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
 }
 
 .alt-menu .am-meta {
   flex: 0 0 auto;
-  font: 400 11px/1.35 var(--font-sans);
-  color: var(--ink-secondary);
 }
 
 /* ---- legend affordance + popover ---- */
@@ -2341,6 +2381,59 @@ details.konzept-regler > button {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+/* Der Kopf der ANGESEHENEN Alternative in der Tagesansicht (AltRouteBanner).
+   Er steht dort, wo sonst der heutige Tag beginnt, und muss deshalb sofort
+   sagen: das hier ist nicht die Hauptroute. Farbe = Identität der Route
+   (dieselbe wie Linie und Chip auf der Karte), inline aus der View. */
+.alt-banner {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--navy-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  padding: var(--space-4);
+  margin: var(--space-3) 0;
+  box-shadow: var(--shadow-1);
+}
+
+.alt-banner .option-kopf .state-chip {
+  flex: none;
+}
+
+.alt-banner-lead {
+  margin: var(--space-2) 0 0;
+  font: 400 13.5px/1.45 var(--font-sans);
+  color: var(--ink-primary);
+}
+
+.alt-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Kopf der Etappenliste auf der Karte, solange eine Alternative im Bild ist:
+   dieselbe Aussage wie der Banner der Tagesansicht, nur schmaler. */
+.alt-lead {
+  border-left: 4px solid var(--navy-soft);
+  background: var(--surface-inset);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+
+.alt-lead-name {
+  font: 600 14px/1.35 var(--font-sans);
+  color: var(--ink-primary);
+}
+
+.alt-lead-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .alt-preview {
