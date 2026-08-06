@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: 'Katapola guter Meltemi-Schutz') + Deep-Research Lauf 3 vom 2026-08-03 (zwei neue Plätze, Liegeplatz-Details). BEMERKENSWERT: Lauf 3 liefert für Katapola exakt denselben Sektor (320–240) und dieselbe Windgrenze wie der Bestand, unabhängig hergeleitet — die stärkste Bestätigung eines Sektors in allen drei Läufen. Wellengrenze auf den kleineren Wert gesenkt.",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: 'Katapola guter Meltemi-Schutz') + Deep-Research Lauf 3 vom 2026-08-03 (zwei neue Plätze, Liegeplatz-Details). BEMERKENSWERT: Lauf 3 liefert für Katapola exakt denselben Sektor (320–240) und dieselbe Windgrenze wie der Bestand, unabhängig hergeleitet — die stärkste Bestätigung eines Sektors in allen drei Läufen. Wellengrenze auf den kleineren Wert gesenkt. | Gastro-Recherche 2026-08-06: Restaurant-Subebene für Katapola ergänzt, Gastro-Score 4 -> 5; Sektoren bestätigt und unverändert.",
   "island": {
     "id": "amorgos",
     "name": "Amorgos",
@@ -18,7 +18,7 @@
       "name": "Katapola",
       "type": "hafen",
       "coordinates": { "lat": 36.8306, "lon": 25.8583 },
-      "qualities": { "schoenheit": 4, "restaurant": 4, "badestrand": 3 },
+      "qualities": { "schoenheit": 4, "restaurant": 5, "badestrand": 3 },
       "shelter": {
         "windSectors": [{ "fromDeg": 320, "toDeg": 240, "maxKn": 35 }],
         "waveSectors": [{ "fromDeg": 320, "toDeg": 240, "maxM": 0.8 }],
@@ -62,7 +62,26 @@
         "vhfChannel": "12",
         "confidence": "hoch",
         "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "amorgos-mouragio",
+          "name": "Mouragio Fish Taverna",
+          "qualityRating": 4.8,
+          "cuisineType": "Fischspezialitäten",
+          "signatureDishes": [
+            "Fangfrischer Seehecht vom eigenen Fischerboot",
+            "Kakavia (traditionelle Kykladen-Fischsuppe)"
+          ],
+          "accessInfo": "Direkt an der Kaimauer in Katapola",
+          "reservationInfo": "Telefon +30 22850 71011 (Nummer unverifiziert)",
+          "confidence": "mittel",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Amorgos",
+            "Deep-Research Gastro 2026-08-06: Navily 2025"
+          ]
+        }
+      ]
     },
     {
       "id": "amorgos-kalotaritissa",

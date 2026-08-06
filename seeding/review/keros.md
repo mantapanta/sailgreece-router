@@ -23,5 +23,32 @@ Koordinaten: 36.9042, 25.6389 · Qualitäten: Schönheit 5/5, Restaurant 0/5, Ba
 
 Warnungen: ⚠ SEKTOR VERMUTLICH INVERTIERT: Beschreibung (Westbucht, Schutz gegen Nordschwell) und Sektor (Nord offen) widersprechen sich. Grenzen konservativ gekappt · ⚠ Unbewohnt, keinerlei Versorgung an Land · ⚠ Archäologisches Schutzgebiet — Betreten von Teilen der Insel untersagt; genaue Grenzen laut Quelle ungeklärt · ⚠ Haltegrund nur in Sandflecken zwischen Felsplatten
 
+**Liegeplatz-Details** (Konfidenz: niedrig):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 4–10 m |
+| Grössenlimit (LoA) | 25 m |
+| Haltegrund | sand-fels |
+| Haltequalität | mittel — Sandflecken zwischen Felsplatten suchen. |
+| Seegras | Vereinzelt Seegras. |
+| Kapazität | 8 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | nein |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Nichts |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Quelle nennt hervorragenden Schutz gegen Nordschwell — steht im Widerspruch zum angegebenen Sektor und ist ungeprüft. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | Felsiges Ufer, Anlandung erschwert |
+| Auflagen | Archäologisches Schutzgebiet, Betreten von Teilen der Insel untersagt |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 3: CruisersWiki Keros
+
 ---
 Freigabe: in `seeding/data/islands/keros.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

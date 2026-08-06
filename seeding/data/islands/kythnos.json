@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Kolona/Fikiada 37°24.7'N 24°23'E, Merichas, Loutra) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details; Kolona und Fikiada als getrennte Plätze). Sektorgeometrie und Koordinaten aus dem Bestand beibehalten, Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt. SCHWERER KONFLIKT bei Loutra (Nordschutz) — vor Freigabe zwingend gegen Heikell prüfen, siehe seeding/research/lauf-2-pruefprotokoll.md.",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1+2: Kolona/Fikiada 37°24.7'N 24°23'E, Merichas, Loutra) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details; Kolona und Fikiada als getrennte Plätze). Sektorgeometrie und Koordinaten aus dem Bestand beibehalten, Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt. SCHWERER KONFLIKT bei Loutra (Nordschutz) — vor Freigabe zwingend gegen Heikell prüfen, siehe seeding/research/lauf-2-pruefprotokoll.md. | Gastro-Recherche 2026-08-06: Restaurant-Subebene für Merichas und Loutra ergänzt. NICHT übernommen: die Recherche weitet Merichas auf 340–220 / 35 kn und Loutra auf 270–120 / 35 kn mit confidence 'hoch' — sie liefert dafür keine neue Begründung, der Loutra-Konflikt bleibt damit offen.",
   "island": {
     "id": "kythnos",
     "name": "Kythnos",
@@ -168,7 +168,25 @@
           "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 231 (Seitenangabe unverifiziert)",
           "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "kythnos-ostria",
+          "name": "Ostria Taverna",
+          "qualityRating": 4.6,
+          "cuisineType": "Kykladische Hausmannskost",
+          "signatureDishes": [
+            "Sfougato (frittierte Kythnos-Käsebällchen)",
+            "Hausgemachte Moussaka"
+          ],
+          "accessInfo": "Fußläufig direkt an der Hafenpromenade",
+          "reservationInfo": "Telefon +30 22810 32263 (Nummer unverifiziert)",
+          "confidence": "niedrig",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: Sightsee Sailing Guide 2024"
+          ]
+        }
+      ]
     },
     {
       "id": "kythnos-loutra",
@@ -222,7 +240,25 @@
         "sources": [
           "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 233 (Seitenangabe unverifiziert)"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "kythnos-cavo-d-oro",
+          "name": "Cavo d'Oro",
+          "qualityRating": 4.7,
+          "cuisineType": "Fischtaverne",
+          "signatureDishes": [
+            "Gegrillte Rote Meerbarbe",
+            "Kakavia (Fischsuppe)"
+          ],
+          "accessInfo": "Tische direkt am Wasser an der Hafenmauer",
+          "reservationInfo": "Telefon +30 22810 31283 (Nummer unverifiziert)",
+          "confidence": "niedrig",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Kythnos"
+          ]
+        }
+      ]
     }
   ]
 }

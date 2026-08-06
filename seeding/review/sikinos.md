@@ -23,5 +23,32 @@ Koordinaten: 36.6750, 25.1450 · Qualitäten: Schönheit 3/5, Restaurant 3/5, Ba
 
 Warnungen: ⚠ GRENZWERTIG FÜR DIESES SCHIFF: Tiefe in der Zufahrt nur 2,0–2,8 m bei 2,0 m Tiefgang, Grössenlimit laut Quelle 14 m · ⚠ Haltegrund schlecht: Fels und Kies mit geringer Haltekraft · ⚠ Nur etwa 6 Plätze, sehr eng · ⚠ Starker Schwell läuft bei Meltemi in das flache Becken · ⚠ Meltemi-sicher: nein
 
+**Liegeplatz-Details** (Konfidenz: niedrig):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2–2.8 m |
+| Grössenlimit (LoA) | 14 m |
+| Haltegrund | fels-kies |
+| Haltequalität | schlecht — Felsgrund mit schlechter Haltekraft. |
+| Seegras | Dichte Krautrinnen im Hafenbecken. |
+| Kapazität | 6 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | ja |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Kleine Taverne und Minimarkt am Strand (2 Min) |
+| Preis | ca. 8 EUR/Nacht (Gemeinde, 2024) |
+| Hafengebühren | Keine ständige Vertretung vor Ort |
+| Schwell | Starker Schwell bei Meltemi im flachen Becken. |
+| Fährverkehr | Fähre legt an der kleinen Außenpier an. |
+| Beiboot-Anlandung | Am Sandstrand neben der Pier |
+| Auflagen | Tiefgang unter 2,0 m erforderlich — historische Peilungen nennen 2,5 m in der Ansteuerung |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 2: CruisersWiki Sikinos
+
 ---
 Freigabe: in `seeding/data/islands/sikinos.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

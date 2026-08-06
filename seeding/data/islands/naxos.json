@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Naxos Entscheidungstag, Marina im Juli/August Engpass) + Deep-Research Lauf 3 vom 2026-08-03 (drei neue Plätze im Süden und Osten, Liegeplatz-Details). Lauf 3 übernahm die Koordinate von Naxos-Stadt exakt; Sektor dort als Schnittmenge beider Quellen. Typ 'marina' aus dem Bestand beibehalten (Lauf 3 stuft als 'hafen' ein — Ausbauzustand ungeprüft).",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Naxos Entscheidungstag, Marina im Juli/August Engpass) + Deep-Research Lauf 3 vom 2026-08-03 (drei neue Plätze im Süden und Osten, Liegeplatz-Details). Lauf 3 übernahm die Koordinate von Naxos-Stadt exakt; Sektor dort als Schnittmenge beider Quellen. Typ 'marina' aus dem Bestand beibehalten (Lauf 3 stuft als 'hafen' ein — Ausbauzustand ungeprüft). | Gastro-Recherche 2026-08-06: Restaurant-Subebene für Naxos-Stadt ergänzt. NICHT übernommen: die Recherche weitet den Sektor auf 30–290 (50° mehr Schutz nach W) und stuft erneut als 'hafen' ein — beides ohne neue Begründung.",
   "island": {
     "id": "naxos",
     "name": "Naxos",
@@ -66,7 +66,26 @@
           "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.",
           "Deep-Research Lauf 3: CruisersWiki Naxos"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "naxos-meze2",
+          "name": "Meze2",
+          "qualityRating": 4.7,
+          "cuisineType": "Traditionelles Ouzeri mit Mezedes",
+          "signatureDishes": [
+            "Gegrillter Oktopus auf Fava",
+            "Naxische Bratkartoffeln in Olivenöl",
+            "Graviera Naxou (Käse vom Grill)"
+          ],
+          "accessInfo": "Fußläufig direkt an der Hafenpromenade",
+          "reservationInfo": "Telefon +30 22850 26400 (Nummer unverifiziert)",
+          "confidence": "niedrig",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Naxos"
+          ]
+        }
+      ]
     },
     {
       "id": "naxos-kalandos",

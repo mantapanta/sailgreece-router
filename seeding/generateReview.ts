@@ -33,6 +33,85 @@ function sectorLine(s: { fromDeg: number; toDeg: number } & Record<string, unkno
   return `geschützt aus ${s.fromDeg}°–${s.toDeg}°${wrap}, ${limit}`;
 }
 
+/** Ja/Nein/Ortsangabe — eine fehlende Angabe bleibt sichtbar leer, nie „nein". */
+function jaNein(v: boolean | string | null | undefined): string {
+  if (v === true) return 'ja';
+  if (v === false) return 'nein';
+  if (typeof v === 'string') return v;
+  return '—';
+}
+
+/**
+ * Liegeplatz-Details: die Angaben, die erst AM Platz entscheiden. Sie steuern
+ * keine Ampel, aber der Reviewer muss sie sehen — Tiefe und Grössenlimit sind
+ * die einzigen harten Ausschlusskriterien der Bibliothek, und Müll, Strom und
+ * Reservierbarkeit sind das, wonach an Bord tatsächlich gefragt wird.
+ */
+function berthingSection(p: Place): string[] {
+  const b = p.berthingDetails;
+  if (!b) return ['**Liegeplatz-Details:** nicht recherchiert.', ''];
+  const depth = b.depthAtBerthM
+    ? `${b.depthAtBerthM.min}–${b.depthAtBerthM.max} m`
+    : '—';
+  const rows: [string, string][] = [
+    ['Anlegeart', b.mooringType],
+    ['Wassertiefe', depth],
+    ['Grössenlimit (LoA)', b.maxLoaM ? `${b.maxLoaM} m` : '—'],
+    ['Haltegrund', b.anchorHoldingGround ?? '—'],
+    ['Haltequalität', `${b.holdingQuality ?? '—'}${b.holdingNote ? ` — ${b.holdingNote}` : ''}`],
+    ['Seegras', b.seagrassNote ?? '—'],
+    ['Kapazität', b.capacityYachts ? `${b.capacityYachts} Yachten` : '—'],
+    ['Reservierbar', `${jaNein(b.reservationPossible)}${b.reservationChannel ? ` — ${b.reservationChannel}` : ''}`],
+    ['Müllentsorgung', jaNein(b.wasteDisposal)],
+    ['Landstrom / Wasser', `${jaNein(b.shorePower)} / ${jaNein(b.water)}`],
+    ['Diesel am Steg', jaNein(b.fuelDock)],
+    ['Duschen / WC', jaNein(b.showersToilets)],
+    ['Versorgung an Land', b.provisioningAshore ?? '—'],
+    ['Preis', b.priceIndicationEur ?? '—'],
+    ['Hafengebühren', b.portAuthorityFees ?? '—'],
+    ['Schwell', b.swellExposureNote ?? '—'],
+    ['Fährverkehr', b.ferryTrafficNote ?? '—'],
+    ['Beiboot-Anlandung', b.dinghyLanding ?? '—'],
+    ['Auflagen', b.restrictions ?? '—'],
+    ['UKW-Kanal', b.vhfChannel ?? '—'],
+  ];
+  return [
+    `**Liegeplatz-Details** (Konfidenz: ${b.confidence}):`,
+    '',
+    '| Angabe | Wert |',
+    '|---|---|',
+    ...rows.map(([k, v]) => `| ${k} | ${v} |`),
+    '',
+    `Quellen: ${b.sources.join('; ')}`,
+    '',
+  ];
+}
+
+/**
+ * Gastronomie-Subebene. Steht NACH den Liegeplatz-Details, weil sie nichts
+ * entscheidet — aber mit den Reservierungskontakten sichtbar, denn eine
+ * veraltete Telefonnummer fällt nur auf, wenn sie jemand liest.
+ */
+function gastroSection(p: Place): string[] {
+  if (!p.restaurants?.length) return [];
+  const lines = [`**Gastronomie (${p.restaurants.length})** — bewertet nichts, Anzeige nur:`, ''];
+  lines.push('| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |');
+  lines.push('|---|---|---|---|---|---|---|');
+  for (const r of [...p.restaurants].sort((a, b) => b.qualityRating - a.qualityRating)) {
+    lines.push(
+      `| ${r.name} (\`${r.id}\`) | ${r.qualityRating.toFixed(1)}/5 | ${r.cuisineType ?? '—'} | ` +
+        `${r.signatureDishes.join(', ') || '—'} | ${r.accessInfo ?? '—'} | ` +
+        `${r.reservationInfo ?? '—'} | ${r.confidence} |`,
+    );
+  }
+  lines.push('');
+  lines.push(
+    `Quellen: ${[...new Set(p.restaurants.flatMap((r) => r.sources))].join('; ')}`,
+  );
+  lines.push('');
+  return lines;
+}
+
 function placeSection(p: Place): string {
   const lines: string[] = [];
   lines.push(`### ${p.name} (\`${p.id}\`, ${p.type})`);
@@ -56,6 +135,8 @@ function placeSection(p: Place): string {
     lines.push(`Warnungen: ${p.warnings.map((w) => `⚠ ${w}`).join(' · ')}`);
   }
   lines.push('');
+  lines.push(...berthingSection(p));
+  lines.push(...gastroSection(p));
   return lines.join('\n');
 }
 

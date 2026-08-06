@@ -90,6 +90,10 @@ async function main() {
   // a curation error and would silently overwrite each other in Firestore.
   const seenIslandIds = new Map<string, string>();
   const seenPlaceIds = new Map<string, string>();
+  // Restaurants sind eine SUBEBENE des Platzes und bekommen kein eigenes
+  // Dokument — eine doppelte Id überschriebe hier zwar nichts, sie machte den
+  // Eintrag aber unadressierbar (Deeplink, Korrektur, Review-Verweis).
+  const seenRestaurantIds = new Map<string, string>();
 
   for (const file of islandFiles) {
     const data = loadStrict<IslandStagingFile>(
@@ -109,6 +113,15 @@ async function main() {
         fail(
           `Platz '${place.id}' in ${file}: islandId '${place.islandId}' passt nicht zur Insel der Datei ('${islandId}').`,
         );
+      }
+      for (const restaurant of place.restaurants ?? []) {
+        const prevRestaurant = seenRestaurantIds.get(restaurant.id);
+        if (prevRestaurant) {
+          fail(
+            `Restaurant-Id '${restaurant.id}' doppelt (${prevRestaurant} und ${file}/${place.id}).`,
+          );
+        }
+        seenRestaurantIds.set(restaurant.id, `${file}/${place.id}`);
       }
     }
     if (!data.approved) {

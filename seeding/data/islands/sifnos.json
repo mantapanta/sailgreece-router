@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Kamares; Buchten Fikiada, Vathy geschützt, Faros) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details). Koordinaten und Sektorgeometrie aus dem Bestand beibehalten, Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt. Kamares deckt sich in beiden Quellen vollständig.",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 2: Kamares; Buchten Fikiada, Vathy geschützt, Faros) + Deep-Research Lauf 2 vom 2026-08-03 (Liegeplatz-Details). Koordinaten und Sektorgeometrie aus dem Bestand beibehalten, Stärkegrenzen auf den kleineren Wert beider Quellen gesetzt. Kamares deckt sich in beiden Quellen vollständig. | Gastro-Recherche 2026-08-06: Restaurant-Subebene für Vathy und Kamares ergänzt, Gastro-Score Vathy 4 -> 5. NICHT übernommen: die Recherche weitet Vathy auf 300–200 (50° mehr Schutz nach Süd) und verschiebt beide Koordinaten um rund 0,7 sm — Geometrie und Sektoren des Bestands bleiben.",
   "island": {
     "id": "sifnos",
     "name": "Sifnos",
@@ -66,7 +66,25 @@
           "Deep-Research Lauf 2: CruisersWiki Sifnos",
           "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl."
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "sifnos-kamares-simos",
+          "name": "Simos Restaurant",
+          "qualityRating": 4.6,
+          "cuisineType": "Meeresfrüchte und ägäische Klassiker",
+          "signatureDishes": [
+            "Garnelen-Saganaki",
+            "Gegrillter Drachenkopf"
+          ],
+          "accessInfo": "Fußläufig vom Kai an der Hafenpromenade",
+          "reservationInfo": "Telefon +30 22840 31630, im August 1 Tag Vorlauf (Nummer unverifiziert)",
+          "confidence": "niedrig",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Sifnos"
+          ]
+        }
+      ]
     },
     {
       "id": "sifnos-vathy",
@@ -74,7 +92,7 @@
       "name": "Vathy",
       "type": "bucht",
       "coordinates": { "lat": 36.9264, "lon": 24.6903 },
-      "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 4 },
+      "qualities": { "schoenheit": 5, "restaurant": 5, "badestrand": 4 },
       "shelter": {
         "windSectors": [{ "fromDeg": 300, "toDeg": 250, "maxKn": 35 }],
         "waveSectors": [{ "fromDeg": 300, "toDeg": 250, "maxM": 0.3 }],
@@ -121,7 +139,44 @@
           "Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean",
           "Deep-Research Lauf 2: CruisersWiki Sifnos"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "sifnos-vathy-manolis",
+          "name": "Taverna Manolis",
+          "qualityRating": 4.8,
+          "cuisineType": "Traditionelle sifnische Küche",
+          "signatureDishes": [
+            "Revithada (im Tonofen geschmorte Kichererbsen)",
+            "Mastelo (Lamm im Keramiktopf mit Rotwein und Dill)"
+          ],
+          "accessInfo": "Anlandung per Beiboot direkt am Sandstrand vor der Taverne",
+          "reservationInfo": "Telefon +30 22840 71115, im Hochsommer 2 Tage Vorlauf (Nummer unverifiziert)",
+          "confidence": "mittel",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Sifnos",
+            "Deep-Research Gastro 2026-08-06: Navily Community Guide 2025"
+          ]
+        },
+        {
+          "id": "sifnos-vathy-tsikali",
+          "name": "Tsikali Taverna",
+          "qualityRating": 4.7,
+          "cuisineType": "Familientaverne mit eigenen Hofprodukten",
+          "signatureDishes": [
+            "Sifnischer Manouri-Käse",
+            "Geschmortes Ziegenfleisch",
+            "Hausgemachter Ziegenkäse-Salat"
+          ],
+          "accessInfo": "Anlandung am Strand im Nordteil der Bucht",
+          "reservationInfo": "Telefon +30 22840 71123, 1 Tag Vorlauf (Nummer unverifiziert)",
+          "confidence": "mittel",
+          "sources": [
+            "Deep-Research Gastro 2026-08-06: CruisersWiki Sifnos",
+            "Deep-Research Gastro 2026-08-06: Navily 2025"
+          ]
+        }
+      ]
     },
     {
       "id": "sifnos-faros",

@@ -25,7 +25,14 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Entscheidungspunkte.
 - **Karte:** Besprechungsbild mit Ampel-Markern, gestrichelten Routen-Optionen,
   Windpfeilen, Itinerar↔Karte-Hover (Google Maps, Hybrid-Ansicht).
-- **Platz-Detail:** Foto, Qualitäten, sicherer Liegeplatz (kuratiert), Nacht-Ampel.
+- **Platz-Detail:** Foto, Qualitäten, sicherer Liegeplatz (kuratiert), Nacht-Ampel,
+  **Liegeplatz-Details** (Tiefe, Grössenlimit, Anlegeart, Haltegrund;
+  Reservierbarkeit, Müll, Strom, Wasser, Diesel, Preis) und die
+  **Gastronomie-Subebene** des Platzes — die kuratierten Tavernen mit
+  Bewertung, Spezialitäten, Anlandung und Reservierungskontakt
+  (`domain/schema/gastro.ts`). Beides bewertet nichts: weder Ampel noch Solver
+  lesen davon ein Feld. Ein unbestätigter Reservierungskontakt trägt seinen
+  Vorbehalt sichtbar, statt wie eine gesicherte Nummer auszusehen.
 
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
 @vis.gl/react-google-maps 1.x · Firebase (Authentication + Firestore +

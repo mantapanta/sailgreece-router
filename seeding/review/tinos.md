@@ -23,6 +23,33 @@ Koordinaten: 37.6492, 25.0408 · Qualitäten: Schönheit 5/5, Restaurant 4/5, Ba
 
 Warnungen: ⚠ Geringe Wassertiefen im inneren Hafenbereich (ab 2,0 m) — bei 2,0 m Tiefgang genau prüfen · ⚠ Grössenlimit laut Quelle 16 m — für dieses Schiff knapp, vorab klären · ⚠ Nur etwa 12 Plätze, kein Landstrom · ⚠ Meltemi-sicher: ja
 
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2–3.5 m |
+| Grössenlimit (LoA) | 16 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Fester Sandgrund. |
+| Seegras | Seegras im äußeren Ankerbereich. |
+| Kapazität | 12 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | ja |
+| Landstrom / Wasser | nein / ja |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Tavernen und Minimarkt am Kai (2 Min) |
+| Preis | 8–12 EUR/Nacht (2025) |
+| Hafengebühren | keine regelmäßige Erhebung |
+| Schwell | Laut Quelle sehr gut geschützt gegen Schwell aus N und NW. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | — |
+| Auflagen | — |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.
+
 ### Tinos-Stadt (`tinos-stadt`, hafen)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -38,6 +65,33 @@ Koordinaten: 37.5361, 25.1606 · Qualitäten: Schönheit 3/5, Restaurant 5/5, Ba
 
 Warnungen: ⚠ Kräftige Fallböen im Hafenbecken bei starkem Meltemi · ⚠ Große Linienfähren legen am äußeren Kai an, Fährpier freihalten
 
+**Liegeplatz-Details** (Konfidenz: hoch):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2.2–4.5 m |
+| Grössenlimit (LoA) | 22 m |
+| Haltegrund | sand-schlamm |
+| Haltequalität | gut — Fester Halt auf Schlamm und Sand. |
+| Seegras | — |
+| Kapazität | 30 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | ja |
+| Landstrom / Wasser | ja / ja |
+| Diesel am Steg | ja |
+| Duschen / WC | ja |
+| Versorgung an Land | Mehrere Supermärkte in 3 Minuten Fußweg |
+| Preis | 10–18 EUR/Nacht (2025, Hafengeld) |
+| Hafengebühren | Gemeindehafen-Gebühren |
+| Schwell | Hafenmole schützt laut Quelle effektiv vor Seegang; das Problem sind die Fallböen. |
+| Fährverkehr | Große Linienfähren legen am äußeren Kai an. |
+| Beiboot-Anlandung | — |
+| Auflagen | Fährpier freihalten |
+| UKW-Kanal | 12 |
+
+Quellen: Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.
+
 ### Kolimvithra (`tinos-kolimvithra`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -52,6 +106,33 @@ Quelle: Deep-Research Lauf 3 (CruisersWiki Tinos): Sektor 240–110 mit maxKn 25
 Koordinaten: 37.6322, 25.1481 · Qualitäten: Schönheit 4/5, Restaurant 2/5, Badestrand 5/5
 
 Warnungen: ⚠ SEKTOR VERMUTLICH VERDREHT: Die Quelle beschreibt eine Nordküstenbucht, offen nach NE, gibt aber einen Sektor mit Nordschutz an. Grenzen deshalb stark gekappt — bei Meltemi grundsätzlich meiden · ⚠ Bei Meltemi laut Quelle schwerer Seegang in der Bucht · ⚠ Haltekraft im östlichen Buchtabschnitt laut Quelle schwankend — Ankerprüfmanöver durchführen
+
+**Liegeplatz-Details** (Konfidenz: niedrig):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | anker-frei |
+| Wassertiefe | 3–7 m |
+| Grössenlimit (LoA) | 20 m |
+| Haltegrund | sand |
+| Haltequalität | gut — Sandgrund; Sedimentverteilung im östlichen Abschnitt laut Quelle schwankend. |
+| Seegras | Geringer Bewuchs. |
+| Kapazität | 10 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | nein |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Taverne am Strand (4 Min) |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Hoher Wellenschlag bei Nordwinden. |
+| Fährverkehr | Kein Fährverkehr. |
+| Beiboot-Anlandung | Anlandung am Sandstrand |
+| Auflagen | — |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 3: CruisersWiki Tinos
 
 ---
 Freigabe: in `seeding/data/islands/tinos.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

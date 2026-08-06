@@ -23,6 +23,33 @@ Koordinaten: 36.4561, 25.3431 · Qualitäten: Schönheit 3/5, Restaurant 3/5, Ba
 
 Warnungen: ⚠ Exponiert gegenüber Nordostschwell — bei Meltemi meiden · ⚠ Nur etwa 8 Plätze, Grössenlimit laut Quelle 16 m · ⚠ Zustand der Pierstrukturen und exakte Tiefen für 2,0 m Tiefgang laut Quelle schwankend — aktuelle Nutzerberichte prüfen · ⚠ Kein Landstrom, kein Wasser
 
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | roemisch-katholisch |
+| Wassertiefe | 2–3.5 m |
+| Grössenlimit (LoA) | 16 m |
+| Haltegrund | sand-fels |
+| Haltequalität | mittel — Felsiger Grund mit Sandauflagen. |
+| Seegras | Spärlicher Bewuchs. |
+| Kapazität | 8 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | nein |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Taverne am Pier in 2 Minuten Fußweg |
+| Preis | kostenfrei, unbewirtschaftet (2025) |
+| Hafengebühren | keine |
+| Schwell | Schwell läuft bei Nordostwind direkt auf den Kai. |
+| Fährverkehr | Lokale Passagierfähre von Oia legt regelmäßig an. |
+| Beiboot-Anlandung | — |
+| Auflagen | Fährbereich freihalten |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 3: CruisersWiki Thirasia
+
 ### Kormoranos (`thirasia-kormoranos`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
@@ -37,6 +64,33 @@ Quelle: Deep-Research Lauf 3 (CruisersWiki Thirasia): Öffnung nach W bis NW, Se
 Koordinaten: 36.4319, 25.3383 · Qualitäten: Schönheit 4/5, Restaurant 2/5, Badestrand 1/5
 
 Warnungen: ⚠ Freies Ankern unmöglich: Wassertiefen 8–25 m auf Felsgrund, nur Bojen nutzbar (etwa 6 Plätze) · ⚠ Verfügbarkeit und Haltekraft der Bojen laut Quelle ungeklärt — vorab bei lokalen Ausflugsbootbetreibern erfragen · ⚠ Spürbare Dünung und Schwell von Ausflugsbooten
+
+**Liegeplatz-Details** (Konfidenz: mittel):
+
+| Angabe | Wert |
+|---|---|
+| Anlegeart | boje |
+| Wassertiefe | 8–25 m |
+| Grössenlimit (LoA) | 20 m |
+| Haltegrund | fels |
+| Haltequalität | schlecht — Felsgrund — nur Bojen nutzen. |
+| Seegras | — |
+| Kapazität | 6 Yachten |
+| Reservierbar | nein |
+| Müllentsorgung | nein |
+| Landstrom / Wasser | nein / nein |
+| Diesel am Steg | nein |
+| Duschen / WC | nein |
+| Versorgung an Land | Taverne am kleinen Anleger (2 Min) |
+| Preis | kostenfrei |
+| Hafengebühren | keine |
+| Schwell | Spürbare Dünung und Schwell von Ausflugsbooten. |
+| Fährverkehr | Verkehr kleinerer Ausflugsboote. |
+| Beiboot-Anlandung | Betonpier zur Anlandung |
+| Auflagen | — |
+| UKW-Kanal | — |
+
+Quellen: Deep-Research Lauf 3: CruisersWiki Thirasia
 
 ---
 Freigabe: in `seeding/data/islands/thirasia.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.
