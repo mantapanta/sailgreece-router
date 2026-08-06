@@ -20,7 +20,7 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Route wird als sie selbst geplant: „Westkykladen-Runde" heißt die
   Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
 - **Schwellen als Regler:** Wo „zu viel Wind" anfängt, stellt der Skipper im
-  Konzept-Panel ein — je Konzept eine kn-Schwelle und die Zahl der Tage in
+  Konzept-Panel ein (eingeklappt am Ende der Tagesansicht) — je Konzept eine kn-Schwelle und die Zahl der Tage in
   Folge, über die sie halten muss (`KONZEPT_REGLER` in `domain/konzept.ts`,
   persistiert im Trip-Kontext, jederzeit auf die Törnanalyse-Werte
   zurücksetzbar). Die Regler sind gekoppelt: Route 2 darf nie über Route 1

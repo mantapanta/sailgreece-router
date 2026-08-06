@@ -1887,8 +1887,33 @@ hr.hairline,
 
 /* --- Routen-Konzept (zentrale Logik, domain/konzept.ts) ---------------------
    Zwei Karten — Route 1 (Klassik) und Route 2 (Ost) — mit Eignung, aktivem
-   Konzept und Empfehlung. Das Panel steht direkt unter dem Rest-Trip-Banner:
-   erst das Konzept, dann alles andere. */
+   Konzept und Empfehlung. Das Panel steht eingeklappt am Ende der Tagesansicht
+   (hinter dem Optionsraum) und trägt eingeklappt nur die Summenzeile; oben
+   bleibt allein die Alarm-Zeile, wenn das aktive Konzept kippt. */
+
+/* Kippt das Konzept: eine Zeile über dem Hero, im Ton der roten Karten. */
+.konzept-alarm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-left: 4px solid var(--rot);
+  border-radius: var(--radius-md);
+  background: #f6e4e3;
+  cursor: pointer;
+  text-align: left;
+  font: 400 13.5px/1.4 var(--font-sans);
+  color: var(--ink-primary);
+}
+.konzept-alarm .status-dot { flex: none; margin-top: 0; }
+.konzept-alarm .chev { flex: none; color: var(--ink-secondary); }
+
+/* Die Eignung des aktiven Konzepts steht in der Summenzeile — nicht dehnen. */
+.konzept-panel .summary-row .state-chip { flex: none; }
 
 .konzept-karten {
   display: grid;
