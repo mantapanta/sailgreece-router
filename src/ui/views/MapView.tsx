@@ -26,12 +26,15 @@ import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-m
 import type { Ampel } from '../../domain/schema/common.ts';
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
+import { departureHourChoices } from '../../domain/scoring.ts';
+import { AbfahrtMenu } from '../components/AbfahrtMenu.tsx';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { TripStatusLine } from '../components/TripStatusLine.tsx';
 import {
   AMPEL_GRAPHIC_HEX,
   COLORS,
   HIN_LINE_COLOR,
+  KITE_SPOT_COLOR,
   RUECK_LINE_COLOR,
 } from '../tokens.ts';
 import { Polyline } from '../components/Polyline.tsx';
@@ -57,6 +60,7 @@ import {
   type AltRouteView,
 } from '../altRoutes.ts';
 import { staleForecastLabel } from '../dayViewModel.ts';
+import { usePlanning } from '../../app/planningContext.tsx';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
 import { useRouteView } from '../../app/routeViewContext.tsx';
 import { resolveMapsEnv } from '../mapsEnv.ts';
@@ -201,12 +205,15 @@ function LegendPopover({
   turnLabel,
   windCount,
   alternatives,
+  kiteShown,
 }: {
   restTripAmpel: Ampel;
   turnLabel: string | null;
   windCount: { shown: number; hidden: number };
   /** Je Alternative: Identitätsfarbe + "Wendepunkt {Insel} · {n} Etappen". */
   alternatives: { key: string; color: string; label: string; shown: boolean }[];
+  /** Ist die Kite-Ebene eingeschaltet? Nur dann wird sie erklärt. */
+  kiteShown: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -302,6 +309,29 @@ function LegendPopover({
                 </p>
               )}
             </div>
+            {/* Kite-Ebene: die Raute erklärt sich nicht selbst, und "gefüllt"
+                muss als BEDEUTUNG dastehen, nicht als Grafik-Detail. */}
+            {kiteShown && (
+              <>
+                <div className="lg-row" style={{ color: KITE_SPOT_COLOR }}>
+                  <span className="kite-marker passt" aria-hidden="true" />
+                  <span style={{ color: 'inherit' }}>
+                    Kite-Spot — Wind passt heute
+                  </span>
+                </div>
+                <div className="lg-row" style={{ color: KITE_SPOT_COLOR }}>
+                  <span className="kite-marker" aria-hidden="true" />
+                  <span style={{ color: 'inherit' }}>
+                    Kite-Spot — heute nicht im Kite-Band
+                  </span>
+                </div>
+                <p className="lg-caption">
+                  Antippen nennt den Spot und öffnet seine Details. Kite-Spots
+                  bewerten nichts — keine Ampel und keine Route hängt an ihnen;
+                  Kite-Verbote und Schutzzonen sind nicht recherchiert.
+                </p>
+              </>
+            )}
             {alternatives.length > 0 && (
               <>
                 {alternatives.map((alt) => (
@@ -511,7 +541,8 @@ export function MapView({
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
-  onOpenPlace: (placeId: string) => void;
+  /** Zweiter Parameter: Kite-Spot, den das Platzdetail hervorheben soll. */
+  onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
   /**
    * In die Tagesansicht wechseln — die gewählte Route bleibt dabei stehen
    * (routeViewContext) und wird dort Tag für Tag aufgeschlagen. Optional,
@@ -521,6 +552,8 @@ export function MapView({
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
+  /** Die EINE Mutation, die diese Ansicht kennt: die Abfahrt eines Tages. */
+  const { setDepartureHour } = usePlanning();
   /**
    * Blick-Zustand der Karte (AD-11): Sheet, Hover/Auswahl, Ebenen — alles
    * transienter View-State, bewusst NICHT im TripContext. Das Ein-/Ausblenden
@@ -560,8 +593,17 @@ export function MapView({
    * Provider, hier wird nur noch gelesen.
    */
   const { shownAltIndex, showAlt } = useRouteView();
+  /**
+   * KITE-EBENE (Skipper-Wunsch 2026-08-06). Standard AN: die Bibliothek hat ein
+   * gutes Dutzend Spots im ganzen Revier, das deckt nichts zu — und eine Ebene,
+   * die man erst suchen muss, beantwortet die Frage nicht, für die sie gebaut
+   * wurde ("wo geht heute was?").
+   */
+  const [showKite, setShowKite] = useState(true);
   /** Touch-Zweischritt (AC 6): erster Tipp "bewaffnet" den Pin (Mini-Chip). */
   const [armedPlaceId, setArmedPlaceId] = useState<string | null>(null);
+  /** Derselbe Zweischritt für Kite-Marker — eigener Zustand, ein Chip zur Zeit. */
+  const [armedKiteId, setArmedKiteId] = useState<string | null>(null);
   /** Gesetzt in onPointerDown, gelesen im onClick — unterscheidet Touch. */
   const lastPointerType = useRef<string>('');
   // Record statt JS-Map: `Map` ist in diesem Modul die Kartenkomponente.
@@ -709,6 +751,19 @@ export function MapView({
     () => (shown: number, hidden: number) => setWindCount({ shown, hidden }),
     [],
   );
+
+  /**
+   * Heutiges Kite-Urteil je Spot — aus dem Assessment (AD-2), hier nur nach
+   * Spot-Id greifbar gemacht, damit die Marker-Schleife nicht linear sucht.
+   */
+  const kiteByspotId = useMemo(() => {
+    const byId: Record<string, (typeof assessment.kiteSpotsHeute)[number]> = {};
+    for (const t of assessment.kiteSpotsHeute) byId[t.spotId] = t;
+    return byId;
+  }, [assessment.kiteSpotsHeute]);
+  const kitePassendHeute = assessment.kiteSpotsHeute.filter(
+    (t) => t.eignung === 'passt',
+  ).length;
 
   // Statuszeile am Listenkopf (AC 2): dieselbe Ableitung wie die Tagesansicht —
   // Minutentakt für die Stale-Prüfung, PPR-Hinweise nur abseits der Basis.
@@ -859,64 +914,95 @@ export function MapView({
           const lastEta =
             lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
           return (
-            <button
-              key={stage.day}
-              type="button"
-              ref={(el) => {
-                cardRefs.current[stage.day] = el ?? undefined;
-              }}
-              className={`itin-card${isPast ? ' past' : ''}`}
-              aria-pressed={selectedDay === stage.day}
-              onMouseEnter={() => setHoverDay(stage.day)}
-              onMouseLeave={() => setHoverDay(null)}
-              onFocus={() => setHoverDay(stage.day)}
-              onBlur={() => setHoverDay(null)}
-              onClick={() =>
-                setSelectedDay((d) => (d === stage.day ? null : stage.day))
-              }
-            >
-              <div className="itin-top">
-                <div>
-                  <div className="itin-day">
-                    Tag {stage.day} · {formatTripDayShort(params.tripStartDate, stage.day)}
-                    {stage.day === day && ' · heute'}
-                    {isPast && ' · gefahren'}
-                  </div>
-                  <div className="itin-route">
-                    {fromIsland ? `${fromIsland} → ` : ''}
-                    {islandName(stage.toIslandId)}
-                  </div>
-                  <div className="itin-meta">
-                    {formatHours(totalHours || null)}
-                    {lastEta && <> · an {formatAthensTime(lastEta)}</>}
-                    {stage.pinned && (
-                      <>
-                        {' '}
-                        <span className="chip">Festgelegt</span>
-                      </>
+            <div key={stage.day} className={`itin-item${isPast ? ' past' : ''}`}>
+              <button
+                type="button"
+                ref={(el) => {
+                  cardRefs.current[stage.day] = el ?? undefined;
+                }}
+                className="itin-card"
+                aria-pressed={selectedDay === stage.day}
+                onMouseEnter={() => setHoverDay(stage.day)}
+                onMouseLeave={() => setHoverDay(null)}
+                onFocus={() => setHoverDay(stage.day)}
+                onBlur={() => setHoverDay(null)}
+                onClick={() =>
+                  setSelectedDay((d) => (d === stage.day ? null : stage.day))
+                }
+              >
+                <div className="itin-top">
+                  <div>
+                    <div className="itin-day">
+                      Tag {stage.day} · {formatTripDayShort(params.tripStartDate, stage.day)}
+                      {stage.day === day && ' · heute'}
+                      {isPast && ' · gefahren'}
+                    </div>
+                    <div className="itin-route">
+                      {fromIsland ? `${fromIsland} → ` : ''}
+                      {islandName(stage.toIslandId)}
+                    </div>
+                    <div className="itin-meta">
+                      {formatHours(totalHours || null)}
+                      {lastEta && <> · an {formatAthensTime(lastEta)}</>}
+                      {stage.pinned && (
+                        <>
+                          {' '}
+                          <span className="chip">Festgelegt</span>
+                        </>
+                      )}
+                    </div>
+                    {/* Kreuz/Halbwind des Tages — dieselbe Meldung wie in der
+                        Tagesansicht, damit die Liste hier nicht harmloser aussieht
+                        als die Etappenkarte, die sie zusammenfasst. */}
+                    {stage.kursAbschnitte.length > 0 && (
+                      <div className="kurs-liste">
+                        {stage.kursAbschnitte.map((a) => (
+                          <span
+                            key={a.kategorie}
+                            className={`ampel ampel-${a.ampel} kurs-zeile kurs-mini`}
+                            title={formatKursAmpelRegel(a.kategorie, params)}
+                          >
+                            <span className="dot" />
+                            {formatKursAbschnitt(a)}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {/* Kreuz/Halbwind des Tages — dieselbe Meldung wie in der
-                      Tagesansicht, damit die Liste hier nicht harmloser aussieht
-                      als die Etappenkarte, die sie zusammenfasst. */}
-                  {stage.kursAbschnitte.length > 0 && (
-                    <div className="kurs-liste">
-                      {stage.kursAbschnitte.map((a) => (
-                        <span
-                          key={a.kategorie}
-                          className={`ampel ampel-${a.ampel} kurs-zeile kurs-mini`}
-                          title={formatKursAmpelRegel(a.kategorie, params)}
-                        >
-                          <span className="dot" />
-                          {formatKursAbschnitt(a)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <AmpelBadge ampel={stage.ampel} />
                 </div>
-                <AmpelBadge ampel={stage.ampel} />
-              </div>
-            </button>
+              </button>
+              {/* ABFAHRT PER KLICK IN DER KARTE (Skipper 2026-08-06): dieselbe
+                  Entscheidung wie in der Tagesansicht, dasselbe Menü — hier
+                  aber neben dem Bild, in dem man sie trifft. Der Default ist
+                  die Empfehlung des Tages; gefahrene Tage bleiben Anzeige.
+                  Der Chip steht NEBEN dem Kartenknopf, nicht darin: ein Menü
+                  in einem Button wäre ein Button im Button.
+
+                  Nicht an einer ANGESEHENEN Alternative: die Liste zeigt dann
+                  deren Etappen, die Abfahrt aber gehört dem Törntag — sie von
+                  hier aus zu verstellen änderte still die Rechnung der
+                  Hauptroute mit, die gerade gar nicht im Bild ist. */}
+              {stage.day >= day && !shownChoice && (
+                <div className="itin-abfahrt">
+                  <AbfahrtMenu
+                    day={stage.day}
+                    hours={departureHourChoices(stage.day)}
+                    value={stage.abfahrtHourAthens}
+                    vomSkipper={stage.abfahrtVomSkipper}
+                    empfehlung={stage.abfahrtsEmpfehlung?.abfahrtHourAthens ?? null}
+                    standard={params.departureHourAthens}
+                    onPick={(hour) => setDepartureHour(stage.day, hour)}
+                  />
+                  {stage.abfahrtsEmpfehlung &&
+                    !stage.abfahrtVomSkipper &&
+                    stage.abfahrtsEmpfehlung.abfahrtHourAthens ===
+                      stage.abfahrtHourAthens && (
+                      <span className="itin-abfahrt-note">empfohlene Abfahrt</span>
+                    )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -938,7 +1024,10 @@ export function MapView({
                 defaultZoom={8}
                 mapTypeId="hybrid"
                 gestureHandling="greedy"
-                onClick={() => setArmedPlaceId(null)}
+                onClick={() => {
+                  setArmedPlaceId(null);
+                  setArmedKiteId(null);
+                }}
               >
                 {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
                     Google-Maps-Architektur immer unter Markern und Polylinien —
@@ -1129,6 +1218,75 @@ export function MapView({
                   );
                 })}
 
+                {/* KITE-SPOTS (Skipper-Wunsch 2026-08-06) — eigene Ebene, eigene
+                    Farbe, eigene Form: eine Raute, damit sie auch ohne Farbe
+                    kein Ampel-Punkt ist. Gefüllt heisst "der Wind passt heute"
+                    (assessment.kiteSpotsHeute, gerechnet in domain/kite.ts —
+                    die Karte rechnet nichts, AD-2), hohl heisst "heute nicht".
+                    Die Bedeutung steht in der Legende und im aria-label, nie
+                    nur in der Füllung.
+
+                    Anders als die Platz-Pins folgen sie NICHT der Kontextmenge
+                    des Plans: ein Kite-Spot ist der Grund, eine Insel überhaupt
+                    anzulaufen — ihn erst zu zeigen, wenn die Route schon dort
+                    vorbeiführt, hätte die Reihenfolge auf den Kopf gestellt.
+                    Touch-Zweischritt wie bei den Pins: erster Tipp nennt den
+                    Spot, zweiter öffnet seine Details. */}
+                {showKite &&
+                  (snapshot.library.kiteSpots ?? []).map((spot) => {
+                    const tag = kiteByspotId[spot.id];
+                    const passt = tag?.eignung === 'passt';
+                    const armed = armedKiteId === spot.id;
+                    const label = `Kite-Spot ${spot.name} — ${
+                      tag?.text ?? 'heute nicht bewertet'
+                    }`;
+                    return (
+                      <AdvancedMarker
+                        key={spot.id}
+                        position={{
+                          lat: spot.coordinates.lat,
+                          lng: spot.coordinates.lon,
+                        }}
+                        zIndex={armed ? 100 : passt ? 45 : 25}
+                      >
+                        <div
+                          className="marker-hit"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={label}
+                          title={label}
+                          onPointerDown={(e) => {
+                            lastPointerType.current = e.pointerType;
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onOpenPlace(spot.refPlaceId, spot.id);
+                            }
+                          }}
+                          onClick={() => {
+                            if (lastPointerType.current === 'touch' && !armed) {
+                              setArmedKiteId(spot.id);
+                              return;
+                            }
+                            onOpenPlace(spot.refPlaceId, spot.id);
+                          }}
+                        >
+                          <span
+                            className={passt ? 'kite-marker passt' : 'kite-marker'}
+                            aria-hidden="true"
+                          />
+                          {armed && (
+                            <span className="marker-chip" aria-hidden="true">
+                              {spot.name}
+                              {passt ? ' · Wind passt' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </AdvancedMarker>
+                    );
+                  })}
+
                 {/* Bootsposition (AC 8): Akzent-Punkt mit Halo — Blickanker,
                     nicht interaktiv. Über den Pins (zIndex 90), unter einem
                     bewaffneten Pin (100). */}
@@ -1196,6 +1354,25 @@ export function MapView({
                   >
                     Seezeichen
                   </button>
+                  {/* Nur wenn es überhaupt eine Kite-Bibliothek gibt: ein Chip
+                      für eine leere Ebene wäre eine Zusage, die die Karte nicht
+                      hält. Der Chip nennt gleich die Zahl der heute passenden
+                      Spots — das ist die Antwort, für die man ihn antippt. */}
+                  {(snapshot.library.kiteSpots ?? []).length > 0 && (
+                    <button
+                      type="button"
+                      className="layer-chip"
+                      aria-pressed={showKite}
+                      onClick={() => setShowKite((v) => !v)}
+                    >
+                      <span
+                        className="chip-dot"
+                        style={{ background: KITE_SPOT_COLOR }}
+                        aria-hidden="true"
+                      />
+                      Kite-Spots{kitePassendHeute > 0 ? ` · ${kitePassendHeute} heute` : ''}
+                    </button>
+                  )}
                 </div>
                 {/* Keine stille Ersetzung: solange eine Alternative gezeigt
                     wird, sagt die Karte in einer Zeile, dass die Hauptroute
@@ -1233,6 +1410,7 @@ export function MapView({
                 turnLabel={turnLabel}
                 windCount={windCount}
                 alternatives={legendAlternatives}
+                kiteShown={showKite && (snapshot.library.kiteSpots ?? []).length > 0}
               />
             </APIProvider>
           ) : (

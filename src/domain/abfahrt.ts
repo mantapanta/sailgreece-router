@@ -21,7 +21,12 @@
 
 import type { Leg } from './schema/route.ts';
 import type { AbfahrtsEmpfehlung, PlanningSnapshot } from './schema/snapshot.ts';
-import { assessLeg, departureHourForDay, stopHoursForDay } from './scoring.ts';
+import {
+  assessLeg,
+  departureHourChoices,
+  departureHourForDay,
+  stopHoursForDay,
+} from './scoring.ts';
 
 /**
  * Ankunft (Athen-Dezimalstunden ab Mitternacht des Abfahrtstags) der
@@ -77,9 +82,18 @@ export function empfehleAbfahrt(
    * Bisektion, weil die Dauer mit der Abfahrt variiert (der Nachmittags-
    * Meltemi macht späte Schläge langsamer) und die Ankunft deshalb nicht
    * monoton sein muss; der Bereich ist klein (≤ 9 Stunden).
+   *
+   * Gesucht wird ausschliesslich in den Stunden, die der Tag auch zur WAHL
+   * stellt (`scoring.departureHourChoices`) — seit die Empfehlung der Default
+   * der Abfahrt ist, wäre eine Empfehlung ausserhalb dieser Liste eine
+   * Abfahrt, die der Skipper im Menü nicht wiederfindet und nicht
+   * zurücksetzen kann.
    */
+  const kandidaten = departureHourChoices(day)
+    .filter((h) => h >= frueheste && h <= ziel - 1)
+    .sort((a, b) => b - a);
   let fallback: { abfahrt: number; ankunft: number } | null = null;
-  for (let h = ziel - 1; h >= frueheste; h--) {
+  for (const h of kandidaten) {
     const ankunft = ankunftBeiAbfahrt(legs, day, h, snapshot);
     if (ankunft === null) continue;
     if (ankunft <= ziel) {

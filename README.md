@@ -27,8 +27,13 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   liegen — wer den einen darüber schiebt, schiebt den anderen mit.
 - **Früh los, 15:00 vor Anker:** Je Etappentag empfiehlt die App die späteste
   Abfahrtsstunde, deren simulierte Ankunft das Ankerziel 15:00 noch hält
-  (`domain/abfahrt.ts`; heute per Klick als Abfahrtszeit übernehmbar) —
-  Crowd-Strategie: entspannt anlegen, bevor der Nachmittags-Meltemi steht.
+  (`domain/abfahrt.ts`) — Crowd-Strategie: entspannt anlegen, bevor der
+  Nachmittags-Meltemi steht. Diese Empfehlung ist der **Default der Abfahrt**:
+  Solver, Gültigkeit, Karte und Anzeige rechnen mit ihr, nicht mit einer
+  pauschalen Standardstunde (`scoring.departureHourForDay`). Abweichen geht per
+  Klick — in der Abfahrt-Kachel der Etappenkarte und am Chip der Etappenliste
+  in der Karte; die Wahl gilt pro Törntag und ist jederzeit auf die Empfehlung
+  zurückzusetzen.
 - **Entscheidungstore:** An natürlichen Knoten (Paros/Naxos, Syros) prüft die
   App am Tag der Festlegung, ob ein 48-h-Forecast-Fenster samt machbarem
   Rückweg den Vorstoß dahinter deckt (`domain/konzept.ts`,
@@ -47,6 +52,12 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   (`domain/schema/gastro.ts`). Beides bewertet nichts: weder Ampel noch Solver
   lesen davon ein Feld. Ein unbestätigter Reservierungskontakt trägt seinen
   Vorbehalt sichtbar, statt wie eine gesicherte Nummer auszusehen.
+
+- **Kite-Spots:** Die kuratierten Spots des Reviers als eigene Ebene auf der
+  Karte **und** als Hinweis an der Etappe — liegt einer auf der Start- oder
+  Ziel-Insel des Tages oder am Kurs, sagt die Tagesansicht es samt Link auf den
+  Spot (`domain/kite.ts`). Bewertet wird davon nichts: kein Feld geht in Ampel,
+  Solver oder Plan ein. Ausführlich unten: „Kite-Spots".
 
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
 @vis.gl/react-google-maps 1.x · Firebase (Authentication + Firestore +
@@ -193,8 +204,9 @@ Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
    ```
 
 3. **Freigeben:** Nach der Prüfung in jeder Staging-Datei
-   (`seeding/data/islands/*.json`, `routes.json`, `config.json`,
-   `polar.json`) das Feld `approved` auf `true` setzen. Die Polare erst
+   (`seeding/data/islands/*.json`, `legs.json`, `variants.json`,
+   `kitespots.json`, `config.json`, `polar.json`) das Feld `approved` auf
+   `true` setzen. Die Polare erst
    freigeben, nachdem das Transkript gegen die Original-Exportdatei
    („Fountaine Pajot 45.txt") verifiziert wurde.
    **Wichtig:** Die mitgelieferten Beispieldaten stammen aus dem
@@ -332,7 +344,7 @@ erreicht sein (Vorabend Tag 11, minus 1 Puffertag).
 src/
   domain/          # purer Core: schema/ (Zod), time, polar, scoring,
                    # ampel, options, ppr, persistence, assess, searoute,
-                   # legGeometry — kein React/Firebase/fetch,
+                   # legGeometry, kite — kein React/Firebase/fetch,
                    # Zeit/Törntag/Position werden injiziert (AD-2)
     data/          # landmass.ts — GENERIERTE Küstenlinien des Reviers
                    # (seeding/tools/extractLandmass.ts)
@@ -347,6 +359,8 @@ src/
                    # Login-Gate, TripContext-Reducer mit localStorage,
                    # manual > gps), View-Switch ohne Router
 seeding/           # Staging-JSON je Insel (approved-Flag), Review-Generator,
+  data/            # islands/*.json, legs.json, variants.json, kitespots.json,
+                   # config.json, polar.json — je Datei ein Freigabe-Gate
   review/          # generierte FR24-Review-Sichten
   tools/           # extractLandmass (Küstenlinien zuschneiden),
                    # seaRouteLegs (Etappenkurse landfrei legen)
@@ -481,6 +495,64 @@ Zwei Bänder, weil derselbe Wind auf den beiden Kursen nicht dasselbe bedeutet.
 Und wie überall in dieser App ist das eine **Meldung, kein Urteil**: diese
 Ampeln gehen NICHT in `StageAssessment.ampel` ein — über die Gültigkeit
 entscheiden weiterhin FR16-Windregel und Fahrtbudgets.
+
+## Kite-Spots
+
+Das Board kommt mit — also muss die App sagen, wo man es benutzen kann. Die
+Kite-Spots sind eine **eigene Bibliothek** (`seeding/data/kitespots.json`,
+Firestore-Sammlung `kiteSpots`, Schema `src/domain/schema/kite.ts`) und keine
+Subebene des Platzes wie die Gastronomie: ein Spot liegt dort, wo Wind und
+Wasser stimmen, und das ist regelmässig nicht der Hafen — Mikri Vigla liegt 5 sm
+von Naxos-Stadt, der Pounda-Kanal gehört zu Paros, geankert wird auf Antiparos.
+Nur mit eigener Koordinate lässt sich beantworten, ob ein Spot an der Etappe von
+heute liegt.
+
+Sichtbar wird das an drei Stellen:
+
+- **Tagesansicht:** je Etappen-Karte die Spots auf der Start- oder Ziel-Insel und
+  die im Korridor neben dem **gesegelten** Kurs (`params.kiteKorridorNm`,
+  Default 5 sm) — mit dem Urteil des Kite-Fensters und einem Link, der den Spot
+  im Platzdetail seines Bezugs-Liegeplatzes aufschlägt und dort hervorhebt.
+  Gezeigt werden die Zeilen, deren Windrichtung heute trifft; der Rest steht als
+  Zahl darunter statt stillschweigend zu fehlen.
+- **Karte:** eine eigene Ebene (Chip „Kite-Spots"), Raute statt Punkt und ein
+  eigener Farbton — ein Spot ist kein Ampel-Urteil. Gefüllt heisst „der Wind
+  passt heute"; die Bedeutung steht in der Legende und im `aria-label`, nie nur
+  in der Füllung. Die Ebene folgt bewusst **nicht** der Plan-Kontextmenge: ein
+  Kite-Spot ist der Grund, eine Insel anzulaufen.
+- **Platzdetail:** die Spots dieses Liegeplatzes mit Profil, Windrichtung,
+  Anfahrt, Gefahren und Konfidenz — nach den Liegeplatz-Details, weil sie wie
+  die Gastronomie nichts bewerten.
+
+**Woher der Wind kommt, und wo die Grenze liegt:** für einen Kite-Spot wird
+*kein* eigener Forecast geholt (AD-3: Forecast-Keys sind Plätze und
+Etappen-Wegpunkte). Gelesen wird der Wind am kuratierten **Bezugsplatz**
+(`refPlaceId`) — jeder Hinweis nennt diesen Platz, damit die Zahl nicht als Wind
+*am Spot* gelesen wird; in einer Kanaldüse steht dort regelmässig mehr.
+`refPlaceId` ist zugleich das Link-Ziel und bewusst kuratiert statt gerechnet:
+der geometrisch nächste Liegeplatz zu Mikri Vigla liegt auf *Paros*, jenseits
+des Kanals.
+
+| Parameter | Default | Bedeutung |
+|---|---|---|
+| `kiteMinKn` / `kiteMaxKn` | 12 / 30 | Das Kite-**Band**: dazwischen ist ein Spot fahrbar. Global statt je Spot — die Richtung ist Ortskenntnis, die Stärke hängt an Material und Crew. |
+| `kiteKorridorNm` | 5 | Bis zu diesem Abstand von der gesegelten Linie gilt ein Spot als „am Kurs". |
+| `kiteFensterStartHourAthens` / `…EndeHourAthens` | 12 / 19 | Das Kite-**Fenster** (Athen-Zeit): die Stunden, in denen gekitet wird — genau die Zeit, die die Crowd-Strategie meidet. |
+
+Bewertet wird mit der **günstigsten** Stunde des Fensters, nicht mit dem Worst
+Case (anders als die Nacht-Ampel): eine Nacht muss man durchhalten, eine Session
+sucht man sich aus. Dazu zählt die App die Stunden, in denen alles passt — eine
+einzelne Stunde im Band ist keine Session.
+
+**Die Datenlage ist bewusst als solche markiert.** Anders als die sicheren
+Liegeplätze ist diese Bibliothek Revierwissen, nicht Revierführer: keine
+Windstatistik, keine Ortsbegehung, und **behördliche Kite-Verbote,
+Badezonen-Auflagen und Schutzgebiete (Delos/Rinia, Despotiko, Polyaigos) sind
+nicht recherchiert**. Jeder Eintrag trägt darum `confidence: 'mittel'` oder
+`'niedrig'` samt Vorbehalt in der Anzeige, und die Datei steht auf
+`approved: false` — sie wird also erst importiert, nachdem
+`seeding/review/kite-spots.md` geprüft und die Freigabe gesetzt ist (dieselbe
+Regel wie für jede andere Staging-Datei, FR24/AD-10).
 
 ## Attribution
 

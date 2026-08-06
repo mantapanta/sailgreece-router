@@ -102,7 +102,8 @@ function realSnapshot(
       currentDay: opts.currentDay ?? 1,
       position: { source: 'manual', lat: a.coordinates.lat, lon: a.coordinates.lon, placeId: a.id },
       plan: opts.plan ?? null,
-      departureHourOverride: null,
+      departureHourByDay: {},
+      empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
     },
   });

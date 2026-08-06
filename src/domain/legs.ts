@@ -7,6 +7,8 @@
  * inventing its own fallback.
  */
 
+import type { Coordinates } from './schema/common.ts';
+import type { Place } from './schema/place.ts';
 import type { Leg, Variant } from './schema/route.ts';
 import type { Library } from './schema/snapshot.ts';
 
@@ -86,6 +88,22 @@ export function legsOfVariant(variant: Variant, library: Library): Leg[] {
 /** True when a variant names legs the library no longer contains. */
 export function variantIsIncomplete(variant: Variant, library: Library): boolean {
   return legsOfVariant(variant, library).length !== variant.legIds.length;
+}
+
+/**
+ * Der KURS einer Etappe als Koordinatenzug: Startplatz, Wegpunkte, Zielplatz.
+ *
+ * Dieselbe Reihenfolge wie `legPoints` in scoring.ts (die Rechnung) und
+ * `stagePoints` in ui/mapPath.ts (die Karte) — nur ohne Forecast-Keys, denn
+ * dieser Zug wird gegen Geometrie gemessen, nicht gegen Wind. Leer, wenn ein
+ * Endplatz nicht auflösbar ist: dann gibt es keinen Kurs, und ein Zug aus
+ * blossen Wegpunkten wäre ein anderer.
+ */
+export function legTrack(leg: Leg, places: Place[]): Coordinates[] {
+  const from = places.find((p) => p.id === leg.fromPlaceId);
+  const to = places.find((p) => p.id === leg.toPlaceId);
+  if (!from || !to) return [];
+  return [from.coordinates, ...leg.waypoints, to.coordinates];
 }
 
 /** Island sequence implied by an ordered leg list. */

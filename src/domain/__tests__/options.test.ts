@@ -60,7 +60,7 @@ function rundkursScenario() {
     trip: {
       currentDay: 1,
       position: { source: 'manual', lat: athen.coordinates.lat, lon: athen.coordinates.lon, placeId: athen.id },
-      plan: null, departureHourOverride: null, stopHoursByDay: {},
+      plan: null, departureHourByDay: {}, empfohleneAbfahrtByDay: {}, stopHoursByDay: {},
     },
   });
   snapshot.params = {
@@ -155,7 +155,8 @@ function twoIslandSnapshot(opts: {
       currentDay: opts.currentDay ?? 1,
       position: { source: 'manual', lat: base.coordinates.lat, lon: base.coordinates.lon, placeId: base.id },
       plan: null,
-      departureHourOverride: null,
+      departureHourByDay: {},
+      empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
     },
   });
@@ -281,7 +282,8 @@ describe('options — restPlanFeasible searches double-leg arrival days at the d
         currentDay: 10, // = effective deadline (disembark 12 - 1 - buffer 1)
         position: { source: 'manual', lat: sued.coordinates.lat, lon: sued.coordinates.lon, placeId: sued.id },
         plan: null,
-        departureHourOverride: null,
+        departureHourByDay: {},
+        empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
       },
     });

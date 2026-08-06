@@ -77,10 +77,10 @@ describe('empfehleAbfahrt — späteste Abfahrt, die 15:00 hält', () => {
 describe('Nachtetappen-Grenze — die empfohlene Frühabfahrt ist keine Nachtfahrt', () => {
   it('06:00-Abfahrt zählt nicht als Nachtetappe, 05:00 schon', () => {
     const { snapshot, leg } = northSouthScenario({ windKn: 15, windFromDeg: 0 });
-    // Abfahrtsbasis heute per Override auf 06:00 bzw. 05:00 (FR15).
-    snapshot.trip.departureHourOverride = 6;
+    // Abfahrtsbasis von Tag 1 auf 06:00 bzw. 05:00 gesetzt (FR15).
+    snapshot.trip.departureHourByDay = { 1: 6 };
     expect(assessLeg(leg, 1, snapshot).nightLeg).toBe(false);
-    snapshot.trip.departureHourOverride = 5;
+    snapshot.trip.departureHourByDay = { 1: 5 };
     expect(assessLeg(leg, 1, snapshot).nightLeg).toBe(true);
   });
 });

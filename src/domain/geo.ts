@@ -76,6 +76,60 @@ export function destinationPoint(
   };
 }
 
+/**
+ * Kürzester Abstand eines Punktes zu einem KURSABSCHNITT in sm — Querab-Abstand
+ * (cross track), aber an den Enden auf den Endpunkt geklemmt.
+ *
+ * Gebraucht für die Frage "liegt das an unserer Strecke?" (domain/kite.ts). Der
+ * reine Querab-Abstand allein taugt dafür nicht: er misst zur VERLÄNGERTEN
+ * Grosskreislinie, und damit läge ein Spot 200 sm hinter dem Ziel noch "0,5 sm
+ * neben dem Kurs". Deshalb wird zuerst geprüft, ob der Fusspunkt überhaupt
+ * zwischen den Enden liegt — sonst gilt der Abstand zum näheren Ende.
+ */
+export function distanceToSegmentNm(
+  point: Coordinates,
+  segStart: Coordinates,
+  segEnd: Coordinates,
+): number {
+  const d12 = distanceNm(segStart, segEnd);
+  // Entartetes Segment (identische Enden): es gibt keine Richtung, nur den Punkt.
+  if (d12 === 0) return distanceNm(point, segStart);
+  const d13 = distanceNm(segStart, point);
+  if (d13 === 0) return 0;
+  const delta = signedAngleDeg(bearingDeg(segStart, point), bearingDeg(segStart, segEnd));
+  // Fusspunkt liegt VOR dem Start: der Startpunkt ist der nächste Punkt.
+  if (Math.abs(delta) > 90) return d13;
+  const dxt = Math.asin(Math.sin(d13 / R_NM) * Math.sin(rad(delta))) * R_NM;
+  const dat =
+    Math.acos(
+      // Rundungsfehler können den Quotienten minimal über 1 schieben; acos
+      // liefert dann NaN und der Abstand wäre nicht mehr vergleichbar.
+      Math.min(1, Math.max(-1, Math.cos(d13 / R_NM) / Math.cos(dxt / R_NM))),
+    ) * R_NM;
+  // Fusspunkt liegt hinter dem Ziel: der Endpunkt ist der nächste Punkt.
+  if (dat > d12) return distanceNm(point, segEnd);
+  return Math.abs(dxt);
+}
+
+/**
+ * Kürzester Abstand zu einem POLYGONZUG (Etappenkurs mit Wegpunkten) in sm.
+ * Leerer oder einpunktiger Zug: null — ohne Kurs gibt es keinen Abstand zu ihm,
+ * und eine 0 wäre die Behauptung "liegt genau darauf".
+ */
+export function distanceToPathNm(
+  point: Coordinates,
+  path: Coordinates[],
+): number | null {
+  if (path.length === 0) return null;
+  if (path.length === 1) return distanceNm(point, path[0]!);
+  let best = Infinity;
+  for (let i = 1; i < path.length; i++) {
+    const d = distanceToSegmentNm(point, path[i - 1]!, path[i]!);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
 const COMPASS_POINTS = [
   'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
   'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
