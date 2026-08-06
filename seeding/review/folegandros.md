@@ -50,5 +50,13 @@ Warnungen: ⚠ Haltegrund schlecht: Felsplatten und dünner Sand, Anker bricht b
 
 Quellen: Deep-Research Lauf 2: CruisersWiki Folegandros
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Dal Capo del porto (`folegandros-karavostasi-dal-capo`) | 4.4/5 | Fisch der Insel, italienisch beeinflusst | Schwertfisch, Thunfisch, Calamari | Oberhalb des Hafenbeckens, kurzer Anstieg von der Kaimauer | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (196 Bewertungen, #11 von 68 in Karavostasis) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar; Befund des Laufs: Kali Kardia am selben Hafen liegt bei 3,1/5 (24 Bewertungen) und ist deshalb NICHT aufgenommen
+
 ---
 Freigabe: in `seeding/data/islands/folegandros.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

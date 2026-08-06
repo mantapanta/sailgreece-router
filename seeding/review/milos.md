@@ -50,6 +50,14 @@ Warnungen: ⚠ Untiefen und Felsen an der östlichen Hafeneinfahrt und bei Kap B
 
 Quellen: Deep-Research Lauf 2: CruisersWiki Milos; Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Mikros Apoplous (`milos-adamas-mikros-apoplous`) | 4.4/5 | Fisch und Meeresfrüchte am Wasser | Linguine mit Seeigel, Kritharaki mit Kaisergranat, Rotbarbe vom Grill | Fußläufig an der Hafenpromenade von Adamas | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (2.666 Bewertungen, #1 von 32 in Adamas) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ### Pollonia (`milos-pollonia`, hafen)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**

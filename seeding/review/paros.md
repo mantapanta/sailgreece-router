@@ -50,6 +50,15 @@ Warnungen: ⚠ Starker Fährverkehr (~27 Anläufe/Tag im Juli) — Schwell und R
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 250 (Seitenangabe unverifiziert)
 
+**Gastronomie (2)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Taverna Paros (`paros-parikia-taverna-paros`) | 4.5/5 | Griechische Taverne, Treffpunkt der Einheimischen | — | Etwas abseits der Hafenfront im Ort — kurzer Weg von der Kaimauer | — | niedrig |
+| Taverna Mira (`paros-parikia-mira`) | 4.3/5 | Grill und Fleisch | Steaks vom Grill | In Parikia, kurzer Weg von der Kaimauer | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,5/5 (579 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar; Web-Recherche 2026-08-06: Tripadvisor 4,3/5 (994 Bewertungen, #41 von 412 in Parikia) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ### Naoussa (`paros-naoussa`, hafen)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**

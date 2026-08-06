@@ -50,6 +50,15 @@ Warnungen: ⚠ Sehr hohe Yachtdichte im Juli und August · ⚠ Badezonen-Bojen b
 
 Quellen: Deep-Research Lauf 3: CruisersWiki Mykonos
 
+**Gastronomie (2)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Kostantis (`mykonos-ornos-kostantis`) | 4.4/5 | Fischtaverne | — | Die Bucht wird frei geankert — mit dem Beiboot an den Strand von Ornos, von dort fussläufig | — | niedrig |
+| Apaggio (`mykonos-ornos-apaggio`) | 4.4/5 | Mediterrane Küche am Strand | — | Die Bucht wird frei geankert — mit dem Beiboot an den Strand von Ornos, von dort fussläufig | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (1.076 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar; Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (1.185 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ### Tourlos (Neue Marina) (`mykonos-tourlos`, marina)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**

@@ -50,6 +50,14 @@ Warnungen: ⚠ Starke Fallböen bei Meltemi aus NE · ⚠ Wochenend-Andrang von 
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 225 (Seitenangabe unverifiziert); Deep-Research Lauf 2: CruisersWiki Kea
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Breeze Finger Food Bar (`kea-vourkari-breeze`) | 4.4/5 | Finger Food und Drinks mit Blick auf die Bucht | — | Fußläufig — die Pier von Vourkari liegt an der Tavernenzeile | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (#10 von 60 in Vourkari) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar; Befund des Laufs: die bekannten Fischtavernen des Orts (Aristos 3,5/5; I Strofi tou Mimi 3,6/5 bei 356 Bewertungen) liegen unter der Aufnahmeschwelle und sind deshalb NICHT aufgenommen
+
 ### Korissia (`kea-korissia`, hafen)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**

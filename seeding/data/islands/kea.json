@@ -66,7 +66,22 @@
           "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 225 (Seitenangabe unverifiziert)",
           "Deep-Research Lauf 2: CruisersWiki Kea"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "kea-vourkari-breeze",
+          "name": "Breeze Finger Food Bar",
+          "qualityRating": 4.4,
+          "cuisineType": "Finger Food und Drinks mit Blick auf die Bucht",
+          "signatureDishes": [],
+          "accessInfo": "Fußläufig — die Pier von Vourkari liegt an der Tavernenzeile",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,4/5 (#10 von 60 in Vourkari) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar",
+            "Befund des Laufs: die bekannten Fischtavernen des Orts (Aristos 3,5/5; I Strofi tou Mimi 3,6/5 bei 356 Bewertungen) liegen unter der Aufnahmeschwelle und sind deshalb NICHT aufgenommen"
+          ]
+        }
+      ]
     },
     {
       "id": "kea-korissia",

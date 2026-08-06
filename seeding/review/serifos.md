@@ -50,5 +50,13 @@ Warnungen: ⚠ Extrem starke Fallböen von den Steilhängen der Chora bei Meltem
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 238 (Seitenangabe unverifiziert); Deep-Research Lauf 2: Jim Baerselman, Cruising the South Aegean
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Kalis Seafood Restaurant (`serifos-livadi-kalis`) | 4.0/5 | Psarotaverna — Fisch aus den Booten des Ortes | Hummer-Pasta, Islanders Salad mit Manouri | Am Ufer von Livadi, fussläufig von der Kaimauer; Tische stehen am Strand | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,0/5 (602 Bewertungen) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ---
 Freigabe: in `seeding/data/islands/serifos.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.
