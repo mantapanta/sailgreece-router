@@ -367,10 +367,29 @@ vorige Faltung `cos(50° − TWA)` hatte denselben Fall um rund ein Viertel zu g
 gerechnet, weshalb eine Kreuz-Etappe fast so schnell aussah wie ein anliegender
 Am-Wind-Kurs.
 
+Gefahren wird dabei kein enger Kurs, sondern ein **Zickzack**: ein Schlag auf
+dem einen Bug mit 50° zum Wind, wenden — 100° Kursänderung —, wieder 50° auf dem
+anderen. `src/domain/kreuz.ts` legt diese Schläge: aus Kurs C, Wind aus W und
+δ = C − W folgen die beiden Bugs auf W ± 50° und ihre Längen
+
+```
+l_A = D · sin(50° + δ) / sin(100°)     l_B = D · sin(50° − δ) / sin(100°)
+```
+
+deren Summe genau `D · cos(δ) / cos(50°)` ist — der Kehrwert des Kreuz-Faktors.
+Zeit und Gestalt sagen dasselbe, an zwei Stellen; ein Test hält das fest. Der
+lange Schlag kommt zuerst (näher am Kurs), die Schlaglänge kommt aus
+`kreuzSchlagNm` (Default 5 sm), und jeder Zickzack wird gegen die Landmaske
+geprüft: passt er nicht, wird halbiert, und wenn er dann immer noch an Land
+läuft, wird **nichts** gezeichnet statt einer Linie über Land.
+
 Sichtbar wird das überall, wo die Etappe von sich erzählt: die Bewertung führt
-`kreuzHours` und `kreuzExtraNm`, jede simulierte Stunde trägt `kreuzen`,
-`sailedTwaDeg` und die Fahrt durchs Wasser, und die Tagesansicht schreibt
-„Kreuzen (50° am Wind)" statt „gegenan".
+`kreuzHours`, `kreuzExtraNm`, `wenden` und den `kreuzTrack`, jede simulierte
+Stunde trägt `kreuzen`, `sailedTwaDeg` und die Fahrt durchs Wasser. Die
+Tagesansicht schreibt „Kreuzen (50° am Wind) · 6 Wenden à 100°" statt „gegenan",
+und die Tageskarte legt den Zickzack gestrichelt über die Ideallinie — als
+Skizze des Umwegs, nicht als Wendeanweisung: wo wirklich gewendet wird,
+entscheiden Dreher und Welle.
 
 Vermieden wird Kreuzen an zwei Stellen — beide raten ab, keine verbietet:
 

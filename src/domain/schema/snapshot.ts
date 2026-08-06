@@ -1,4 +1,4 @@
-import type { Ampel } from './common.ts';
+import type { Ampel, Coordinates } from './common.ts';
 import type { Island } from './island.ts';
 import type { InvalidPlace, Place } from './place.ts';
 import type { Leg, Variant } from './route.ts';
@@ -282,6 +282,24 @@ export interface LegAssessment {
    * macht — 4 sm mehr durchs Wasser sind eine Stunde mehr an Bord.
    */
   kreuzExtraNm: number | null;
+  /**
+   * Zahl der WENDEN des geplanten Zickzacks — die Kreuz als Handgriff gezählt.
+   * 0, wenn nichts zu kreuzen ist; null, wenn die Etappe nicht simuliert
+   * werden konnte.
+   */
+  wenden: number | null;
+  /**
+   * DER ZICKZACK, wie er gesegelt wird (domain/kreuz.ts): Schlag auf dem einen
+   * Bug, wenden, Schlag auf dem anderen — der Weg, den die Karte zeichnen muss,
+   * weil die gerade Linie zum Ziel keiner ist, den das Boot fahren kann.
+   *
+   * Leer, wenn nichts gekreuzt wird ODER kein landfreier Zickzack gefunden
+   * wurde. Es ist eine SKIZZE des Umwegs, keine Wendeanweisung: wo wirklich
+   * gewendet wird, entscheiden Dreher und Welle. Die Strecke durchs Wasser
+   * behauptet der Track deshalb nicht — die steht in `kreuzExtraNm` und kommt
+   * aus der stündlichen Simulation.
+   */
+  kreuzTrack: Coordinates[];
   /**
    * Whether this verdict rests on real model hours or partly on the
    * persistence assumption beyond the forecast horizon.

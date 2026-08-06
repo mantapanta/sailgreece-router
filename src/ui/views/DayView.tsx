@@ -142,6 +142,13 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
                   <strong>
                     Kreuzen ({formatDeg(kreuzStunde.sailedTwaDeg)} am Wind)
                   </strong>
+                  {leg.wenden !== null && leg.wenden > 0 && (
+                    <>
+                      {' · '}
+                      {leg.wenden} {leg.wenden === 1 ? 'Wende' : 'Wenden'} à{' '}
+                      {formatDeg(2 * kreuzStunde.sailedTwaDeg)}
+                    </>
+                  )}
                 </>
               )}
             </dd>
@@ -180,10 +187,14 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
             {' '}
             Liegt der Kurs enger am Wind als{' '}
             {formatDeg(kreuzStunde.sailedTwaDeg)}, wird er nicht angelegen:
-            gerechnet ist dann mit Kreuzschlägen über{' '}
-            {formatDeg(kreuzStunde.sailedTwaDeg)} — die Fahrt in der Tabelle ist
-            die auf der Ideallinie, durchs Wasser läuft das Boot schneller und
-            weiter.
+            gesegelt wird ein Schlag auf dem einen Bug mit{' '}
+            {formatDeg(kreuzStunde.sailedTwaDeg)} zum Wind, dann gewendet (
+            {formatDeg(2 * kreuzStunde.sailedTwaDeg)} Kursänderung) und wieder{' '}
+            {formatDeg(kreuzStunde.sailedTwaDeg)} — Zickzack statt direkt. Die
+            Fahrt in der Tabelle ist die auf der Ideallinie; durchs Wasser läuft
+            das Boot schneller und weiter. Die gestrichelte Linie auf der Karte
+            zeigt den Zickzack als Skizze — wo wirklich gewendet wird,
+            entscheiden Dreher und Welle.
           </>
         )}
         {worstCase &&
@@ -837,6 +848,11 @@ function StageCard({
           {mapId ? (
             <StageMap
               points={points}
+              // Fertig gerechnet aus der Bewertung (AD-2) — die Karte legt
+              // keine Kurse, sie zeichnet die gelegten.
+              kreuzTracks={stage.legs.map((l) =>
+                l.kreuzTrack.map((c) => ({ lat: c.lat, lng: c.lon })),
+              )}
               ampel={stage.ampel}
               mapId={mapId}
               onOpenPlace={onOpenPlace}

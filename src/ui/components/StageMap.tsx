@@ -41,6 +41,7 @@ function FitToStage({ path }: { path: google.maps.LatLngLiteral[] }) {
 
 export function StageMap({
   points,
+  kreuzTracks = [],
   ampel,
   mapId,
   onOpenPlace,
@@ -51,6 +52,17 @@ export function StageMap({
    * Rechnung nutzt. Nur so können Karte und Tabelle nicht auseinanderlaufen.
    */
   points: StagePoint[];
+  /**
+   * Der ZICKZACK je Etappe des Tages (LegAssessment.kreuzTrack) — der Weg, der
+   * wirklich gesegelt wird, wenn das Ziel enger als 50° am Wind liegt.
+   *
+   * Er ersetzt die Ideallinie nicht, er liegt darüber: die Gerade ist die
+   * Strecke, um die es geht, der Zickzack der Weg dorthin. Leere Tracks
+   * (nichts zu kreuzen, oder kein landfreier Zickzack gefunden) kommen als
+   * leere Listen und zeichnen nichts — die Domäne entscheidet das, nicht die
+   * Karte.
+   */
+  kreuzTracks?: google.maps.LatLngLiteral[][];
   ampel: Ampel;
   mapId: string;
   onOpenPlace?: (placeId: string) => void;
@@ -100,6 +112,22 @@ export function StageMap({
           directionArrows
           zIndex={20}
         />
+
+        {/* Der Zickzack über der Ideallinie: gestrichelt und dünner, weil er
+            eine SKIZZE ist — wo wirklich gewendet wird, entscheiden Dreher und
+            Welle. Dass er da ist, ist die Aussage: direkt kommt man nicht an. */}
+        {kreuzTracks.map((track, i) =>
+          track.length > 1 ? (
+            <Polyline
+              key={`kreuz-${i}`}
+              path={track}
+              strokeColor={lineColor}
+              strokeWeight={2}
+              dashed
+              zIndex={25}
+            />
+          ) : null,
+        )}
 
         {points.map((p) =>
           p.kind === 'platz' ? (

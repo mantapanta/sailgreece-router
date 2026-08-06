@@ -28,6 +28,7 @@ import {
   kreuzFactor,
   motorSpeedKn,
 } from './polar.ts';
+import { kreuzSchlaege } from './kreuz.ts';
 import { hourIndexAt, legWindow, MAX_LEG_HOURS } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -299,6 +300,8 @@ export function assessLeg(
     upwind: false,
     kreuzHours: null,
     kreuzExtraNm: null,
+    wenden: null,
+    kreuzTrack: [],
     basis: 'forecast',
     reasons: [reason],
     nightLeg: null,
@@ -622,6 +625,45 @@ export function assessLeg(
     samples > 0 && twdVectorLen >= 0.1
       ? (((Math.atan2(twdSinSum, twdCosSum) * 180) / Math.PI) + 360) % 360
       : null;
+  /**
+   * DER ZICKZACK (kreuz.ts) — die Gestalt zu den Kreuz-Stunden.
+   *
+   * Gebaut wird er aus den DURCHFAHRTEN, nicht aus den Stunden: ein Abschnitt
+   * ist die Einheit, in der ein Kurs anliegt, und der Wind, gegen den gekreuzt
+   * wird, ist der der Stunde, in der der Abschnitt passiert wurde — genau der,
+   * der in derselben Zeile der Rechnung steht. Abschnitte, die anliegen,
+   * bleiben gerade.
+   */
+  let kreuzTrack: Coordinates[] = [];
+  let wenden = 0;
+  /** Mindestens ein Abschnitt hat einen zeichenbaren Zickzack beigesteuert. */
+  let zickzackGezeichnet = false;
+  if (kreuzHours > 0 && points.length > 1) {
+    kreuzTrack.push(points[0]!.coordinates);
+    for (let i = 1; i < points.length; i++) {
+      const from = points[i - 1]!.coordinates;
+      const to = points[i]!.coordinates;
+      const seg = passages[i]?.segment;
+      const kreuz = seg?.kreuzen
+        ? kreuzSchlaege(from, to, seg.twdDeg, params)
+        : null;
+      // Die Wenden zählen IMMER, wenn gekreuzt wird — auch wenn sich der
+      // Zickzack nicht landfrei zeichnen lässt. Sie sind der Handgriff an
+      // Bord; ob die Karte ihn skizzieren kann, ändert daran nichts.
+      wenden += kreuz?.wenden ?? 0;
+      if (kreuz && kreuz.track.length > 1) {
+        kreuzTrack.push(...kreuz.track.slice(1));
+        zickzackGezeichnet = true;
+      } else {
+        kreuzTrack.push(to);
+      }
+    }
+    // Kein einziger Abschnitt liess sich landfrei kreuzen: dann bliebe der
+    // Track die Ideallinie ein zweites Mal — eine Linie, die nichts Neues
+    // sagt und als "so wird gesegelt" gelesen würde. Lieber keine.
+    if (!zickzackGezeichnet) kreuzTrack = [];
+  }
+
   const budget = budgetVerdict(sailHours, motorHours, avgTwsKn, params);
   budget.reasons.forEach((r) => reasons.add(r));
   verdicts.push(budget.ampel);
@@ -679,6 +721,8 @@ export function assessLeg(
     upwind: avgTwaDeg !== null && avgTwaDeg < params.upwindTwaDeg,
     kreuzHours,
     kreuzExtraNm,
+    wenden,
+    kreuzTrack,
     basis,
     reasons: [...reasons],
     nightLeg,

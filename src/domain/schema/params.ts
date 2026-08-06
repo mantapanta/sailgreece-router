@@ -50,6 +50,17 @@ const ParamsObjectSchema = z.object({
    * ist — eine halbe Stunde Aufkreuzen merkt an Bord niemand.
    */
   kreuzGelbAbStunden: z.number().min(0).default(0.5),
+  /**
+   * PLANLÄNGE EINES KREUZSCHLAGS in sm — daraus folgt, wie oft der gezeichnete
+   * Zickzack wendet (domain/kreuz.ts).
+   *
+   * Keine Wendeanweisung, sondern der Massstab der Skizze: 5 sm sind bei
+   * Familiencrew und 6 kn knapp eine Stunde je Schlag. Kürzer wäre ein
+   * Zickzack aus vierzig Wenden, länger ein einzelner Schlag quer aus dem
+   * Revier heraus — beides zeigt nicht, was wirklich gefahren wird. Findet
+   * sich damit kein landfreier Weg, halbiert kreuz.ts selbst.
+   */
+  kreuzSchlagNm: z.number().positive().default(5),
   /** FR16: no beating upwind above this true wind speed. */
   maxUpwindTwsKn: z.number().positive().default(25),
   /** Yellow-band wind reserve (FR17 calibration parameter, AD-8/Deferred). */

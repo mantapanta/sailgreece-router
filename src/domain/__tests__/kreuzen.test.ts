@@ -12,9 +12,20 @@
 
 import { describe, expect, it } from 'vitest';
 import { courseSpeedKn, kreuzFactor, sailSpeedKn } from '../polar.ts';
+import { kreuzSchlaege } from '../kreuz.ts';
 import { assessLeg } from '../scoring.ts';
 import { preferred, type PlanMetrics, type SolveResult } from '../solver.ts';
+import {
+  angleDiffDeg,
+  bearingDeg,
+  destinationPoint,
+  distanceNm,
+  normDeg,
+  twaDeg,
+} from '../geo.ts';
+import { pathCrossesLand } from '../searoute.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
+import type { Coordinates } from '../schema/common.ts';
 import { makePlan, makeStage, northSouthScenario, TEST_POLAR } from './fixtures.ts';
 
 const params = DEFAULT_PARAMS;
@@ -156,6 +167,152 @@ describe('assessLeg — die Etappe weist das Kreuzen aus', () => {
       params.fallbackSpeeds.upwindKn * kreuzFactor(22, params),
       6,
     );
+  });
+});
+
+describe('kreuz — der Zickzack: zwei Bugs, 100° Wende, längere Strecke', () => {
+  /** Offene See westlich der Kykladen — kein Land, das den Zickzack stört. */
+  const from: Coordinates = { lat: 36.9, lon: 24.0 };
+  const nach = (bearing: number, nm: number) => destinationPoint(from, bearing, nm);
+
+  it('liegt der Kurs an, gibt es keine Kreuz', () => {
+    // Kurs 000°, Wind aus 090° => TWA 90.
+    expect(kreuzSchlaege(from, nach(0, 20), 90, params)).toBeNull();
+  });
+
+  it('segelt beide Bugs bei genau 50° zum Wind — 100° Kursänderung je Wende', () => {
+    // Kurs 000°, Wind aus 022° => TWA 22, muss gekreuzt werden.
+    const k = kreuzSchlaege(from, nach(0, 20), 22, params)!;
+    expect(k).not.toBeNull();
+    expect(k.wendewinkelDeg).toBe(2 * params.beatTwaDeg);
+    for (const s of k.schlaege) {
+      expect(twaDeg(s.courseDeg, 22)).toBeCloseTo(params.beatTwaDeg, 6);
+    }
+    // Genau zwei Kurse, und zwischen ihnen liegen die 100°.
+    const kurse = [...new Set(k.schlaege.map((s) => Math.round(s.courseDeg)))];
+    expect(kurse).toHaveLength(2);
+    expect(angleDiffDeg(kurse[0]!, kurse[1]!)).toBeCloseTo(100, 0);
+    expect(new Set(k.schlaege.map((s) => s.bug))).toEqual(
+      new Set(['backbord', 'steuerbord']),
+    );
+    // Wenden = Schläge − 1, und gewendet wird mindestens einmal.
+    expect(k.wenden).toBe(k.schlaege.length - 1);
+    expect(k.wenden).toBeGreaterThanOrEqual(1);
+  });
+
+  it('die Schläge wechseln den Bug — nie zweimal derselbe hintereinander', () => {
+    const k = kreuzSchlaege(from, nach(0, 30), 22, params)!;
+    for (let i = 1; i < k.schlaege.length; i++) {
+      expect(k.schlaege[i]!.bug).not.toBe(k.schlaege[i - 1]!.bug);
+    }
+  });
+
+  it('der lange Schlag kommt zuerst — der Bug, der näher am Kurs liegt', () => {
+    // Kurs 000°, Wind aus 010°: der Kurs liegt dichter am Steuerbordbug
+    // (Wind − 50 = 320°) ... nein, an dem, dessen Kurs weniger abweicht.
+    const k = kreuzSchlaege(from, nach(0, 30), 10, params)!;
+    const erster = k.schlaege[0]!;
+    const zweiter = k.schlaege[1]!;
+    expect(erster.nm).toBeGreaterThan(zweiter.nm);
+    expect(angleDiffDeg(erster.courseDeg, 0)).toBeLessThan(
+      angleDiffDeg(zweiter.courseDeg, 0),
+    );
+  });
+
+  it('die Summe der Schläge ist genau der Umweg aus polar.ts — eine Wahrheit, zwei Stellen', () => {
+    const ziel = nach(0, 20);
+    const D = distanceNm(from, ziel);
+    for (const twa of [0, 10, 22, 35, 49]) {
+      const k = kreuzSchlaege(from, ziel, twa, params)!;
+      const gesegelt = k.schlaege.reduce((s, x) => s + x.nm, 0);
+      // kreuzFactor sagt, was von der Fahrt ankommt; sein Kehrwert ist der
+      // Streckenzuschlag. Beides muss dieselbe Kreuz meinen.
+      expect(gesegelt).toBeCloseTo(D / kreuzFactor(twa, params), 4);
+      expect(gesegelt).toBeGreaterThan(D);
+    }
+  });
+
+  it('endet am Ziel — der Zickzack führt hin, er läuft nicht daneben vorbei', () => {
+    const ziel = nach(0, 20);
+    const k = kreuzSchlaege(from, ziel, 22, params)!;
+    const letzter = k.schlaege[k.schlaege.length - 1]!;
+    expect(distanceNm(letzter.to, ziel)).toBeLessThan(0.01);
+    expect(k.track[0]).toEqual(from);
+    expect(k.track).toHaveLength(k.schlaege.length + 1);
+    // Und er holt aus: kein Punkt des Zickzacks liegt auf der Ideallinie.
+    const mitten = k.track[1]!;
+    expect(angleDiffDeg(bearingDeg(from, mitten), bearingDeg(from, ziel))).toBeGreaterThan(
+      5,
+    );
+  });
+
+  it('kürzere Schläge, wenn der Skipper sie kürzer plant', () => {
+    const ziel = nach(0, 30);
+    const lang = kreuzSchlaege(from, ziel, 22, { ...params, kreuzSchlagNm: 15 })!;
+    const kurz = kreuzSchlaege(from, ziel, 22, { ...params, kreuzSchlagNm: 3 })!;
+    expect(kurz.wenden).toBeGreaterThan(lang.wenden);
+  });
+
+  it('zeichnet keinen Zickzack über Land — lieber gar keinen', () => {
+    // Quer über Naxos: jeder ausholende Schlag liegt an Land.
+    const west: Coordinates = { lat: 37.1, lon: 25.35 };
+    const ost: Coordinates = { lat: 37.15, lon: 25.65 };
+    const k = kreuzSchlaege(west, ost, normDeg(bearingDeg(west, ost) - 20), params);
+    if (k && k.landImWeg) {
+      expect(k.track).toEqual([]);
+      // Der Umweg bleibt trotzdem richtig — nur die Skizze fehlt.
+      expect(k.schlaege.length).toBeGreaterThan(1);
+    } else {
+      expect(pathCrossesLand(k!.track)).toBe(false);
+    }
+  });
+});
+
+describe('assessLeg — der Zickzack hängt an der Etappe', () => {
+  it('führt Wenden und Track, wenn gekreuzt wird', () => {
+    // Offene See (lon 24,0): der Zickzack holt aus und braucht Platz dafür.
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 22,
+      southbound: false,
+      lon: 24.0,
+    });
+    const a = assessLeg(leg, 1, snapshot);
+    expect(a.wenden!).toBeGreaterThanOrEqual(1);
+    expect(a.kreuzTrack.length).toBeGreaterThan(2);
+    // Der Track beginnt am Start und endet am Ziel der Etappe.
+    const start = snapshot.library.places.find((p) => p.id === leg.fromPlaceId)!;
+    const ziel = snapshot.library.places.find((p) => p.id === leg.toPlaceId)!;
+    expect(distanceNm(a.kreuzTrack[0]!, start.coordinates)).toBeLessThan(0.01);
+    expect(
+      distanceNm(a.kreuzTrack[a.kreuzTrack.length - 1]!, ziel.coordinates),
+    ).toBeLessThan(0.01);
+  });
+
+  it('zählt die Wenden auch dort, wo kein landfreier Zickzack zu zeichnen ist', () => {
+    // Der Default-Ort liegt zwischen den westlichen Kykladen: die Ideallinie
+    // ist frei, jeder ausholende Schlag läuft an Land. Gekreuzt werden MUSS
+    // trotzdem — die Wenden sind der Handgriff, die Skizze nur die Karte.
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 22,
+      southbound: false,
+    });
+    const a = assessLeg(leg, 1, snapshot);
+    expect(a.kreuzHours!).toBeGreaterThan(0);
+    expect(a.wenden!).toBeGreaterThanOrEqual(1);
+    expect(a.kreuzTrack).toEqual([]);
+  });
+
+  it('liegt der Kurs an, bleibt der Track leer — nichts zu zeichnen', () => {
+    const { snapshot, leg } = northSouthScenario({
+      windKn: 12,
+      windFromDeg: 90,
+      southbound: false,
+    });
+    const a = assessLeg(leg, 1, snapshot);
+    expect(a.wenden).toBe(0);
+    expect(a.kreuzTrack).toEqual([]);
   });
 });
 

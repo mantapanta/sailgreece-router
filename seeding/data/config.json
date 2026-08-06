@@ -13,6 +13,7 @@
     "upwindTwaDeg": 55,
     "beatTwaDeg": 50,
     "kreuzGelbAbStunden": 0.5,
+    "kreuzSchlagNm": 5,
     "maxUpwindTwsKn": 25,
     "gelbReserveKn": 3,
     "konzeptOstMaxKn": 22,

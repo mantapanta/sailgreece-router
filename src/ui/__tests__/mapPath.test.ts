@@ -74,6 +74,8 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
         upwind: false,
         kreuzHours: 0,
         kreuzExtraNm: 0,
+        wenden: 0,
+        kreuzTrack: [],
         basis: 'forecast',
         reasons: [],
         nightLeg: false,
