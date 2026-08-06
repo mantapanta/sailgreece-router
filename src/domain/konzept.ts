@@ -34,6 +34,18 @@
  * bedingung: ein Ost-Plan bleibt baubar und wird ehrlich bepreist — aber er
  * verliert die Rangfolge und trägt die Warnung sichtbar. Die App ersetzt das
  * Kopfrechnen, nicht das seemännische Urteil (README).
+ *
+ * ABRATEN, NICHT VERBIETEN (Skipper 2026-08-06: "andere Best-Practice-Routen
+ * wie West-Kykladen trotzdem erlauben und lediglich davon abraten, wenn der
+ * Wind zu stark ist"). Daraus folgt für alles unten:
+ *   - Kein Konzept und keine kuratierte Route verschwindet je aus dem
+ *     Angebot, weil die Lage sie nicht trägt. Sie behält ihren Plan, bleibt
+ *     ansehbar und übernehmbar (RouteOptionAssessment.plan) und trägt die
+ *     Empfehlung 'abgeraten' samt Begründung.
+ *   - Die Rangfolge (`preferred`) und die Empfehlung sind die Werkzeuge des
+ *     Abratens — nicht ein Filter. Der Solver SCHLÄGT die tragende Route vor;
+ *     er nimmt die andere nicht weg.
+ *   - Die Sprache folgt dem: "abgeraten", "wählbar", nie "gestrichen".
  */
 
 import type { PlanningSnapshot, Library, PlanAssessment } from './schema/snapshot.ts';
@@ -544,8 +556,10 @@ export function deriveTorChecks(
  *   - Das AKTIVE Konzept (Hauptroute, sonst Vorschlag, sonst Klassik) wird
  *     beibehalten, solange es nicht 'ungeeignet' ist — Kurs halten ist eine
  *     Entscheidung, kein Unterlassen.
- *   - Kippt das Ost-Konzept, wird auf Route 1 umgeschwenkt (Abbruchroute der
- *     Törnanalyse). Der Wechsel-Hinweis nennt das ausdrücklich.
+ *   - Kippt das Ost-Konzept, EMPFIEHLT die App Route 1 (Abbruchroute der
+ *     Törnanalyse). Der Wechsel-Hinweis nennt das ausdrücklich — und ebenso
+ *     ausdrücklich, dass Route 2 wählbar bleibt: es ist eine Empfehlung,
+ *     keine Streichung (Skipper 2026-08-06).
  *   - Route 1 wechselt NIE aus Eignungsgründen nach Ost: nach Osten geht man
  *     aus Ambition, nicht als Wetterausweich. Ist auch Klassik ungeeignet,
  *     bleibt Klassik empfohlen (der geschütztere Rahmen) — mit dem Hinweis,
@@ -565,15 +579,17 @@ export function deriveKonzeptEntscheid(
   if (!aktivTraegt && aktivKonzept === 'ost') {
     const von = currentIslandId ? ` ab ${currentIslandId}` : '';
     wechselHinweis =
-      `Konzeptwechsel: Der Vorstoß in die Ost-Kykladen wird gestrichen —` +
+      `Konzeptwechsel empfohlen: Vom Vorstoß in die Ost-Kykladen wird abgeraten —` +
       `${von} nach Südwesten auf Route 1 (West-Korridor) umschwenken. ` +
-      lage.gruende.ost.join(' ');
+      lage.gruende.ost.join(' ') +
+      ' Route 2 bleibt wählbar: das ist eine Empfehlung, keine Sperre.';
   } else if (!aktivTraegt) {
     wechselHinweis =
-      'Auch Route 1 trägt diese Lage nicht: kein Konzeptwechsel möglich — ' +
-      'in Abdeckung bleiben und abwettern; die tägliche Abbruch-Notation der ' +
-      'Hauptroute nennt den Umkehrpunkt. ' +
-      lage.gruende.klassik.join(' ');
+      'Auch Route 1 trägt diese Lage nicht: es gibt kein besseres Konzept, ' +
+      'auf das sich umschwenken liesse — in Abdeckung bleiben und abwettern; ' +
+      'die tägliche Abbruch-Notation der Hauptroute nennt den Umkehrpunkt. ' +
+      lage.gruende.klassik.join(' ') +
+      ' Beide Konzepte bleiben wählbar; die App rät ab, sie sperrt nicht.';
   }
 
   const routeIdsOf = (konzept: KonzeptId): string[] =>

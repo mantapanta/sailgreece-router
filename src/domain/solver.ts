@@ -1268,6 +1268,19 @@ export function completePlan(
      */
     turnIslandId?: string;
     /**
+     * Nur Kandidaten betrachten, die aus DIESER kuratierten Variante stammen
+     * (`Candidate.variantId`).
+     *
+     * Damit heisst "Westkykladen-Runde" auch die Westkykladen-Runde: ohne den
+     * Filter beantwortete `turnIslandId` allein die Frage, und der Solver
+     * lieferte irgendeine Kette zum selben Wendepunkt — angeboten unter dem
+     * Namen der Best-Practice-Route, gefahren aber woanders lang. Der Filter
+     * ist bewusst OPTIONAL und ohne Fallback im Solver: findet die Variante
+     * nichts, entscheidet der Aufrufer, ob er auf die Wendepunkt-Suche
+     * zurückfällt (options.ts tut das).
+     */
+    variantId?: string;
+    /**
      * Bei der ERSTEN Stufe abbrechen, die etwas Gültiges liefert.
      *
      * Nur sinnvoll zusammen mit `turnIslandId`: dann ist die Reichweite über
@@ -1307,7 +1320,9 @@ export function completePlan(
   }
 
   const candidates = buildCandidates(snapshot, startIslandId).filter(
-    (c) => opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId,
+    (c) =>
+      (opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId) &&
+      (opts.variantId === undefined || c.variantId === opts.variantId),
   );
   if (candidates.length === 0) return null;
   const constraint = dayConstraintFor(snapshot, futurePins);

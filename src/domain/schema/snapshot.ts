@@ -275,6 +275,20 @@ export interface LegAssessment {
 
 export type OptionState = 'offen' | 'offen-horizont' | 'schliesst' | 'zu';
 
+/**
+ * EMPFEHLUNGS-EBENE über der Machbarkeit (Skipper 2026-08-06: "andere
+ * Best-Practice-Routen wie West-Kykladen trotzdem erlauben und lediglich davon
+ * abraten, wenn der Wind zu stark ist").
+ *
+ * Die Achse ist bewusst von `OptionState` GETRENNT: der State beantwortet
+ * "existiert ein tragfähiger Plan?", die Empfehlung beantwortet "rät die App
+ * dazu?". Starkwind darf die zweite Frage beantworten — er darf keine
+ * kuratierte Route aus dem Angebot nehmen. Jede Option behält deshalb ihren
+ * besten Plan (`plan`), bleibt ansehbar und übernehmbar; abgeraten heisst
+ * abgeraten, nicht verboten.
+ */
+export type RoutenEmpfehlung = 'empfohlen' | 'moeglich' | 'abgeraten';
+
 export interface RouteOptionAssessment {
   routeId: string;
   /** Kuratierter Name der Route — die View soll keine Ids anzeigen müssen. */
@@ -290,6 +304,17 @@ export interface RouteOptionAssessment {
    * Revier-Empfehlung steht sichtbar daneben, nie stumm.
    */
   konzeptWarnung: string | null;
+  /**
+   * Rät die App zu dieser Route? 'abgeraten' bei gekipptem Konzept oder wenn
+   * der beste Plan Sicherheits-Befunde trägt — die Route bleibt trotzdem
+   * wählbar. 'moeglich' bei grenzwertiger Lage. Nie ein Ausschluss.
+   */
+  empfehlung: RoutenEmpfehlung;
+  /**
+   * Die Sätze, mit denen abgeraten wird (Wind-Lage, Sicherheits-Befunde des
+   * besten Versuchs). Leer bei 'empfohlen'.
+   */
+  abratenGruende: string[];
   state: OptionState;
   /** Set when state === 'schliesst': last day the option can still be started. */
   closesOnDay: number | null;
@@ -315,7 +340,14 @@ export interface RouteOptionAssessment {
   costNote: string | null;
   /**
    * Der konkrete Plan zu dieser Option — damit "verfolgen" nicht heisst, dass
-   * der Skipper ihn sich selbst zusammensucht. Null, wenn es keinen gibt.
+   * der Skipper ihn sich selbst zusammensucht.
+   *
+   * Gesetzt, SOBALD der Solver überhaupt etwas bauen kann — auch wenn der
+   * beste Versuch Sicherheits-Befunde trägt (`state: 'zu'`,
+   * `empfehlung: 'abgeraten'`). Genau das ist der Unterschied zwischen
+   * abraten und verbieten: der Skipper sieht die Route, ihre Befunde und
+   * kann sie gegen die Empfehlung übernehmen. Null nur, wenn sich zu diesem
+   * Ziel gar keine Etappenkette bilden lässt.
    */
   plan: Plan | null;
   /** Tag, an dem dieser Plan den Wendepunkt erreicht (früher = mehr Luft). */

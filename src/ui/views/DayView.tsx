@@ -22,6 +22,7 @@ import type {
   PlanAssessment,
   PlanningSnapshot,
   RouteOptionAssessment,
+  RoutenEmpfehlung,
   StageAssessment,
   LegHourBreakdown,
   PointPassage,
@@ -833,6 +834,17 @@ const EIGNUNG_LABEL: Record<KonzeptEignung, string> = {
 };
 
 /**
+ * Die EMPFEHLUNGS-Achse einer Option (schema/snapshot.ts). Bewusst getrennt
+ * vom Zustands-Chip: "zu · abgeraten" ist eine andere Aussage als "zu", und
+ * "offen · abgeraten" heisst — die Route geht, die App rät nur ab.
+ */
+const EMPFEHLUNG_LABEL: Record<RoutenEmpfehlung, string> = {
+  empfohlen: 'empfohlen',
+  moeglich: 'möglich',
+  abgeraten: 'abgeraten · wählbar',
+};
+
+/**
  * ROUTEN-KONZEPT — die zentrale, alles überschreibende Logik der App
  * (Skipper 2026-08-05, domain/konzept.ts): NACH WELCHEM der beiden
  * Revier-Konzepte segeln wir? Das Panel steht direkt unter dem
@@ -851,7 +863,9 @@ function KonzeptPanel({ assessment }: { assessment: Assessment }) {
         Die übergeordnete Törn-Entscheidung: Route 1 (klassische Runde, Rückweg
         im westlichen Lee-Korridor) oder Route 2 (Ost-Kykladen, nur bei
         moderatem Meltemi). Vorschlag und Rangfolge der App folgen dieser
-        Beurteilung — kippt das aktive Konzept, wird umgeschwenkt.
+        Beurteilung — kippt das aktive Konzept, empfiehlt die App den Wechsel.
+        Beide Konzepte und alle Routen darin bleiben trotzdem wählbar: bei zu
+        viel Wind rät die App ab, sie sperrt nicht.
       </p>
       {entscheid.wechselHinweis && (
         <div className="hint-panel konzept-wechsel">
@@ -921,12 +935,19 @@ function AltPreview({
   snapshot,
   color,
   mapId,
+  abratenGruende = [],
 }: {
   alt: PlanAssessment;
   snapshot: PlanningSnapshot;
   /** Farbe dieser Alternative (altRouteColors.ts) — identisch zur Karte. */
   color: string;
   mapId: string | null;
+  /**
+   * Warum die App von dieser Route abrät (leer = sie rät nicht ab). Der Knopf
+   * bleibt in JEDEM Fall bedienbar: abgeraten ist nicht verboten (Skipper
+   * 2026-08-06) — aber wer übernimmt, hat die Gründe hier gelesen.
+   */
+  abratenGruende?: string[];
 }) {
   const { checkIn } = usePlanning();
   return (
@@ -982,8 +1003,20 @@ function AltPreview({
         die Hauptroute legen. Übernehmen macht sie zur neuen Hauptroute —
         bisherige Festlegungen werden dabei gelöst.
       </p>
+      {abratenGruende.length > 0 && (
+        <div className="hint-panel abraten-hinweis">
+          <strong>Von dieser Route wird abgeraten — übernehmen kannst du sie trotzdem.</strong>
+          <ul className="reasons">
+            {abratenGruende.map((g) => (
+              <li key={g}>{g}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <button type="button" className="btn-secondary" onClick={() => checkIn(alt.plan)}>
-        Als Hauptroute übernehmen
+        {abratenGruende.length > 0
+          ? 'Trotz Abraten als Hauptroute übernehmen'
+          : 'Als Hauptroute übernehmen'}
       </button>
     </div>
   );
@@ -1030,7 +1063,9 @@ function OptionRow({
   const istHauptroute = option.plan !== null && preview === null;
 
   return (
-    <div className={`option-row state-${option.state}${dringend ? ' dringend' : ''}`}>
+    <div
+      className={`option-row state-${option.state} empfehlung-${option.empfehlung}${dringend ? ' dringend' : ''}`}
+    >
       <div className="option-kopf">
         <span className="option-name">
           {color && <span className="alt-farbe" style={{ background: color }} />}
@@ -1042,6 +1077,16 @@ function OptionRow({
       </div>
 
       <div className="badges">
+        {/* Die Empfehlung steht NEBEN dem Zustand, nicht statt seiner: der
+            Zustand sagt, ob es geht, die Empfehlung, ob die App dazu rät.
+            Abgeraten ist kein Ausschluss — die Route bleibt ansehbar und
+            übernehmbar (Skipper 2026-08-06). */}
+        <span
+          className={`badge badge-empfehlung badge-empfehlung-${option.empfehlung}`}
+          title="Empfehlung der App zu dieser Route. Abgeraten heisst abgeraten, nicht gesperrt."
+        >
+          {EMPFEHLUNG_LABEL[option.empfehlung]}
+        </span>
         <span
           className={`badge badge-konzept${option.konzeptWarnung ? ' badge-konzept-warnung' : ''}`}
           title="Routen-Konzept dieser Option (siehe Panel „Routen-Konzept“)."
@@ -1073,16 +1118,21 @@ function OptionRow({
       <div className="beschreibung">
         {option.costNote
           ? `Kostet: ${option.costNote}.`
-          : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
+          : option.plan
+            ? 'Kein tragfähiger Plan zu diesem Ziel — der beste Versuch steht trotzdem zum Ansehen bereit.'
+            : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
         {istHauptroute && ' Dieser Plan ist bereits die Hauptroute.'}
       </div>
 
-      {/* Die Konzept-Warnung steht AN der Option, nicht nur im Panel oben:
-          wer hier "Verlängerung Amorgos · offen" liest, soll im selben
-          Blick sehen, dass das Ost-Konzept die Lage gerade nicht trägt. */}
-      {option.konzeptWarnung && (
-        <div className="konzept-warnung">{option.konzeptWarnung}</div>
-      )}
+      {/* Warum abgeraten wird, steht AN der Option, nicht nur im Panel oben:
+          wer hier "Verlängerung Amorgos · offen" liest, soll im selben Blick
+          sehen, dass das Ost-Konzept die Lage gerade nicht trägt — und dass
+          die Route deswegen nicht weg ist, sondern nur nicht empfohlen. */}
+      {option.abratenGruende.map((g) => (
+        <div className="konzept-warnung" key={g}>
+          {g}
+        </div>
+      ))}
 
       {option.reasons.length > 0 && (
         <ul className="reasons">
@@ -1104,7 +1154,13 @@ function OptionRow({
             </button>
           </div>
           {open && (
-            <AltPreview alt={preview} snapshot={snapshot} color={color} mapId={mapId} />
+            <AltPreview
+              alt={preview}
+              snapshot={snapshot}
+              color={color}
+              mapId={mapId}
+              abratenGruende={option.abratenGruende}
+            />
           )}
         </>
       )}

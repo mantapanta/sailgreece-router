@@ -1838,6 +1838,15 @@ hr.hairline,
 .option-row.state-schliesst { border-left-color: var(--gelb); }
 .option-row.state-zu { border-left-color: var(--grau); opacity: 0.72; }
 
+/* Abgeraten ist NICHT weg (Skipper 2026-08-06): eine abgeratene Route bleibt
+   voll lesbar und bedienbar — sie trägt einen roten Rahmenakzent statt
+   Ausblendung. Das gilt auch, wenn sie zugleich 'zu' ist: ihr bester Versuch
+   steht zum Ansehen bereit, und Ausgrautes liest sich niemand durch. */
+.option-row.empfehlung-abgeraten {
+  opacity: 1;
+  box-shadow: inset 3px 0 0 0 var(--rot);
+}
+
 .option-row.dringend {
   border-left-color: var(--gelb);
   background: var(--ampel-gelb-tint);
@@ -1942,6 +1951,34 @@ hr.hairline,
   background: #f6e4e3;
   font-size: 0.82rem;
   color: var(--navy);
+}
+
+/* Die Empfehlungs-Achse einer Option: empfohlen / möglich / abgeraten. Sie
+   steht neben dem Zustands-Chip, weil sie eine ANDERE Frage beantwortet —
+   nicht "geht das?", sondern "rät die App dazu?". */
+.badge-empfehlung-empfohlen {
+  background: #e8f2ea;
+  color: var(--gruen);
+  border-color: #bcd8c2;
+}
+.badge-empfehlung-moeglich {
+  background: #f7ecd7;
+  color: #8a6414;
+  border-color: #e4cf9f;
+}
+.badge-empfehlung-abgeraten {
+  background: #f6e4e3;
+  color: var(--rot);
+  border-color: #e0b7b5;
+  font-weight: 600;
+}
+
+/* Der Abraten-Hinweis in der Vorschau, direkt über dem Übernehmen-Knopf: wer
+   gegen die Empfehlung übernimmt, hat die Gründe unmittelbar davor gelesen. */
+.hint-panel.abraten-hinweis {
+  border-left: 4px solid var(--rot);
+  background: #f6e4e3;
+  margin-top: 0.5rem;
 }
 
 /* --- Alternativ-Routen (FR29): erst ansehen, dann übernehmen ---------------
