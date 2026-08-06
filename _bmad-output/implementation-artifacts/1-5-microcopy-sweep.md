@@ -4,7 +4,7 @@ baseline_commit: feeab43a31f720a61dc400adf759331d41c8e468
 
 # Story 1.5: UI microcopy sweep
 
-Status: ready-for-dev
+Status: in-progress
 
 Epic 1: **UX Redesign — Consumer Warm** (ad hoc epic; the UX spines in
 `_bmad-output/planning-artifacts/ux-designs/ux-sailgreece-router-2026-08-05/` are BINDING,
