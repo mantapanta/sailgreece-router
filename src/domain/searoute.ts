@@ -273,19 +273,10 @@ function ringCrossings(a: Pt, b: Pt, ring: Ring): number[] {
 }
 
 /**
- * Ansteuerung: wie weit ein Endpunkt sich aus dem eigenen Land herausarbeiten
- * darf. 1,5 sm, weil der am weitesten "landeinwärts" liegende kuratierte Platz
- * (Poros, Russian Bay) rund 1 sm hinter der 250-m-Küstenlinie sitzt — tiefe
- * Buchten schneidet die Quellauflösung ab. Kleiner gewählt, und die eigene
- * Bucht wäre unerreichbar.
- *
- * Das ist ausdrücklich KEIN Radius: was hier zählt, ist das Landstück, an dem
- * der Endpunkt selbst klebt (siehe `landIntervals`). Als Kreis um Start und
- * Ziel gelesen war die Zone der Grund, dass die Karte bei Syros zweimal über
- * Land führte — zwei Kreise von 1,5 sm decken jeden Schlag bis 3 sm restlos ab,
- * und damit war die Landprüfung auf kurzen Schlägen schlicht abgeschaltet. Der
- * Schlag vom Ansteuerungspunkt Ermoupoli nach Grammata ist 3,0 sm lang, davon
- * 2,3 sm quer über die Insel — gemeldet wurden 0,007 sm.
+ * Obergrenze der Ansteuerung. Der am weitesten "landeinwärts" liegende
+ * kuratierte Platz (Poros, Russian Bay) sitzt 1,03 sm hinter der
+ * 250-m-Küstenlinie — tiefe Buchten schneidet die Quellauflösung ab. Weiter als
+ * das darf keine Ansteuerung reichen, was auch immer die Geometrie sagt.
  */
 const APPROACH_NM = 1.5;
 
@@ -295,6 +286,42 @@ const APPROACH_NM = 1.5;
  * der eigenen Diskretisierung scheitern.
  */
 const TOUCH_TOLERANCE_NM = 0.15;
+
+/**
+ * Wieviel Land dieser Endpunkt sich als ANSTEUERUNG anrechnen darf.
+ *
+ * Nicht pauschal `APPROACH_NM`, sondern so tief, wie der Punkt selbst hinter
+ * der Küstenlinie sitzt. Das ist der ganze Grund für die Ausnahme: eine Bucht,
+ * die die 250-m-Auflösung zugeschnitten hat, macht aus dem Hafen einen
+ * Landpunkt, und der Weg aus dieser gedachten Bucht heraus ist Pilotage.
+ *
+ * Ein pauschaler Betrag hat genau diese Begründung überdehnt. Grammata liegt im
+ * Wasser (Einbettung 0) und bekam trotzdem 1,5 sm gutgeschrieben — genug, um
+ * die 0,6 sm breite Landzunge davor zu verschlucken. Dasselbe vor Ornos: 1,3 sm
+ * quer über Mykonos, gemeldet als 0,000. Wer im Wasser liegt, braucht keine
+ * Ansteuerung durch Land; ihm bleibt die Auflösungstoleranz und sonst nichts.
+ */
+function approachAllowanceNm(p: Pt): number {
+  for (const ring of RINGS) {
+    if (pointInRing(p, ring)) {
+      return Math.min(distanceToRing(p, ring) + TOUCH_TOLERANCE_NM, APPROACH_NM);
+    }
+  }
+  return TOUCH_TOLERANCE_NM;
+}
+
+/**
+ * Dasselbe, gemerkt. Die Sichtbarkeitssuche fragt für dieselben zwei Endpunkte
+ * quadratisch oft; der Wert hängt nur am Punkt.
+ */
+const allowanceCache = new WeakMap<Pt, number>();
+function allowanceOf(p: Pt): number {
+  const hit = allowanceCache.get(p);
+  if (hit !== undefined) return hit;
+  const nm = approachAllowanceNm(p);
+  allowanceCache.set(p, nm);
+  return nm;
+}
 
 /**
  * Die Landstücke auf a→b, als Parameterintervalle [t0,t1], vereinigt über alle
@@ -337,14 +364,22 @@ function landIntervals(a: Pt, b: Pt): [number, number][] {
  *      Toleranzabstand davor. Land, das erst nach einem Stück offenem Wasser
  *      beginnt, ist ein Hindernis auf dem Weg, keine Ansteuerung.
  *   2. Das Landstück ist von diesem Endpunkt aus in beide Richtungen kürzer
- *      als `APPROACH_NM`. Sonst wäre der Weg quer über die eigene Insel eine
- *      Ansteuerung: Ermoupoli liegt selbst knapp hinter der Küstenlinie, und
- *      ohne diese Schranke dürfte ein Kurs von dort quer über Syros laufen.
+ *      als seine Ansteuerung (`approachAllowanceNm`). Sonst wäre der Weg quer
+ *      über die eigene Insel eine Ansteuerung: Ermoupoli liegt selbst knapp
+ *      hinter der Küstenlinie, und ohne diese Schranke dürfte ein Kurs von dort
+ *      quer über Syros laufen.
  */
-function isApproach(t0: number, t1: number, tp: number, len: number): boolean {
+function isApproach(t0: number, t1: number, anchor: Anchor, len: number): boolean {
   const gap = len > 0 ? TOUCH_TOLERANCE_NM / len : 0;
+  const tp = anchor.t;
   if (tp < t0 - gap || tp > t1 + gap) return false;
-  return Math.max(t1 - tp, tp - t0, 0) * len <= APPROACH_NM;
+  return Math.max(t1 - tp, tp - t0, 0) * len <= anchor.allowance;
+}
+
+/** Ein Endpunkt auf der Strecke: wo er liegt und wieviel Land er sich anrechnet. */
+interface Anchor {
+  t: number;
+  allowance: number;
 }
 
 /**
@@ -370,14 +405,14 @@ function parameterOn(a: Pt, b: Pt, e: Pt): number | null {
 function landCrossingPlanar(a: Pt, b: Pt, exempt: Pt[]): number {
   const len = dist(a, b);
   if (len === 0) return 0;
-  const anchors: number[] = [];
+  const anchors: Anchor[] = [];
   for (const e of exempt) {
     const t = parameterOn(a, b, e);
-    if (t !== null) anchors.push(t);
+    if (t !== null) anchors.push({ t, allowance: allowanceOf(e) });
   }
   let total = 0;
   for (const [t0, t1] of landIntervals(a, b)) {
-    if (anchors.some((tp) => isApproach(t0, t1, tp, len))) continue;
+    if (anchors.some((anchor) => isApproach(t0, t1, anchor, len))) continue;
     total += (t1 - t0) * len;
   }
   return total;
