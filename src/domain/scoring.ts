@@ -22,7 +22,12 @@ import type {
 import { worstAmpel, type Ampel } from './schema/common.ts';
 import type { Coordinates } from './schema/common.ts';
 import { bearingDeg, distanceNm, twaDeg } from './geo.ts';
-import { fallbackSpeedKn, motorSpeedKn, sailSpeedKn } from './polar.ts';
+import {
+  courseSpeedKn,
+  fallbackSpeedKn,
+  kreuzFactor,
+  motorSpeedKn,
+} from './polar.ts';
 import { hourIndexAt, legWindow, MAX_LEG_HOURS } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -60,6 +65,24 @@ export function budgetVerdict(
     };
   }
   return { ampel: 'rot', reasons: ['Hartes Tagesbudget überschritten'] };
+}
+
+/**
+ * Der EINE Satz, mit dem die FR16-Aufkreuz-Grenze rot meldet.
+ *
+ * Er steht hier und nicht als Zeichenkette an zwei Stellen, weil der Solver
+ * genau an ihm erkennt, ob eine rote Etappe ein SICHERHEITS-Befund ist
+ * ('upwind') oder ein Budget-Befund — ein Vergleich auf ein Teilwort ("enthält
+ * 'Aufkreuzen'") hätte jeden neuen Kreuz-Hinweis stillschweigend zur
+ * Sicherheitsverletzung gemacht.
+ */
+export function upwindRotReason(params: Params): string {
+  return `Aufkreuzen gegenan bei über ${params.maxUpwindTwsKn} kn wahrem Wind`;
+}
+
+/** Der Hinweis, mit dem eine Etappe ihre Kreuz-Stunden ausweist. */
+export function kreuzGelbReason(kreuzHours: number, params: Params): string {
+  return `Kurs liegt enger als ${params.beatTwaDeg}° am Wind — ${kreuzHours.toFixed(1).replace('.', ',')} h Kreuzschläge nötig`;
 }
 
 /**
@@ -274,6 +297,8 @@ export function assessLeg(
     avgTwdDeg: null,
     avgSpeedKn: null,
     upwind: false,
+    kreuzHours: null,
+    kreuzExtraNm: null,
     basis: 'forecast',
     reasons: [reason],
     nightLeg: null,
@@ -365,6 +390,10 @@ export function assessLeg(
   let traveled = 0;
   let sailHours = 0;
   let motorHours = 0;
+  /** Stunden unter Segeln, in denen gekreuzt werden muss (Teilmenge von sailHours). */
+  let kreuzHours = 0;
+  /** Umweg dieser Kreuzschläge in sm (durchs Wasser minus über der Ideallinie). */
+  let kreuzExtraNm = 0;
   let twsSum = 0;
   let twaSum = 0;
   // Richtungen werden als Einheitsvektoren summiert (Zirkulärmittel): der
@@ -430,7 +459,7 @@ export function assessLeg(
       const t = twaDeg(seg.course, w.fromDeg);
       const v = upwindWindVerdict(t, w.twsKn, params);
       verdicts.push(v);
-      if (v === 'rot') reasons.add('Aufkreuzen gegenan bei >25 kn wahrem Wind');
+      if (v === 'rot') reasons.add(upwindRotReason(params));
       if (v === 'gelb') reasons.add('Wind nahe der Aufkreuz-Schwelle');
     }
 
@@ -441,26 +470,44 @@ export function assessLeg(
     twdCosSum += Math.cos(rad(progressWind.fromDeg));
     samples++;
 
-    // Speed model: polar (+offset, only in polar.ts) with upwind VMG folding;
-    // motor when sailing would be slower than minSailSpeedKn.
+    /**
+     * Fahrtmodell: Polare (+Offset, nur in polar.ts) mit KREUZ-MODELL
+     * (polar.ts, `courseSpeedKn`). Unter `beatTwaDeg` wird der Kurs nicht
+     * angelegen, sondern gekreuzt — auf der Ideallinie kommt dann nur
+     * cos(beat)/cos(TWA) der Fahrt an. Motor, sobald Segeln langsamer wäre als
+     * `minSailSpeedKn`; gemessen wird dafür die Fahrt AUF DEM KURS, denn genau
+     * die entscheidet, ob sich Segeln noch lohnt — unter Motor liegt der Kurs
+     * an, gekreuzt wird nicht.
+     */
     let speed: number;
     let motoring: boolean;
+    let kreuzen: boolean;
+    let sailedTwa: number;
+    let boatSpeed: number;
     if (polar) {
-      const sail =
-        twa >= params.beatTwaDeg
-          ? sailSpeedKn(polar, twa, progressWind.twsKn, params)
-          : sailSpeedKn(polar, params.beatTwaDeg, progressWind.twsKn, params) *
-            Math.cos(rad(params.beatTwaDeg - twa));
-      motoring = sail < params.minSailSpeedKn;
-      speed = motoring ? motorSpeedKn(params) : sail;
+      const cs = courseSpeedKn(polar, twa, progressWind.twsKn, params);
+      motoring = cs.speedKn < params.minSailSpeedKn;
+      speed = motoring ? motorSpeedKn(params) : cs.speedKn;
+      kreuzen = cs.kreuzen && !motoring;
+      sailedTwa = kreuzen ? cs.sailedTwaDeg : twa;
+      boatSpeed = kreuzen ? cs.boatSpeedKn : speed;
     } else {
       const upwind = twa < params.upwindTwaDeg;
       motoring = progressWind.twsKn <= params.lightWindMaxTwsKn;
-      speed = fallbackSpeedKn(upwind, motoring, params);
+      const flat = fallbackSpeedKn(upwind, motoring, params);
+      // Auch ohne Polare gilt die Kreuz-Grenze: die flache Ersatzfahrt ist die
+      // Fahrt DURCHS WASSER am Wind, nicht die über der Ideallinie.
+      kreuzen = !motoring && twa < params.beatTwaDeg;
+      speed = kreuzen ? flat * kreuzFactor(twa, params) : flat;
+      sailedTwa = kreuzen ? params.beatTwaDeg : twa;
+      boatSpeed = flat;
     }
     if (speed <= 0) {
       motoring = true;
+      kreuzen = false;
       speed = motorSpeedKn(params);
+      sailedTwa = twa;
+      boatSpeed = speed;
     }
 
     const remaining = total - traveled;
@@ -470,6 +517,11 @@ export function assessLeg(
     traveled += speed * hourFraction;
     if (motoring) motorHours += hourFraction;
     else sailHours += hourFraction;
+    if (kreuzen) {
+      kreuzHours += hourFraction;
+      // Der Umweg: durchs Wasser gesegelt minus auf dem Kurs gutgemacht.
+      kreuzExtraNm += (boatSpeed - speed) * hourFraction;
+    }
 
     // FR30: record what this hour contributed, so the day card can explain
     // the total instead of asking the skipper to trust it.
@@ -481,6 +533,9 @@ export function assessLeg(
       twaDeg: twa,
       speedKn: speed,
       motoring,
+      kreuzen,
+      sailedTwaDeg: sailedTwa,
+      boatSpeedKn: boatSpeed,
       distanceNm: speed * hourFraction,
       worstCase: usedWorstCase,
     });
@@ -510,6 +565,7 @@ export function assessLeg(
           twaDeg: twa,
           speedKn: speed,
           motoring,
+          kreuzen,
           worstCase: usedWorstCase,
         },
       });
@@ -571,6 +627,20 @@ export function assessLeg(
   verdicts.push(budget.ampel);
 
   /**
+   * KREUZEN IST EIN BEFUND (Skipper 2026-08-06: "sonst muss gekreuzt werden …
+   * was im Routing eher vermieden werden sollte").
+   *
+   * Gelb, nicht rot: gekreuzt wird gefahrlos, es kostet Zeit und Bequemlichkeit.
+   * Rot bleibt der FR16-Fall — Aufkreuzen im Starkwind (upwindWindVerdict) —,
+   * und der Satz hier ist bewusst ein ANDERER: der Solver liest den roten Satz
+   * als Sicherheitsverletzung, und ein Kreuz-Hinweis ist keine.
+   */
+  if (kreuzHours > params.kreuzGelbAbStunden) {
+    verdicts.push('gelb');
+    reasons.add(kreuzGelbReason(kreuzHours, params));
+  }
+
+  /**
    * 'annahme' covers BOTH ways the basis can be weaker than a model run:
    * extrapolated hours, and hours the model does deliver but beyond the
    * reliable horizon. The second case is what preserves AD-13's information —
@@ -607,6 +677,8 @@ export function assessLeg(
     avgSpeedKn:
       sailHours + motorHours > 0 ? traveled / (sailHours + motorHours) : null,
     upwind: avgTwaDeg !== null && avgTwaDeg < params.upwindTwaDeg,
+    kreuzHours,
+    kreuzExtraNm,
     basis,
     reasons: [...reasons],
     nightLeg,

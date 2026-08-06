@@ -195,6 +195,7 @@ describe('preferred — das Konzept überschreibt die Reichweite', () => {
     stages: 4,
     bandDevTenths: 0,
     harbourDev: 0,
+    kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
     maxHarbourRun: 1,

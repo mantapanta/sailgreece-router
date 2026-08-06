@@ -215,6 +215,8 @@ function assessPlan(
                   avgTwdDeg: null,
                   avgSpeedKn: null,
                   upwind: false,
+                  kreuzHours: null,
+                  kreuzExtraNm: null,
                   basis: 'forecast' as const,
                   reasons: [`Etappe ${legId} nicht in der Bibliothek`],
                   nightLeg: null,
