@@ -11,6 +11,7 @@ import {
   kiteHinweisAnzeige,
   optionsSummary,
   restTripVerdictLabel,
+  stageFocusPlacement,
   staleForecastLabel,
 } from '../dayViewModel.ts';
 
@@ -115,6 +116,29 @@ describe('dayViewStages — Hero-Switch und Listen-Split', () => {
     expect(hero?.day).toBe(4);
     expect(rest).toEqual([]);
     expect(past.map((s) => s.day)).toEqual([1, 2, 3]);
+  });
+});
+
+describe('stageFocusPlacement — Sprung von einer Etappennummer der Karte', () => {
+  const stages = [makeStage(1), makeStage(2), makeStage(3), makeStage(4)];
+  const split = dayViewStages({ stages }, 2, 'insel-1'); // Hero = Tag 2
+
+  it('erkennt den Hero-Tag', () => {
+    expect(stageFocusPlacement(split, 2)).toBe('hero');
+  });
+
+  it('erkennt einen Rest-Trip-Tag — der aufgeklappt werden muss', () => {
+    expect(stageFocusPlacement(split, 3)).toBe('rest');
+    expect(stageFocusPlacement(split, 4)).toBe('rest');
+  });
+
+  it('erkennt einen gefahrenen Tag — der steht als Chip in "Bereits gefahren"', () => {
+    expect(stageFocusPlacement(split, 1)).toBe('past');
+  });
+
+  it('meldet null für einen Tag, den die Hauptroute nicht kennt', () => {
+    expect(stageFocusPlacement(split, 9)).toBeNull();
+    expect(stageFocusPlacement({ hero: null, rest: [], past: [] }, 2)).toBeNull();
   });
 });
 

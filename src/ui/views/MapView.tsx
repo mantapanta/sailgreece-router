@@ -6,19 +6,24 @@
  * dieselben Etappen und waren einfarbig nicht unterscheidbar), gefahren als
  * durchgezogene, geplant als gestrichelte Linie, and every stage numbered at
  * its day target. Die Rest-Trip-Ampel steht als Badge in der Legende UND als
- * TripStatusLine am Kopf der Etappenliste — nie nur als Farbe. Ampel markers
+ * TripStatusLine über der Karte — nie nur als Farbe. Ampel markers
  * appear only for the current island and today's target island (FR1) — what
  * matters is which harbour we enter today, not what happens in five days.
  *
- * Layout: ≤860px full-bleed map unter dem Header, die Etappenliste als
- * Bottom-Sheet (Zwei-Zustands-Toggle, bewusst ohne Gesten-Physik — AC 1);
- * ≥861px der Sticky-Split (Liste links, Karte rechts). Layer-Chips und die
- * Legende (Popover hinter dem "i") schweben auf der Karte. Google Maps via
+ * Layout (Feedback 2026-08-06, dritter Durchgang): die Karte ist DAS Bild
+ * dieser Ansicht — nur die Trip-Statuszeile steht darüber, darunter nichts
+ * mehr. Die Etappenliste als Bottom-Sheet ist ENTFALLEN: sie wiederholte die
+ * Tagesansicht in kleinerer Schrift und nahm dem Bild auf dem Telefon ein
+ * Viertel der Höhe. Ihren Zweck — von einer Etappe auf der Karte zu ihrer
+ * Karte im Klartext — tragen jetzt die Etappennummern selbst: jede Zahl ist
+ * ein Knopf in die Tagesansicht. Layer-Chips und die Legende (Popover hinter
+ * dem "i") schweben auf der Karte. Google Maps via
  * @vis.gl/react-google-maps 1.x: AdvancedMarker for pins, capsules and
  * rotated wind arrows; dashed lines via the symbol-repeat workaround in
- * Polyline.tsx. Hover/Fokus/Tap syncs list and map (transient view state,
- * never TripContext). Ohne vollständige Maps-Konfiguration zeigt die
- * Kartenfläche einen benannten Hinweis — die Etappenliste rendert voll.
+ * Polyline.tsx. Hover/Fokus auf einer Etappennummer hebt ihre Linie hervor
+ * (transient view state, never TripContext). Ohne vollständige
+ * Maps-Konfiguration zeigt die Kartenfläche einen benannten Hinweis — die
+ * Statuszeile darüber bleibt vollständig lesbar.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -26,8 +31,6 @@ import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-m
 import type { Ampel } from '../../domain/schema/common.ts';
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
-import { departureHourChoices } from '../../domain/scoring.ts';
-import { AbfahrtMenu } from '../components/AbfahrtMenu.tsx';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { TripStatusLine } from '../components/TripStatusLine.tsx';
 import {
@@ -42,20 +45,9 @@ import { SeamarkLayer } from '../components/SeamarkLayer.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
 import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
 import { type BarbPoint, windFieldFor } from '../windField.ts';
-import {
-  compass,
-  formatAthensTime,
-  formatHours,
-  formatKn,
-  formatKursAbschnitt,
-  formatKursAmpelRegel,
-  formatTripDayShort,
-  formatTripRange,
-} from '../format.ts';
-import { islandWithPlace } from '../stageText.ts';
+import { compass, formatKn } from '../format.ts';
 import { altRouteColor } from '../altRouteColors.ts';
 import { staleForecastLabel } from '../dayViewModel.ts';
-import { usePlanning } from '../../app/planningContext.tsx';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
 import { resolveMapsEnv } from '../mapsEnv.ts';
 
@@ -64,8 +56,8 @@ const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
 /**
  * Maps-Konfiguration — EINMAL pro View gelesen (Story 1.3, AC 9). Fehlende
  * Werte sind ein BENANNTER Zustand: die Kartenfläche erklärt, welche
- * VITE_-Variablen fehlen, die Etappenliste rendert voll — nie ein stiller
- * Demo-Map-Fallback.
+ * VITE_-Variablen fehlen, Statuszeile und Bewertungen bleiben lesbar — nie ein
+ * stiller Demo-Map-Fallback.
  */
 const MAPS_ENV = resolveMapsEnv(
   import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined,
@@ -277,6 +269,15 @@ function LegendPopover({
               Pfeile zeigen die Fahrtrichtung.
               {turnLabel && <> {turnLabel}</>}
             </p>
+            {/* Die Nummern sind der Weg von der Karte in den Klartext —
+                seit die Etappenliste unter der Karte entfallen ist, ist das
+                die EINZIGE Verbindung, und sie muss benannt sein. */}
+            <div className="lg-row">
+              <span className="stage-capsule" aria-hidden="true">
+                4
+              </span>
+              Etappe — antippen öffnet sie in „Heute“
+            </div>
             <div className="lg-row">
               Rest-Trip: <AmpelBadge ampel={restTripAmpel} />
             </div>
@@ -522,26 +523,32 @@ export function MapView({
   snapshot,
   assessment,
   onOpenPlace,
+  onOpenStageDay,
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
   /** Zweiter Parameter: Kite-Spot, den das Platzdetail hervorheben soll. */
   onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
+  /**
+   * Von einer Etappennummer in die Tagesansicht (Feedback 2026-08-06): die
+   * Karte zeigt WO, die Etappen-Card sagt WAS — der Sprung dorthin ist der
+   * Ersatz für die entfallene Etappenliste unter der Karte.
+   */
+  onOpenStageDay: (day: number) => void;
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
-  /** Die EINE Mutation, die diese Ansicht kennt: die Abfahrt eines Tages. */
-  const { setDepartureHour } = usePlanning();
   /**
-   * Blick-Zustand der Karte (AD-11): Sheet, Hover/Auswahl, Ebenen — alles
-   * transienter View-State, bewusst NICHT im TripContext. Das Ein-/Ausblenden
-   * ist eine Blickentscheidung, keine Törnentscheidung.
+   * Blick-Zustand der Karte (AD-11): Hervorhebung und Ebenen — transienter
+   * View-State, bewusst NICHT im TripContext. Das Ein-/Ausblenden ist eine
+   * Blickentscheidung, keine Törnentscheidung.
+   *
+   * `activeDay` ist die hervorgehobene Etappe: gesetzt von Hover/Fokus einer
+   * Etappennummer und vom ersten Tipp auf einen Pin. Die frühere sticky
+   * Tap-Auswahl hing an den Karten der Etappenliste — die ist entfallen, und
+   * ein Tipp auf eine Nummer navigiert jetzt statt zu markieren.
    */
-  const [sheetOpen, setSheetOpen] = useState(false);
-  /** Transient (Hover/Fokus) + sticky (Tap) — Highlight ist eines von beiden. */
-  const [hoverDay, setHoverDay] = useState<number | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const activeDay = hoverDay ?? selectedDay;
+  const [activeDay, setActiveDay] = useState<number | null>(null);
   /**
    * FR10-Lesbarkeit: 97 Windfiedern über den Kykladen verdecken die Route.
    */
@@ -579,8 +586,6 @@ export function MapView({
   const [armedKiteId, setArmedKiteId] = useState<string | null>(null);
   /** Gesetzt in onPointerDown, gelesen im onClick — unterscheidet Touch. */
   const lastPointerType = useRef<string>('');
-  // Record statt JS-Map: `Map` ist in diesem Modul die Kartenkomponente.
-  const cardRefs = useRef<Record<number, HTMLButtonElement | undefined>>({});
 
   const legsById = useMemo(
     () => buildLegsById(snapshot.library.legs),
@@ -742,7 +747,7 @@ export function MapView({
     (t) => t.eignung === 'passt',
   ).length;
 
-  // Statuszeile am Listenkopf (AC 2): dieselbe Ableitung wie die Tagesansicht —
+  // Statuszeile über der Karte (AC 2): dieselbe Ableitung wie die Tagesansicht —
   // Minutentakt für die Stale-Prüfung, PPR-Hinweise nur abseits der Basis.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -779,387 +784,317 @@ export function MapView({
       ? `Wende: ${islandName(turnIsland)} (Tag ${turnDay})`
       : null;
 
-  /** Erster Segeltag zu einer Insel — Ziel des Pin-Tipps für den Karten-Sync. */
-  const stageDayForIsland = (islandId: string): number | null =>
-    sailingStages.find((s) => s.toIslandId === islandId)?.day ?? null;
-
-  /** Pin-Tipp (Touch, Schritt 1): Karte des Tages hervorheben + heranscrollen. */
-  const syncCardForIsland = (islandId: string) => {
-    const stageDay = stageDayForIsland(islandId);
-    if (stageDay !== null) {
-      setSelectedDay(stageDay);
-      cardRefs.current[stageDay]?.scrollIntoView({ block: 'nearest' });
-    }
-  };
-
-  const stagesByDay = useMemo(
-    () => [...(main?.stages ?? [])].sort((a, b) => a.day - b.day),
-    [main],
-  );
-
-  const itinerary = (
-    <div className={`map-itinerary${sheetOpen ? ' open' : ''}`}>
-      <button
-        type="button"
-        className="drag-handle"
-        aria-expanded={sheetOpen}
-        aria-label={sheetOpen ? 'Etappenliste einklappen' : 'Etappenliste ausklappen'}
-        onClick={() => setSheetOpen((o) => !o)}
-      >
-        <span className="bar" aria-hidden="true" />
-      </button>
-      <TripStatusLine
-        assessment={assessment}
-        main={main}
-        pprHinweise={pprHinweise}
-        staleLabel={staleLabel}
-      />
-      {/* Der Kopf toggelt das Sheet mit (AC 1) — der Handle-Button ist das
-          zugängliche Steuerelement, der Kopf nur die grössere Tippfläche.
-          ≥861px ist das Sheet inert (Media Query), der Klick wirkungslos. */}
-      <div className="sheet-head" onClick={() => setSheetOpen((o) => !o)}>
-        <h2 className="section-title">Etappen</h2>
-        <span className="trip-caption">
-          {formatTripRange(params.tripStartDate, params.tripLengthDays)} ·{' '}
-          {params.tripLengthDays} Tage
-        </span>
-      </div>
-
-      {!main && (
-        <div className="hint-panel">
-          Noch keine Hauptroute — in der Tagesansicht den Vorschlag übernehmen.
-        </div>
-      )}
-
-      <div className="itin-list">
-        {/* Chronologisch VERSCHRÄNKT (Segel- und Hafentage in Tagesfolge) —
-            das Sheet liest sich wie der Törn, nicht wie zwei Listen. */}
-        {stagesByDay.map((stage) => {
-          if (stage.kind === 'harbour') {
-            return (
-              <button
-                key={`harbour-${stage.day}`}
-                type="button"
-                className="harbour-row"
-                aria-pressed={selectedDay === stage.day}
-                onMouseEnter={() => setHoverDay(stage.day)}
-                onMouseLeave={() => setHoverDay(null)}
-                onFocus={() => setHoverDay(stage.day)}
-                onBlur={() => setHoverDay(null)}
-                onClick={() =>
-                  setSelectedDay((d) => (d === stage.day ? null : stage.day))
-                }
-              >
-                <span className="hd">Tag {stage.day}</span>
-                <span>
-                  Hafentag: {islandWithPlace(snapshot, stage.toIslandId, stage.placeId)}
-                </span>
-              </button>
-            );
-          }
-          const isPast = stage.day < day;
-          const firstLeg0 = stage.legs[0];
-          const firstLeg = firstLeg0
-            ? (firstLeg0.sailedLeg ?? legsById[firstLeg0.legId])
-            : undefined;
-          const fromIsland = firstLeg ? islandName(firstLeg.fromIslandId) : null;
-          const totalHours = stage.legs.reduce((s, l) => s + (l.totalHours ?? 0), 0);
-          const lastLeg = stage.legs[stage.legs.length - 1];
-          const lastEta =
-            lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
-          return (
-            <div key={stage.day} className={`itin-item${isPast ? ' past' : ''}`}>
-              <button
-                type="button"
-                ref={(el) => {
-                  cardRefs.current[stage.day] = el ?? undefined;
-                }}
-                className="itin-card"
-                aria-pressed={selectedDay === stage.day}
-                onMouseEnter={() => setHoverDay(stage.day)}
-                onMouseLeave={() => setHoverDay(null)}
-                onFocus={() => setHoverDay(stage.day)}
-                onBlur={() => setHoverDay(null)}
-                onClick={() =>
-                  setSelectedDay((d) => (d === stage.day ? null : stage.day))
-                }
-              >
-                <div className="itin-top">
-                  <div>
-                    <div className="itin-day">
-                      Tag {stage.day} · {formatTripDayShort(params.tripStartDate, stage.day)}
-                      {stage.day === day && ' · heute'}
-                      {isPast && ' · gefahren'}
-                    </div>
-                    <div className="itin-route">
-                      {fromIsland ? `${fromIsland} → ` : ''}
-                      {islandName(stage.toIslandId)}
-                    </div>
-                    <div className="itin-meta">
-                      {formatHours(totalHours || null)}
-                      {lastEta && <> · an {formatAthensTime(lastEta)}</>}
-                      {stage.pinned && (
-                        <>
-                          {' '}
-                          <span className="chip">Festgelegt</span>
-                        </>
-                      )}
-                    </div>
-                    {/* Kreuz/Halbwind des Tages — dieselbe Meldung wie in der
-                        Tagesansicht, damit die Liste hier nicht harmloser aussieht
-                        als die Etappenkarte, die sie zusammenfasst. */}
-                    {stage.kursAbschnitte.length > 0 && (
-                      <div className="kurs-liste">
-                        {stage.kursAbschnitte.map((a) => (
-                          <span
-                            key={a.kategorie}
-                            className={`ampel ampel-${a.ampel} kurs-zeile kurs-mini`}
-                            title={formatKursAmpelRegel(a.kategorie, params)}
-                          >
-                            <span className="dot" />
-                            {formatKursAbschnitt(a)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <AmpelBadge ampel={stage.ampel} />
-                </div>
-              </button>
-              {/* ABFAHRT PER KLICK IN DER KARTE (Skipper 2026-08-06): dieselbe
-                  Entscheidung wie in der Tagesansicht, dasselbe Menü — hier
-                  aber neben dem Bild, in dem man sie trifft. Der Default ist
-                  die Empfehlung des Tages; gefahrene Tage bleiben Anzeige.
-                  Der Chip steht NEBEN dem Kartenknopf, nicht darin: ein Menü
-                  in einem Button wäre ein Button im Button. */}
-              {stage.day >= day && (
-                <div className="itin-abfahrt">
-                  <AbfahrtMenu
-                    day={stage.day}
-                    hours={departureHourChoices(stage.day)}
-                    value={stage.abfahrtHourAthens}
-                    vomSkipper={stage.abfahrtVomSkipper}
-                    empfehlung={stage.abfahrtsEmpfehlung?.abfahrtHourAthens ?? null}
-                    standard={params.departureHourAthens}
-                    onPick={(hour) => setDepartureHour(stage.day, hour)}
-                  />
-                  {stage.abfahrtsEmpfehlung &&
-                    !stage.abfahrtVomSkipper &&
-                    stage.abfahrtsEmpfehlung.abfahrtHourAthens ===
-                      stage.abfahrtHourAthens && (
-                      <span className="itin-abfahrt-note">empfohlene Abfahrt</span>
-                    )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  /**
+   * Erster Segeltag der GEZEIGTEN Route zu einer Insel — die Etappe, die ein
+   * angetippter Pin hervorhebt. Null, wenn die Route dort nicht endet (die
+   * Kontextmenge enthält auch Plätze auf Durchgangsinseln).
+   */
+  const highlightDayForIsland = (islandId: string): number | null =>
+    displayStages.find((s) => s.toIslandId === islandId)?.day ?? null;
 
   return (
     <div className="map-view">
       <h1 className="visually-hidden">Karte</h1>
-      <div className="map-split">
-        {itinerary}
-        <div className="map-sticky">
-          {MAPS_ENV.ok ? (
-            <APIProvider apiKey={MAPS_ENV.env.apiKey}>
-              <Map
-                className="map-container"
-                mapId={MAPS_ENV.env.mapId}
-                defaultCenter={REVIER_CENTER}
-                defaultZoom={8}
-                mapTypeId="hybrid"
-                gestureHandling="greedy"
-                onClick={() => {
-                  setArmedPlaceId(null);
-                  setArmedKiteId(null);
-                }}
-              >
-                {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
-                    Google-Maps-Architektur immer unter Markern und Polylinien —
-                    die Ebene kann Route und Ampeln nie zudecken. */}
-                {showSeamarks && <SeamarkLayer />}
+      {/* Das Verdikt bleibt über der Karte stehen (AC 2): es war der einzige
+          Teil des entfallenen Sheets, den die Karte selbst nicht sagen kann —
+          "Round-Trip trägt / unter Vorbehalt", Rückkehr-Frist, Stale-Hinweis
+          und, aufgeklappt, die Begründungen. Die Etappen selbst stehen in der
+          Tagesansicht; die Nummern auf der Karte führen dorthin. */}
+      <div className="map-status">
+        <TripStatusLine
+          assessment={assessment}
+          main={main}
+          pprHinweise={pprHinweise}
+          staleLabel={staleLabel}
+        />
+        {!main && (
+          <div className="hint-panel">
+            Noch keine Hauptroute — in der Tagesansicht den Vorschlag übernehmen.
+          </div>
+        )}
+      </div>
+      <div className="map-sticky">
+        {MAPS_ENV.ok ? (
+          <APIProvider apiKey={MAPS_ENV.env.apiKey}>
+            <Map
+              className="map-container"
+              mapId={MAPS_ENV.env.mapId}
+              defaultCenter={REVIER_CENTER}
+              defaultZoom={8}
+              mapTypeId="hybrid"
+              gestureHandling="greedy"
+              onClick={() => {
+                setArmedPlaceId(null);
+                setArmedKiteId(null);
+              }}
+            >
+              {/* Seezeichen UNTER allem Eigenen: overlayMapTypes liegen per
+                  Google-Maps-Architektur immer unter Markern und Polylinien —
+                  die Ebene kann Route und Ampeln nie zudecken. */}
+              {showSeamarks && <SeamarkLayer />}
 
-                {/* Eingeblendete Alternative — ANSTELLE der Hauptroute
-                    (Feedback 2026-08-06), gestrichelt in ihrer Identitätsfarbe
-                    und mit Fahrtrichtungspfeilen, weil die EINE Farbe der
-                    Alternative Hin- und Rückweg nicht trennen kann. Kein
-                    Übereinanderlegen mehr: die Hauptroute ist so lange
-                    ausgeblendet, und deshalb trägt die Linie hier auch die
-                    Strichstärke und den zIndex einer Route, nicht die eines
-                    Overlays darunter. */}
-                {shownAlt &&
-                  displayStages.map((stage) => {
-                    const path = stagePath(stage, legsById, snapshot);
-                    if (path.length < 2) return null;
-                    return (
-                      <Polyline
-                        key={`alt-${shownAlt.variantId}-${shownAlt.turnIslandId}-${stage.day}`}
-                        path={path}
-                        strokeColor={shownAltColor!}
-                        dashed
-                        directionArrows
-                        strokeWeight={activeDay === stage.day ? 6 : 4}
-                        zIndex={activeDay === stage.day ? 60 : 20}
-                      />
-                    );
-                  })}
-
-                {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
-                    gefahren durchgezogen, geplant gestrichelt, Pfeile in
-                    Fahrtrichtung. One polyline per stage, so a single stage can
-                    be highlighted on hover. Der Rückweg liegt ÜBER dem Hinweg
-                    und um die halbe Strichperiode versetzt: wo beide dieselbe
-                    Etappe nutzen, scheint der Hinweg durch die Lücken der oberen
-                    Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
-                    Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
-                    dashOffset).
-
-                    Ausgeblendet, solange eine Alternative gezeigt wird: zwei
-                    Routen im selben Bild waren nicht mehr auseinanderzuhalten. */}
-                {!shownAlt &&
-                  sailingStages.map((stage) => {
-                    const path = stagePath(stage, legsById, snapshot);
-                    if (path.length < 2) return null;
-                    const isPast = stage.day < day;
-                    const rueck = isRueckweg(stage.day);
-                    return (
-                      <Polyline
-                        key={`line-${stage.day}`}
-                        path={path}
-                        strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
-                        dashed={!isPast}
-                        dashOffset={rueck ? '9px' : undefined}
-                        directionArrows
-                        // Kräftiger als bisher: über dem Satellitenbild geht
-                        // eine 3-px-Linie im Blau der Ägäis unter (dazu der
-                        // helle Saum in Polyline.tsx).
-                        strokeWeight={activeDay === stage.day ? 6 : 4}
-                        zIndex={activeDay === stage.day ? 60 : rueck ? 21 : 20}
-                      />
-                    );
-                  })}
-
-                {/* FR2 — Etappennummern am Tagesziel, EINE Markierung je Insel.
-                    Der Round-Trip läuft hin und zurück über dieselbe Kette; je
-                    Etappe eine Markierung hiesse, dass die Rücktour die Hintour
-                    zudeckt und die Karte nur noch die halbe Reise zeigt.
-                    Kapseln sind tastaturbedienbar (AC 7): Enter/Space/Klick
-                    öffnet das Platzdetail des ersten Anlaufs (endPlaceId).
-
-                    Sie zählen die GEZEIGTE Route: bei eingeblendeter
-                    Alternative deren Etappen, in deren Farbe — Nummern der
-                    ausgeblendeten Hauptroute an einer Alternativ-Linie wären
-                    eine zweite, unsichtbare Behauptung. */}
-                {endMarkers.map((marker) => {
-                  const active = marker.stops.some((s) => s.day === activeDay);
-                  const allPast = marker.stops.every((s) => s.day < day);
-                  const label = `${shownAlt ? 'Alternative — ' : ''}${islandName(marker.islandId)} — ${marker.stops
-                    .map(
-                      (s) =>
-                        `Etappe ${s.stageNumber ?? '–'} (Tag ${s.day})${s.day === day ? ', heute' : ''}`,
-                    )
-                    .join(', ')}`;
-                  const endPlaceId = marker.endPlaceId;
+              {/* Eingeblendete Alternative — ANSTELLE der Hauptroute
+                  (Feedback 2026-08-06), gestrichelt in ihrer Identitätsfarbe
+                  und mit Fahrtrichtungspfeilen, weil die EINE Farbe der
+                  Alternative Hin- und Rückweg nicht trennen kann. Kein
+                  Übereinanderlegen mehr: die Hauptroute ist so lange
+                  ausgeblendet, und deshalb trägt die Linie hier auch die
+                  Strichstärke und den zIndex einer Route, nicht die eines
+                  Overlays darunter. */}
+              {shownAlt &&
+                displayStages.map((stage) => {
+                  const path = stagePath(stage, legsById, snapshot);
+                  if (path.length < 2) return null;
                   return (
-                    <AdvancedMarker
-                      key={marker.key}
-                      position={marker.position}
-                      zIndex={active ? 120 : 70}
-                    >
-                      <div
-                        className="marker-hit"
-                        {...(endPlaceId
-                          ? {
-                              role: 'button',
-                              tabIndex: 0,
-                              'aria-label': label,
-                              onKeyDown: (e: React.KeyboardEvent) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  onOpenPlace(endPlaceId);
-                                }
-                              },
-                              onClick: () => onOpenPlace(endPlaceId),
-                            }
-                          : { 'aria-label': label })}
-                        onMouseEnter={() => setHoverDay(marker.stops[0]!.day)}
-                        onMouseLeave={() => setHoverDay(null)}
-                        onFocus={() => setHoverDay(marker.stops[0]!.day)}
-                        onBlur={() => setHoverDay(null)}
-                      >
-                        <span
-                          className={`stage-capsule${active ? ' highlight' : ''}${allPast ? ' past' : ''}`}
-                          style={
-                            shownAltColor
-                              ? { background: shownAltColor, color: COLORS.onAccent }
-                              : undefined
-                          }
-                          aria-hidden="true"
-                        >
-                          {marker.label}
-                        </span>
-                      </div>
-                    </AdvancedMarker>
+                    <Polyline
+                      key={`alt-${shownAlt.variantId}-${shownAlt.turnIslandId}-${stage.day}`}
+                      path={path}
+                      strokeColor={shownAltColor!}
+                      dashed
+                      directionArrows
+                      strokeWeight={activeDay === stage.day ? 6 : 4}
+                      zIndex={activeDay === stage.day ? 60 : 20}
+                    />
                   );
                 })}
 
-                {/* Places along the plan only; ampel colour where
-                    decision-relevant. Pins sind Buttons (AC 6): Enter/Space und
-                    Mausklick öffnen direkt; Touch braucht zwei Tipps — der
-                    erste hebt die Etappen-Karte hervor und zeigt den Mini-Chip
-                    mit dem Ampel-Wort, der zweite öffnet. */}
-                {contextPlaces.map((place) => {
-                  const relevant = ampelIslands.has(place.islandId);
-                  const ampel =
-                    assessment.nightAmpeln[place.id]?.[day]?.ampel ?? 'unbewertet';
-                  const armed = armedPlaceId === place.id;
+              {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
+                  gefahren durchgezogen, geplant gestrichelt, Pfeile in
+                  Fahrtrichtung. One polyline per stage, so a single stage can
+                  be highlighted on hover. Der Rückweg liegt ÜBER dem Hinweg
+                  und um die halbe Strichperiode versetzt: wo beide dieselbe
+                  Etappe nutzen, scheint der Hinweg durch die Lücken der oberen
+                  Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
+                  Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
+                  dashOffset).
+
+                  Ausgeblendet, solange eine Alternative gezeigt wird: zwei
+                  Routen im selben Bild waren nicht mehr auseinanderzuhalten. */}
+              {!shownAlt &&
+                sailingStages.map((stage) => {
+                  const path = stagePath(stage, legsById, snapshot);
+                  if (path.length < 2) return null;
+                  const isPast = stage.day < day;
+                  const rueck = isRueckweg(stage.day);
+                  return (
+                    <Polyline
+                      key={`line-${stage.day}`}
+                      path={path}
+                      strokeColor={rueck ? RUECK_LINE_COLOR : HIN_LINE_COLOR}
+                      dashed={!isPast}
+                      dashOffset={rueck ? '9px' : undefined}
+                      directionArrows
+                      // Kräftiger als bisher: über dem Satellitenbild geht
+                      // eine 3-px-Linie im Blau der Ägäis unter (dazu der
+                      // helle Saum in Polyline.tsx).
+                      strokeWeight={activeDay === stage.day ? 6 : 4}
+                      zIndex={activeDay === stage.day ? 60 : rueck ? 21 : 20}
+                    />
+                  );
+                })}
+
+              {/* FR2 — Etappennummern am Tagesziel, EINE Markierung je Insel.
+                  Der Round-Trip läuft hin und zurück über dieselbe Kette; je
+                  Etappe eine Markierung hiesse, dass die Rücktour die Hintour
+                  zudeckt und die Karte nur noch die halbe Reise zeigt.
+
+                  JEDE ZAHL IST EIN KNOPF (Feedback 2026-08-06): sie führt in
+                  die Tagesansicht auf die Etappen-Card genau dieser Etappe —
+                  tastaturbedienbar, Enter/Space wie Klick. Bei zwei Anläufen
+                  derselben Insel ("4 · 8") sind es zwei Knöpfe, denn die
+                  Nummern meinen zwei verschiedene Tage; eine Kapsel für beide
+                  hätte nur den ersten erreichbar gemacht.
+
+                  Sie zählen die GEZEIGTE Route: bei eingeblendeter
+                  Alternative deren Etappen, in deren Farbe — Nummern der
+                  ausgeblendeten Hauptroute an einer Alternativ-Linie wären
+                  eine zweite, unsichtbare Behauptung. Genau darum sind die
+                  Zahlen einer Alternative NICHT anklickbar: in der
+                  Tagesansicht stehen die Cards der Hauptroute, ein Sprung
+                  dorthin führte zu einem anderen Tag als dem angetippten.
+                  Übernommen wird eine Alternative in der Tagesansicht, danach
+                  ist sie die Hauptroute und ihre Nummern führen wieder. */}
+              {endMarkers.map((marker) => {
+                const stopText = (s: { day: number; stageNumber: number | null }) =>
+                  `Etappe ${s.stageNumber ?? '–'} (Tag ${s.day})${s.day === day ? ', heute' : ''}`;
+                const active = marker.stops.some((s) => s.day === activeDay);
+                return (
+                  <AdvancedMarker
+                    key={marker.key}
+                    position={marker.position}
+                    zIndex={active ? 120 : 70}
+                  >
+                    {shownAlt ? (
+                      // Alternative: Beschriftung ohne Ziel — die Zahlen
+                      // benennen die eingeblendete Route, führen aber nicht.
+                      // role="img" + aria-label wie bei den Windfiedern: ein
+                      // nackter div mit aria-label wird nicht vorgelesen.
+                      <div
+                        className="marker-hit capsule-group"
+                        role="img"
+                        aria-label={`Alternative — ${islandName(marker.islandId)} — ${marker.stops
+                          .map(stopText)
+                          .join(', ')}`}
+                      >
+                        {marker.stops.map((stop) => (
+                          <span
+                            key={stop.day}
+                            className={`stage-capsule${stop.day === activeDay ? ' highlight' : ''}${stop.day < day ? ' past' : ''}`}
+                            style={{ background: shownAltColor!, color: COLORS.onAccent }}
+                            aria-hidden="true"
+                          >
+                            {stop.stageNumber ?? '–'}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="marker-hit capsule-group">
+                        {marker.stops.map((stop) => (
+                          <button
+                            key={stop.day}
+                            type="button"
+                            className={`stage-capsule${stop.day === activeDay ? ' highlight' : ''}${stop.day < day ? ' past' : ''}`}
+                            aria-label={`${islandName(marker.islandId)} — ${stopText(stop)} — in „Heute“ öffnen`}
+                            onMouseEnter={() => setActiveDay(stop.day)}
+                            onMouseLeave={() => setActiveDay(null)}
+                            onFocus={() => setActiveDay(stop.day)}
+                            onBlur={() => setActiveDay(null)}
+                            onClick={() => onOpenStageDay(stop.day)}
+                          >
+                            {stop.stageNumber ?? '–'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </AdvancedMarker>
+                );
+              })}
+
+              {/* Places along the plan only; ampel colour where
+                  decision-relevant. Pins sind Buttons (AC 6): Enter/Space und
+                  Mausklick öffnen direkt; Touch braucht zwei Tipps — der
+                  erste hebt die Etappenlinie hervor und zeigt den Mini-Chip
+                  mit dem Ampel-Wort, der zweite öffnet. */}
+              {contextPlaces.map((place) => {
+                const relevant = ampelIslands.has(place.islandId);
+                const ampel =
+                  assessment.nightAmpeln[place.id]?.[day]?.ampel ?? 'unbewertet';
+                const armed = armedPlaceId === place.id;
+                return (
+                  <AdvancedMarker
+                    key={place.id}
+                    position={{
+                      lat: place.coordinates.lat,
+                      lng: place.coordinates.lon,
+                    }}
+                    // Bewaffneter Pin über dem Bootsmarker (90): sein
+                    // Mini-Chip darf nie verdeckt werden (AC 8).
+                    zIndex={armed ? 100 : relevant ? 50 : 30}
+                  >
+                    <div
+                      className="marker-hit"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${place.name} — ${AMPEL_LABEL[ampel]}`}
+                      onPointerDown={(e) => {
+                        lastPointerType.current = e.pointerType;
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onOpenPlace(place.id);
+                        }
+                      }}
+                      onClick={() => {
+                        if (lastPointerType.current === 'touch' && !armed) {
+                          // Schritt 1: bewaffnen — Mini-Chip zeigen und die
+                          // Etappe hervorheben, die hier endet (die Liste, mit
+                          // der das früher synchronisiert wurde, ist entfallen —
+                          // die Linie auf der Karte trägt den Bezug jetzt
+                          // allein). Ein anderer Pin re-armiert.
+                          setArmedPlaceId(place.id);
+                          setActiveDay(highlightDayForIsland(place.islandId));
+                          return;
+                        }
+                        onOpenPlace(place.id); // Maus / Tastatur / zweiter Tipp
+                      }}
+                    >
+                      <div
+                        className={relevant ? 'marker-pin' : 'marker-pin muted'}
+                        style={{ background: AMPEL_GRAPHIC_HEX[ampel] }}
+                      />
+                      {armed && (
+                        <span className="marker-chip" aria-hidden="true">
+                          {place.name} · {AMPEL_LABEL[ampel]}
+                        </span>
+                      )}
+                    </div>
+                  </AdvancedMarker>
+                );
+              })}
+
+              {/* KITE-SPOTS (Skipper-Wunsch 2026-08-06) — eigene Ebene, eigene
+                  Farbe, eigene Form: eine Raute, damit sie auch ohne Farbe
+                  kein Ampel-Punkt ist. Gefüllt heisst "der Wind passt heute"
+                  (assessment.kiteSpotsHeute, gerechnet in domain/kite.ts —
+                  die Karte rechnet nichts, AD-2), hohl heisst "heute nicht".
+                  Die Bedeutung steht in der Legende und im aria-label, nie
+                  nur in der Füllung.
+
+                  Anders als die Platz-Pins folgen sie NICHT der Kontextmenge
+                  des Plans: ein Kite-Spot ist der Grund, eine Insel überhaupt
+                  anzulaufen — ihn erst zu zeigen, wenn die Route schon dort
+                  vorbeiführt, hätte die Reihenfolge auf den Kopf gestellt.
+                  Touch-Zweischritt wie bei den Pins: erster Tipp nennt den
+                  Spot, zweiter öffnet seine Details. */}
+              {showKite &&
+                (snapshot.library.kiteSpots ?? []).map((spot) => {
+                  const tag = kiteByspotId[spot.id];
+                  const passt = tag?.eignung === 'passt';
+                  const armed = armedKiteId === spot.id;
+                  const label = `Kite-Spot ${spot.name} — ${
+                    tag?.text ?? 'heute nicht bewertet'
+                  }`;
                   return (
                     <AdvancedMarker
-                      key={place.id}
+                      key={spot.id}
                       position={{
-                        lat: place.coordinates.lat,
-                        lng: place.coordinates.lon,
+                        lat: spot.coordinates.lat,
+                        lng: spot.coordinates.lon,
                       }}
-                      // Bewaffneter Pin über dem Bootsmarker (90): sein
-                      // Mini-Chip darf nie verdeckt werden (AC 8).
-                      zIndex={armed ? 100 : relevant ? 50 : 30}
+                      zIndex={armed ? 100 : passt ? 45 : 25}
                     >
                       <div
                         className="marker-hit"
                         role="button"
                         tabIndex={0}
-                        aria-label={`${place.name} — ${AMPEL_LABEL[ampel]}`}
+                        aria-label={label}
+                        title={label}
                         onPointerDown={(e) => {
                           lastPointerType.current = e.pointerType;
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            onOpenPlace(place.id);
+                            onOpenPlace(spot.refPlaceId, spot.id);
                           }
                         }}
                         onClick={() => {
                           if (lastPointerType.current === 'touch' && !armed) {
-                            // Schritt 1: bewaffnen — Karte synchronisieren,
-                            // Mini-Chip zeigen. Ein anderer Pin re-armiert.
-                            setArmedPlaceId(place.id);
-                            syncCardForIsland(place.islandId);
+                            setArmedKiteId(spot.id);
                             return;
                           }
-                          onOpenPlace(place.id); // Maus / Tastatur / zweiter Tipp
+                          onOpenPlace(spot.refPlaceId, spot.id);
                         }}
                       >
-                        <div
-                          className={relevant ? 'marker-pin' : 'marker-pin muted'}
-                          style={{ background: AMPEL_GRAPHIC_HEX[ampel] }}
+                        <span
+                          className={passt ? 'kite-marker passt' : 'kite-marker'}
+                          aria-hidden="true"
                         />
                         {armed && (
                           <span className="marker-chip" aria-hidden="true">
-                            {place.name} · {AMPEL_LABEL[ampel]}
+                            {spot.name}
+                            {passt ? ' · Wind passt' : ''}
                           </span>
                         )}
                       </div>
@@ -1167,211 +1102,141 @@ export function MapView({
                   );
                 })}
 
-                {/* KITE-SPOTS (Skipper-Wunsch 2026-08-06) — eigene Ebene, eigene
-                    Farbe, eigene Form: eine Raute, damit sie auch ohne Farbe
-                    kein Ampel-Punkt ist. Gefüllt heisst "der Wind passt heute"
-                    (assessment.kiteSpotsHeute, gerechnet in domain/kite.ts —
-                    die Karte rechnet nichts, AD-2), hohl heisst "heute nicht".
-                    Die Bedeutung steht in der Legende und im aria-label, nie
-                    nur in der Füllung.
+              {/* Bootsposition (AC 8): Akzent-Punkt mit Halo — Blickanker,
+                  nicht interaktiv. Über den Pins (zIndex 90), unter einem
+                  bewaffneten Pin (100). */}
+              {snapshot.trip.position && (
+                <AdvancedMarker
+                  position={{
+                    lat: snapshot.trip.position.lat,
+                    lng: snapshot.trip.position.lon,
+                  }}
+                  zIndex={90}
+                >
+                  <div className="boat-marker" role="img" aria-label="Bootsposition">
+                    <span
+                      className="halo"
+                      style={{ background: COLORS.accent }}
+                    />
+                    <span
+                      className="core"
+                      style={{ background: COLORS.accent }}
+                    />
+                  </div>
+                </AdvancedMarker>
+              )}
 
-                    Anders als die Platz-Pins folgen sie NICHT der Kontextmenge
-                    des Plans: ein Kite-Spot ist der Grund, eine Insel überhaupt
-                    anzulaufen — ihn erst zu zeigen, wenn die Route schon dort
-                    vorbeiführt, hätte die Reihenfolge auf den Kopf gestellt.
-                    Touch-Zweischritt wie bei den Pins: erster Tipp nennt den
-                    Spot, zweiter öffnet seine Details. */}
-                {showKite &&
-                  (snapshot.library.kiteSpots ?? []).map((spot) => {
-                    const tag = kiteByspotId[spot.id];
-                    const passt = tag?.eignung === 'passt';
-                    const armed = armedKiteId === spot.id;
-                    const label = `Kite-Spot ${spot.name} — ${
-                      tag?.text ?? 'heute nicht bewertet'
-                    }`;
-                    return (
-                      <AdvancedMarker
-                        key={spot.id}
-                        position={{
-                          lat: spot.coordinates.lat,
-                          lng: spot.coordinates.lon,
-                        }}
-                        zIndex={armed ? 100 : passt ? 45 : 25}
-                      >
-                        <div
-                          className="marker-hit"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={label}
-                          title={label}
-                          onPointerDown={(e) => {
-                            lastPointerType.current = e.pointerType;
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              onOpenPlace(spot.refPlaceId, spot.id);
-                            }
-                          }}
-                          onClick={() => {
-                            if (lastPointerType.current === 'touch' && !armed) {
-                              setArmedKiteId(spot.id);
-                              return;
-                            }
-                            onOpenPlace(spot.refPlaceId, spot.id);
-                          }}
-                        >
-                          <span
-                            className={passt ? 'kite-marker passt' : 'kite-marker'}
-                            aria-hidden="true"
-                          />
-                          {armed && (
-                            <span className="marker-chip" aria-hidden="true">
-                              {spot.name}
-                              {passt ? ' · Wind passt' : ''}
-                            </span>
-                          )}
-                        </div>
-                      </AdvancedMarker>
-                    );
-                  })}
+              {/* FR3 — Windfiedern in der Notation der Wetterkarte. Anders als
+                  der frühere Pfeil zeigt der Schaft dorthin, WOHER der Wind
+                  kommt (AD-6), nicht wohin er weht. Gezeigt werden nur die
+                  Plätze der Kontextmenge (Plan-Inseln plus aktuelle Position);
+                  wie viele davon die Karte verträgt, entscheidet windField.ts
+                  — eine je Insel, danach Mindestabstand auf dem Schirm. */}
+              {showWind && (
+                <WindLayer
+                  points={barbCandidates}
+                  islandOf={islandOfPlace}
+                  onCount={onWindCount}
+                />
+              )}
+            </Map>
 
-                {/* Bootsposition (AC 8): Akzent-Punkt mit Halo — Blickanker,
-                    nicht interaktiv. Über den Pins (zIndex 90), unter einem
-                    bewaffneten Pin (100). */}
-                {snapshot.trip.position && (
-                  <AdvancedMarker
-                    position={{
-                      lat: snapshot.trip.position.lat,
-                      lng: snapshot.trip.position.lon,
-                    }}
-                    zIndex={90}
-                  >
-                    <div className="boat-marker" role="img" aria-label="Bootsposition">
-                      <span
-                        className="halo"
-                        style={{ background: COLORS.accent }}
-                      />
-                      <span
-                        className="core"
-                        style={{ background: COLORS.accent }}
-                      />
-                    </div>
-                  </AdvancedMarker>
-                )}
-
-                {/* FR3 — Windfiedern in der Notation der Wetterkarte. Anders als
-                    der frühere Pfeil zeigt der Schaft dorthin, WOHER der Wind
-                    kommt (AD-6), nicht wohin er weht. Gezeigt werden nur die
-                    Plätze der Kontextmenge (Plan-Inseln plus aktuelle Position);
-                    wie viele davon die Karte verträgt, entscheidet windField.ts
-                    — eine je Insel, danach Mindestabstand auf dem Schirm. */}
-                {showWind && (
-                  <WindLayer
-                    points={barbCandidates}
-                    islandOf={islandOfPlace}
-                    onCount={onWindCount}
+            <div className="layer-chips">
+              <div className="chip-row">
+                <button
+                  type="button"
+                  className="layer-chip"
+                  aria-pressed={showWind}
+                  onClick={() => setShowWind((v) => !v)}
+                >
+                  Windfiedern
+                </button>
+                {/* EIN Chip für die Routenwahl statt einer Chip-Reihe: er
+                    nennt die gezeigte Route und öffnet die Liste
+                    (AltRouteMenu). */}
+                {altChoices.length > 0 && (
+                  <AltRouteMenu
+                    alternatives={altChoices}
+                    shownIndex={shownAltIndex}
+                    onPick={setShownAltIndex}
                   />
                 )}
-              </Map>
-
-              <div className="layer-chips">
-                <div className="chip-row">
+                <button
+                  type="button"
+                  className="layer-chip"
+                  aria-pressed={showSeamarks}
+                  onClick={() => setShowSeamarks((v) => !v)}
+                >
+                  Seezeichen
+                </button>
+                {/* Nur wenn es überhaupt eine Kite-Bibliothek gibt: ein Chip
+                    für eine leere Ebene wäre eine Zusage, die die Karte nicht
+                    hält. Der Chip nennt gleich die Zahl der heute passenden
+                    Spots — das ist die Antwort, für die man ihn antippt. */}
+                {(snapshot.library.kiteSpots ?? []).length > 0 && (
                   <button
                     type="button"
                     className="layer-chip"
-                    aria-pressed={showWind}
-                    onClick={() => setShowWind((v) => !v)}
+                    aria-pressed={showKite}
+                    onClick={() => setShowKite((v) => !v)}
                   >
-                    Windfiedern
-                  </button>
-                  {/* EIN Chip für die Routenwahl statt einer Chip-Reihe: er
-                      nennt die gezeigte Route und öffnet die Liste
-                      (AltRouteMenu). */}
-                  {altChoices.length > 0 && (
-                    <AltRouteMenu
-                      alternatives={altChoices}
-                      shownIndex={shownAltIndex}
-                      onPick={setShownAltIndex}
+                    <span
+                      className="chip-dot"
+                      style={{ background: KITE_SPOT_COLOR }}
+                      aria-hidden="true"
                     />
-                  )}
-                  <button
-                    type="button"
-                    className="layer-chip"
-                    aria-pressed={showSeamarks}
-                    onClick={() => setShowSeamarks((v) => !v)}
-                  >
-                    Seezeichen
+                    Kite-Spots{kitePassendHeute > 0 ? ` · ${kitePassendHeute} heute` : ''}
                   </button>
-                  {/* Nur wenn es überhaupt eine Kite-Bibliothek gibt: ein Chip
-                      für eine leere Ebene wäre eine Zusage, die die Karte nicht
-                      hält. Der Chip nennt gleich die Zahl der heute passenden
-                      Spots — das ist die Antwort, für die man ihn antippt. */}
-                  {(snapshot.library.kiteSpots ?? []).length > 0 && (
-                    <button
-                      type="button"
-                      className="layer-chip"
-                      aria-pressed={showKite}
-                      onClick={() => setShowKite((v) => !v)}
-                    >
-                      <span
-                        className="chip-dot"
-                        style={{ background: KITE_SPOT_COLOR }}
-                        aria-hidden="true"
-                      />
-                      Kite-Spots{kitePassendHeute > 0 ? ` · ${kitePassendHeute} heute` : ''}
-                    </button>
-                  )}
-                </div>
-                {/* Keine stille Ersetzung: solange eine Alternative gezeigt
-                    wird, sagt die Karte in einer Zeile, dass die Hauptroute
-                    fehlt — welche Alternative es ist, steht im Chip daneben.
-                    Leer = kein Kasten (CSS :empty). */}
-                <p className="alt-note" aria-live="polite">
-                  {shownAlt ? 'Hauptroute ausgeblendet' : ''}
-                </p>
+                )}
               </div>
-              {/* CC-BY-SA verlangt SICHTBARE Attribution, solange die Ebene an
-                  ist — der volle Satz steht zusätzlich in der Legende. */}
-              {showSeamarks && (
-                <span className="map-attrib">
-                  ©{' '}
-                  <a
-                    href="https://www.openseamap.org"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    OpenSeaMap
-                  </a>{' '}
-                  (CC-BY-SA)
-                </span>
-              )}
-              <LegendPopover
-                restTripAmpel={assessment.restTripAmpel}
-                turnLabel={turnLabel}
-                windCount={windCount}
-                alternatives={legendAlternatives}
-                kiteShown={showKite && (snapshot.library.kiteSpots ?? []).length > 0}
-              />
-            </APIProvider>
-          ) : (
-            <div className="hint-panel" style={{ height: '100%' }}>
-              <h2>Karte nicht verfügbar.</h2>
-              <p>
-                Es fehlt:{' '}
-                {MAPS_ENV.missing.map((name, i) => (
-                  <span key={name}>
-                    {i > 0 && ', '}
-                    <code>{name}</code>
-                  </span>
-                ))}
-                . Trage sie in deine <code>.env</code> ein (siehe{' '}
-                <code>.env.example</code> und README) und lade die Seite neu.
-                Alle Bewertungen sind weiter in der Tagesansicht verfügbar.
+              {/* Keine stille Ersetzung: solange eine Alternative gezeigt
+                  wird, sagt die Karte in einer Zeile, dass die Hauptroute
+                  fehlt — welche Alternative es ist, steht im Chip daneben.
+                  Leer = kein Kasten (CSS :empty). */}
+              <p className="alt-note" aria-live="polite">
+                {shownAlt ? 'Hauptroute ausgeblendet' : ''}
               </p>
             </div>
-          )}
-        </div>
+            {/* CC-BY-SA verlangt SICHTBARE Attribution, solange die Ebene an
+                ist — der volle Satz steht zusätzlich in der Legende. */}
+            {showSeamarks && (
+              <span className="map-attrib">
+                ©{' '}
+                <a
+                  href="https://www.openseamap.org"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  OpenSeaMap
+                </a>{' '}
+                (CC-BY-SA)
+              </span>
+            )}
+            <LegendPopover
+              restTripAmpel={assessment.restTripAmpel}
+              turnLabel={turnLabel}
+              windCount={windCount}
+              alternatives={legendAlternatives}
+              kiteShown={showKite && (snapshot.library.kiteSpots ?? []).length > 0}
+            />
+          </APIProvider>
+        ) : (
+          <div className="hint-panel" style={{ height: '100%' }}>
+            <h2>Karte nicht verfügbar.</h2>
+            <p>
+              Es fehlt:{' '}
+              {MAPS_ENV.missing.map((name, i) => (
+                <span key={name}>
+                  {i > 0 && ', '}
+                  <code>{name}</code>
+                </span>
+              ))}
+              . Trage sie in deine <code>.env</code> ein (siehe{' '}
+              <code>.env.example</code> und README) und lade die Seite neu.
+              Alle Bewertungen sind weiter in der Tagesansicht verfügbar.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

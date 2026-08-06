@@ -61,6 +61,32 @@ export function dayViewStages(
   };
 }
 
+/**
+ * WO STEHT DIESER TAG IN DER TAGESANSICHT? — für den Sprung von einer
+ * Etappennummer der Karte auf ihre Etappen-Card (Feedback 2026-08-06).
+ *
+ * Jede der drei Stellen braucht einen anderen Handgriff, bevor die Card
+ * sichtbar ist: der Hero steht offen da, eine Rest-Trip-Zeile muss aufgeklappt
+ * werden (und die Liste zeigt normalerweise nur drei Tage), ein gefahrener Tag
+ * steht als Chip in der eingeklappten Sektion "Bereits gefahren". `null` heisst
+ * "dieser Tag kommt in der Hauptroute nicht vor" — etwa nach einem Wechsel der
+ * Hauptroute, während die Karte noch die alten Nummern zeigte: dann wird nichts
+ * aufgeklappt und nichts angesprungen.
+ */
+export function stageFocusPlacement(
+  split: {
+    hero: StageAssessment | null;
+    rest: StageAssessment[];
+    past: StageAssessment[];
+  },
+  day: number,
+): 'hero' | 'rest' | 'past' | null {
+  if (split.hero?.day === day) return 'hero';
+  if (split.rest.some((s) => s.day === day)) return 'rest';
+  if (split.past.some((s) => s.day === day)) return 'past';
+  return null;
+}
+
 /** Collapsed Optionsraum summary. Open = every state except 'zu'. */
 export function optionsSummary(
   options: Pick<RouteOptionAssessment, 'state' | 'closesOnDay'>[],

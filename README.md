@@ -31,9 +31,8 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Nachmittags-Meltemi steht. Diese Empfehlung ist der **Default der Abfahrt**:
   Solver, Gültigkeit, Karte und Anzeige rechnen mit ihr, nicht mit einer
   pauschalen Standardstunde (`scoring.departureHourForDay`). Abweichen geht per
-  Klick — in der Abfahrt-Kachel der Etappenkarte und am Chip der Etappenliste
-  in der Karte; die Wahl gilt pro Törntag und ist jederzeit auf die Empfehlung
-  zurückzusetzen.
+  Klick in der Abfahrt-Kachel der Etappenkarte; die Wahl gilt pro Törntag und
+  ist jederzeit auf die Empfehlung zurückzusetzen.
 - **Entscheidungstore:** An natürlichen Knoten (Paros/Naxos, Syros) prüft die
   App am Tag der Festlegung, ob ein 48-h-Forecast-Fenster samt machbarem
   Rückweg den Vorstoß dahinter deckt (`domain/konzept.ts`,
@@ -43,7 +42,10 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   (offen / schließt am Tag X / geschlossen), Predicted Point of Return,
   Entscheidungspunkte.
 - **Karte:** Besprechungsbild mit Ampel-Markern, gestrichelten Routen-Optionen,
-  Windpfeilen, Itinerar↔Karte-Hover (Google Maps, Hybrid-Ansicht).
+  Windpfeilen (Google Maps, Hybrid-Ansicht). Über der Karte nur die
+  Trip-Statuszeile, darunter nichts — die Etappen stehen in der Tagesansicht,
+  und jede **Etappennummer auf der Karte ist ein Knopf dorthin** (Feedback
+  2026-08-06: die Etappenliste unter der Karte wiederholte die Tagesansicht).
 - **Platz-Detail:** Foto, Qualitäten, sicherer Liegeplatz (kuratiert), Nacht-Ampel,
   **Liegeplatz-Details** (Tiefe, Grössenlimit, Anlegeart, Haltegrund;
   Reservierbarkeit, Müll, Strom, Wasser, Diesel, Preis) und die

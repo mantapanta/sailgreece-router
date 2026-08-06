@@ -1424,3 +1424,52 @@ claude-fable-5 (BMad dev-story)
   headless Chromium gegen die echte styles.css geprüft (Chip 30px sichtbar,
   Treffer 6px darüber/darunter, Menü 246×328 bei 390px Viewport). Tests 592
   green, build green.
+
+- 2026-08-06 (Feedback Philipp, dritter Durchgang — zwei Punkte): (1) Die
+  Etappenliste der Kartenansicht ist KOMPLETT ENTFALLEN — Bottom-Sheet ≤860px
+  und Listenspalte ≥861px. Sie wiederholte die Tagesansicht in kleinerer
+  Schrift und nahm dem Besprechungsbild auf dem Telefon 232px (eingeklappt) bis
+  75vh (offen). Übrig bleibt über der Karte die Trip-Statuszeile — das Einzige,
+  was die Karte selbst nicht sagen kann (Verdikt, Rückkehr-Frist, Stale-Hinweis,
+  aufgeklappt die Begründungen); darunter nur noch Karte. Auf 390×844 wächst die
+  Kartenfläche damit von ~492px auf 674px, auf dem Desktop läuft sie über die
+  ganze Breite (Höhe min(82vh, 820px) statt min(78vh, 720px)). (2) DIE
+  ETAPPENNUMMERN SIND JETZT KNÖPFE: jede Zahl führt in die Tagesansicht auf die
+  Etappen-Card genau dieser Etappe. Läuft der Round-Trip zweimal über dieselbe
+  Insel ("4·8"), sind es zwei Knöpfe — die Zahlen meinen zwei Tage, eine Kapsel
+  für beide hätte nur den ersten erreichbar gemacht. Der Sprung läuft über
+  `View = { kind: 'tag'; focusDay }` (App.tsx) → `DayView focusDay`: die
+  Tagesansicht klappt auf, was zu öffnen ist (Rest-Trip-Zeile inkl. "Alle N Tage
+  anzeigen", Sektion "Bereits gefahren"), scrollt das Ziel an und setzt den
+  Fokus dorthin; wo der Tag steht, entscheidet der getestete Helper
+  `stageFocusPlacement` (dayViewModel.ts). Ein gefahrener Tag hat keine Card
+  mehr — sein Chip wird angesprungen und umrandet (`.chip.angesprungen`).
+  Die Zahlen einer eingeblendeten ALTERNATIVE führen bewusst nicht (die
+  Tagesansicht zeigt die Cards der Hauptroute); sie bleiben Beschriftung mit
+  `role="img"` + aria-label. Sichtbar bleibt die Kapsel 18px hoch, die
+  Tippfläche wächst über `::after` auf 44px — 44×44 bei einer Zahl
+  (`:only-child`), 44×24 je Zahl bei zwei Nachbarn, ohne Überlappung (mit
+  headless Chromium gegen die echte styles.css geprüft). Weitere Folgen:
+  `.map-status` ersetzt `.map-split`/`.map-itinerary`; `.drag-handle`,
+  `.sheet-head`, `.itin-*`, `.harbour-row`, `.kurs-mini` und die
+  Sheet-Freihaltung von "i"/Attribution sind gelöscht; `MapViewSkeleton` ohne
+  Listenzeilen; `StageEndMarker.endPlaceId` entfernt (das Platzdetail erreicht
+  man über den Pin — die Kapsel navigiert jetzt); `formatTripDayShort` entfernt;
+  der Törnzeitraum ("8.–19. August 2026 · 12 Tage") stand nur im Sheet-Kopf und
+  steht jetzt in der Tag-Zeile der Tagesansicht (`.day-kicker .zeitraum`).
+  Legende neu mit der Zeile "Etappe — antippen öffnet sie in „Heute“".
+  Tests 631 green, build green.
+
+- 2026-08-06 (Merge origin/main — Kite-Ebene und Abfahrt-Default): main hatte
+  parallel IN der Etappenliste der Karte gearbeitet, die dieser Stand entfernt.
+  Übernommen ist die Kite-Ebene vollständig (Marker-Raute mit Touch-Zweischritt
+  zwischen Platz-Pins und Bootsposition, Chip „Kite-Spots · N heute", zwei
+  Legendenzeilen samt Vorbehalt, `onOpenPlace(placeId, kiteSpotId)`) — sie hing
+  nicht an der Liste. WEGGEFALLEN sind die Abfahrt-Chips, die main je Etappenzeile
+  in die Liste gesetzt hatte (`.itin-item`, `.itin-abfahrt`, `AbfahrtMenu`
+  `variant="chip"`): dieselbe Entscheidung sitzt in der Abfahrt-Kachel jeder
+  Etappenkarte der Tagesansicht (`variant="tile"`), und die Etappennummer auf der
+  Karte führt jetzt genau dorthin — EIN Bedienelement je Entscheidung statt
+  zweier. Die Chip-Variante von `AbfahrtMenu` bleibt als Baustein erhalten (ihre
+  Kommentare nennen kein „scrollendes Etappen-Sheet" mehr); README an zwei
+  Stellen nachgezogen. Tests 671 green, tsc und build green.

@@ -9,10 +9,12 @@
  * stellt (scoring.departureHourChoices; Tag 1 trägt das Übernahme-Fenster
  * 14–17 Uhr zusätzlich).
  *
- * EIN Menü für beide Ansichten: die Etappenkarte hängt es an die
- * Abfahrt-Kachel, die Karte an einen Chip in der Etappenliste. Zwei
- * Bedienelemente für dieselbe Entscheidung wären zwei Gelegenheiten, sie
- * verschieden zu beantworten.
+ * EIN Menü für jede Stelle, an der die Abfahrt gesetzt wird: die Etappenkarte
+ * hängt es an ihre Abfahrt-Kachel (`variant="tile"`), die kompakte Chip-Form
+ * bleibt für Wirte ohne Kachel. Zwei Bedienelemente für dieselbe Entscheidung
+ * wären zwei Gelegenheiten, sie verschieden zu beantworten. (Die Etappenliste
+ * der Kartenansicht, für die die Chip-Form gebaut wurde, ist mit dem Feedback
+ * vom 2026-08-06 entfallen — die Karte trägt keine Etappenzeilen mehr.)
  *
  * Popover-Kontrakt wie AltRouteMenu/AvatarMenu (Interaction Primitives): eines
  * zur Zeit, Esc/Backdrop/Auslöser schliessen, Fokus geht hinein und zurück zum
@@ -46,7 +48,8 @@ export function AbfahrtMenu({
   standard: number;
   /** `null` = zurück auf den Default (Empfehlung, sonst Standard). */
   onPick: (hour: number | null) => void;
-  /** 'tile' sitzt in der Abfahrt-Kachel, 'chip' in der Etappenliste. */
+  /** 'tile' sitzt in der Abfahrt-Kachel (Etappenkarte), 'chip' ist die
+   *  kompakte Form für einen Wirt ohne Kachel. */
   variant?: 'tile' | 'chip';
 }) {
   const [open, setOpen] = useState(false);
@@ -62,11 +65,11 @@ export function AbfahrtMenu({
   };
 
   /**
-   * Das Menü hängt an `position: fixed` statt am Auslöser — beide Wirte
-   * beschneiden sonst: die Kachelreihe der Etappenkarte rundet ihre Ecken über
-   * die Kachelflächen, und die Etappenliste der Karte ist auf dem Telefon ein
-   * scrollendes Sheet. Ein Menü, das man erst scrollen muss, um es zu lesen,
-   * ist kein Menü. Reicht der Platz darunter nicht, klappt es nach oben.
+   * Das Menü hängt an `position: fixed` statt am Auslöser — der Wirt
+   * beschneidet sonst: die Kachelreihe der Etappenkarte rundet ihre Ecken über
+   * die Kachelflächen, und ein Wirt kann in einem eigenen Container scrollen.
+   * Ein Menü, das man erst scrollen muss, um es zu lesen, ist kein Menü.
+   * Reicht der Platz darunter nicht, klappt es nach oben.
    */
   useLayoutEffect(() => {
     if (!open) return;
@@ -87,8 +90,8 @@ export function AbfahrtMenu({
     };
     place();
     window.addEventListener('resize', place);
-    // Capture: das Sheet der Karte scrollt in einem eigenen Container, nicht
-    // im Fenster — ohne capture käme sein scroll-Event hier nie an.
+    // Capture: scrollt der Wirt in einem eigenen Container statt im Fenster,
+    // käme sein scroll-Event ohne capture hier nie an.
     window.addEventListener('scroll', place, true);
     return () => {
       window.removeEventListener('resize', place);
@@ -142,8 +145,8 @@ export function AbfahrtMenu({
           vomSkipper ? '' : ` (${empfehlung !== null ? 'Empfehlung' : 'Standard'})`
         } — ändern`}
         onClick={(e) => {
-          // In der Karte steckt der Chip in einer anklickbaren Etappenzeile;
-          // ohne das hier würde jeder Klick aufs Menü auch die Zeile schalten.
+          // Sitzt der Auslöser in einem anklickbaren Wirt (Zeile, Kachel),
+          // würde ohne das hier jeder Klick aufs Menü auch den Wirt schalten.
           e.stopPropagation();
           if (open) close();
           else setOpen(true);

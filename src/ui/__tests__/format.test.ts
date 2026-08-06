@@ -4,7 +4,6 @@ import {
   formatAthensTime,
   formatKursAbschnitt,
   formatKursAmpelRegel,
-  formatTripDayShort,
   formatWaveM,
   formatWindFrom,
   pointOfSail,
@@ -82,22 +81,6 @@ describe('pointOfSail — Kurs zum Wind als Name', () => {
 
   it('ohne TWA keinen Kursnamen', () => {
     expect(pointOfSail(null)).toBe('–');
-  });
-});
-
-/**
- * Story 1.3 — der Tag-Tag der Karten-Etappenkarten: kurzer Wochentag plus
- * "d.M." ohne führende Nullen, zusammengesetzt aus den BESTEHENDEN Formattern
- * (kein neues Intl-Muster). ICU liefert den kurzen Wochentag in de-DE ohne
- * Punkt ("Sa", nicht "Sa.").
- */
-describe('formatTripDayShort — Tag-Tag der Karten-Etappenkarten', () => {
-  it('setzt Wochentag und d.M. für Tag 1 zusammen', () => {
-    expect(formatTripDayShort('2026-08-08', 1)).toBe('Sa 8.8.');
-  });
-
-  it('zählt den Törntag über den Kalender weiter (Tag 2)', () => {
-    expect(formatTripDayShort('2026-08-08', 2)).toBe('So 9.8.');
   });
 });
 
