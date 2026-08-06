@@ -134,7 +134,22 @@
         "sources": [
           "Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 226 (Seitenangabe unverifiziert)"
         ]
-      }
+      },
+      "restaurants": [
+        {
+          "id": "kea-korissia-oikos",
+          "name": "Oikos Kea",
+          "qualityRating": 4.5,
+          "cuisineType": "Griechische Küche am Hafen",
+          "signatureDishes": [],
+          "accessInfo": "Fußläufig von der Kaimauer in Korissia; Beiboot am Südende der Kaimauer",
+          "confidence": "niedrig",
+          "sources": [
+            "Web-Recherche 2026-08-06: Tripadvisor 4,5/5 (#20 von 61 in Korissia) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar",
+            "Befund des Laufs: Taverna Kea liegt bei 3,1/5 (#61 von 61) und ist deshalb NICHT aufgenommen"
+          ]
+        }
+      ]
     }
   ]
 }

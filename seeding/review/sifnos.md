@@ -151,5 +151,13 @@ Warnungen: ⚠ Bei Südwind völlig offen · ⚠ Meltemi-sicher: ja · ⚠ Badez
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 244 (Seitenangabe unverifiziert)
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Fasolu Restaurant (`sifnos-faros-fasolu`) | 4.6/5 | Griechische Küche im Fischerdorf | — | Faros wird frei geankert — Beiboot an den kleinen Fischersteg im Ort, von dort fußläufig | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,6/5 (#27 von 133 in Faros) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ---
 Freigabe: in `seeding/data/islands/sifnos.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

@@ -50,6 +50,14 @@ Warnungen: ⚠ KRITISCHE TIEFENBESCHRÄNKUNG: Lauf 3 nennt eine durch Versandung
 
 Quellen: Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl.; Deep-Research Lauf 3: CruisersWiki Santorini
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| To Psaraki (`santorin-vlychada-psaraki`) | 4.6/5 | Fischtaverne oberhalb der Marina | — | Oberhalb des Marinabeckens von Vlychada, kurzer Weg vom Muring-Platz | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,6/5 (2.133 Bewertungen, #2 von 8 in Vlychada) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ### Akrotiri (`santorin-akrotiri`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**

@@ -100,5 +100,13 @@ Warnungen: ⚠ Erheblicher Fährschwell bei An- und Ablegemanövern der Schnellf
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 226 (Seitenangabe unverifiziert)
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Oikos Kea (`kea-korissia-oikos`) | 4.5/5 | Griechische Küche am Hafen | — | Fußläufig von der Kaimauer in Korissia; Beiboot am Südende der Kaimauer | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,5/5 (#20 von 61 in Korissia) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar; Befund des Laufs: Taverna Kea liegt bei 3,1/5 (#61 von 61) und ist deshalb NICHT aufgenommen
+
 ---
 Freigabe: in `seeding/data/islands/kea.json` das Feld `approved` auf `true` setzen, dann `npm run seed:import`.

@@ -50,6 +50,14 @@ Warnungen: ⚠ Böen drehen in der Bucht · ⚠ Schnellfähren erzeugen kurzzeit
 
 Quellen: Deep-Research Lauf 2: Heikell, Greek Waters Pilot 14. Aufl., S. 270 (Seitenangabe unverifiziert)
 
+**Gastronomie (1)** — bewertet nichts, Anzeige nur:
+
+| Lokal | Bewertung | Küche | Spezialitäten | Anlandung / Weg | Reservierung | Konfidenz |
+|---|---|---|---|---|---|---|
+| Enigma Ios (`ios-ormos-enigma`) | 4.5/5 | Griechische Küche mit lokalen Erzeugnissen | — | Im Hafenort Ormos, fußläufig von der Kaimauer; Beiboot am kleinen Beibootsteg | — | niedrig |
+
+Quellen: Web-Recherche 2026-08-06: Tripadvisor 4,5/5 (211 Bewertungen, #17 von 95 auf Ios) — über Suchtreffer erhoben, Quellseite im Recherchelauf nicht direkt abrufbar
+
 ### Manganari (`ios-manganari`, bucht)
 
 **Sicherer Liegeplatz (sicherheitsrelevant — zuerst prüfen!):**
