@@ -31,7 +31,7 @@ const state = (plan: Plan | null): TripState => ({
   position: null,
   plan,
   planUnreadable: false,
-  departureHourOverride: null,
+  departureHourByDay: {},
   stopHoursByDay: {},
   customLegs: [],
   konzeptSchwellen: null,
@@ -171,5 +171,44 @@ describe('tripReducer — Konzept-Regler', () => {
       schwellen,
     });
     expect(result.plan).toBe(plan);
+  });
+});
+
+/**
+ * Die Abfahrt ist seit 2026-08-06 eine Entscheidung PRO TÖRNTAG (der Default
+ * ist die Empfehlung des Tages, domain/abfahrt.ts). Gespeichert wird nur, was
+ * der Skipper wirklich gesetzt hat — `null` löscht den Eintrag, statt eine
+ * Stunde festzuschreiben, damit der Tag der Empfehlung wieder folgen kann,
+ * wenn der Forecast sie verschiebt.
+ */
+describe('tripReducer — Abfahrt je Törntag', () => {
+  it('setzt die Abfahrt genau eines Tages', () => {
+    const result = tripReducer(state(null), {
+      type: 'SET_DEPARTURE_HOUR',
+      day: 3,
+      hour: 7,
+    });
+    expect(result.departureHourByDay).toEqual({ 3: 7 });
+  });
+
+  it('lässt die anderen Tage stehen', () => {
+    const vorher = { ...state(null), departureHourByDay: { 2: 8 } };
+    const result = tripReducer(vorher, {
+      type: 'SET_DEPARTURE_HOUR',
+      day: 3,
+      hour: 7,
+    });
+    expect(result.departureHourByDay).toEqual({ 2: 8, 3: 7 });
+  });
+
+  it('null LÖSCHT den Eintrag — der Tag folgt wieder der Empfehlung', () => {
+    const vorher = { ...state(null), departureHourByDay: { 2: 8, 3: 7 } };
+    const result = tripReducer(vorher, {
+      type: 'SET_DEPARTURE_HOUR',
+      day: 3,
+      hour: null,
+    });
+    expect(result.departureHourByDay).toEqual({ 2: 8 });
+    expect(3 in result.departureHourByDay).toBe(false);
   });
 });

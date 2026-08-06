@@ -86,18 +86,32 @@ export interface TripFrame {
    */
   plan: Plan | null;
   /**
-   * Athens local departure hour override for today (FR15). Späte Stunden aus
-   * dem Übernahme-Fenster (14–17 Uhr) gelten nur an Törntag 1 — aufgelöst
-   * wird der Wert ausschliesslich über `scoring.departureHourForDay`.
+   * Vom Skipper GESETZTE Abfahrtsstunde (Athen), pro Törntag (FR15). Fehlt ein
+   * Tag, gilt die Abfahrtsempfehlung dieses Tages und erst danach
+   * `params.departureHourAthens` — aufgelöst wird ausschliesslich über
+   * `scoring.departureHourForDay`.
+   *
+   * Pro Tag und nicht nur für heute, wie schon bei `stopHoursByDay`: seit die
+   * Empfehlung der Default ist, trägt JEDER Etappentag eine eigene Abfahrt.
+   * Sie an Tag 1 zu binden hiesse, den Skipper eine Abfahrt sehen zu lassen,
+   * die er nicht anfassen kann. Späte Stunden aus dem Übernahme-Fenster
+   * (14–17 Uhr) bleiben Törntag 1 vorbehalten.
    */
-  departureHourOverride: number | null;
+  departureHourByDay: Record<number, number>;
+  /**
+   * Die Abfahrtsempfehlung je Törntag ("früh los, 15:00 vor Anker",
+   * domain/abfahrt.ts) — DERIVIERT, nicht gesetzt: `assessPlanning` rechnet sie
+   * einmal für die Hauptroute und legt sie hier ab, bevor irgendetwas bewertet
+   * wird. Damit ist die Empfehlung der Default der Abfahrt und Solver,
+   * Gültigkeit, Karte und Anzeige lesen dieselbe Stunde (AD-3).
+   *
+   * Aufrufer ausserhalb der Bewertung übergeben `{}` — dann rechnet alles mit
+   * `params.departureHourAthens` wie zuvor.
+   */
+  empfohleneAbfahrtByDay: Record<number, number>;
   /**
    * Liegezeit an den Zwischenstopps, pro Törntag überschrieben. Fehlt ein Tag,
    * gilt `params.stopHoursDefault`.
-   *
-   * Anders als `departureHourOverride` gilt das NICHT nur für heute: eine
-   * geplante Badepause an Tag 5 ist eine Planungsentscheidung für Tag 5 und
-   * muss dessen Bewertung auch dann tragen, wenn heute Tag 1 ist.
    */
   stopHoursByDay: Record<number, number>;
 }
@@ -586,6 +600,19 @@ export interface StageAssessment {
    * würde die Übernahme immer ablehnen (Bug-Report 2026-08-05).
    */
   reachableIslandIds: string[];
+  /**
+   * Die WIRKSAME Abfahrtsstunde dieses Tages (Athen), gegen die der Tag
+   * gerechnet wurde — Skipper-Wahl, sonst die Empfehlung, sonst der Standard
+   * (`scoring.departureHourForDay`). Die Anzeige liest diesen Wert, statt die
+   * Auflösung ein zweites Mal zu bauen (AD-3).
+   */
+  abfahrtHourAthens: number;
+  /**
+   * True, wenn `abfahrtHourAthens` vom Skipper gesetzt wurde — sonst steht dort
+   * der Default (Empfehlung bzw. Standard). Die Ansicht braucht den
+   * Unterschied für ihr "zurück auf Empfehlung".
+   */
+  abfahrtVomSkipper: boolean;
   /**
    * "Früh los, 15:00 vor Anker" — die empfohlene Abfahrt dieses Tages
    * (domain/abfahrt.ts). Null an Hafentagen, für vergangene Tage und wenn

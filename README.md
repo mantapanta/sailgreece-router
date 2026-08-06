@@ -27,8 +27,13 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   liegen — wer den einen darüber schiebt, schiebt den anderen mit.
 - **Früh los, 15:00 vor Anker:** Je Etappentag empfiehlt die App die späteste
   Abfahrtsstunde, deren simulierte Ankunft das Ankerziel 15:00 noch hält
-  (`domain/abfahrt.ts`; heute per Klick als Abfahrtszeit übernehmbar) —
-  Crowd-Strategie: entspannt anlegen, bevor der Nachmittags-Meltemi steht.
+  (`domain/abfahrt.ts`) — Crowd-Strategie: entspannt anlegen, bevor der
+  Nachmittags-Meltemi steht. Diese Empfehlung ist der **Default der Abfahrt**:
+  Solver, Gültigkeit, Karte und Anzeige rechnen mit ihr, nicht mit einer
+  pauschalen Standardstunde (`scoring.departureHourForDay`). Abweichen geht per
+  Klick — in der Abfahrt-Kachel der Etappenkarte und am Chip der Etappenliste
+  in der Karte; die Wahl gilt pro Törntag und ist jederzeit auf die Empfehlung
+  zurückzusetzen.
 - **Entscheidungstore:** An natürlichen Knoten (Paros/Naxos, Syros) prüft die
   App am Tag der Festlegung, ob ein 48-h-Forecast-Fenster samt machbarem
   Rückweg den Vorstoß dahinter deckt (`domain/konzept.ts`,

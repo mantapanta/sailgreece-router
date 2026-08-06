@@ -948,13 +948,27 @@ hr.hairline,
   gap: var(--space-2);
 }
 
+/* Die Etappenzeile ist eine KACHEL mit zwei Bedienelementen: der Knopf, der
+   die Etappe auf der Karte hervorhebt, und das Abfahrtsmenü darunter. Deshalb
+   trägt der Rahmen die Kachel (.itin-item) und nicht mehr der Knopf — ein
+   Menü in einem Button wäre ein Button im Button. */
+.itin-item {
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+}
+
+.itin-item:has(.itin-card[aria-pressed='true']) {
+  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
+}
+
 .itin-card {
   display: block;
   width: 100%;
   text-align: left;
   border: 0;
   cursor: pointer;
-  background: var(--surface-card);
+  background: transparent;
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-1);
@@ -962,16 +976,33 @@ hr.hairline,
   color: var(--ink-secondary);
 }
 
-.itin-card[aria-pressed='true'] {
-  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-1);
+/* In der Kachel trägt der Knopf keinen eigenen Schatten mehr. */
+.itin-item > .itin-card {
+  box-shadow: none;
 }
 
 .itin-card[aria-pressed='true'] .itin-day {
   color: var(--accent-text);
 }
 
-.itin-card.past {
+.itin-card.past,
+.itin-item.past {
   opacity: 0.75;
+}
+
+/* Abfahrtszeile der Etappenkachel — die Entscheidung sitzt direkt unter dem
+   Tag, den sie verschiebt. */
+.itin-abfahrt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.itin-abfahrt-note {
+  font: 400 11.5px/1.35 var(--font-sans);
+  color: var(--ink-secondary);
 }
 
 .itin-top {
@@ -2549,27 +2580,6 @@ textarea {
   font: 400 16px/1.4 var(--font-sans);
   color: var(--ink-primary);
 }
-.stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-.stepper button {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-md);
-  background: var(--surface-inset);
-  font: 700 19px/1 var(--font-sans);
-  color: var(--ink-primary);
-  cursor: pointer;
-}
-.stepper button:disabled {
-  color: var(--ink-tertiary);
-  cursor: default;
-}
-
 /* ---- hero / row stage card ---- */
 .hero-card { margin-top: var(--space-2); }
 /* New card recipe — the legacy .card keeps serving the old views. */
@@ -2662,13 +2672,19 @@ button.stage-thumb {
   background: var(--border-hairline);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  /* NICHT overflow:hidden — das Abfahrtsmenü klappt aus der ersten Kachel
+     heraus und wurde daran abgeschnitten. Die Rundung tragen stattdessen die
+     vier Eckkacheln selbst. */
   margin-top: var(--space-4);
 }
 .stat-tile {
   background: var(--surface-inset);
   padding: var(--space-3) var(--space-4);
 }
+.stat-tile:nth-child(1) { border-top-left-radius: calc(var(--radius-md) - 1px); }
+.stat-tile:nth-child(2) { border-top-right-radius: calc(var(--radius-md) - 1px); }
+.stat-tile:nth-last-child(2) { border-bottom-left-radius: calc(var(--radius-md) - 1px); }
+.stat-tile:last-child { border-bottom-right-radius: calc(var(--radius-md) - 1px); }
 .stat-tile .label {
   font: 600 11px/1.3 var(--font-sans);
   letter-spacing: 0.07em;
@@ -2683,6 +2699,63 @@ button.stage-thumb {
   color: var(--ink-primary);
 }
 .stat-tile .btn-text { font-size: 12.5px; }
+/* Die Abfahrt-Kachel IST der Auslöser (AbfahrtMenu, variant="tile"): sie liest
+   sich wie die Nachbarkacheln, verrät ihre Bedienbarkeit aber durch das
+   Caret und eine Tippfläche über die ganze Kachelbreite. */
+.stat-tile .popover-wrap { display: flex; }
+.abfahrt-trigger {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: 700 19px/1.2 var(--font-sans);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-primary);
+  margin-top: 3px;
+  text-align: left;
+}
+/* Der Chip in der Etappenliste der Karte — Ruhe statt Signalfarbe: er nennt
+   eine Zahl, er urteilt nicht. */
+.abfahrt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-full);
+  background: var(--surface-inset);
+  cursor: pointer;
+  font: 600 12.5px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-primary);
+}
+.abfahrt-trigger .caret,
+.abfahrt-chip .caret {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  opacity: 0.55;
+  flex: 0 0 auto;
+}
+/* Das Stundenmenü folgt dem Rezept von .alt-menu; es braucht nur weniger
+   Breite und tabellarische Ziffern, damit die Stunden untereinander stehen. */
+.abfahrt-menu {
+  /* fixed statt absolute: das Menü darf weder von der Kachelreihe noch vom
+     scrollenden Etappen-Sheet beschnitten werden (AbfahrtMenu platziert es). */
+  position: fixed;
+  min-width: 190px;
+  max-height: min(60vh, 340px);
+  font-variant-numeric: tabular-nums;
+}
 /* Problematische Abschnitte (Kreuz/Halbwind) unter den Kacheln der
    Etappenkarte. Sie tragen den Ampel-Tint der Badge-Pille, aber Fliesstext-Typo:
    das hier ist eine ZEILE, die gelesen wird ("ca. 4 sm Kreuz (16 kn)"), kein

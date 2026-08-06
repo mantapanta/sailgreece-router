@@ -33,6 +33,8 @@ function makeStage(
     kursAbschnitte: [],
     pinned: false,
     stopHoursPerStop: 0,
+    abfahrtHourAthens: 9,
+    abfahrtVomSkipper: false,
     stopHoursTotal: 0,
     reachableIslandIds: [],
     abfahrtsEmpfehlung: null,

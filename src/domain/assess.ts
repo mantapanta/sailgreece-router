@@ -14,6 +14,7 @@ import type {
 } from './schema/snapshot.ts';
 import type { Ampel } from './schema/common.ts';
 import type { Plan } from './schema/plan.ts';
+import type { Leg } from './schema/route.ts';
 import { islandAtEndOfDay, stageNumber, stagesOf } from './schema/plan.ts';
 import { worstAmpel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
@@ -30,7 +31,7 @@ import {
 import { empfehleAbfahrt } from './abfahrt.ts';
 import { mergeKursAbschnitte } from './kursAbschnitte.ts';
 import { predictedPointOfReturn } from './ppr.ts';
-import { assessLeg, stopHoursForDay } from './scoring.ts';
+import { assessLeg, departureHourForDay, stopHoursForDay } from './scoring.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import {
   completePlan,
@@ -95,16 +96,21 @@ export function deriveCurrentIslandId(snapshot: PlanningSnapshot): string | null
  * skipper-chosen berths are shown as-is, solver stages get the current
  * `bestPlace` suggestion, declared as such (AD-12).
  */
-function assessPlan(
-  plan: Plan,
+/**
+ * Der Platz, an dem jeder Plantag endet — gewählt (AD-12) oder vorgeschlagen.
+ *
+ * Eigene Funktion, weil sie ZWEIMAL gebraucht wird: von `assessPlan` für die
+ * gesegelte Kette und von `withAbfahrtsempfehlungen`, das dieselbe Kette schon
+ * vor der Bewertung braucht, um die Abfahrt des Tages zu bestimmen. Zwei
+ * Auflösungen hiessen zwei Ketten — und damit eine Empfehlung für eine Route,
+ * die so nicht gefahren wird.
+ */
+function planPlaceIds(
+  ordered: Plan['days'],
   snapshot: PlanningSnapshot,
   bestPlaceByIsland: Record<string, Record<number, string | null>>,
   nightAmpeln: Record<string, Record<number, PlaceNightAssessment>>,
-  meta: { variantId: string; turnIslandId: string; relaxedTo: string },
-): PlanAssessment {
-  const legs = legLibrary(snapshot);
-  const ordered = plan.days.slice().sort((a, b) => a.day - b.day);
-
+): (entry: Plan['days'][number]) => string | null {
   /**
    * Aufenthalts-bewusste Platzvorschläge (Zielmodell v2 — nie derselbe
    * Liegeplatz zweimal): läuft die Route eine Insel ein zweites Mal an, wird
@@ -151,8 +157,7 @@ function assessPlan(
     }
   }
 
-  /** Der Platz, an dem ein Tag endet: gewählt (AD-12) oder vorgeschlagen. */
-  const placeIdOf = (entry: (typeof ordered)[number]): string | null => {
+  return (entry) => {
     const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
     const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
     return (
@@ -162,6 +167,108 @@ function assessPlan(
       null
     );
   };
+}
+
+/**
+ * Die Kette, wie sie wirklich gesegelt wird — chronologisch (legGeometry.ts),
+ * für EINEN Plan. Eigene Funktion aus demselben Grund wie `planPlaceIds`:
+ * Bewertung und Abfahrtsempfehlung müssen dieselbe Kette sehen.
+ */
+function sailedChain(
+  ordered: Plan['days'],
+  snapshot: PlanningSnapshot,
+  placeIdOf: (entry: Plan['days'][number]) => string | null,
+): Map<number, (Leg | undefined)[]> {
+  return sailedLegsByDay(
+    ordered.map((entry) => ({
+      day: entry.day,
+      legIds: entry.kind === 'stage' ? entry.legIds : [],
+      placeId: entry.kind === 'stage' ? placeIdOf(entry) : (entry.placeId ?? null),
+    })),
+    legLibrary(snapshot),
+    snapshot.library.places,
+  );
+}
+
+/**
+ * Die vollständig aufgelösten Etappen eines Plantags — oder null, wenn die
+ * Kette den Tag nicht auflösen konnte (tote Referenz, kein landfreier Kurs).
+ * Für einen halben Tag wird weder gerechnet noch empfohlen.
+ */
+function resolvedDayLegs(
+  entry: Plan['days'][number],
+  sailed: Map<number, (Leg | undefined)[]>,
+): Leg[] | null {
+  if (entry.kind !== 'stage') return null;
+  const dayLegs = sailed.get(entry.day) ?? [];
+  const resolved = dayLegs.filter((l): l is Leg => !!l);
+  return resolved.length === entry.legIds.length ? resolved : null;
+}
+
+/**
+ * DER DEFAULT DER ABFAHRT IST DIE EMPFEHLUNG (Skipper 2026-08-06).
+ *
+ * Bis hierher schrieb die App "Empfohlene Abfahrt 12:00" neben eine Kachel,
+ * die 9:00 zeigte und auch mit 9:00 rechnete — der Skipper musste die eigene
+ * Empfehlung der App erst per Knopf übernehmen, und nur für heute. Jetzt wird
+ * sie EINMAL für die Hauptroute gerechnet und in den Snapshot gelegt, bevor
+ * irgendetwas bewertet wird: Solver, Gültigkeit, Karte und Anzeige lesen
+ * danach dieselbe Stunde (AD-3), und die Kachel zeigt, was gerechnet wurde.
+ *
+ * Gerechnet wird gegen die Kette der HAUPTROUTE — der Route, die gefahren
+ * wird. Alternativen und Vorschlag werden gegen dieselben Abfahrtsstunden
+ * bewertet; das ist der faire Vergleich (gleiche Uhr für alle) und der einzige
+ * ohne Henne-und-Ei: eine Alternative, die ihre eigene Abfahrt mitbringt,
+ * müsste erst bewertet werden, um bewertet werden zu können.
+ *
+ * Ohne Plan (vor der ersten Übernahme) bleibt es beim Standard — dann gibt es
+ * keine Kette, gegen die man empfehlen könnte.
+ */
+function withAbfahrtsempfehlungen(
+  snapshot: PlanningSnapshot,
+  bestPlaceByIsland: Record<string, Record<number, string | null>>,
+  nightAmpeln: Record<string, Record<number, PlaceNightAssessment>>,
+): PlanningSnapshot {
+  const plan = snapshot.trip.plan;
+  if (!plan) return snapshot;
+  const ordered = plan.days.slice().sort((a, b) => a.day - b.day);
+  const sailed = sailedChain(
+    ordered,
+    snapshot,
+    planPlaceIds(ordered, snapshot, bestPlaceByIsland, nightAmpeln),
+  );
+
+  const empfohleneAbfahrtByDay: Record<number, number> = {};
+  for (const entry of ordered) {
+    // Vergangene Tage sind gefahren — für sie wird nichts mehr empfohlen und
+    // nichts mehr verschoben.
+    if (entry.day < snapshot.trip.currentDay) continue;
+    const resolved = resolvedDayLegs(entry, sailed);
+    if (!resolved) continue;
+    const empfehlung = empfehleAbfahrt(resolved, entry.day, snapshot);
+    if (empfehlung) empfohleneAbfahrtByDay[entry.day] = empfehlung.abfahrtHourAthens;
+  }
+
+  return {
+    ...snapshot,
+    trip: { ...snapshot.trip, empfohleneAbfahrtByDay },
+  };
+}
+
+/**
+ * Assess one plan day by day: leg ampeln, the FR2 leg number and the berth —
+ * skipper-chosen berths are shown as-is, solver stages get the current
+ * `bestPlace` suggestion, declared as such (AD-12).
+ */
+function assessPlan(
+  plan: Plan,
+  snapshot: PlanningSnapshot,
+  bestPlaceByIsland: Record<string, Record<number, string | null>>,
+  nightAmpeln: Record<string, Record<number, PlaceNightAssessment>>,
+  meta: { variantId: string; turnIslandId: string; relaxedTo: string },
+): PlanAssessment {
+  const ordered = plan.days.slice().sort((a, b) => a.day - b.day);
+  const placeIdOf = planPlaceIds(ordered, snapshot, bestPlaceByIsland, nightAmpeln);
 
   /**
    * Die Kette, wie sie wirklich gesegelt wird — EINMAL für den ganzen Plan,
@@ -176,15 +283,7 @@ function assessPlan(
    * Kette abschafft. Verlegt der Skipper am Hafentag, sagt er es (AD-12), und
    * dann gilt sein Platz.
    */
-  const sailed = sailedLegsByDay(
-    ordered.map((entry) => ({
-      day: entry.day,
-      legIds: entry.kind === 'stage' ? entry.legIds : [],
-      placeId: entry.kind === 'stage' ? placeIdOf(entry) : (entry.placeId ?? null),
-    })),
-    legs,
-    snapshot.library.places,
-  );
+  const sailed = sailedChain(ordered, snapshot, placeIdOf);
 
   // Entscheidungstore dieses Plans — einmal je Plan, dann je Tag zugeordnet.
   const torChecks = deriveTorChecks(plan, snapshot);
@@ -194,6 +293,7 @@ function assessPlan(
     const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
     const placeId = placeIdOf(entry);
     const stopHoursPerStop = stopHoursForDay(snapshot, entry.day);
+    const abfahrtHourAthens = departureHourForDay(snapshot, entry.day);
     const legAssessments =
       entry.kind === 'stage'
         ? (() => {
@@ -251,16 +351,20 @@ function assessPlan(
      * gerechnet gegen die GESEGELTE Kette (dieselben Etappen wie Anzeige
      * und Gültigkeit, AD-3). Nur für zukünftige Etappentage, deren Kette
      * vollständig auflösbar ist — für einen halben Tag empfiehlt man nichts.
+     *
+     * Der Wert hängt NICHT davon ab, welche Abfahrt gerade gilt: die Suche
+     * simuliert absolute Stunden (abfahrt.ts) und liefert für dieselbe Kette
+     * dieselbe Empfehlung, egal ob die Basis der Standard oder schon die
+     * Empfehlung selbst ist. Nur deshalb darf die Empfehlung der Default der
+     * Abfahrt sein, ohne sich selbst zu verschieben.
      */
-    const abfahrtsEmpfehlung = (() => {
-      if (entry.kind !== 'stage' || entry.day < snapshot.trip.currentDay) {
-        return null;
-      }
-      const dayLegs = sailed.get(entry.day) ?? [];
-      const resolved = dayLegs.filter((l): l is NonNullable<typeof l> => !!l);
-      if (resolved.length !== entry.legIds.length) return null;
-      return empfehleAbfahrt(resolved, entry.day, snapshot);
-    })();
+    const abfahrtsEmpfehlung =
+      entry.kind === 'stage' && entry.day >= snapshot.trip.currentDay
+        ? (() => {
+            const resolved = resolvedDayLegs(entry, sailed);
+            return resolved ? empfehleAbfahrt(resolved, entry.day, snapshot) : null;
+          })()
+        : null;
 
     return {
       day: entry.day,
@@ -288,6 +392,14 @@ function assessPlan(
       stopHoursTotal:
         Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
       reachableIslandIds: reachableIslands(snapshot, fromIslandId, entry.day),
+      // Die Stunde, gegen die dieser Tag GERECHNET wurde — dieselbe Auflösung,
+      // die auch assessLeg benutzt hat (AD-3), damit die Kachel nie eine
+      // andere Abfahrt zeigt als die Bewertung darunter. "Vom Skipper" heisst
+      // dabei: seine Wahl hat sich auch DURCHGESETZT — eine späte Stunde, die
+      // an diesem Tag nicht gilt, ist keine Skipper-Abfahrt, sondern der
+      // Default, und die Ansicht muss das zurücksetzen dürfen.
+      abfahrtHourAthens,
+      abfahrtVomSkipper: snapshot.trip.departureHourByDay[entry.day] === abfahrtHourAthens,
       abfahrtsEmpfehlung,
       torCheck: torChecks.find((c) => c.day === entry.day) ?? null,
     };
@@ -346,21 +458,26 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   // does not reach the second week must not mean "no statement" — it means
   // "statement under a named assumption", flagged per hour and reported per
   // verdict. Everything downstream therefore sees a complete axis.
-  const { snapshot, info: persistence } = applyPersistenceAssumption(rawSnapshot);
-  const { library, trip, params } = snapshot;
+  const { snapshot: rohSnapshot, info: persistence } =
+    applyPersistenceAssumption(rawSnapshot);
+  const { library, params } = rohSnapshot;
   const { islandId: currentIslandId, note: positionNote } =
-    deriveCurrentIsland(snapshot);
+    deriveCurrentIsland(rohSnapshot);
 
   // --- place night ampeln (valid places; invalid ones stay 'unbewertet') ---
+  // Die Nacht-Ampeln hängen NICHT an der Abfahrtsstunde (sie bewerten den
+  // Liegeplatz, nicht den Schlag) — deshalb dürfen sie vor der
+  // Abfahrtsempfehlung stehen, die ihre Platzvorschläge braucht.
   const nightAmpeln: Record<string, Record<number, PlaceNightAssessment>> = {};
   const nights: number[] = [];
-  for (let n = trip.currentDay; n < trip.currentDay + params.nightLookaheadDays; n++) {
+  const currentDay = rohSnapshot.trip.currentDay;
+  for (let n = currentDay; n < currentDay + params.nightLookaheadDays; n++) {
     nights.push(n);
   }
   for (const place of library.places) {
     nightAmpeln[place.id] = {};
     for (const n of nights) {
-      nightAmpeln[place.id]![n] = placeNightAmpel(place, n, snapshot);
+      nightAmpeln[place.id]![n] = placeNightAmpel(place, n, rohSnapshot);
     }
   }
   for (const invalid of library.invalidPlaces) {
@@ -393,6 +510,15 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
       bestPlaceByIsland[island.id]![n] = ranked[0]?.id ?? null;
     }
   }
+
+  /**
+   * ERST JETZT steht die Abfahrt fest: der Default jedes Etappentags ist seine
+   * eigene Empfehlung (withAbfahrtsempfehlungen). Ab hier rechnet ALLES —
+   * Optionsraum, PPR, Solver, Hauptroute — gegen diese Stunden; oberhalb
+   * dieser Zeile darf nichts stehen, das eine Abfahrt braucht.
+   */
+  const snapshot = withAbfahrtsempfehlungen(rohSnapshot, bestPlaceByIsland, nightAmpeln);
+  const trip = snapshot.trip;
 
   // --- option space, PPR, decision points, day options ---------------------
   // Ordering by escalation rank is a domain criterion (AD-2): the assessment

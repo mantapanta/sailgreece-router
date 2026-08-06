@@ -45,7 +45,17 @@ export interface TripState {
    * forbids. Adopting a fresh plan then needs an explicit confirmation.
    */
   planUnreadable: boolean;
-  departureHourOverride: number | null;
+  /**
+   * Abfahrtsstunde (Athen) je Törntag, vom Skipper gesetzt. Fehlt ein Tag,
+   * gilt die Abfahrtsempfehlung dieses Tages und erst dann der Standard
+   * (`scoring.departureHourForDay`) — gespeichert wird also nur, was der
+   * Skipper WIRKLICH entschieden hat, nie der Default.
+   *
+   * Pro Tag statt nur für heute, seit die Empfehlung der Default ist: jeder
+   * Etappentag zeigt jetzt eine eigene Abfahrt, und was man sieht, muss man
+   * auch ändern können.
+   */
+  departureHourByDay: Record<number, number>;
   /**
    * Liegezeit an den Zwischenstopps je Törntag. Fehlt ein Tag, gilt
    * `params.stopHoursDefault`. Persistiert, weil es eine Planungsentscheidung
@@ -105,7 +115,8 @@ export type TripAction =
   | { type: 'RELEASE_PIN'; day: number }
   /** The skipper acknowledged an unreadable plan; a fresh one may be adopted. */
   | { type: 'DISCARD_UNREADABLE' }
-  | { type: 'SET_DEPARTURE_HOUR'; hour: number | null }
+  /** Abfahrt EINES Törntags setzen; null = zurück auf Empfehlung/Standard. */
+  | { type: 'SET_DEPARTURE_HOUR'; day: number; hour: number | null }
   /** Liegezeit für EINEN Tag setzen; null = zurück auf den Default. */
   | { type: 'SET_STOP_HOURS'; day: number; hours: number | null }
   /**
@@ -121,7 +132,7 @@ const INITIAL: TripState = {
   position: null,
   plan: null,
   planUnreadable: false,
-  departureHourOverride: null,
+  departureHourByDay: {},
   stopHoursByDay: {},
   customLegs: [],
   konzeptSchwellen: null,
@@ -199,8 +210,15 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
     }
     case 'DISCARD_UNREADABLE':
       return { ...state, planUnreadable: false, plan: null };
-    case 'SET_DEPARTURE_HOUR':
-      return { ...state, departureHourOverride: action.hour };
+    case 'SET_DEPARTURE_HOUR': {
+      const next = { ...state.departureHourByDay };
+      // null LÖSCHT den Eintrag, statt eine Stunde zu speichern: "keine
+      // eigene Wahl" ist die Voraussetzung dafür, dass der Tag der
+      // Empfehlung folgt, wenn der Forecast sie verschiebt.
+      if (action.hour === null) delete next[action.day];
+      else next[action.day] = action.hour;
+      return { ...state, departureHourByDay: next };
+    }
     case 'SET_STOP_HOURS': {
       const next = { ...state.stopHoursByDay };
       // null loescht den Eintrag statt 0 zu speichern: "kein Override" und
@@ -235,7 +253,15 @@ const TripStateSchema = z.object({
   currentDayOverride: z.number().int().min(1).nullable(),
   position: TripPositionSchema.nullable(),
   plan: PlanSchema.nullable(),
-  departureHourOverride: z.number().int().min(0).max(23).nullable(),
+  /**
+   * Abfahrt je Törntag. Aus älterem Storage fehlt das Feld — Default statt
+   * Reset. Der frühere `departureHourOverride` (eine Stunde, nur für heute)
+   * wird bewusst NICHT übernommen: er liesse sich keinem Tag sicher zuordnen,
+   * und sein Zweck — die Empfehlung übernehmen — ist jetzt der Default.
+   */
+  departureHourByDay: z
+    .record(z.coerce.number().int(), z.number().int().min(0).max(23))
+    .default({}),
   // Aus aelterem Storage fehlt das Feld — Default statt Reset des ganzen
   // Zustands, sonst kostet ein Schema-Zuwachs die Position des Skippers.
   stopHoursByDay: z.record(z.coerce.number().int(), z.number().min(0).max(12)).default({}),

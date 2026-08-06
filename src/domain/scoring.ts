@@ -148,19 +148,29 @@ export function isLateDeparture(hourAthens: number): boolean {
 
 /**
  * Wirksame Abfahrtsstunde eines Törntags — die EINE Quelle (AD-2/AD-3):
- * Anzeige (DayView) und Rechnung (assessLeg) lesen denselben Wert.
+ * Anzeige (DayView, Karte) und Rechnung (assessLeg, Solver, Gültigkeit) lesen
+ * denselben Wert. Die Rangfolge:
  *
- * Der Override ist die HEUTIGE Entscheidung (AD-11) und verschiebt nie die
- * simulierte Abfahrt zukünftiger Törntage. Eine späte Abfahrt aus dem
- * Übernahme-Fenster gilt zusätzlich NUR an Törntag 1 — an jedem anderen Tag
- * fällt sie auf den Standard zurück, statt den Tag in die Nacht zu rechnen.
+ *   1. die Wahl des Skippers für DIESEN Tag (`trip.departureHourByDay`),
+ *   2. die Abfahrtsempfehlung des Tages ("früh los, 15:00 vor Anker") — der
+ *      DEFAULT, seit die App ihre eigene Empfehlung auch rechnet statt sie nur
+ *      danebenzuschreiben,
+ *   3. `params.departureHourAthens` als Standard, wenn es (noch) keine
+ *      Empfehlung gibt: vor dem ersten Plan, an Hafentagen, an vergangenen
+ *      Tagen und überall dort, wo keine Stunde simulierbar ist.
+ *
+ * Eine späte Abfahrt aus dem Übernahme-Fenster (14–17 Uhr) gilt NUR an Törntag
+ * 1 — an jedem anderen Tag fällt sie auf den nächsten Rang zurück, statt den
+ * Tag in die Nacht zu rechnen.
  */
 export function departureHourForDay(snapshot: PlanningSnapshot, day: number): number {
-  const override =
-    day === snapshot.trip.currentDay ? snapshot.trip.departureHourOverride : null;
-  if (override === null) return snapshot.params.departureHourAthens;
-  if (isLateDeparture(override) && day !== 1) return snapshot.params.departureHourAthens;
-  return override;
+  const zulaessig = (h: number | undefined): h is number =>
+    h !== undefined && (day === 1 || !isLateDeparture(h));
+  const gewaehlt = snapshot.trip.departureHourByDay[day];
+  if (zulaessig(gewaehlt)) return gewaehlt;
+  const empfohlen = snapshot.trip.empfohleneAbfahrtByDay[day];
+  if (zulaessig(empfohlen)) return empfohlen;
+  return snapshot.params.departureHourAthens;
 }
 
 function legPoints(leg: Leg, snapshot: PlanningSnapshot): LegPoint[] | null {

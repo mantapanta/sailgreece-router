@@ -101,7 +101,8 @@ function diamondSnapshot(
       currentDay: opts.currentDay ?? 1,
       position: { source: 'manual', lat: athen.coordinates.lat, lon: athen.coordinates.lon, placeId: athen.id },
       plan: null,
-      departureHourOverride: null,
+      departureHourByDay: {},
+      empfohleneAbfahrtByDay: {},
       stopHoursByDay: {},
     },
   });

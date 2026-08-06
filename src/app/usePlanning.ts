@@ -140,7 +140,11 @@ export function usePlanningEngine() {
         currentDay,
         position: trip.position,
         plan: trip.plan,
-        departureHourOverride: trip.departureHourOverride,
+        departureHourByDay: trip.departureHourByDay,
+        // Leer: die Empfehlungen rechnet die Bewertung selbst und legt sie in
+        // ihren eigenen Snapshot (assess.withAbfahrtsempfehlungen). Sie hier
+        // vorzubelegen hiesse, sie zweimal zu haben.
+        empfohleneAbfahrtByDay: {},
         stopHoursByDay: trip.stopHoursByDay,
       },
     };
@@ -152,7 +156,7 @@ export function usePlanningEngine() {
     currentDay,
     trip.position,
     trip.plan,
-    trip.departureHourOverride,
+    trip.departureHourByDay,
     trip.stopHoursByDay,
   ]);
 
@@ -208,20 +212,19 @@ export function usePlanningEngine() {
 
   /**
    * Späte Abfahrt (Übernahme-Fenster 14–17 Uhr) gilt nur an Törntag 1
-   * (scoring.departureHourForDay). Die Rechnung ignoriert einen späten
-   * Override an anderen Tagen ohnehin — hier wird zusätzlich der PERSISTIERTE
-   * Wert gelöst, sobald der Törn Tag 1 verlässt, damit Auswahl und Zustand
-   * nicht auseinanderlaufen (das Abfahrt-Select kennt 14–17 nur an Tag 1).
+   * (scoring.departureHourForDay). Die Rechnung ignoriert eine späte Wahl an
+   * anderen Tagen ohnehin — hier wird zusätzlich der PERSISTIERTE Wert
+   * gelöst, damit Auswahl und Zustand nicht auseinanderlaufen (das
+   * Abfahrt-Menü kennt 14–17 nur an Tag 1).
    */
   useEffect(() => {
-    if (
-      trip.departureHourOverride !== null &&
-      isLateDeparture(trip.departureHourOverride) &&
-      currentDay !== 1
-    ) {
-      dispatch({ type: 'SET_DEPARTURE_HOUR', hour: null });
+    for (const [key, hour] of Object.entries(trip.departureHourByDay)) {
+      const day = Number(key);
+      if (day !== 1 && isLateDeparture(hour)) {
+        dispatch({ type: 'SET_DEPARTURE_HOUR', day, hour: null });
+      }
     }
-  }, [trip.departureHourOverride, currentDay, dispatch]);
+  }, [trip.departureHourByDay, dispatch]);
 
   /**
    * FR28 — the skipper sets a day's target; the rest of the trip is recomputed
@@ -293,14 +296,15 @@ export function usePlanningEngine() {
   );
 
   /**
-   * FR15 — Abfahrtszeit für HEUTE setzen (null = zurück auf den Standard).
-   * Hier verdrahtet, damit die Tagesansicht die Abfahrtsempfehlung
-   * ("früh los, 15:00 vor Anker") mit einem Klick übernehmen kann.
+   * FR15 — Abfahrtszeit EINES Törntags setzen; `null` gibt den Tag an seinen
+   * Default zurück, und der ist die Abfahrtsempfehlung ("früh los, 15:00 vor
+   * Anker"), nicht mehr die pauschale Standardstunde. Der Plan bleibt
+   * unangetastet (AD-12) — nur seine Bewertung startet früher oder später.
    */
   const setDepartureHour = useCallback(
-    (hour: number | null) => {
+    (day: number, hour: number | null) => {
       if (hour !== null && (!Number.isInteger(hour) || hour < 0 || hour > 23)) return;
-      dispatch({ type: 'SET_DEPARTURE_HOUR', hour });
+      dispatch({ type: 'SET_DEPARTURE_HOUR', day, hour });
     },
     [dispatch],
   );

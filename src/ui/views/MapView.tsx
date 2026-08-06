@@ -26,6 +26,8 @@ import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-m
 import type { Ampel } from '../../domain/schema/common.ts';
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
+import { departureHourChoices } from '../../domain/scoring.ts';
+import { AbfahrtMenu } from '../components/AbfahrtMenu.tsx';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { TripStatusLine } from '../components/TripStatusLine.tsx';
 import {
@@ -52,6 +54,7 @@ import {
 import { islandWithPlace } from '../stageText.ts';
 import { altRouteColor } from '../altRouteColors.ts';
 import { staleForecastLabel } from '../dayViewModel.ts';
+import { usePlanning } from '../../app/planningContext.tsx';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
 import { resolveMapsEnv } from '../mapsEnv.ts';
 
@@ -499,6 +502,8 @@ export function MapView({
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
+  /** Die EINE Mutation, die diese Ansicht kennt: die Abfahrt eines Tages. */
+  const { setDepartureHour } = usePlanning();
   /**
    * Blick-Zustand der Karte (AD-11): Sheet, Hover/Auswahl, Ebenen — alles
    * transienter View-State, bewusst NICHT im TripContext. Das Ein-/Ausblenden
@@ -813,64 +818,90 @@ export function MapView({
           const lastEta =
             lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
           return (
-            <button
-              key={stage.day}
-              type="button"
-              ref={(el) => {
-                cardRefs.current[stage.day] = el ?? undefined;
-              }}
-              className={`itin-card${isPast ? ' past' : ''}`}
-              aria-pressed={selectedDay === stage.day}
-              onMouseEnter={() => setHoverDay(stage.day)}
-              onMouseLeave={() => setHoverDay(null)}
-              onFocus={() => setHoverDay(stage.day)}
-              onBlur={() => setHoverDay(null)}
-              onClick={() =>
-                setSelectedDay((d) => (d === stage.day ? null : stage.day))
-              }
-            >
-              <div className="itin-top">
-                <div>
-                  <div className="itin-day">
-                    Tag {stage.day} · {formatTripDayShort(params.tripStartDate, stage.day)}
-                    {stage.day === day && ' · heute'}
-                    {isPast && ' · gefahren'}
-                  </div>
-                  <div className="itin-route">
-                    {fromIsland ? `${fromIsland} → ` : ''}
-                    {islandName(stage.toIslandId)}
-                  </div>
-                  <div className="itin-meta">
-                    {formatHours(totalHours || null)}
-                    {lastEta && <> · an {formatAthensTime(lastEta)}</>}
-                    {stage.pinned && (
-                      <>
-                        {' '}
-                        <span className="chip">Festgelegt</span>
-                      </>
+            <div key={stage.day} className={`itin-item${isPast ? ' past' : ''}`}>
+              <button
+                type="button"
+                ref={(el) => {
+                  cardRefs.current[stage.day] = el ?? undefined;
+                }}
+                className="itin-card"
+                aria-pressed={selectedDay === stage.day}
+                onMouseEnter={() => setHoverDay(stage.day)}
+                onMouseLeave={() => setHoverDay(null)}
+                onFocus={() => setHoverDay(stage.day)}
+                onBlur={() => setHoverDay(null)}
+                onClick={() =>
+                  setSelectedDay((d) => (d === stage.day ? null : stage.day))
+                }
+              >
+                <div className="itin-top">
+                  <div>
+                    <div className="itin-day">
+                      Tag {stage.day} · {formatTripDayShort(params.tripStartDate, stage.day)}
+                      {stage.day === day && ' · heute'}
+                      {isPast && ' · gefahren'}
+                    </div>
+                    <div className="itin-route">
+                      {fromIsland ? `${fromIsland} → ` : ''}
+                      {islandName(stage.toIslandId)}
+                    </div>
+                    <div className="itin-meta">
+                      {formatHours(totalHours || null)}
+                      {lastEta && <> · an {formatAthensTime(lastEta)}</>}
+                      {stage.pinned && (
+                        <>
+                          {' '}
+                          <span className="chip">Festgelegt</span>
+                        </>
+                      )}
+                    </div>
+                    {/* Kreuz/Halbwind des Tages — dieselbe Meldung wie in der
+                        Tagesansicht, damit die Liste hier nicht harmloser aussieht
+                        als die Etappenkarte, die sie zusammenfasst. */}
+                    {stage.kursAbschnitte.length > 0 && (
+                      <div className="kurs-liste">
+                        {stage.kursAbschnitte.map((a) => (
+                          <span
+                            key={a.kategorie}
+                            className={`ampel ampel-${a.ampel} kurs-zeile kurs-mini`}
+                            title={formatKursAmpelRegel(a.kategorie, params)}
+                          >
+                            <span className="dot" />
+                            {formatKursAbschnitt(a)}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {/* Kreuz/Halbwind des Tages — dieselbe Meldung wie in der
-                      Tagesansicht, damit die Liste hier nicht harmloser aussieht
-                      als die Etappenkarte, die sie zusammenfasst. */}
-                  {stage.kursAbschnitte.length > 0 && (
-                    <div className="kurs-liste">
-                      {stage.kursAbschnitte.map((a) => (
-                        <span
-                          key={a.kategorie}
-                          className={`ampel ampel-${a.ampel} kurs-zeile kurs-mini`}
-                          title={formatKursAmpelRegel(a.kategorie, params)}
-                        >
-                          <span className="dot" />
-                          {formatKursAbschnitt(a)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <AmpelBadge ampel={stage.ampel} />
                 </div>
-                <AmpelBadge ampel={stage.ampel} />
-              </div>
-            </button>
+              </button>
+              {/* ABFAHRT PER KLICK IN DER KARTE (Skipper 2026-08-06): dieselbe
+                  Entscheidung wie in der Tagesansicht, dasselbe Menü — hier
+                  aber neben dem Bild, in dem man sie trifft. Der Default ist
+                  die Empfehlung des Tages; gefahrene Tage bleiben Anzeige.
+                  Der Chip steht NEBEN dem Kartenknopf, nicht darin: ein Menü
+                  in einem Button wäre ein Button im Button. */}
+              {stage.day >= day && (
+                <div className="itin-abfahrt">
+                  <AbfahrtMenu
+                    day={stage.day}
+                    hours={departureHourChoices(stage.day)}
+                    value={stage.abfahrtHourAthens}
+                    vomSkipper={stage.abfahrtVomSkipper}
+                    empfehlung={stage.abfahrtsEmpfehlung?.abfahrtHourAthens ?? null}
+                    standard={params.departureHourAthens}
+                    onPick={(hour) => setDepartureHour(stage.day, hour)}
+                  />
+                  {stage.abfahrtsEmpfehlung &&
+                    !stage.abfahrtVomSkipper &&
+                    stage.abfahrtsEmpfehlung.abfahrtHourAthens ===
+                      stage.abfahrtHourAthens && (
+                      <span className="itin-abfahrt-note">empfohlene Abfahrt</span>
+                    )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
