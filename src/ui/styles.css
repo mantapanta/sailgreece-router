@@ -2593,6 +2593,44 @@ button.stage-thumb {
   color: var(--ink-primary);
 }
 .stat-tile .btn-text { font-size: 12.5px; }
+/* Problematische Abschnitte (Kreuz/Halbwind) unter den Kacheln der
+   Etappenkarte. Sie tragen den Ampel-Tint der Badge-Pille, aber Fliesstext-Typo:
+   das hier ist eine ZEILE, die gelesen wird ("ca. 4 sm Kreuz (16 kn)"), kein
+   Zustandswort in Versalien. Das Urteil steht am Ende als eigenes Wort — Farbe
+   allein trägt in dieser App keine Bedeutung. */
+.kurs-liste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.kurs-zeile {
+  font: 600 13px/1.35 var(--font-sans);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.kurs-zeile .urteil {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.kurs-zeile .urteil::before {
+  content: '·';
+  margin-right: var(--space-1);
+}
+/* Kartenansicht: dieselbe Zeile, aber in der Etappenliste — kleiner, damit sie
+   die Route und den Tag nicht überschreit. */
+.kurs-mini {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  gap: 5px;
+}
+.kurs-mini .dot {
+  width: 7px;
+  height: 7px;
+}
 .berth-line {
   display: flex;
   align-items: center;

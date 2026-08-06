@@ -29,6 +29,7 @@ import {
   motorSpeedKn,
 } from './polar.ts';
 import { kreuzSchlaege } from './kreuz.ts';
+import { kursAbschnitteOfPassages } from './kursAbschnitte.ts';
 import { hourIndexAt, legWindow, MAX_LEG_HOURS } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -308,6 +309,7 @@ export function assessLeg(
     arrivalHourAthens: null,
     breakdown: [],
     pointPassages: [],
+    kursAbschnitte: [],
   });
   if (!points) return unbewertet('Start- oder Zielplatz fehlt in der Bibliothek');
 
@@ -729,5 +731,8 @@ export function assessLeg(
     arrivalHourAthens: arrivalAthens,
     breakdown,
     pointPassages: passages,
+    // Die Warnzeilen der Etappenkarte — zusammengefasst aus DIESEN Durchfahrten,
+    // damit jede Zeile in der Tabelle darunter nachschlagbar bleibt (AD-3).
+    kursAbschnitte: kursAbschnitteOfPassages(passages, params),
   };
 }

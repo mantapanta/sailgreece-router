@@ -24,6 +24,7 @@ import type {
   RouteOptionAssessment,
   RoutenEmpfehlung,
   StageAssessment,
+  KursAbschnitt,
   LegHourBreakdown,
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
@@ -61,6 +62,8 @@ import {
   formatHourOfDay,
   formatHours,
   formatKn,
+  formatKursAbschnitt,
+  formatKursAmpelRegel,
   formatStamp,
   formatTripDayDate,
   formatTripDayWeekdayShort,
@@ -307,6 +310,45 @@ function Breakdown({
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/**
+ * DIE PROBLEMATISCHEN ABSCHNITTE des Tages — "ca. 4 sm Kreuz (16 kn)".
+ *
+ * Die Kacheln darüber nennen EINEN Wind für den ganzen Tag; die Zeilen hier
+ * nennen die Meilen, auf denen er von vorn oder von der Seite kommt. Beides
+ * zusammen ist die Antwort auf "was für ein Tag wird das an Bord?" — der
+ * Mittelwert allein ist es nicht, denn vier Meilen gegenan verschwinden darin
+ * (Skipper 2026-08-06).
+ *
+ * Fertig gerechnet aus der Bewertung (AD-2): Meilen, Wind und Ampel kommen aus
+ * `stage.kursAbschnitte`. Die Ampel steht als Farbe UND als Wort — Farbe allein
+ * trägt in dieser App keine Bedeutung —, und der Titel nennt die Schwellen,
+ * gegen die gemessen wurde.
+ */
+function KursAbschnitte({
+  abschnitte,
+  params,
+}: {
+  abschnitte: KursAbschnitt[];
+  params: PlanningSnapshot['params'];
+}) {
+  if (abschnitte.length === 0) return null;
+  return (
+    <div className="kurs-liste">
+      {abschnitte.map((a) => (
+        <span
+          key={a.kategorie}
+          className={`ampel ampel-${a.ampel} kurs-zeile`}
+          title={formatKursAmpelRegel(a.kategorie, params)}
+        >
+          <span className="dot" />
+          {formatKursAbschnitt(a)}
+          <span className="urteil">{AMPEL_LABEL[a.ampel]}</span>
+        </span>
+      ))}
     </div>
   );
 }
@@ -742,6 +784,12 @@ function StageCard({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Kreuz und Halbwind des Tages — direkt unter der Wind-Kachel, weil sie
+          deren Zahl aufschlüsselt: DA kommt der Wind von vorn, SO lange. */}
+      {!isHarbour && (
+        <KursAbschnitte abschnitte={stage.kursAbschnitte} params={params} />
       )}
 
       {/* Die ganze Zeile öffnet das Platzdetail — der Liegeplatz ist das Ziel

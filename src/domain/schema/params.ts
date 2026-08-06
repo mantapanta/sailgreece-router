@@ -62,6 +62,25 @@ const ParamsObjectSchema = z.object({
    * sich damit kein landfreier Weg, halbiert kreuz.ts selbst.
    */
   kreuzSchlagNm: z.number().positive().default(5),
+  /**
+   * KURS-AMPEL DER ETAPPENKARTE (Skipper 2026-08-06: "Ich will bei den
+   * Etappenkarten erkennen, ob problematische Abschnitte mit dabei sind").
+   *
+   * Ab wie viel Wind ein KREUZ- bzw. HALBWIND-Abschnitt in der Etappenkarte
+   * gelb bzw. rot gemeldet wird. Zwei Bänder, weil derselbe Wind auf den beiden
+   * Kursen nicht dasselbe bedeutet: gegenan stellt sich die See auf, das Boot
+   * stampft und die Strecke wird länger — halbwind trägt der Wind, und was
+   * gegenan schon unangenehm ist, ist raumer noch entspanntes Segeln.
+   *
+   * REINE MELDUNG, KEIN URTEIL über den Tag: diese Schwellen gehen NICHT in die
+   * Etappen-Ampel ein (die entscheiden FR16-Regel und Budget, domain/scoring.ts).
+   * Sie beantworten die andere Frage — "was für ein Tag wird das an Bord?" —
+   * und dürfen dem Sicherheitsurteil weder vorgreifen noch widersprechen.
+   */
+  kreuzGelbAbKn: z.number().positive().default(10),
+  kreuzRotAbKn: z.number().positive().default(20),
+  halbwindGelbAbKn: z.number().positive().default(20),
+  halbwindRotAbKn: z.number().positive().default(30),
   /** FR16: no beating upwind above this true wind speed. */
   maxUpwindTwsKn: z.number().positive().default(25),
   /** Yellow-band wind reserve (FR17 calibration parameter, AD-8/Deferred). */
@@ -429,6 +448,29 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
       code: 'custom',
       message:
         'beatTwaDeg darf upwindTwaDeg nicht überschreiten — ein Kurs, der gekreuzt werden muss, muss auch als "gegenan" gelten',
+      input: p,
+    });
+  }
+  // Kurs-Ampel der Etappenkarte: gelb muss VOR rot liegen, sonst gäbe es kein
+  // gelbes Band. Und der Kreuz-Schwellwert darf den Halbwind-Schwellwert nicht
+  // überschreiten — gegenan ist der härtere Kurs, er kippt zuerst.
+  for (const [gelbField, gelb, rotField, rot] of [
+    ['kreuzGelbAbKn', p.kreuzGelbAbKn, 'kreuzRotAbKn', p.kreuzRotAbKn],
+    ['halbwindGelbAbKn', p.halbwindGelbAbKn, 'halbwindRotAbKn', p.halbwindRotAbKn],
+  ] as const) {
+    if (gelb >= rot) {
+      ctx.issues.push({
+        code: 'custom',
+        message: `${gelbField} muss unter ${rotField} liegen (sonst gibt es kein gelbes Band)`,
+        input: p,
+      });
+    }
+  }
+  if (p.kreuzGelbAbKn > p.halbwindGelbAbKn || p.kreuzRotAbKn > p.halbwindRotAbKn) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        'Kurs-Ampel: die Kreuz-Schwellen dürfen die Halbwind-Schwellen nicht überschreiten — gegenan ist der härtere Kurs und muss zuerst kippen',
       input: p,
     });
   }

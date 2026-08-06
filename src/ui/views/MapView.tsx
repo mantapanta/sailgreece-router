@@ -44,6 +44,8 @@ import {
   formatAthensTime,
   formatHours,
   formatKn,
+  formatKursAbschnitt,
+  formatKursAmpelRegel,
   formatTripDayShort,
   formatTripRange,
 } from '../format.ts';
@@ -678,6 +680,23 @@ export function MapView({
                       </>
                     )}
                   </div>
+                  {/* Kreuz/Halbwind des Tages — dieselbe Meldung wie in der
+                      Tagesansicht, damit die Liste hier nicht harmloser aussieht
+                      als die Etappenkarte, die sie zusammenfasst. */}
+                  {stage.kursAbschnitte.length > 0 && (
+                    <div className="kurs-liste">
+                      {stage.kursAbschnitte.map((a) => (
+                        <span
+                          key={a.kategorie}
+                          className={`ampel ampel-${a.ampel} kurs-zeile kurs-mini`}
+                          title={formatKursAmpelRegel(a.kategorie, params)}
+                        >
+                          <span className="dot" />
+                          {formatKursAbschnitt(a)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <AmpelBadge ampel={stage.ampel} />
               </div>
