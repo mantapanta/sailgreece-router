@@ -1,7 +1,34 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin.",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin. | Antiparos angebunden (2026-08-06): paros--antiparos und die Gegenrichtung neu, Kurs mit seeding/tools/seaRouteLegs.ts-Logik gegen die Landmaske gelegt und landfrei verifiziert. Endpunkt ist BEWUSST antiparos-agios-georgios und nicht antiparos-town: die Stadt ist auf 15 kn gekappt, auf 15 m LoA begrenzt und trägt die Warnung 'bei Meltemi nicht als Nachtplatz einplanen' — Agios Georgios ist mit 270–90 / 35 kn der einzige Antiparos-Platz, an dem dieses Schiff im August sicher übernachtet. distanceNm ist als einzige Etappe neben milos--polyaigos NICHT recherchiert, sondern aus der Geometrie abgeleitet.",
   "legs": [
+    {
+      "id": "antiparos--paros",
+      "fromIslandId": "antiparos",
+      "toIslandId": "paros",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "paros-parikia",
+      "distanceNm": 10.6,
+      "waypoints": [
+        {
+          "lat": 37.004,
+          "lon": 25.0149
+        },
+        {
+          "lat": 37.0257,
+          "lon": 25.035
+        },
+        {
+          "lat": 37.0636,
+          "lon": 25.0844
+        }
+      ],
+      "windWarnings": [
+        "Düse Paros–Antiparos: der Kanal beschleunigt den Meltemi, Modellwerte glätten das",
+        "Distanz 10.6 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren",
+        "Kurs führt durch den flachen Antiparos-Kanal (Fahrrinne, Strömung, Pendelfähre Pounda–Antiparos-Stadt) — Pilotage, nicht Routing"
+      ]
+    },
     {
       "id": "athen--attika",
       "fromIslandId": "athen",
@@ -432,6 +459,33 @@
       ],
       "windWarnings": [
         "Langer Schlag, nur bei stabilem Fenster (Quelle 1: 8h30 / 6h50)"
+      ]
+    },
+    {
+      "id": "paros--antiparos",
+      "fromIslandId": "paros",
+      "toIslandId": "antiparos",
+      "fromPlaceId": "paros-parikia",
+      "toPlaceId": "antiparos-agios-georgios",
+      "distanceNm": 10.6,
+      "waypoints": [
+        {
+          "lat": 37.0636,
+          "lon": 25.0844
+        },
+        {
+          "lat": 37.0257,
+          "lon": 25.035
+        },
+        {
+          "lat": 37.004,
+          "lon": 25.0149
+        }
+      ],
+      "windWarnings": [
+        "Düse Paros–Antiparos: der Kanal beschleunigt den Meltemi, Modellwerte glätten das",
+        "Distanz 10.6 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren",
+        "Kurs führt durch den flachen Antiparos-Kanal (Fahrrinne, Strömung, Pendelfähre Pounda–Antiparos-Stadt) — Pilotage, nicht Routing"
       ]
     },
     {

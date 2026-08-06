@@ -46,6 +46,7 @@ const places: Record<string, Coordinates> = (() => {
     'santorin',
     'ios',
     'paros',
+    'antiparos',
     'naxos',
     'amorgos',
     'syros',

@@ -2,12 +2,17 @@
 
 Status Etappen: **FREIGEGEBEN** · Varianten: **FREIGEGEBEN**
 
-Quelle: Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin.
+Quelle: Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin. | Antiparos angebunden (2026-08-06): paros--antiparos und die Gegenrichtung neu, Kurs mit seeding/tools/seaRouteLegs.ts-Logik gegen die Landmaske gelegt und landfrei verifiziert. Endpunkt ist BEWUSST antiparos-agios-georgios und nicht antiparos-town: die Stadt ist auf 15 kn gekappt, auf 15 m LoA begrenzt und trägt die Warnung 'bei Meltemi nicht als Nachtplatz einplanen' — Agios Georgios ist mit 270–90 / 35 kn der einzige Antiparos-Platz, an dem dieses Schiff im August sicher übernachtet. distanceNm ist als einzige Etappe neben milos--polyaigos NICHT recherchiert, sondern aus der Geometrie abgeleitet.
 
-## Etappen (30)
+## Nicht referenzierte Etappen (2)
+
+antiparos--paros, paros--antiparos
+
+## Etappen (32)
 
 | Etappe | Distanz | Wegpunkte | Warnungen | Rebasing |
 |---|---|---|---|---|
+| `antiparos--paros` | 10.6 sm | 3 | Düse Paros–Antiparos: der Kanal beschleunigt den Meltemi, Modellwerte glätten das; Distanz 10.6 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren; Kurs führt durch den flachen Antiparos-Kanal (Fahrrinne, Strömung, Pendelfähre Pounda–Antiparos-Stadt) — Pilotage, nicht Routing | — |
 | `athen--attika` | 22 sm | 3 | Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung | — |
 | `athen--kea` | 36 sm | 4 | Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung | ursprünglich lavrion-basiert |
 | `attika--kea` | 15 sm | 1 | Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung | — |
@@ -25,6 +30,7 @@ Quelle: Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäf
 | `naxos--amorgos` | 31 sm | 5 | Nur mit vorgedachtem Fähr-Exit über Naxos (Eskalationsleiter Quelle 1) | — |
 | `naxos--paros` | 12 sm | 4 | Düse Paros–Naxos: deutlich mehr Wind als der Modellwert | — |
 | `naxos--santorin` | 51 sm | 6 | Langer Schlag, nur bei stabilem Fenster (Quelle 1: 8h30 / 6h50) | — |
+| `paros--antiparos` | 10.6 sm | 3 | Düse Paros–Antiparos: der Kanal beschleunigt den Meltemi, Modellwerte glätten das; Distanz 10.6 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren; Kurs führt durch den flachen Antiparos-Kanal (Fahrrinne, Strömung, Pendelfähre Pounda–Antiparos-Stadt) — Pilotage, nicht Routing | — |
 | `paros--ios` | 32 sm | 5 | — | — |
 | `paros--naxos` | 12 sm | 4 | Düse Paros–Naxos: deutlich mehr Wind als der Modellwert | — |
 | `paros--sifnos` | 26 sm | 4 | Insel-Beschleunigungszonen zwischen Sifnos und Paros | — |
