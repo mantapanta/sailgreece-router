@@ -407,8 +407,22 @@ describe('kitespots.json — die kuratierte Bibliothek selbst', () => {
     }
   });
 
-  it('ist nicht freigegeben — Revierwissen ohne Quellenbeleg (siehe sourceNote)', () => {
-    expect(parsed.success && parsed.data.approved).toBe(false);
+  /**
+   * Die Datei ist seit 2026-08-06 freigegeben (Skipper-Entscheid) — der
+   * Vorbehalt liegt damit NICHT mehr im Import-Gate, sondern allein in der
+   * Anzeige. Genau das prüft dieser Test: kein Eintrag darf `confidence:
+   * 'hoch'` behaupten, denn nichts an der Herkunft hat sich geändert
+   * (Revierwissen, keine Windstatistik, keine Ortsbegehung, behördliche
+   * Auflagen nicht recherchiert — siehe sourceNote). Fiele die Konfidenz
+   * eines Spots auf 'hoch', verschwände der Vorbehalt aus der Kite-Karte,
+   * und die Ebene läse sich wie kuratierte Liegeplatz-Daten.
+   */
+  it('behauptet nirgends hohe Konfidenz — der Vorbehalt trägt jetzt die Anzeige', () => {
+    const spots = parsed.success ? parsed.data.kiteSpots : [];
+    expect(spots.length).toBeGreaterThan(0);
+    for (const spot of spots) {
+      expect(spot.confidence, `Konfidenz von ${spot.id}`).not.toBe('hoch');
+    }
   });
 });
 
