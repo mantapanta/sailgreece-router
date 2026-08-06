@@ -28,6 +28,7 @@ import {
   rueckwegEmpfehlungFor,
 } from './konzept.ts';
 import { empfehleAbfahrt } from './abfahrt.ts';
+import { kiteHinweiseForStage, kiteSpotsForDay } from './kite.ts';
 import { mergeKursAbschnitte } from './kursAbschnitte.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { assessLeg, stopHoursForDay } from './scoring.ts';
@@ -290,6 +291,20 @@ function assessPlan(
       reachableIslandIds: reachableIslands(snapshot, fromIslandId, entry.day),
       abfahrtsEmpfehlung,
       torCheck: torChecks.find((c) => c.day === entry.day) ?? null,
+      /**
+       * Kite-Hinweise des Tages (domain/kite.ts) — gerechnet gegen die
+       * GESEGELTE Kette, damit "am Kurs" denselben Kurs meint, den Karte und
+       * Rechnung zeigen. Bewertet nichts: die Liste steht neben der Ampel, nie
+       * in ihr. Am Hafentag ohne Ausgangsinsel (es wird nicht gesegelt) bleibt
+       * nur die Insel, an der das Boot liegt.
+       */
+      kiteHinweise: kiteHinweiseForStage(
+        snapshot,
+        entry.day,
+        entry.kind === 'stage' ? fromIslandId : null,
+        islandId,
+        legAssessments,
+      ),
     };
   });
 
@@ -614,6 +629,9 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     restTripAmpel,
     restTripReasons,
     ppr,
+    // Revier-Sicht der Kite-Ebene: alle Spots, bewertet für HEUTE. Die Karte
+    // liest von hier, damit sie nichts rechnet (AD-2).
+    kiteSpotsHeute: kiteSpotsForDay(snapshot, trip.currentDay),
     decisionPoints,
     currentIslandId,
     positionNote: offPlan

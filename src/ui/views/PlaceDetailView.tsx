@@ -16,6 +16,7 @@
  * Feld — sie beantworten, was erst AM Platz zählt.
  */
 
+import { useEffect, useRef } from 'react';
 import { APIProvider, AdvancedMarker, Map } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
@@ -24,6 +25,8 @@ import type {
 import type { Place } from '../../domain/schema/place.ts';
 import type { BerthingDetails } from '../../domain/schema/berthing.ts';
 import type { Restaurant } from '../../domain/schema/gastro.ts';
+import type { KiteSpot, KiteSpotTag } from '../../domain/schema/kite.ts';
+import { kiteProfilLabel, kiteSektorLabel, kiteSpotsOfPlace } from '../../domain/kite.ts';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { compass, formatTripDayDate, formatWaveM } from '../format.ts';
 import { resolveMapsEnv } from '../mapsEnv.ts';
@@ -209,6 +212,118 @@ function GastroKarte({ restaurants }: { restaurants: Restaurant[] }) {
 }
 
 /**
+ * KITE-SPOTS von diesem Liegeplatz aus (schema/kite.ts).
+ *
+ * Steht wie die Gastronomie NACH dem Liegeplatz, aus demselben Grund: sie
+ * bewertet nichts. Angezeigt wird je Spot das Urteil des heutigen
+ * Kite-Fensters — fertig formuliert aus der Domain (`KiteSpotTag.text`,
+ * AD-2), nie hier zusammengebaut.
+ *
+ * Drei Dinge trägt die Karte bewusst sichtbar:
+ *  - die GEFAHREN, und zwar nicht kleiner gesetzt als der Rest. Ein
+ *    Tiefwasser-Launch ohne Stehbereich ist die Information, an der eine
+ *    Session scheitert;
+ *  - die KONFIDENZ, mit Vorbehalt-Satz bei allem unter 'hoch' — diese
+ *    Bibliothek ist Revierwissen, kein Revierführer (Datei-Kopf von
+ *    kitespots.json);
+ *  - dass hier nichts bewertet wird.
+ *
+ * `focusSpotId` kommt vom Kite-Hinweis der Tagesansicht: der Spot, auf den
+ * geklickt wurde, wird hervorgehoben und herangescrollt.
+ */
+function KiteKarte({
+  spots,
+  heute,
+  focusSpotId,
+}: {
+  spots: KiteSpot[];
+  /** Heutige Bewertung je Spot (assessment.kiteSpotsHeute), Domain-Wert. */
+  heute: KiteSpotTag[];
+  focusSpotId?: string;
+}) {
+  const focusRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (focusSpotId) focusRef.current?.scrollIntoView({ block: 'center' });
+  }, [focusSpotId]);
+
+  const LEVEL_LABEL: Record<KiteSpot['level'], string> = {
+    einsteiger: 'Einsteiger',
+    fortgeschritten: 'Fortgeschritten',
+    experte: 'Experten',
+  };
+
+  return (
+    <>
+      <h2 className="section-title">Kite-Spots</h2>
+      <section className="card-surface">
+        <ul className="kite-liste">
+          {spots.map((s) => {
+            const tag = heute.find((t) => t.spotId === s.id) ?? null;
+            const focused = s.id === focusSpotId;
+            return (
+              <li
+                key={s.id}
+                ref={focused ? focusRef : undefined}
+                className={focused ? 'focused' : undefined}
+              >
+                <div className="kite-kopf">
+                  <span className="name">{s.name}</span>
+                  <span className="chip">{LEVEL_LABEL[s.level]}</span>
+                </div>
+                <div className="kite-profil">
+                  {kiteProfilLabel(s)} · Wind aus {kiteSektorLabel(s)}
+                </div>
+                {s.description && <div className="zeile">{s.description}</div>}
+                {/* Das Urteil von heute — Wort und Zahl, keine Farbe allein. */}
+                {tag && <div className={`kite-urteil ${tag.eignung}`}>{tag.text}</div>}
+                <div className="zeile">
+                  <span className="label">Anfahrt: </span>
+                  {s.accessInfo}
+                </div>
+                {s.hazards.length > 0 && (
+                  <ul className="kite-gefahren">
+                    {s.hazards.map((h) => (
+                      <li key={h}>{h}</li>
+                    ))}
+                  </ul>
+                )}
+                {s.localNote && (
+                  <div className="zeile">
+                    <span className="label">Vor Ort: </span>
+                    {s.localNote}
+                  </div>
+                )}
+                {s.infoUrl && (
+                  <div className="zeile">
+                    <a href={s.infoUrl} target="_blank" rel="noreferrer">
+                      Spot-Info öffnen
+                    </a>
+                  </div>
+                )}
+                <div className={s.confidence === 'hoch' ? 'zeile' : 'zeile vorbehalt'}>
+                  <span className="label">Konfidenz: </span>
+                  {s.confidence}
+                  {s.confidence !== 'hoch' &&
+                    ' — Revierwissen ohne Quellenbeleg, Lage und Auflagen vor Ort prüfen'}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="shelter-source">
+          Kite-Spots bewerten nichts: weder Nacht-Ampel noch Etappen-Ampel noch
+          Routenwahl lesen ein Feld. Der Wind je Spot ist der Forecast DIESES
+          Liegeplatzes — am Spot selbst, besonders in einer Kanaldüse, kann er
+          deutlich schärfer stehen. Behördliche Kite-Verbote und Schutzzonen sind
+          nicht recherchiert. Quellen:{' '}
+          {[...new Set(spots.flatMap((s) => s.sources))].join('; ')}.
+        </p>
+      </section>
+    </>
+  );
+}
+
+/**
  * Rating → presentation: one lookup, no logic — the rating itself comes from
  * the domain's windHourAmpel via sectorTiles (placeViewModel.ts). The two rot
  * states differ in visible text ("offen" vs "schwach · bis {kn} kn"), so
@@ -319,11 +434,14 @@ export function PlaceDetailView({
   placeId,
   snapshot,
   assessment,
+  focusKiteSpotId,
   onBack,
 }: {
   placeId: string;
   snapshot: PlanningSnapshot;
   assessment: Assessment;
+  /** Über einen Kite-Hinweis geöffnet: diesen Spot hervorheben und anscrollen. */
+  focusKiteSpotId?: string;
   onBack: () => void;
 }) {
   const day = snapshot.trip.currentDay;
@@ -359,6 +477,9 @@ export function PlaceDetailView({
     snapshot.params.nightEndHourAthens,
   );
   const tiles = sectorTiles(place.shelter, snapshot.params);
+  // Kite-Spots, deren Bezugsplatz DIESER Platz ist (domain/kite.ts) — die
+  // Zuordnung ist kuratiert, hier wird nur gefiltert.
+  const kiteSpots = kiteSpotsOfPlace(snapshot.library.kiteSpots ?? [], place.id);
 
   return (
     <div>
@@ -513,6 +634,14 @@ export function PlaceDetailView({
 
       {place.restaurants && place.restaurants.length > 0 && (
         <GastroKarte restaurants={place.restaurants} />
+      )}
+
+      {kiteSpots.length > 0 && (
+        <KiteKarte
+          spots={kiteSpots}
+          heute={assessment.kiteSpotsHeute}
+          focusSpotId={focusKiteSpotId}
+        />
       )}
     </div>
   );

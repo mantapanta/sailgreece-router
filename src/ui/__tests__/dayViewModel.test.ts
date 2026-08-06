@@ -4,9 +4,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { KiteHinweis } from '../../domain/schema/kite.ts';
 import type { StageAssessment } from '../../domain/schema/snapshot.ts';
 import {
   dayViewStages,
+  kiteHinweisAnzeige,
   optionsSummary,
   restTripVerdictLabel,
   staleForecastLabel,
@@ -37,6 +39,7 @@ function makeStage(
     reachableIslandIds: [],
     abfahrtsEmpfehlung: null,
     torCheck: null,
+    kiteHinweise: [],
     ...over,
   };
 }
@@ -151,5 +154,50 @@ describe('restTripVerdictLabel', () => {
     expect(restTripVerdictLabel('gelb')).toBe('Round-Trip unter Vorbehalt');
     expect(restTripVerdictLabel('rot')).toBe('Kein gültiger Round-Trip');
     expect(restTripVerdictLabel('unbewertet')).toBe('Round-Trip unbewertet');
+  });
+});
+
+describe('kiteHinweisAnzeige', () => {
+  const hinweis = (
+    spotId: string,
+    eignung: KiteHinweis['eignung'],
+  ): KiteHinweis => ({
+    spotId,
+    name: spotId,
+    islandId: 'insel',
+    placeId: 'insel-bucht',
+    day: 3,
+    eignung,
+    windKn: 18,
+    windDirDeg: 20,
+    passendeStunden: eignung === 'passt' ? 4 : 0,
+    basis: 'forecast',
+    text: `${spotId}: Text aus der Domain`,
+    bezug: 'ziel',
+    abstandNm: null,
+  });
+
+  it('zeigt, was die Windrichtung trifft — passt und stark', () => {
+    const { gezeigt, weitere } = kiteHinweisAnzeige([
+      hinweis('a', 'passt'),
+      hinweis('b', 'stark'),
+    ]);
+    expect(gezeigt.map((h) => h.spotId)).toEqual(['a', 'b']);
+    expect(weitere).toBe(0);
+  });
+
+  it('fasst Auskunft ohne Anlass zu einer ZAHL zusammen (nie stille Kürzung)', () => {
+    const { gezeigt, weitere } = kiteHinweisAnzeige([
+      hinweis('a', 'passt'),
+      hinweis('b', 'richtung'),
+      hinweis('c', 'wenig-wind'),
+      hinweis('d', 'unbewertet'),
+    ]);
+    expect(gezeigt.map((h) => h.spotId)).toEqual(['a']);
+    expect(weitere).toBe(3);
+  });
+
+  it('ohne Hinweise ist beides leer', () => {
+    expect(kiteHinweisAnzeige([])).toEqual({ gezeigt: [], weitere: 0 });
   });
 });

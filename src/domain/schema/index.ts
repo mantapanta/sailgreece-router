@@ -3,6 +3,7 @@ export * from './shelter.ts';
 export * from './berthing.ts';
 export * from './gastro.ts';
 export * from './island.ts';
+export * from './kite.ts';
 export * from './place.ts';
 export * from './route.ts';
 export * from './plan.ts';

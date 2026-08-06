@@ -92,6 +92,7 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
     stopHoursTotal: 0,
     abfahrtsEmpfehlung: null,
     torCheck: null,
+    kiteHinweise: [],
   });
 
   return {

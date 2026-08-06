@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { IslandSchema } from './island.ts';
+import { KiteSpotSchema } from './kite.ts';
 import { PlaceSchema } from './place.ts';
 import { LegSchema, RouteSchema, VariantSchema } from './route.ts';
 import { ParamsSchema } from './params.ts';
@@ -50,6 +51,23 @@ export const VariantsStagingFileSchema = z.object({
   variants: z.array(VariantSchema).min(1),
 });
 export type VariantsStagingFile = z.infer<typeof VariantsStagingFileSchema>;
+
+/**
+ * Kite-Spots (seeding/data/kitespots.json) — EINE Datei, ein Freigabe-Gate.
+ *
+ * Bewusst nicht je Insel wie die Plätze: ein Kite-Spot gehört nicht zum Hafen
+ * (schema/kite.ts), die Sammlung ist klein, und sie kommt aus einer anderen
+ * Quelle als die nautische Kuratierung. Eine Datei heisst: eine Review, eine
+ * Freigabe — und niemand muss 42 Insel-Dateien anfassen, um einen Strand
+ * nachzutragen. Referenzielle Integrität gegen Inseln und Plätze prüft der
+ * Import, nicht das Schema: es sieht die anderen Dateien nicht.
+ */
+export const KiteSpotsStagingFileSchema = z.object({
+  approved: z.boolean(),
+  sourceNote: z.string().min(1),
+  kiteSpots: z.array(KiteSpotSchema).min(1),
+});
+export type KiteSpotsStagingFile = z.infer<typeof KiteSpotsStagingFileSchema>;
 
 export const ConfigStagingFileSchema = z.object({
   approved: z.boolean(),

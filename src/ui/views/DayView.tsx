@@ -72,6 +72,7 @@ import {
 } from '../format.ts';
 import {
   dayViewStages,
+  kiteHinweisAnzeige,
   optionsSummary,
   staleForecastLabel,
 } from '../dayViewModel.ts';
@@ -554,7 +555,7 @@ function StageCard({
   /** True for the ONE hero card of the view (display type, stepper, primary CTA). */
   hero: boolean;
   currentDay: number;
-  onOpenPlace: (placeId: string) => void;
+  onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
   /** Null when no Maps key is configured — the panel then stays text-only. */
   mapId: string | null;
   /** Zielmodell v2 — der Heimweg-Status dieses Tages (Abbruch-Notation). */
@@ -623,6 +624,8 @@ function StageCard({
   const lastEta =
     lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
   const windLeg = stage.legs[0];
+  /** Kite-Zeilen dieser Karte plus die Zahl der zusammengefassten (getestet). */
+  const kite = kiteHinweisAnzeige(stage.kiteHinweise);
 
   return (
     <article className={hero ? 'card-surface hero-card' : 'card-surface'}>
@@ -874,6 +877,50 @@ function StageCard({
       {returnCheck && (
         <div className={`return-note status-${returnCheck.status}`}>
           {returnCheck.note}
+        </div>
+      )}
+
+      {/* KITE-HINWEISE des Tages (domain/kite.ts, Skipper-Wunsch 2026-08-06):
+          die kuratierten Spots auf Start- und Ziel-Insel und am Kurs. Sie
+          stehen NACH Abfahrt, Tor und Heimweg-Status, weil sie nichts
+          entscheiden — und tragen bewusst keine Ampel-Farbe: ein grüner Kasten
+          neben einer gelben Etappe würde wie ein zweites, freundlicheres
+          Urteil über denselben Tag gelesen. Was passt, trägt darum den
+          Kite-Ton als Kante, alles andere bleibt eine ruhige Zeile; die
+          Aussage steht im Text (formuliert in der Domain, AD-2).
+          Die Zeile ist ein Knopf: sie öffnet den Spot im Platzdetail seines
+          Bezugs-Liegeplatzes. */}
+      {stage.kiteHinweise.length > 0 && (
+        <div className="kite-zeilen">
+          {kite.gezeigt.map((h) => (
+            <button
+              type="button"
+              key={h.spotId}
+              className={`kite-zeile ${h.eignung}`}
+              onClick={() => onOpenPlace(h.placeId, h.spotId)}
+              title="Spot-Details im Platzdetail des Bezugs-Liegeplatzes öffnen"
+            >
+              <span className="glyph" aria-hidden="true">
+                ◆
+              </span>
+              <span className="text">
+                Kite: {h.text}
+                {h.basis === 'annahme' && ' (Annahme jenseits des Forecast-Horizonts)'}
+              </span>
+              <span className="link" aria-hidden="true">
+                Spot →
+              </span>
+            </button>
+          ))}
+          {/* Keine stille Kürzung: was nicht als Zeile steht, steht als Zahl. */}
+          {kite.weitere > 0 && (
+            <p className="kite-weitere">
+              {kite.weitere === 1
+                ? 'Ein weiterer Kite-Spot liegt an diesem Tag'
+                : `${kite.weitere} weitere Kite-Spots liegen an diesem Tag`}{' '}
+              — heute passt die Windrichtung dort nicht. Auf der Karte sichtbar.
+            </p>
+          )}
         </div>
       )}
 
@@ -1506,7 +1553,8 @@ export function DayView({
 }: {
   snapshot: PlanningSnapshot;
   assessment: Assessment;
-  onOpenPlace: (placeId: string) => void;
+  /** Zweiter Parameter: Kite-Spot, den das Platzdetail hervorheben soll. */
+  onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;

@@ -35,6 +35,14 @@ service cloud.firestore {
       allow read: if istAngemeldet();
       allow write: if false;
     }
+    // Kite-Spots (aus kitespots.json). Eigene Collection, weil ein Spot nicht
+    // zum Hafen gehoert (src/domain/schema/kite.ts). Fehlt dieser Block, bleibt
+    // die Kite-Ebene leer — der Adapter faengt die Ablehnung ab, damit eine
+    // nicht deployte Regel nicht die ganze Bibliothek mitnimmt.
+    match /kiteSpots/{spotId} {
+      allow read: if istAngemeldet();
+      allow write: if false;
+    }
     match /config/{docId} {
       allow read: if istAngemeldet();
       allow write: if false;
