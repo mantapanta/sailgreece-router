@@ -40,7 +40,7 @@ import { kiteHinweiseForStage, kiteSpotsForDay } from './kite.ts';
 import { mergeKursAbschnitte } from './kursAbschnitte.ts';
 import { predictedPointOfReturn } from './ppr.ts';
 import { assessLeg, departureHourForDay, stopHoursForDay } from './scoring.ts';
-import { sailedLegsByDay } from './legGeometry.ts';
+import { sailedLeg, sailedLegsByDay } from './legGeometry.ts';
 import {
   completePlan,
   deriveReturnChecks,
@@ -133,6 +133,43 @@ function planPlaceIds(
     const usedByIsland = new Map<string, Set<string>>();
     let prevIsland: string | null = null;
     let staySuggestion: string | null = null;
+    const legsById = legLibrary(snapshot);
+    const byDay = new Map(ordered.map((e) => [e.day, e]));
+
+    /**
+     * KOMMT DAS BOOT VON DIESEM PLATZ MORGEN WIEDER WEG?
+     *
+     * Der Grund steht bei `rankPlacesForNight` (ampel.ts): die Rangfolge kannte
+     * bis 2026-08-07 nur die Nacht und wählte auf Ios folgerichtig Manganari an
+     * der Südküste — von wo aus die Etappe des nächsten Morgens keinen
+     * landfreien Kurs mehr hat. Der Kurs wurde still zur Luftlinie über Land,
+     * und darauf rechnete alles Weitere.
+     *
+     * Gefragt wird an der ERSTEN Etappe des Folgetags, weil die dort losfährt.
+     * Ohne Folgetag (letzter Tag, Hafentag ohne Weiterfahrt) gibt es nichts zu
+     * prüfen, und die Rangfolge bleibt, was sie war.
+     */
+    const wegkommenVon = (day: number): ((placeId: string) => boolean) | undefined => {
+      const next = byDay.get(day + 1);
+      if (!next || next.kind !== 'stage') return undefined;
+      const nextLeg = legsById.get(next.legIds[0]!);
+      if (!nextLeg) return undefined;
+      // Ein Memo je Tag: die Rangfolge fragt denselben Platz beim Sortieren
+      // mehrfach, und `sailedLeg` legt jedes Mal einen Kurs neu.
+      const memo = new Map<string, boolean>();
+      return (placeId: string): boolean => {
+        const gecacht = memo.get(placeId);
+        if (gecacht !== undefined) return gecacht;
+        const probe = sailedLeg(nextLeg, snapshot.library.places, {
+          fromPlaceId: placeId,
+          probe: true,
+        });
+        const ok = probe.kursUnaufloesbar !== true;
+        memo.set(placeId, ok);
+        return ok;
+      };
+    };
+
     for (const entry of ordered) {
       const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
       const chosen = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
@@ -152,7 +189,11 @@ function planPlaceIds(
           for (const p of islandPlaces) {
             ampelByPlace[p.id] = nightAmpeln[p.id]?.[entry.day]?.ampel ?? 'unbewertet';
           }
-          const ranked = rankPlacesForNight(islandPlaces, ampelByPlace);
+          const ranked = rankPlacesForNight(
+            islandPlaces,
+            ampelByPlace,
+            wegkommenVon(entry.day),
+          );
           const pick = ranked.find((p) => !used.has(p.id)) ?? ranked[0] ?? null;
           staySuggestion = pick?.id ?? null;
         }

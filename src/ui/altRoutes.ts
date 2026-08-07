@@ -173,3 +173,37 @@ export function altRouteAt(
   if (index === null) return null;
   return views[index] ?? null;
 }
+
+/** Woher die Route stammt, die eine Ansicht gerade zeichnet. */
+export type GezeigteHerkunft = 'alternative' | 'hauptroute' | 'vorschlag' | 'keine';
+
+/**
+ * WELCHE ROUTE EINE ANSICHT ZEICHNET — und woher sie stammt.
+ *
+ * Steht hier und nicht in `MapView`, weil genau diese Entscheidung still
+ * kaputtging: die Karte hing allein an `assessment.mainRoute`, und die gibt es
+ * erst mit ÜBERNOMMENEM Plan (`assess.ts`: `trip.plan ? assessPlan(…) : null`).
+ * Vor der ersten Übernahme zeichnete sie deshalb gar nichts — keine Linie,
+ * keine Etappennummern, keine Liste. Der Skipper las das am 2026-08-07 als
+ * "es wird gar keine Hauptroute berechnet"; berechnet wurde sie immer, die
+ * Tagesansicht zeigte sie sogar. Nur die Karte schwieg.
+ *
+ * Die Vorrangordnung ist die eine Regel, um die es geht:
+ *
+ *   eingeblendete Alternative  >  übernommene Hauptroute  >  Vorschlag
+ *
+ * Der Vorschlag steht ZULETZT und ersetzt die Hauptroute nie — er springt nur
+ * ein, wo sonst nichts stünde. Und er wird mit seiner Herkunft zurückgegeben,
+ * damit die Ansicht ihn benennen kann: eine gezeichnete Linie ohne
+ * Herkunftsangabe wäre eine Behauptung (AD-3).
+ */
+export function gezeigteRoute(
+  shownAlt: PlanAssessment | null,
+  mainRoute: PlanAssessment | null,
+  vorschlag: PlanAssessment | null,
+): { plan: PlanAssessment | null; herkunft: GezeigteHerkunft } {
+  if (shownAlt) return { plan: shownAlt, herkunft: 'alternative' };
+  if (mainRoute) return { plan: mainRoute, herkunft: 'hauptroute' };
+  if (vorschlag) return { plan: vorschlag, herkunft: 'vorschlag' };
+  return { plan: null, herkunft: 'keine' };
+}

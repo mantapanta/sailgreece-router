@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   placeNightAmpel,
+  rankPlacesForNight,
   sectorContains,
   windHourAmpel,
   windSectorLimitKn,
@@ -444,5 +445,63 @@ describe('place night ampel — reference cases (AD-2/AD-6)', () => {
       library: { islands: [], places: [bay], invalidPlaces: [], legs: [], variants: [] },
     });
     expect(placeNightAmpel(bay, 1, snapshot).ampel).toBe('rot');
+  });
+});
+
+describe('rankPlacesForNight — der schönste Platz taugt nichts, wenn es morgen nicht weitergeht', () => {
+  /**
+   * REGRESSION zum Screenshot-Review des Skippers (2026-08-07): rote Etappen,
+   * „die überhaupt nicht notwendig werden".
+   *
+   * Die Rangfolge kannte nur die NACHT — Schutz, dann Schönheit, dann
+   * Restaurant. Auf Ios gewann damit Manganari, die geschützte Bucht an der
+   * Südküste; `legGeometry` verankerte die Etappe des nächsten Morgens dort,
+   * und zwischen Manganari und Santorin-Akrotiri findet `seaRoute` keinen Weg
+   * ums Land. Der Kurs wurde zur Luftlinie über die Insel, und darauf rechnete
+   * die ganze Bewertung weiter.
+   */
+  const schoen = makePlace({
+    id: 'sackgasse-schoen',
+    islandId: 'ios',
+    qualities: { schoenheit: 5, restaurant: 5, badestrand: 5 },
+  });
+  const nuechtern = makePlace({
+    id: 'weiterfahrt-nuechtern',
+    islandId: 'ios',
+    qualities: { schoenheit: 1, restaurant: 1, badestrand: 1 },
+  });
+  const beideGruen = { [schoen.id]: 'gruen' as const, [nuechtern.id]: 'gruen' as const };
+
+  it('ohne die Auskunft bleibt die alte Rangfolge — der schönste gewinnt', () => {
+    const ranked = rankPlacesForNight([nuechtern, schoen], beideGruen);
+    expect(ranked[0]!.id).toBe(schoen.id);
+  });
+
+  it('eine Sackgasse fällt hinter den nüchternen Platz zurück', () => {
+    const ranked = rankPlacesForNight(
+      [nuechtern, schoen],
+      beideGruen,
+      (id) => id !== schoen.id,
+    );
+    expect(ranked[0]!.id).toBe(nuechtern.id);
+  });
+
+  it('sie schlägt sogar die Ampel: ein gelber Platz mit Weiterfahrt geht vor', () => {
+    // Die Sackgasse steht ÜBER der Ampel, weil ein grüner Liegeplatz, von dem
+    // aus die Etappe nicht berechenbar ist, den ganzen nächsten Tag entwertet.
+    const ranked = rankPlacesForNight(
+      [schoen, nuechtern],
+      { [schoen.id]: 'gruen', [nuechtern.id]: 'gelb' },
+      (id) => id !== schoen.id,
+    );
+    expect(ranked[0]!.id).toBe(nuechtern.id);
+  });
+
+  it('sind ALLE Plätze Sackgassen, wird trotzdem einer gewählt', () => {
+    // Kein Ausschluss, nur eine Rangfolge: sonst stünde der Plan ohne
+    // Liegeplatz da, und die Etappe trüge ihren Befund gar nicht erst.
+    const ranked = rankPlacesForNight([nuechtern, schoen], beideGruen, () => false);
+    expect(ranked).toHaveLength(2);
+    expect(ranked[0]!.id).toBe(schoen.id);
   });
 });

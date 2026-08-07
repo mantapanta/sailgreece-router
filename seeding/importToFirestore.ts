@@ -256,6 +256,13 @@ async function main() {
           `Etappe ${leg.id}: 'waypointKeys' ist NICHT kuratierbar (wird nur von abgeleiteten Etappen im Core gesetzt).`,
         );
       }
+      if (leg.kursUnaufloesbar !== undefined) {
+        fail(
+          `Etappe ${leg.id}: 'kursUnaufloesbar' ist NICHT kuratierbar — es ist ein BEFUND, ` +
+            'den legGeometry.sailedLeg an der verankerten Etappe setzt, keine Eigenschaft der Bibliothek. ' +
+            'Eine kuratierte Etappe ohne landfreien Kurs ist ein Datenfehler und gehört repariert, nicht markiert.',
+        );
+      }
       // Deduplication is now structural — but a duplicate ID inside legs.json
       // would still let one definition silently win.
       if (legIds.has(leg.id)) {

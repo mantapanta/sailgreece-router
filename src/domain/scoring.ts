@@ -341,6 +341,32 @@ export function assessLeg(
   if (!points) return unbewertet('Start- oder Zielplatz fehlt in der Bibliothek');
 
   /**
+   * KEIN LANDFREIER KURS — und deshalb auch keine Zahlen.
+   *
+   * `legGeometry.sailedLeg` setzt `kursUnaufloesbar`, wenn `seaRoute` für die
+   * VERANKERTE Etappe keinen Weg um die Inseln findet. Dann steht in
+   * `waypoints` die Luftlinie, und `distanceNm` wurde im Verhältnis zu ihr
+   * skaliert. Alles, was darauf folgt — Fahrtzeit, Kreuzstunden, Ampel — wäre
+   * die Simulation eines Kurses, den kein Boot fahren kann.
+   *
+   * Der Befund vom 2026-08-07: genau so entstand eine rote Etappe
+   * Ios(Manganari) → Paros über 34 sm mit „32 sm Kreuz". Nicht das Wetter war
+   * hart, sondern der Kurs lief quer durch Ios. Eine erfundene Zahl ist
+   * schlechter als keine — und ROT wäre eine Aussage über das Segeln, die hier
+   * gar nicht getroffen werden kann.
+   *
+   * 'unbewertet' zählt WEDER FÜR NOCH GEGEN die Plan-Gültigkeit (FR18). Der
+   * Plan fällt damit nicht durch, aber er kann sich auch nicht auf diese
+   * Etappe stützen — und der Grund steht dabei.
+   */
+  if (leg.kursUnaufloesbar) {
+    return unbewertet(
+      `Kein landfreier Kurs von ${leg.fromPlaceId} nach ${leg.toPlaceId} — ` +
+        'die Etappe lässt sich von diesem Liegeplatz aus nicht berechnen',
+    );
+  }
+
+  /**
    * AD-13 REVISED — the far range is COMPUTED, not silenced.
    *
    * The original rule returned 'unbewertet' beyond params.reliableHorizonDays,

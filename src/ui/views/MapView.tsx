@@ -49,6 +49,7 @@ import { compass, formatKn } from '../format.ts';
 import {
   altRouteAt,
   altRouteViews,
+  gezeigteRoute,
   KONZEPT_KURZ,
   type AltRouteView,
 } from '../altRoutes.ts';
@@ -643,14 +644,39 @@ export function MapView({
   const shownAltColor = shownChoice?.color ?? null;
 
   /**
-   * Die Route, die die Karte ZEIGT — Hauptroute oder eingeblendete Alternative.
+   * DER VORSCHLAG, solange keine Hauptroute übernommen ist.
+   *
+   * Bis 2026-08-07 hing die Karte allein an `mainRoute` — und die gibt es erst
+   * mit übernommenem Plan (`assess.ts`: `trip.plan ? assessPlan(…) : null`).
+   * Vorher zeichnete die Karte GAR NICHTS: keine Linie, keine Etappennummern,
+   * keine Etappenliste. Eine leere See.
+   *
+   * Das war die Beanstandung des Skippers "es wird gar keine Hauptroute
+   * berechnet" — und sie war genau invertiert. Berechnet wird sie immer; sie
+   * ist der teuerste Schritt der ganzen Bewertung, und die Tagesansicht zeigt
+   * sie Tag für Tag. Nur die Karte schwieg, bis jemand "Übernehmen" drückte.
+   * Für den, der davorsitzt, sieht das aus wie ein Rechenfehler.
+   *
+   * Der Vorschlag wird deshalb GEZEICHNET, aber nicht als Hauptroute
+   * AUSGEGEBEN: die Zeile unter den Ebenen-Chips sagt, dass es einer ist, und
+   * der Hinweiskasten über der Karte sagt weiterhin, wie man ihn übernimmt.
+   * Dieselbe Doktrin wie überall sonst — anzeigen ja, behaupten nein.
+   */
+  const gezeigt = gezeigteRoute(shownAlt, main, assessment.proposal);
+  /** Zeigt die Karte den Vorschlag, weil noch keine Hauptroute übernommen ist? */
+  const zeigtVorschlag = gezeigt.herkunft === 'vorschlag';
+
+  /**
+   * Die Route, die die Karte ZEIGT — Hauptroute, eingeblendete Alternative
+   * oder, solange keine Hauptroute übernommen ist, der Vorschlag.
    * Alles Routenbezogene hängt hieran (Linien, Etappennummern, Etappenliste,
    * Kontextmenge der Pins und Windfiedern), damit die Karte nie eine Route
    * zeichnet und die Nummern oder die Liste einer anderen dazu.
    */
+  const gezeigterPlan = gezeigt.plan;
   const displayRouteStages = useMemo(
-    () => (shownAlt ? shownAlt.stages : (main?.stages ?? [])),
-    [shownAlt, main],
+    () => gezeigterPlan?.stages ?? [],
+    [gezeigterPlan],
   );
   /** Die Segeltage der GEZEIGTEN Route — Linien, Nummern, Liste, Sync. */
   const displayStages = useMemo(
@@ -694,7 +720,7 @@ export function MapView({
    * Wende-Hinweis weg statt einen zu erfinden. Blendet eine Alternative die
    * Hauptroute aus, nennt die Legende deren Wende — nie die der verborgenen.
    */
-  const turnDay = (shownAlt ?? main)?.turnDay ?? null;
+  const turnDay = gezeigterPlan?.turnDay ?? null;
   const turnIsland =
     turnDay === null
       ? null
@@ -821,7 +847,9 @@ export function MapView({
         />
         {!main && (
           <div className="hint-panel">
-            Noch keine Hauptroute — in der Tagesansicht den Vorschlag übernehmen.
+            {zeigtVorschlag
+              ? 'Noch keine Hauptroute übernommen — die Karte zeigt den Vorschlag der App. Übernehmen geht in der Tagesansicht.'
+              : 'Noch keine Hauptroute — in der Tagesansicht den Vorschlag übernehmen.'}
           </div>
         )}
       </div>
@@ -1184,9 +1212,16 @@ export function MapView({
               {/* Keine stille Ersetzung: solange eine Alternative gezeigt
                   wird, sagt die Karte in einer Zeile, dass die Hauptroute
                   fehlt — welche Alternative es ist, steht im Chip daneben.
+                  Und wenn die Karte den VORSCHLAG zeichnet, weil noch keine
+                  Hauptroute übernommen ist, sagt sie auch das: eine gezeichnete
+                  Linie ohne Herkunftsangabe wäre eine Behauptung.
                   Leer = kein Kasten (CSS :empty). */}
               <p className="alt-note" aria-live="polite">
-                {shownChoice ? `${shownChoice.name} · Hauptroute ausgeblendet` : ''}
+                {shownChoice
+                  ? `${shownChoice.name} · Hauptroute ausgeblendet`
+                  : zeigtVorschlag
+                    ? 'Vorschlag der App · noch nicht übernommen'
+                    : ''}
               </p>
               {/* Der Verweis auf die Heute-Ansicht steht HIER, weil hier die
                   Frage aufkommt: „schön, aber taugt die Route?" — beantwortet

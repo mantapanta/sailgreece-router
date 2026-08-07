@@ -21,7 +21,7 @@ import type {
   RouteOptionAssessment,
   StageAssessment,
 } from '../../domain/schema/snapshot.ts';
-import { altRouteAt, altRouteViews } from '../altRoutes.ts';
+import { altRouteAt, altRouteViews, gezeigteRoute } from '../altRoutes.ts';
 import { ALT_ROUTE_COLORS } from '../altRouteColors.ts';
 
 const ISLAND_NAMES: Record<string, string> = {
@@ -200,5 +200,44 @@ describe('altRouteAt', () => {
 
   it('liefert die Alternative an ihrem Listenplatz', () => {
     expect(altRouteAt(views, 1)?.turnName).toBe('Amorgos');
+  });
+});
+
+describe('gezeigteRoute — welche Route eine Ansicht zeichnet', () => {
+  /**
+   * REGRESSION zum Befund des Skippers vom 2026-08-07: „Es wird gar keine
+   * Hauptroute berechnet."
+   *
+   * Die Karte hing allein an `assessment.mainRoute`, und die gibt es erst mit
+   * ÜBERNOMMENEM Plan. Vor der ersten Übernahme zeichnete sie deshalb gar
+   * nichts — obwohl `assessment.proposal` danebenstand und die Tagesansicht
+   * ihn Tag für Tag zeigte. Der Vorschlag muss einspringen, wo sonst eine
+   * leere See stünde, und dabei als Vorschlag ERKENNBAR bleiben.
+   */
+  const alt = makeAlt('amorgos', ['amorgos']);
+  const haupt = makeAlt('milos', ['milos']);
+  const vorschlag = makeAlt('sifnos', ['sifnos']);
+
+  it('zeichnet den Vorschlag, wenn keine Hauptroute übernommen ist', () => {
+    const g = gezeigteRoute(null, null, vorschlag);
+    expect(g.plan).toBe(vorschlag);
+    expect(g.herkunft).toBe('vorschlag');
+  });
+
+  it('der Vorschlag ersetzt eine übernommene Hauptroute NIE', () => {
+    const g = gezeigteRoute(null, haupt, vorschlag);
+    expect(g.plan).toBe(haupt);
+    expect(g.herkunft).toBe('hauptroute');
+  });
+
+  it('die eingeblendete Alternative geht beiden vor', () => {
+    expect(gezeigteRoute(alt, haupt, vorschlag).herkunft).toBe('alternative');
+    expect(gezeigteRoute(alt, null, vorschlag).herkunft).toBe('alternative');
+  });
+
+  it('ohne alles bleibt die Karte leer — und sagt das auch', () => {
+    const g = gezeigteRoute(null, null, null);
+    expect(g.plan).toBeNull();
+    expect(g.herkunft).toBe('keine');
   });
 });

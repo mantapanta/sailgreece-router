@@ -43,6 +43,30 @@ const places: Place[] = [
     islandId: 'syros',
     coordinates: { lat: 37.498, lon: 24.8911 },
   }),
+  // Ios und Santorin: der Fall aus dem Screenshot-Review vom 2026-08-07.
+  // Manganari liegt an der SÜDküste von Ios, Akrotiri an der Südwestecke
+  // Santorins — beides Schönwetter-Ankerplätze, die die Nacht-Rangfolge
+  // bevorzugt, und zwischen ihnen findet seaRoute keinen Weg ums Land.
+  makePlace({
+    id: 'ios-ormos',
+    islandId: 'ios',
+    coordinates: { lat: 36.7217, lon: 25.275 },
+  }),
+  makePlace({
+    id: 'ios-manganari',
+    islandId: 'ios',
+    coordinates: { lat: 36.6617, lon: 25.3717 },
+  }),
+  makePlace({
+    id: 'santorin-vlychada',
+    islandId: 'santorin',
+    coordinates: { lat: 36.3353, lon: 25.4353 },
+  }),
+  makePlace({
+    id: 'santorin-akrotiri',
+    islandId: 'santorin',
+    coordinates: { lat: 36.3533, lon: 25.3983 },
+  }),
 ];
 
 const leg = (over: Partial<Leg> & { id: string }): Leg => ({
@@ -82,6 +106,16 @@ const PAROS_SIFNOS = leg({
   fromPlaceId: 'paros-parikia',
   toPlaceId: 'sifnos-kamares',
   distanceNm: 26,
+});
+
+const iosParosKuratiertNm = 32;
+const IOS_PAROS = leg({
+  id: 'ios--paros',
+  fromIslandId: 'ios',
+  toIslandId: 'paros',
+  fromPlaceId: 'ios-ormos',
+  toPlaceId: 'paros-naoussa',
+  distanceNm: iosParosKuratiertNm,
 });
 
 const pathOf = (l: Leg): { lat: number; lon: number }[] => {
@@ -182,6 +216,62 @@ describe('sailedLeg — Verankerung an einem anderen Hafen derselben Insel', () 
     });
     const sailed = sailedLeg(curated, places, { fromPlaceId: 'kea-vourkari' });
     expect(sailed.waypoints).toContainEqual({ lat: 37.4879, lon: 24.9528 });
+  });
+});
+
+describe('sailedLeg — ein unauflösbarer Kurs sagt es, statt still zu rechnen', () => {
+  /**
+   * DER BEFUND VOM 2026-08-07, an der echten Geometrie nachgestellt.
+   *
+   * Der Skipper beanstandete rote Etappen, „die überhaupt nicht notwendig
+   * werden". Eine davon war Santorin(Akrotiri) → Ios(Manganari) — beides
+   * Liegeplätze, die die App selbst für die NACHT vorgeschlagen hatte
+   * (`rankPlacesForNight` sortiert nach Schutz und Schönheit, nicht nach der
+   * Etappe des nächsten Morgens).
+   *
+   * Zwischen diesen beiden Punkten findet `seaRoute` keinen landfreien Kurs.
+   * Vorher stand dafür nur ein `console.warn`, und die Bewertung rechnete auf
+   * der LUFTLINIE weiter: 14,2 sm quer über Land, daraus Fahrtzeit,
+   * Kreuzschläge und eine rote Ampel. Zahlen zu einem Kurs, den kein Boot
+   * fahren kann.
+   */
+  const iosSantorin = leg({
+    id: 'ios--santorin',
+    fromIslandId: 'ios',
+    toIslandId: 'santorin',
+    fromPlaceId: 'ios-ormos',
+    toPlaceId: 'santorin-vlychada',
+    distanceNm: 21,
+  });
+
+  it('markiert die Etappe, wenn zwischen den Ankerplätzen kein Weg ums Land führt', () => {
+    const sailed = sailedLeg(iosSantorin, places, {
+      fromPlaceId: 'ios-manganari',
+      toPlaceId: 'santorin-akrotiri',
+    });
+    expect(sailed.kursUnaufloesbar).toBe(true);
+    // Die Luftlinie steht weiterhin da — sie ist alles, was es gibt. Aber sie
+    // ist jetzt als solche gekennzeichnet, und scoring.assessLeg rechnet nicht
+    // mehr auf ihr.
+    expect(sailed.waypoints).toHaveLength(0);
+  });
+
+  it('setzt die Marke NICHT, wo ein Weg existiert — auch wenn er lang wird', () => {
+    /**
+     * Die Gegenprobe, und zugleich die Korrektur einer voreiligen Diagnose:
+     * Manganari → Paros IST auflösbar. Der Kurs geht um Ios herum und wird
+     * dabei von 32 auf rund 36 sm länger — das ist echte Geometrie, keine
+     * erfundene. Diese Etappe darf ihre Zahlen behalten; teuer ist sie
+     * trotzdem, und zwar wegen der Platzwahl.
+     */
+    const sailed = sailedLeg(IOS_PAROS, places, { fromPlaceId: 'ios-manganari' });
+    expect(sailed.kursUnaufloesbar).toBeUndefined();
+    expect(sailed.waypoints.length).toBeGreaterThan(0);
+    expect(sailed.distanceNm).toBeGreaterThan(iosParosKuratiertNm);
+  });
+
+  it('lässt die kuratierte Etappe unberührt', () => {
+    expect(sailedLeg(IOS_PAROS, places).kursUnaufloesbar).toBeUndefined();
   });
 });
 
