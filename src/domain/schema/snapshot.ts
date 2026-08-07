@@ -693,6 +693,25 @@ export interface AbfahrtsEmpfehlung {
   hinweis: string | null;
 }
 
+/**
+ * EIN ZWISCHENSTOPP eines Törntags — die Insel, an der der Tag unterwegs
+ * anhält, und der Hafen, an dem das dort passiert.
+ *
+ * Bewusst OHNE Ampel: ein Zwischenstopp ist kein Liegeplatz. Dort wird gebadet,
+ * gegessen und weitergefahren — sicher liegen muss das Boot dort nicht (Skipper
+ * 2026-08-07), und ein Ampel-Feld an dieser Stelle wäre genau die Verwechslung,
+ * die die Nacht-Kriterien (Schutzsektoren, Kuratierungs-Vorbehalt) auf einen
+ * Mittagsstopp anwendet. Was den TAG betrifft, sagt `StageAssessment.ampel`:
+ * der Umweg steckt in seinen Stunden und in seinem Wind.
+ */
+export interface Zwischenstopp {
+  islandId: string;
+  /** Hafen des Stopps; null nur, wenn die Etappe nicht auflösbar ist. */
+  placeId: string | null;
+  /** True = der kuratierte Hafen der Etappe, keine Skipper-Wahl. */
+  placeIsCurated: boolean;
+}
+
 /** One assessed day of a plan — what the day card and the map render. */
 export interface StageAssessment {
   day: number;
@@ -739,6 +758,23 @@ export interface StageAssessment {
    * würde die Übernahme immer ablehnen (Bug-Report 2026-08-05).
    */
   reachableIslandIds: string[];
+  /**
+   * DIE ZWISCHENSTOPPS dieses Tages, in Etappen-Reihenfolge — einer je Etappe
+   * ausser der letzten. Leer an Tagen, die in einem Schlag durchfahren.
+   *
+   * Gelesen aus der GESEGELTEN Kette, damit hier der Hafen steht, den die
+   * Rechnung und die Karte auch benutzen (AD-3): der vom Skipper gewählte
+   * (`Stage.viaPlaceIds`), sonst der kuratierte der Etappe.
+   */
+  zwischenstopps: Zwischenstopp[];
+  /**
+   * Inseln, die als ZWISCHENSTOPP dieses Tages in Frage kommen
+   * (domain/reach.ts `stopoverIslands`): von der Ausgangsinsel des Tages
+   * erreichbar UND von dort weiter zum Tagesziel, beides mit Etappen der
+   * Bibliothek. Nach Umweg sortiert, der naheliegendste zuerst. Leer an
+   * Hafentagen und wenn die Bibliothek keinen Umweg kennt.
+   */
+  stopoverIslandIds: string[];
   /**
    * Die WIRKSAME Abfahrtsstunde dieses Tages (Athen), gegen die der Tag
    * gerechnet wurde — Skipper-Wahl, sonst die Empfehlung, sonst der Standard
