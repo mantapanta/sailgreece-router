@@ -444,14 +444,15 @@ describe('preferred — Kreuzen wird vermieden, aber nichts wird ihm geopfert', 
     distinctIslands: 3,
     clockwise: true,
     turnDay: 2,
-    harbourDays: 1,
+    legDays: 4,
+    repeatStays: 0,
     stages: 4,
     bandDevTenths: 0,
-    harbourDev: 0,
+    kreuzTenthsRueckweg: 0,
     kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
-    maxHarbourRun: 1,
+    umlaufsinnPasst: null,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),
@@ -475,17 +476,27 @@ describe('preferred — Kreuzen wird vermieden, aber nichts wird ihm geopfert', 
     expect(preferred(kreuzend, anliegend, metrics)).toBe(anliegend);
   });
 
-  it('die Reichweite bleibt darüber — weiter kommen schlägt bequemer segeln', () => {
-    const weit = mkResult('weit');
-    const nah = mkResult('nah');
+  it('der RÜCKWEG entscheidet vor dem Gesamtwert — dort kostet Kreuzen wirklich', () => {
+    /**
+     * ZIELMODELL V3 (Skipper 2026-08-07): "ein angenehmer Rückweg, ohne
+     * Kreuzen oder mit möglichst wenig Kreuzen, ist ein entscheidendes
+     * Kriterium". Hinaus fährt man mit dem Meltemi im Rücken, heim gegen ihn
+     * an — die Summe über den ganzen Törn konnte diesen Unterschied nie sehen.
+     *
+     * Bis dahin stand an dieser Stelle "die Reichweite bleibt darüber". Sie
+     * steht jetzt auf Rang 13 und ist die Frage des Optionsraums, nicht die
+     * der Hauptroute.
+     */
+    const angenehm = mkResult('angenehm');
+    const gegenan = mkResult('gegenan');
     const metrics = withMetrics({
-      weit: { reachNm: 60, kreuzTenths: 60 },
-      nah: { reachNm: 40, kreuzTenths: 0 },
+      angenehm: { kreuzTenthsRueckweg: 0, kreuzTenths: 60 },
+      gegenan: { kreuzTenthsRueckweg: 40, kreuzTenths: 40 },
     });
-    expect(preferred(nah, weit, metrics)).toBe(weit);
+    expect(preferred(gegenan, angenehm, metrics)).toBe(angenehm);
   });
 
-  it('und die Inselvielfalt auch — Kreuzen ist ein Preis, kein Ausschluss', () => {
+  it('die Inselvielfalt bleibt darüber — Kreuzen ist ein Preis, kein Ausschluss', () => {
     const viele = mkResult('viele');
     const wenige = mkResult('wenige');
     const metrics = withMetrics({

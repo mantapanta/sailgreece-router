@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-  assessRouteOption,
+  assessTargetOption,
   deriveDayOptions,
   deriveDecisionPoints,
   restPlanFeasible,
 } from '../options.ts';
 import { predictedPointOfReturn } from '../ppr.ts';
+import { stagesOf } from '../schema/plan.ts';
 
 import {
   constantForecast,
@@ -173,21 +174,19 @@ function twoIslandSnapshot(opts: {
 describe('options — FR18 open / closes / closed', () => {
   it('gentle broad-reach wind, full forecast axis: option closes on the last startable day (FR18)', () => {
     // Axis covers the whole trip, so the calendar limit is computable.
-    // Zielmodell v2: die Frist einer Option misst am ECHTEN Stichtag (Tag 12,
-    // wie die Plan-Gültigkeit), nicht mehr am Puffertag — der letzte Tag zum
-    // Auslaufen mit Rückkehr bis Tag 12 ist also Tag 11.
+    // Zielmodell v3: der Törnrahmen sind elf Tage, und der Vertrag heisst
+    // "ein Törntag, eine Etappe". Der Plan zu diesem Ziel hat zwei Etappen
+    // (hin und zurück), der letzte Tag zum Auslaufen ist also Tag 10.
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    const route = snapshot.library.variants[0]!;
-    const result = assessRouteOption(route, 'athen', snapshot);
+    const result = assessTargetOption('zielinsel', 'athen', snapshot);
     expect(result.state).toBe('schliesst');
-    expect(result.closesOnDay).toBe(11);
+    expect(result.closesOnDay).toBe(10);
   });
 
   it('feasible now, closing-day scan hits the horizon: offen-horizont with visible caveat', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
     truncateForecast(snapshot, 4 * 24); // horizon: 4 days only
-    const route = snapshot.library.variants[0]!;
-    const result = assessRouteOption(route, 'athen', snapshot);
+    const result = assessTargetOption('zielinsel', 'athen', snapshot);
     // Today's rest plan is fully computable within the horizon, but the
     // closing day may lie just beyond it — that is NOT an unqualified
     // 'offen' (I/O-Matrix: horizon cases need a visible caveat).
@@ -199,8 +198,7 @@ describe('options — FR18 open / closes / closed', () => {
   it("today's rest plan itself crosses the horizon: offen-horizont (first-class state)", () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
     truncateForecast(snapshot, 30); // horizon: 30 h only
-    const route = snapshot.library.variants[0]!;
-    const result = assessRouteOption(route, 'athen', snapshot);
+    const result = assessTargetOption('zielinsel', 'athen', snapshot);
     // Outbound today fits the axis, the return leg does not: the whole rest
     // plan is only assessable up to the horizon.
     expect(result.state).toBe('offen-horizont');
@@ -210,15 +208,13 @@ describe('options — FR18 open / closes / closed', () => {
   it('permanent 28 kn northerly makes the northbound return impossible: option zu', () => {
     // Outbound south is fine, but the return leg north beats against 28 kn.
     const snapshot = twoIslandSnapshot({ windKn: 28, windFromDeg: 0 });
-    const route = snapshot.library.variants[0]!;
-    const result = assessRouteOption(route, 'athen', snapshot);
+    const result = assessTargetOption('zielinsel', 'athen', snapshot);
     expect(result.state).toBe('zu');
   });
 
   it('no position => zu with reason', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
-    const route = snapshot.library.variants[0]!;
-    const result = assessRouteOption(route, null, snapshot);
+    const result = assessTargetOption('zielinsel', null, snapshot);
     expect(result.state).toBe('zu');
     expect(result.reasons.join(' ')).toContain('Position');
   });
@@ -336,10 +332,11 @@ describe('ppr — FR19 predicted point of return', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90, currentDay: 3 });
     const ppr = predictedPointOfReturn(snapshot, 'zielinsel');
     // Deadline semantics per review finding H3 (2026-08-02): arrival is due ON
-    // the return deadline date (2026-08-19 = trip day 12), and the PoR
-    // additionally keeps the buffer/harbour day in reserve => day 11.
-    expect(ppr.effectiveDeadlineDay).toBe(11);
-    expect(ppr.latestReturnStartDay).toBe(11);
+    // the return deadline date. Elf-Tage-Rahmen (Zielmodell v3, 2026-08-07):
+    // Stichtag ist Törntag 11, und der PoR hält zusätzlich den Puffertag in
+    // Reserve => Tag 10.
+    expect(ppr.effectiveDeadlineDay).toBe(10);
+    expect(ppr.latestReturnStartDay).toBe(10);
     expect(ppr.remainingDistanceNm).toBe(20);
   });
 
@@ -355,24 +352,41 @@ describe('ppr — FR19 predicted point of return', () => {
  * Entscheidungsgrundlage. Diese Fälle halten fest, was jede Option mitbringen
  * muss, damit der Skipper sie überhaupt abwägen kann.
  */
-describe('Optionsraum — Reichweite, Preis, Frist', () => {
-  it('nennt den Wendepunkt als FERNSTE Insel, nicht als letzte', () => {
-    // Ein Rundkurs endet wieder an der Basis. Seine letzte Insel als Wende zu
-    // lesen ergäbe Reichweite 0 — "diese Route führt nirgendwohin".
-    const { snapshot, rundkurs } = rundkursScenario();
-    const opt = assessRouteOption(rundkurs, 'athen', snapshot);
+describe('Optionsraum — Ziel, Reichweite, Preis, Frist', () => {
+  it('das Ziel IST die Insel — Reichweite ist die Distanz dorthin', () => {
+    // ZIELMODELL V3: eine Option ist keine Variante mehr, sondern eine
+    // Ziel-Insel. Damit kann der Wendepunkt nicht mehr von der angebotenen
+    // Kette abweichen — er IST die Frage.
+    const { snapshot } = rundkursScenario();
+    const opt = assessTargetOption('fern', 'athen', snapshot);
     expect(opt.turnIslandId).toBe('fern');
     expect(opt.reachNm).toBeGreaterThan(0);
   });
 
-  it('trägt den Namen der Route, nicht ihre Id', () => {
-    const { snapshot, rundkurs } = rundkursScenario();
-    expect(assessRouteOption(rundkurs, 'athen', snapshot).name).toBe(rundkurs.name);
+  it('trägt den Namen der ZIEL-INSEL, nicht eine Routen-Id', () => {
+    const { snapshot } = rundkursScenario();
+    expect(assessTargetOption('fern', 'athen', snapshot).name).toBe('Fern');
+  });
+
+  it('ein Plan zu einem Ziel läuft dieses Ziel wirklich an', () => {
+    /**
+     * DIE INVARIANTE gegen den beanstandeten Fehler ("die Verlängerung nach
+     * Santorin führt nicht nach Santorin"): entweder der Plan enthält das
+     * Ziel, oder es gibt keinen Plan. Ein Etikett auf einer fremden Kette ist
+     * keine dritte Möglichkeit mehr.
+     */
+    const { snapshot } = rundkursScenario();
+    for (const ziel of ['fern', 'mitte']) {
+      const opt = assessTargetOption(ziel, 'athen', snapshot);
+      if (!opt.plan) continue;
+      const ziele = stagesOf(opt.plan).map((s) => s.toIslandId);
+      expect(ziele).toContain(ziel);
+    }
   });
 
   it('eine offene Option bringt Preis UND Plan mit', () => {
-    const { snapshot, hinweg } = rundkursScenario();
-    const opt = assessRouteOption(hinweg, 'athen', snapshot);
+    const { snapshot } = rundkursScenario();
+    const opt = assessTargetOption('mitte', 'athen', snapshot);
     expect(opt.state).not.toBe('zu');
     expect(opt.costLevel).not.toBeNull();
     expect(opt.costNote).toBeTruthy();
@@ -382,8 +396,8 @@ describe('Optionsraum — Reichweite, Preis, Frist', () => {
   });
 
   it('ohne Position gibt es keine Option und keinen erfundenen Preis', () => {
-    const { snapshot, hinweg } = rundkursScenario();
-    const opt = assessRouteOption(hinweg, null, snapshot);
+    const { snapshot } = rundkursScenario();
+    const opt = assessTargetOption('fern', null, snapshot);
     expect(opt.state).toBe('zu');
     expect(opt.costLevel).toBeNull();
     expect(opt.plan).toBeNull();
@@ -409,34 +423,33 @@ describe('Entscheidungspunkte — Vorwarnung statt Nachruf', () => {
     latestReturnStartDay: null, remainingDistanceNm: null,
     effectiveDeadlineDay: 11, reasons: [],
   };
-  const routes = [{ id: 'sued', name: 'Süd-Route' }];
 
   it('warnt innerhalb der Vorwarnzeit mit der Zahl der verbleibenden Tage', () => {
-    const points = deriveDecisionPoints([option({})], ppr, routes, 4, 4);
+    const points = deriveDecisionPoints([option({})], ppr, 4, 4);
     expect(points[0]!.text).toContain('Noch 3 Tage');
     expect(points[0]!.text).toContain('Süd-Route');
   });
 
   it('am letzten Tag heisst es HEUTE, nicht "noch 0 Tage"', () => {
-    const points = deriveDecisionPoints([option({})], ppr, routes, 7, 4);
+    const points = deriveDecisionPoints([option({})], ppr, 7, 4);
     expect(points[0]!.text).toContain('HEUTE entscheiden');
   });
 
   it('ausserhalb der Vorwarnzeit bleibt es der schlichte Termin', () => {
-    const points = deriveDecisionPoints([option({})], ppr, routes, 1, 4);
+    const points = deriveDecisionPoints([option({})], ppr, 1, 4);
     expect(points[0]!.text).toContain('Bis Tag 7 entscheiden');
     expect(points[0]!.text).not.toContain('Noch');
   });
 
   it('die Warnung nennt den Preis mit — wer jetzt zieht, soll wissen wofür', () => {
     const points = deriveDecisionPoints(
-      [option({ costNote: 'nur mit zwei Nachtetappen' })], ppr, routes, 5, 4,
+      [option({ costNote: 'nur mit zwei Nachtetappen' })], ppr, 5, 4,
     );
     expect(points[0]!.text).toContain('nur mit zwei Nachtetappen');
   });
 
   it('ohne Vorwarnzeit-Angabe verhält sich alles wie bisher', () => {
-    const points = deriveDecisionPoints([option({})], ppr, routes);
+    const points = deriveDecisionPoints([option({})], ppr);
     expect(points[0]!.text).toContain('Bis Tag 7 entscheiden');
   });
 });

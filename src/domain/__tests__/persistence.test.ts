@@ -124,7 +124,9 @@ describe('persistence assumption', () => {
     expect(snapshot.times).toHaveLength(4 * 24);
 
     const { snapshot: ext, info } = applyPersistenceAssumption(snapshot);
-    expect(ext.times.length).toBeGreaterThan(12 * 24);
+    // Elf-Tage-Rahmen (Zielmodell v3): die Achse wird bis zum Stichtag
+    // verlängert, nicht bis zu einer festen Zahl.
+    expect(ext.times.length).toBeGreaterThan(10 * 24);
     expect(info.appendedHours).toBeGreaterThan(0);
     expect(info.horizonIso).toBe(snapshot.times[snapshot.times.length - 1]);
     expect(info.profileDays).toBe(4);

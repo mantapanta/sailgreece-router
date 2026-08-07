@@ -1,23 +1,58 @@
 /**
- * AD-13 — the round-trip solver.
+ * AD-13 / ZIELMODELL V3 — der Round-Trip-Solver.
  *
- * Pure and deterministic (stable tie-breaks). It extends the existing packing
- * DP (ppr.ts) from a boolean feasibility check to a plan builder, and it
- * searches the curated leg library along the route variants (FR9) — never a
- * free-form graph, and never a variant replayed verbatim.
+ * Rein und deterministisch (stabile Tiebreaks). Er erweitert die Packungs-DP
+ * (ppr.ts) von einer Machbarkeits-Prüfung zum Plan-Bauer und sucht über den
+ * Graphen der KURATIERTEN Etappen — nie über freie Geometrie.
  *
- * A candidate round trip is built as OUTBOUND (along a variant, up to a
- * turning point) + RETURN (over the fallback chain). That is exactly the
- * domain question "how far south can we get?": the turning point is the
- * decision, the way home is the chain.
+ * WAS DIE APP LIEFERN SOLL (Skipper 2026-08-07): einen vollständigen Rundkurs.
+ * Elf Törntage, elf Etappen, jede Insel höchstens einmal, möglichst viele
+ * Inseln, und ein Rückweg, der so wenig wie möglich am Wind liegt.
  *
- * Validity is two-tiered and normative (see `validatePlan`):
- *   (1) every stage holds the FR16 thresholds. Stages beyond the reliable
- *       horizon are computed on the persistence assumption: they DO count,
- *       but their violations are flagged `assumed` and thus never safety-
- *       relevant — they block green without being able to force red (FR18)
- *   (2) arrival at the base by the ONE deadline constant
- *  (2') the return is sailable under the Meltemi worst case (shared with PoR)
+ * WAS SIE STATTDESSEN LIEFERTE, und warum. Drei Fehler, die zusammen die
+ * Kernfunktion aushebelten:
+ *
+ *   1. DER KANDIDATENRAUM. Neben der Graph-Suche lief ein zweiter Generator:
+ *      "kuratierte Variante bis zum Wendepunkt + Rückfallkette heim". Die
+ *      Rückfallkette IST die Umkehrung der Varianten — jeder so erzeugte
+ *      Kandidat war zwangsläufig dieselbe Strecke hin und zurück. Er lief
+ *      zuerst und gewann im Dedup, verdrängte also die echten Runden.
+ *      → entfallen (`candidateLayers`).
+ *
+ *   2. DIE ZIELGRÖSSE. `preferred` fragte auf Rang 3 nach der Süd-Reichweite
+ *      und auf Rang 14 von 14 nach der Etappenzahl. "Weit runter und dann
+ *      liegen bleiben" schlug damit jeden Törn, der den Rahmen wirklich segelt
+ *      — neun Etappen in elf Tagen waren die Folge, nicht der Ausrutscher.
+ *      → neue Rangfolge (siehe `preferred`).
+ *
+ *   3. DER WENDEPUNKT WURDE NIE AM PLAN GEPRÜFT. `SolveResult.turnIslandId`
+ *      übernahm ungeprüft das Etikett des Kandidaten, und `completePlan`
+ *      prüfte `packed.length`, nie das Packungs-VERDIKT. Ein auf halbem Weg
+ *      abgebrochener Plan wurde damit akzeptiert, behauptete eine Wende, die
+ *      er nie erreicht, und wurde unter dem Namen dieses Ziels angeboten.
+ *      → `planTurn` am Plan, `packing.verdict` als Tor.
+ *
+ * DER SUCHRAUM ist klein und exakt aufzählbar: über die 39 kuratierten Etappen
+ * gibt es SECHS wiederholungsfreie Runden, die den Elf-Tage-Rahmen füllen. Es
+ * braucht deshalb keine Notbremse, sondern einen engeren Filter — und der ist
+ * in Vorzugs-SCHICHTEN organisiert (roundTrips.ts): erst wiederholungsfreie
+ * volle Runden, dann solche mit einer Stichfahrt, dann kürzere. Trägt eine
+ * Schicht, werden die nachrangigen nicht mehr aufgezählt. Das ist die
+ * strukturelle Fassung von "keine Insel doppelt" — stärker als jede
+ * Gewichtung.
+ *
+ * GÜLTIGKEIT ist zweistufig und normativ (siehe `validatePlan`):
+ *   (1) jede Etappe hält die FR16-Schwellen. Etappen jenseits des
+ *       verlässlichen Horizonts werden unter der Persistenz-Annahme gerechnet:
+ *       sie zählen, aber ihre Verletzungen sind `assumed` und damit nie
+ *       sicherheitsrelevant — sie blockieren Grün, ohne Rot erzwingen zu
+ *       können (FR18)
+ *   (2) Ankunft an der Basis bis zur EINEN Deadline
+ *  (2') der Notausstieg bleibt segelbar — über die Rückfallkette ODER über die
+ *       eigene Fortsetzung des Plans
+ *
+ * Hafentage sind seit 2026-08-07 KEIN Kriterium mehr, weder in der Gültigkeit
+ * noch als Parameter. Der Rahmen-Vertrag steht direkt in der Rangfolge.
  *
  * Eine dritte Stufe gab es bis 2026-08-06: der Gästewechsel (FR31) verlangte,
  * dass der Zustiegstag auf einer fährverbundenen Insel endet. Sie ist auf
@@ -25,12 +60,12 @@
  * Information erhalten (`island.guestPickup`), aber keine Bewertung liest sie
  * mehr, und kein Plan wird mehr daran gemessen.
  *
- * Relaxation is an OUTER loop over the same DP with loosened params, never a
- * special path inside it — which is what structurally guarantees that the
- * 65°/25 kn threshold can never be relaxed away.
+ * Die Eskalation ist eine ÄUSSERE Schleife über dieselbe DP mit gelockerten
+ * Params, nie ein Sonderweg darin — das ist die strukturelle Garantie, dass
+ * die 65°/25-kn-Schwelle nie weggelockert werden kann.
  */
 
-import type { Leg, Variant } from './schema/route.ts';
+import type { Leg } from './schema/route.ts';
 import type { Params } from './schema/params.ts';
 import type { PlanningSnapshot } from './schema/snapshot.ts';
 import type {
@@ -65,11 +100,16 @@ import {
   type Feasibility,
   type PackedLeg,
 } from './ppr.ts';
-import { legIndexWithReverses, legsOfVariant } from './legs.ts';
-import { konzeptLageFor, konzeptOfPlan, rueckwegAbweichung } from './konzept.ts';
+import { legIndexWithReverses } from './legs.ts';
+import {
+  konzeptLageFor,
+  konzeptOfPlan,
+  rueckwegAbweichung,
+  umlaufsinnGebot,
+} from './konzept.ts';
 import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
-import { enumerateRoundTrips } from './roundTrips.ts';
+import { roundTripLayers, type RoundTripLayer } from './roundTrips.ts';
 import { deadlineFrame } from './time.ts';
 import { distanceNm, isClockwise } from './geo.ts';
 import type { Coordinates } from './schema/common.ts';
@@ -183,47 +223,32 @@ export function legLibrary(snapshot: PlanningSnapshot): Map<string, Leg> {
   return legIndexWithReverses(snapshot.library);
 }
 
-/** Outbound variants (everything that is not the fallback chain), conservative first. */
-function outboundVariants(snapshot: PlanningSnapshot): Variant[] {
-  return [...snapshot.library.variants]
-    .filter((v) => !v.isReturnChain)
-    .sort((a, b) => a.escalationRank - b.escalationRank || a.id.localeCompare(b.id));
-}
-
 export interface Candidate {
-  /** Variant the outbound part came from (for alternative diversity). */
+  /** Herkunft dieses Kandidaten, für Dedup und Determinismus-Tiebreak. */
   variantId: string;
-  escalationRank: number;
-  /** Island where the trip turns around — the "how far south" decision. */
+  /** Aus welcher Schicht von `roundTripLayers` er stammt. */
+  layer: RoundTripLayer | 'rueckfall';
+  /**
+   * Insel, an der die Kette am weitesten südlich steht — nur ein FILTER-Griff
+   * für den Optionsraum ("nur Kandidaten, die Santorin berühren"). Was der
+   * fertige Plan wirklich erreicht, sagt `planTurn` am Plan selbst; genau
+   * diese Verwechslung hat vorher Pläne unter falschem Ziel ausgeliefert.
+   */
   turnIslandId: string;
   legs: Leg[];
 }
 
 /**
- * Candidate round trips from `startIslandId`: for every variant that touches
- * our position, every turning point along it, plus the way home over the
- * chain. Deduplicated by leg chain, deterministic order.
- */
-/**
- * Der Wendepunkt eines Kandidaten ist seine FERNSTE Insel — nicht die letzte.
- *
- * Ein kuratierter Rundkurs endet wieder an der Basis. Seine letzte Insel als
- * Wendepunkt zu lesen ergab Reichweite 0, und weil die Reichweite in
- * `preferred` gleich nach der Gültigkeit kommt, verlor die ganze Runde gegen
- * jedes Hin-und-zurück. Genau deshalb kam nie eine Runde heraus, sondern immer
- * dieselbe Strecke vor und zurück — obwohl die Bibliothek zwei fertige
- * Rundkurse enthält, die jede Insel genau einmal anlaufen.
+ * Der Wendepunkt eines Kandidaten ist seine SÜDLICHSTE Insel — nicht die
+ * letzte. Ein Rundkurs endet wieder an der Basis; seine letzte Insel als
+ * Wendepunkt zu lesen ergäbe Reichweite 0.
  */
 function makeCandidate(
   variantId: string,
-  escalationRank: number,
+  layer: Candidate['layer'],
   legs: Leg[],
   snapshot: PlanningSnapshot,
 ): Candidate {
-  // Der Wendepunkt ist die SÜDLICHSTE Insel der Kette (reachNmFor) — dieselbe
-  // Kennzahl, nach der preferred die Törnfrage entscheidet. Bei Gleichstand
-  // (etwa alles nördlich der Basis) entscheidet die Distanz, damit "gar nicht
-  // erst losfahren" nicht als Wende gilt.
   const reachOf = reachNmFor(snapshot);
   const base = snapshot.library.islands.find(
     (i) => i.id === snapshot.params.baseIslandId,
@@ -244,76 +269,100 @@ function makeCandidate(
           seq[0]!,
         )
       : snapshot.params.baseIslandId;
-  return {
-    variantId,
-    escalationRank,
-    turnIslandId,
-    legs,
-  };
+  return { variantId, layer, turnIslandId, legs };
 }
 
+/**
+ * Der Kandidatenraum, in VORZUGS-SCHICHTEN (Zielmodell v3).
+ *
+ * WAS HIER VORHER SCHIEFLIEF. Es gab zwei Generatoren nebeneinander. Der
+ * ältere baute "kuratierte Variante bis zum Wendepunkt + Rückfallkette heim" —
+ * und weil die Rückfallkette `rueckfallkette-west` exakt die UMKEHRUNG der
+ * Varianten ist, war jeder so erzeugte Kandidat zwangsläufig dieselbe Kette
+ * hin und zurück. Der Skipper bekam "Paros–Naxos" als gerade Linie hin und
+ * zurück angeboten, mit fünf Inseln doppelt. Schlimmer noch: dieser Generator
+ * lief ZUERST und gewann im Dedup (first-writer-wins), er verdrängte also die
+ * echten Runden aus dem Angebot.
+ *
+ * Er ist ersatzlos entfallen. Die kuratierten Varianten bleiben, was sie immer
+ * sein sollten: Seed-Daten für den Etappen-GRAPHEN (jede ihrer Verbindungen
+ * steht in legs.json und wird von roundTrips.ts befahren) — aber sie sind
+ * keine Angebots-Einheit mehr und erzeugen keine Kandidaten.
+ *
+ * Die Schichten werden LAZY geliefert: `completePlan` bricht ab, sobald eine
+ * Schicht einen fest-gültigen Plan getragen hat. Damit kann eine Runde mit
+ * Wiederholung nur gewinnen, wenn es gar keine wiederholungsfreie gibt — die
+ * strukturelle Fassung von "keine Insel doppelt, weich aber schwer gewichtet".
+ */
+export function* candidateLayers(
+  snapshot: PlanningSnapshot,
+  startIslandId: string,
+): Generator<Candidate[]> {
+  const frame = deadlineFrame(snapshot.params);
+  // Ein Törntag, eine Verbindung: so viele Etappen wie Tage übrig sind.
+  const daysAvailable = frame.deadlineDay - snapshot.trip.currentDay + 1;
+
+  const seen = new Set<string>();
+  const fresh = (cs: Candidate[]): Candidate[] => {
+    const out: Candidate[] = [];
+    for (const c of cs) {
+      const key = c.legs.length > 0 ? c.legs.map((l) => l.id).join('>') : '(bleiben)';
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(c);
+    }
+    return out;
+  };
+
+  for (const layer of roundTripLayers(snapshot, startIslandId, daysAvailable)) {
+    const candidates = layer.trips.map((legs) => {
+      const c = makeCandidate('runde', layer.layer, legs, snapshot);
+      return { ...c, variantId: `runde-${c.turnIslandId}-${legs.length}` };
+    });
+
+    if (layer.layer !== 'verkuerzt') {
+      yield fresh(candidates);
+      continue;
+    }
+
+    /**
+     * Die letzte Schicht trägt zusätzlich die beiden FR18-Notantworten: heute
+     * umkehren, und gar nicht erst losfahren. Beide gehören ans ENDE — sie
+     * sind die am wenigsten verletzende Antwort im Meltemi, aber nie das Ziel.
+     */
+    const rueckfall: Candidate[] = [];
+    const directReturn = remainingReturnLegs(startIslandId, snapshot);
+    if (directReturn) {
+      rueckfall.push({
+        variantId: 'direkt-rueckkehr',
+        layer: 'rueckfall',
+        turnIslandId: startIslandId,
+        legs: directReturn,
+      });
+    }
+    // Eine LEERE Kette ist ein legitimer Kandidat: "an der Basis bleiben".
+    // Wenn der Meltemi alles blockiert, ist das die Antwort, die die App
+    // immer noch geben können muss (FR18).
+    rueckfall.push({
+      variantId: 'bleiben',
+      layer: 'rueckfall',
+      turnIslandId: snapshot.params.baseIslandId,
+      legs: [],
+    });
+    yield fresh([...candidates, ...rueckfall]);
+  }
+}
+
+/**
+ * Der flache Kandidatenraum über alle Schichten — für Tests und Diagnose.
+ * Der Solver nimmt `candidateLayers`, weil er die Vorzugsreihenfolge braucht.
+ */
 export function buildCandidates(
   snapshot: PlanningSnapshot,
   startIslandId: string,
 ): Candidate[] {
   const out: Candidate[] = [];
-  const seen = new Set<string>();
-
-  const push = (c: Candidate) => {
-    // An EMPTY leg chain is a legitimate candidate: "stay at the base". When
-    // the Meltemi blocks everything, that is the least-violating answer the
-    // app must still be able to give (FR18) — so it needs its own key rather
-    // than being dropped as falsy.
-    const key = c.legs.length > 0 ? c.legs.map((l) => l.id).join('>') : '(bleiben)';
-    if (!seen.has(key)) {
-      seen.add(key);
-      out.push(c);
-    }
-  };
-
-  // Kuratierte Varianten ZUERST: eine Graph-Runde, die einer Variante gleicht,
-  // behält so deren Namen und Rang (first-writer-wins im Dedup).
-  for (const variant of outboundVariants(snapshot)) {
-    const vLegs = legsOfVariant(variant, snapshot.library);
-    const seq = routeIslandSequence(vLegs);
-    const startIdx = seq.indexOf(startIslandId);
-    if (startIdx < 0) continue;
-    for (let turnIdx = startIdx; turnIdx < seq.length; turnIdx++) {
-      const outbound = vLegs.slice(startIdx, turnIdx);
-      const ret = remainingReturnLegs(seq[turnIdx]!, snapshot);
-      if (!ret) continue;
-      push(makeCandidate(variant.id, variant.escalationRank, [...outbound, ...ret], snapshot));
-    }
-  }
-
-  /**
-   * Zielmodell v2 — Rundkurse über den Etappen-Graphen (roundTrips.ts).
-   *
-   * Das ist der Suchraum, in dem echte Runden mit Inselvielfalt überhaupt
-   * existieren: der alte Raum (Variante hin, Rückfallkette heim) bestand fast
-   * nur aus Pendel-Formen, weil die Kette die Umkehrung der Varianten ist.
-   * Begrenzt auf die verfügbaren Törntage — eine Runde mit mehr Etappen als
-   * Tagen kann kein Packing tragen.
-   */
-  const frame = deadlineFrame(snapshot.params);
-  const daysAvailable = frame.deadlineDay - snapshot.trip.currentDay + 1;
-  for (const legs of enumerateRoundTrips(snapshot, startIslandId, daysAvailable)) {
-    const c = makeCandidate('runde', 100, legs, snapshot);
-    push({ ...c, variantId: `runde-${c.turnIslandId}` });
-  }
-
-  // Turning around right here is always a candidate, even when no variant
-  // covers our position — it is the most conservative plan there is.
-  const directReturn = remainingReturnLegs(startIslandId, snapshot);
-  if (directReturn) {
-    push({
-      variantId: 'direkt-rueckkehr',
-      escalationRank: -1,
-      turnIslandId: startIslandId,
-      legs: directReturn,
-    });
-  }
-
+  for (const layer of candidateLayers(snapshot, startIslandId)) out.push(...layer);
   return out;
 }
 
@@ -467,48 +516,19 @@ export function validatePlan(
     }
   }
 
-  // (1b) Harbour days: `harbourDays` is the TARGET (normally the single buffer
-  // day), and waiting out weather is legitimate — so exceeding the target is
-  // no finding at all up to `harbourDaysMax` (skipper: "at a pinch up to 5").
-  // Beyond that ceiling the plan is no longer the intended trip and says so,
-  // but as a STRUCTURAL finding: lying in port is safe, so it must not turn the
-  // rest-trip light red. What keeps the solver from proposing an idle trip is
-  // the score (more stages rank higher) plus the FR2 existence predicate,
-  // which demands a witness that actually sails.
-  const harbourCount = plan.days.filter((d) => d.kind === 'harbour').length;
-  if (harbourCount > params.harbourDaysMax) {
-    violations.push({
-      kind: 'incomplete',
-      day: null,
-      text: `${harbourCount} Hafentage im Plan — mehr als die Notgrenze von ${params.harbourDaysMax} (Ziel: ${params.harbourDays})`,
-    });
-  }
-
-  // (1b') Die LAGE der Hafentage, nicht nur ihre Zahl: ein Plan, der früh
-  // heimkommt und die letzten Tage an der Basis liegt, nutzt den Rahmen nicht —
-  // genau 5 Trailing-Hafentage waren vorher exakt KEIN Befund (nicht > Notgrenze),
-  // und die Rangfolge belohnte das noch (schema/plan.ts, firmViolations).
-  // Erlaubt bleibt das Zielband harbourDaysTargetMax (Puffer-/Ruhetag am Ende
-  // ist legitim, und der Packer schliesst früh ab, wenn die Etappen kurz sind).
-  // STRUKTURELL wie (1b), nie Safety: im Meltemi bleibt "früh heim" die am
-  // wenigsten verletzende Antwort (FR18) — sie verliert nur gegen jeden Plan,
-  // der den Rahmen wirklich segelt.
-  {
-    const ordered = [...plan.days].sort((a, b) => a.day - b.day);
-    let trailing = 0;
-    for (let i = ordered.length - 1; i >= 0; i--) {
-      const d = ordered[i]!;
-      if (d.kind === 'harbour' && d.islandId === params.baseIslandId) trailing++;
-      else break;
-    }
-    if (trailing > params.harbourDaysTargetMax) {
-      violations.push({
-        kind: 'incomplete',
-        day: null,
-        text: `Plan liegt die letzten ${trailing} Tage an der Basis — der Törnrahmen bis Tag ${frame.deadlineDay} wird nicht genutzt (Ziel: höchstens ${params.harbourDaysTargetMax} Hafentage am Ende)`,
-      });
-    }
-  }
+  // (1b)/(1b') HAFENTAGE — hier standen bis 2026-08-07 zwei Befunde: eine
+  // Notgrenze (`harbourDaysMax`, "höchstens 5") und ein Trailing-Befund
+  // ("liegt die letzten N Tage an der Basis"). Beide sind ersatzlos entfallen,
+  // samt der drei Parameter dahinter (Skipper: "harbourDaysMax kann raus, das
+  // brauchen wir nicht als Kriterium").
+  //
+  // Sie waren Ersatzkonstruktionen dafür, dass die RANGFOLGE die Etappenzahl
+  // nicht kannte — sie stand auf Platz 14 von 14. Ein Plan, der den Rahmen
+  // verschenkt, brauchte deshalb einen eigenen Strukturbefund, um überhaupt
+  // aufzufallen. Jetzt sagt `preferred` es direkt (Kriterium 2, `legDays`):
+  // jeder Törntag trägt eine Etappe, ein Tag ohne ist schlicht die schlechtere
+  // Runde. Als GÜLTIGKEITS-Frage war es ohnehin falsch — im Liegen wird
+  // niemand unsicher.
 
   // (1c) FR16 night-leg quota. The params existed but nothing enforced them:
   // at most `nightLegMaxPerTrip` night legs, none before `nightLegEarliestDay`
@@ -577,24 +597,9 @@ export function validatePlan(
   // explizit gewählte Plätze prüft sie direkt. Die Basis ist ausgenommen:
   // Start, Ziel und Puffertage liegen dort naturgemäß mehrfach.
   {
-    const ordered = [...plan.days].sort((a, b) => a.day - b.day);
-    interface Stay {
-      islandId: string;
-      placeIds: Set<string>;
-    }
-    const stays: Stay[] = [];
-    for (const entry of ordered) {
-      const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
-      const placeId = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
-      const last = stays[stays.length - 1];
-      if (last && last.islandId === islandId) {
-        if (placeId) last.placeIds.add(placeId);
-      } else {
-        stays.push({ islandId, placeIds: new Set(placeId ? [placeId] : []) });
-      }
-    }
+    type Stay = { islandId: string; placeIds: Set<string> };
     const staysByIsland = new Map<string, Stay[]>();
-    for (const stay of stays) {
+    for (const stay of inselAufenthalte(plan)) {
       if (stay.islandId === params.baseIslandId) continue;
       const list = staysByIsland.get(stay.islandId) ?? [];
       list.push(stay);
@@ -711,16 +716,46 @@ export function validatePlan(
   // Rundkurse, deren Notausstieg über die Rückfallkette naturgemäss weiter ist
   // als die Fortsetzung der Runde. Die Aussage "der Puffertag wäre aufgebraucht"
   // bleibt erhalten — sie ist jetzt ein Vorbehalt und kein Urteil.
+  /**
+   * DIE EIGENE FORTSETZUNG ZÄHLT ALS HEIMWEG (Korrektur 2026-08-07).
+   *
+   * Der harte Teil prüfte den Notausstieg AUSSCHLIESSLICH über die
+   * Rückfallkette — und die ist von manchen Inseln aus länger als der Heimweg,
+   * den der Plan ohnehin fährt. Von Serifos braucht die Kette drei Etappen
+   * (Kythnos, Kea, Basis), der Plan selbst zwei. Eine Runde, die den Rahmen
+   * ausfüllt, war dadurch ab dem drittletzten Tag ZWANGSLÄUFIG ungültig: sie
+   * verletzte eine Bedingung, die von ihr mehr Reserve verlangte, als sie
+   * selbst braucht.
+   *
+   * Genau das hat den Elf-Tage-Vertrag unerfüllbar gemacht — jede volle Runde
+   * trug einen Sicherheits-Befund, und die Rangfolge zog daraufhin folgerichtig
+   * kurze Törns vor. "Gefangen" heisst deshalb ab jetzt: WEDER die
+   * Rückfallkette NOCH die eigene Fortsetzung bringt das Schiff rechtzeitig
+   * heim. Der Worst-Case-Teil (unten) bleibt unverändert ein Vorbehalt.
+   */
+  const eigeneFortsetzungHeim = (afterDay: number): boolean => {
+    const spaeter = stagesOf(plan).filter((s) => s.day > afterDay);
+    const letzte = spaeter[spaeter.length - 1];
+    return (
+      letzte !== undefined &&
+      letzte.toIslandId === params.baseIslandId &&
+      letzte.day <= frame.deadlineDay
+    );
+  };
+
   for (const stage of stagesOf(plan)) {
     if (stage.day >= frame.deadlineDay) continue;
     if (stage.toIslandId === params.baseIslandId) continue;
-    const byForecast: Feasibility = returnFeasibleStarting(
-      stage.toIslandId,
-      stage.day + 1,
-      snapshot,
-      'forecast',
-      frame.deadlineDay,
-    );
+    const byForecast: Feasibility =
+      eigeneFortsetzungHeim(stage.day)
+        ? 'feasible'
+        : returnFeasibleStarting(
+            stage.toIslandId,
+            stage.day + 1,
+            snapshot,
+            'forecast',
+            frame.deadlineDay,
+          );
     if (byForecast === 'infeasible') {
       violations.push({
         kind: 'return',
@@ -821,6 +856,25 @@ export function reachNmFor(snapshot: PlanningSnapshot): (islandId: string) => nu
  * Erst-Anlauf-Konvention wie die Marker der Karte. Null ohne Segeltage.
  */
 export function planTurnDay(plan: Plan, snapshot: PlanningSnapshot): number | null {
+  return planTurn(plan, snapshot)?.day ?? null;
+}
+
+/**
+ * Der Wendepunkt eines Plans — Tag UND Insel, aus EINER Ableitung.
+ *
+ * ZIELMODELL V3: Diese Funktion ist ab jetzt die einzige Quelle für
+ * `SolveResult.turnIslandId`. Vorher übernahm der Solver das Etikett des
+ * KANDIDATEN (`Candidate.turnIslandId`) ungeprüft in das Ergebnis — und weil
+ * der Packer eine unvollständige Kette zurückgeben konnte, behauptete ein
+ * abgeschnittener Plan eine Wende, die er nie erreicht hat. In `preferred`
+ * bekam er dafür sogar die Reichweiten-Gutschrift, und der Optionsraum bot ihn
+ * unter dem Namen des Ziels an, das er nicht anläuft. Der Wendepunkt gehört
+ * dem Plan, nicht dem Vorhaben.
+ */
+export function planTurn(
+  plan: Plan,
+  snapshot: PlanningSnapshot,
+): { day: number; islandId: string } | null {
   const stages = stagesOf(plan);
   if (stages.length === 0) return null;
   const reach = reachNmFor(snapshot);
@@ -841,7 +895,34 @@ export function planTurnDay(plan: Plan, snapshot: PlanningSnapshot): number | nu
       turn = stage;
     }
   }
-  return turn.day;
+  return { day: turn.day, islandId: turn.toIslandId };
+}
+
+/**
+ * Aufenthalte eines Plans: aufeinanderfolgende Nächte auf DERSELBEN Insel sind
+ * EIN Aufenthalt (ein Hafentag nach der Ankunft wechselt den Platz nicht).
+ *
+ * Die EINE Zählung für zwei Fragen, die sonst auseinanderlaufen könnten: die
+ * Liegeplatz-Regel in `validatePlan` (1e) fragt "reichen die kuratierten
+ * Plätze für alle Aufenthalte?", die Rangfolge fragt "wie oft wiederholt sich
+ * eine Insel?". Beide müssen dieselben Aufenthalte sehen.
+ */
+export function inselAufenthalte(
+  plan: Plan,
+): { islandId: string; placeIds: Set<string> }[] {
+  const ordered = [...plan.days].sort((a, b) => a.day - b.day);
+  const stays: { islandId: string; placeIds: Set<string> }[] = [];
+  for (const entry of ordered) {
+    const islandId = entry.kind === 'stage' ? entry.toIslandId : entry.islandId;
+    const placeId = entry.kind === 'stage' ? entry.toPlaceId : entry.placeId;
+    const last = stays[stays.length - 1];
+    if (last && last.islandId === islandId) {
+      if (placeId) last.placeIds.add(placeId);
+    } else {
+      stays.push({ islandId, placeIds: new Set(placeId ? [placeId] : []) });
+    }
+  }
+  return stays;
 }
 
 /**
@@ -860,7 +941,30 @@ export interface PlanMetrics {
   /** Läuft die Runde im Uhrzeigersinn? */
   clockwise: boolean;
   turnDay: number;
-  harbourDays: number;
+  /**
+   * ZIELMODELL V3 — Tage, die eine Etappe tragen. DER Vertrag: ein Törntag,
+   * eine Verbindung (Skipper 2026-08-07, "elf Tage, elf Etappen").
+   *
+   * Bewusst Etappen-TAGE und nicht Etappen: würde man Etappen zählen, machte
+   * dieses Kriterium den Doppelschlag zum Gewinnerzug (zwei Verbindungen an
+   * einem Tag = mehr Etappen) und die Nachgabe zur Norm. Etappentage sind
+   * dagegen immun — ein Doppelschlag-Tag ist ein Tag.
+   *
+   * Ersetzt die drei Hafentage-Parameter (Zielwert, Zielband, Notgrenze), die
+   * bis 2026-08-07 dasselbe indirekt und schlechter sagten: sie waren
+   * Ersatzkonstruktionen dafür, dass die Etappenzahl auf Rang 14 von 14 stand.
+   */
+  legDays: number;
+  /**
+   * ZIELMODELL V3 — Aufenthalte über den ERSTEN je Insel hinaus, Basis
+   * ausgenommen. 0 heisst: eine echte Runde, keine Insel zweimal.
+   *
+   * Gezählt werden AUFENTHALTE, nicht Nächte: aufeinanderfolgende Nächte auf
+   * derselben Insel sind ein Aufenthalt. Dieselbe Zählung wie die
+   * Liegeplatz-Regel in `validatePlan` (1e) — beide lesen `inselAufenthalte`,
+   * damit Rangfolge und Gültigkeit nie zweierlei behaupten können.
+   */
+  repeatStays: number;
   stages: number;
   /**
    * Zielmodell v2 — Summe der Abweichungen der Etappentage vom Wegstunden-Band
@@ -870,8 +974,22 @@ export interface PlanMetrics {
    * tragen 0 — eine Annahme-Lücke ist kein Qualitätsurteil.
    */
   bandDevTenths: number;
-  /** Abstand der Hafentagszahl vom Zielband [harbourDays, harbourDaysTargetMax]. */
-  harbourDev: number;
+  /**
+   * KREUZ-STUNDEN NACH DER WENDE, in Zehntelstunden — die entscheidende
+   * Rückweg-Kennzahl (Skipper 2026-08-07: "ein angenehmer Rückweg, ohne
+   * Kreuzen oder mit möglichst wenig Kreuzen, ist ein entscheidendes
+   * Kriterium").
+   *
+   * Getrennt vom Gesamtwert, weil die beiden Hälften eines Törns nicht
+   * dasselbe kosten: hinaus fährt man mit dem Meltemi im Rücken, heim gegen
+   * ihn an. Eine Kreuzstunde auf dem Rückweg ist die, die weh tut — und die
+   * Summe über den ganzen Plan konnte sie nie sichtbar machen.
+   *
+   * Gemessen am simulierten Kurs gegen den echten Forecast (`assessLeg`
+   * `kreuzHours`), nicht aus der Geometrie geraten. Genau deshalb steht sie
+   * in `preferred` ÜBER dem Umlaufsinn: die Messung schlägt die Faustregel.
+   */
+  kreuzTenthsRueckweg: number;
   /**
    * KREUZ-STUNDEN des ganzen Plans, in Zehntelstunden (ganzzahlig, damit der
    * lexikografische Vergleich nicht an Float-Rauschen hängt).
@@ -895,13 +1013,12 @@ export interface PlanMetrics {
    */
   rueckwegAbweichung: number;
   /**
-   * Längster ZUSAMMENHÄNGENDER Hafentage-Lauf ab dem aktuellen Törntag —
-   * die Verteilungs-Kennzahl, die harbourDev nicht hat: fünf Hafentage am
-   * Stück (egal ob am Ende oder mitten im Törn) sind ein anderer Törn als
-   * fünf verteilte. Auch an der Basis gezählt — das Rumliegen in Alimos ist
-   * genau der beanstandete Fall.
+   * Läuft die Runde in der Drehrichtung, die die Wetterlage vorgibt
+   * (konzept.umlaufsinnGebot)? `null` bei Gebot 'egal' — dann darf die
+   * Drehrichtung nichts entscheiden, und genau das ist der Unterschied zum
+   * früheren unbedingten `clockwise`.
    */
-  maxHarbourRun: number;
+  umlaufsinnPasst: boolean | null;
 }
 
 export function planMetricsFor(
@@ -914,6 +1031,8 @@ export function planMetricsFor(
   const { stageHoursBandMinH, stageHoursBandMaxH } = snapshot.params;
   // Die Konzept-Lage gilt je Snapshot, nicht je Plan — einmal beurteilen.
   const konzeptLage = konzeptLageFor(snapshot);
+  // Ebenso das Umlaufsinn-Gebot: es hängt am Wetterfenster, nicht am Plan.
+  const gebot = umlaufsinnGebot(snapshot);
   // preferred vergleicht jeden Kandidaten gegen den bisherigen Besten — der
   // Beste würde ohne Memo bei jedem Vergleich neu durchgerechnet.
   const memo = new WeakMap<SolveResult, PlanMetrics>();
@@ -938,6 +1057,11 @@ export function planMetricsFor(
     // Wegstunden-Band unbewertbar bleibt: eine gekreuzte Stunde ist eine
     // gekreuzte Stunde, unabhängig davon, ob der Tag ins Band passt.
     let kreuzTenths = 0;
+    // Und getrennt NACH DER WENDE — die Kennzahl, die den Rückweg beurteilt.
+    // Der Wendetag selbst zählt zum Hinweg (Etappen bis EINSCHLIESSLICH dieses
+    // Tags sind Hinweg, siehe planTurn), erst der Tag danach fährt heim.
+    const turn = planTurn(r.plan, snapshot);
+    let kreuzTenthsRueckweg = 0;
     for (const stage of stages) {
       let offset = 0;
       let hours = 0;
@@ -954,7 +1078,9 @@ export function planMetricsFor(
           known = false;
           break;
         }
-        kreuzTenths += Math.round((a.kreuzHours ?? 0) * 10);
+        const kreuz = Math.round((a.kreuzHours ?? 0) * 10);
+        kreuzTenths += kreuz;
+        if (turn !== null && stage.day > turn.day) kreuzTenthsRueckweg += kreuz;
         hours += a.totalHours;
         offset += a.totalHours + stopHours;
       }
@@ -968,34 +1094,42 @@ export function planMetricsFor(
       bandDevTenths += Math.round(dev * 10);
     }
 
-    const harbourDays = r.plan.days.filter((d) => d.kind === 'harbour').length;
-    const lo = snapshot.params.harbourDays;
-    const hi = snapshot.params.harbourDaysTargetMax;
-    const harbourDev = harbourDays < lo ? lo - harbourDays : harbourDays > hi ? harbourDays - hi : 0;
+    // Ohne Wende-Etappe (Plan bleibt an der Basis) zählt der letzte Tag, damit
+    // "gar nicht losfahren" nicht als früheste Wende gewinnt.
+    const turnDay = turn?.day ?? Math.max(0, ...r.plan.days.map((d) => d.day));
 
-    const turnDay = turnDayOf(r);
+    // Etappen-TAGE, nicht Etappen: ein Doppelschlag-Tag bleibt ein Tag.
+    const legDays = stages.length;
 
-    // Nur ab dem aktuellen Tag: vergangene Hafentage sind gesegelte
-    // Geschichte (AD-12) und keine Qualität des Restplans.
-    let maxHarbourRun = 0;
+    /**
+     * Wiederholungen: Aufenthalte über den ersten je Insel hinaus, Basis
+     * ausgenommen (Start, Ziel und Puffertage liegen dort naturgemäss
+     * mehrfach). Dieselbe Aufenthalts-Zählung wie die Liegeplatz-Regel.
+     */
+    let repeatStays = 0;
     {
-      let run = 0;
-      for (const d of [...r.plan.days].sort((a, b) => a.day - b.day)) {
-        if (d.day < snapshot.trip.currentDay) continue;
-        run = d.kind === 'harbour' ? run + 1 : 0;
-        if (run > maxHarbourRun) maxHarbourRun = run;
+      const gesehen = new Set<string>();
+      for (const stay of inselAufenthalte(r.plan)) {
+        if (stay.islandId === snapshot.params.baseIslandId) continue;
+        if (gesehen.has(stay.islandId)) repeatStays++;
+        else gesehen.add(stay.islandId);
       }
     }
 
+    const clockwise = isClockwise(ring);
+
     const m: PlanMetrics = {
-      reachNm: reach(r.turnIslandId),
+      // Die Reichweite des PLANS, nicht die des Vorhabens: `r.turnIslandId`
+      // wird in completePlan aus genau diesem `planTurn` gesetzt.
+      reachNm: reach(turn?.islandId ?? snapshot.params.baseIslandId),
       distinctIslands: new Set(islands).size,
-      clockwise: isClockwise(ring),
+      clockwise,
       turnDay,
-      harbourDays,
+      legDays,
+      repeatStays,
       stages: stages.length,
       bandDevTenths,
-      harbourDev,
+      kreuzTenthsRueckweg,
       kreuzTenths,
       konzeptTraegt:
         konzeptLage.eignung[konzeptOfPlan(r.plan)] !== 'ungeeignet',
@@ -1004,23 +1138,13 @@ export function planMetricsFor(
         stages.length > 0 ? turnDay : null,
         snapshot.params.baseIslandId,
       ),
-      maxHarbourRun,
+      // 'egal' heisst: die Drehrichtung darf hier nichts entscheiden.
+      umlaufsinnPasst:
+        gebot === 'egal' ? null : clockwise === (gebot === 'im-uhrzeigersinn'),
     };
     memo.set(r, m);
     return m;
   };
-}
-
-/**
- * Tag, an dem der Plan den Wendepunkt erreicht — die Trennlinie zwischen Hin-
- * und Rückweg. Ohne Wende-Etappe (Plan bleibt an der Basis) zählt der letzte
- * Tag, damit "gar nicht losfahren" nicht als früheste Wende gewinnt.
- */
-function turnDayOf(r: SolveResult): number {
-  const stages = stagesOf(r.plan);
-  const turn = stages.find((s) => s.toIslandId === r.turnIslandId);
-  if (turn) return turn.day;
-  return Math.max(0, ...r.plan.days.map((d) => d.day));
 }
 
 const RELAXATION_STEP: Record<RelaxationLevel, number> = {
@@ -1032,71 +1156,112 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
 
 /**
  * Welcher von zwei Plänen der bessere ist — lexikografisch, nicht als
- * gewichtete Summe.
+ * gewichtete Summe. Die Reihenfolge IST die Entscheidung, und sie soll
+ * ablesbar sein statt aus Gewichten hervorzugehen, die sich gegenseitig
+ * aufheben können.
  *
- * Die Reihenfolge IST die Entscheidung (Zielmodell v2, Skipper 2026-08-05),
- * und sie soll ablesbar sein statt aus Gewichten hervorzugehen, die sich
- * gegenseitig aufheben können:
+ * ZIELMODELL V3 (Skipper 2026-08-07). Die Vorgängerordnung stellte die
+ * REICHWEITE — wie weit südlich der Wendepunkt liegt — auf Platz 3 und die
+ * Zahl der Etappen auf Platz 14 von 14, unter den Umlaufsinn und den Wendetag.
+ * Damit schlug "weit nach Süden und dann liegen bleiben" jeden Törn, der den
+ * Rahmen wirklich segelt: der Skipper bekam eine Hauptroute mit neun Etappen
+ * in elf Tagen und Alternativen mit sechs. Ein Rangkriterium kann aber nur
+ * ordnen, was im Suchraum liegt — deshalb ist die Reihenfolge hier zusammen
+ * mit dem Kandidatenraum (roundTrips.ts, buildCandidates) neu gefasst.
  *
- *   1. FEST gültig vor ungültig, und unter den ungültigen zuerst weniger
- *      Sicherheitsverletzungen, dann weniger FESTE Verletzungen. Die App
- *      muss auch im Meltemi antworten (FR18) — aber nie mit etwas Unsicherem.
- *   2. TRAGENDES KONZEPT vor gekipptem (konzept.ts) — VOR der Reichweite,
- *      mit Absicht: das ist die zentrale, alles überschreibende Logik
- *      (Skipper 2026-08-05). Steht ein anhaltendes Starkwindfeld über den
- *      Ost-Kykladen im Forecast, zieht kein noch so ferner Wendepunkt den
- *      Törn nach Osten — Route 2 verliert dann gegen jede Route-1-Runde.
+ *   1. WENIGER SICHERHEITS-BEFUNDE. Das einzige absolute Tor: unsicher, zu
+ *      spät oder unterwegs gefangen schlägt jede Ambition. Die App muss auch
+ *      im Meltemi antworten (FR18) — aber nie mit etwas Unsicherem.
  *
- *      FEST heisst in Kriterium 1: ohne die Annahme-Befunde
- *      (`Violation.assumed`). Die zählten dort früher mit — und weil jeder
- *      Segeltag jenseits des verlässlichen Horizonts Annahme-Befunde trägt,
- *      Tage an der Basis aber keine, gewann "an Tag 7 heim und fünf Tage
- *      liegen" gegen jeden Törn, der die zweite Woche nutzt, bevor
- *      Reichweite oder Inseln je verglichen wurden. Die Annahme warnt, sie
- *      verurteilt nicht (schema/plan.ts) — als Rangkriterium steht sie
- *      deshalb NACHRANGIG (Kriterium 6), nicht im Gültigkeits-Tor.
- *   3. WEITER vor näher. Das ist die Törnfrage.
- *   4. Weniger Nachgeben auf der Eskalationsleiter — VOR der Inselvielfalt
- *      und dem Wegstunden-Band, mit Absicht: der Doppelschlag ist eine
- *      NACHGABE (Skipper 2026-08-05, "ein Tag, eine Verbindung") und darf
- *      weder zum Normalfall werden, weil er die Stunden hübscher verteilt,
- *      NOCH weil er mehr Inseln in die erste Woche stopft. Genau über die
- *      Inselvielfalt hatte er sich zurückgekämpft: sechs Doppelschlag-Tage
- *      hintereinander erreichten mehr Inseln und gewannen — die Ausnahme als
- *      Serie. Ein Doppelschlag, der WEITER trägt, gewinnt weiterhin
- *      (Kriterium 3); zusätzlich deckelt params.doppelschlagMaxPerTrip die
- *      Zahl der Doppelschlag-Tage im Packer selbst.
- *   5. So viele VERSCHIEDENE Inseln wie möglich. Ohne dieses Kriterium war ein
- *      Törn, der zwölf Tage dieselbe Kette auf und ab fährt, genauso gut wie
- *      eine Runde — er erreicht denselben Wendepunkt und ist leichter gültig.
- *      (Runde vor Pendeln bleibt erhalten: beide lösen ohne Eskalation, also
- *      entscheidet weiterhin die Vielfalt.)
- *   6. Weniger Annahme-Befunde: der abgestufte Rest des alten Kriteriums 1.
- *      Bei gleicher Reichweite und Vielfalt ist der Plan vorzuziehen, der
- *      weniger auf der Persistenz-Annahme ruht.
- *   7. WENIGER KREUZEN (Skipper 2026-08-06: "ich kann maximal 50 Grad TWA
- *      segeln … was im Routing eher vermieden werden sollte"). Muss ein Kurs
- *      gekreuzt werden, kostet er Zeit, Strecke und Bequemlichkeit — unter
- *      sonst gleichen Plänen gewinnt deshalb der, der seine Ziele anliegen
- *      kann. Bewusst HIER und nicht weiter oben: das Kreuzen ist ein Preis,
- *      keine Gefahr, und es darf weder eine Route aus dem Angebot nehmen noch
- *      die Reichweite oder die Inselvielfalt überstimmen — genau deshalb steht
- *      es unter Kriterium 3/5 und nicht über ihnen. Vor dem Wegstunden-Band,
- *      weil das den Umweg nur indirekt sieht (mehr Stunden), nicht als das,
- *      was er ist.
- *   8. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
+ *      NUR die Sicherheits-Befunde stehen hier, nicht alle festen. Ein
+ *      Budget-Befund heisst "dieser Tag ist lang", und wer Tage weglässt, hat
+ *      keine langen Tage — die absolute Zahl der Befunde belohnte damit
+ *      systematisch das Nicht-Segeln. Genau so gewann "fünf Etappen, sechs
+ *      Tage an der Basis, keine Befunde" gegen jede volle Runde mit einem
+ *      einzigen langen Tag. Nicht zu segeln ist keine Leistung; die
+ *      übrigen festen Befunde ranken deshalb unter dem Rahmen-Vertrag
+ *      (Kriterium 9).
+ *
+ *      FEST heisst überall hier: ohne die Annahme-Befunde
+ *      (`Violation.assumed`). Die zählten früher mit — und weil jeder Segeltag
+ *      jenseits des verlässlichen Horizonts Annahme-Befunde trägt, Tage an der
+ *      Basis aber keine, gewann "an Tag 7 heim und liegen bleiben" gegen jeden
+ *      Törn, der die zweite Woche nutzt. Die Annahme warnt, sie verurteilt
+ *      nicht (schema/plan.ts).
+ *
+ *   2. TRAGENDES ROUTEN-KONZEPT vor gekipptem (konzept.ts) — VOR dem
+ *      Rahmen-Vertrag, mit Absicht: dass ein anhaltendes Starkwindfeld über
+ *      den Ost-Kykladen steht, ist eine Wetter-Aussage und keine Ambition. Den
+ *      Törnrahmen zu füllen ist kein Grund, dort hineinzusegeln. Route 2
+ *      verliert dann gegen jede Route-1-Runde, auch gegen eine kürzere.
+ *
+ *   3. MEHR ETAPPENTAGE. Der Vertrag: elf Törntage, elf Etappen. Ein Tag ohne
+ *      Verbindung ist kein Optimierungsergebnis, sondern eine schlechtere
+ *      Runde. Ersetzt die drei Hafentage-Parameter, die dasselbe indirekt und
+ *      schlechter sagten (params.ts).
+ *
+ *      Etappen-TAGE, nicht Etappen: sonst wäre der Doppelschlag der
+ *      Gewinnerzug — zwei Verbindungen an einem Tag zählten dann doppelt und
+ *      machten die Nachgabe zur Norm.
+ *
+ *   4. WENIGER WIEDERHOLUNGEN. Eine Insel zweimal anzulaufen ist erlaubt, aber
+ *      teuer: eine Runde schlägt ein Pendeln immer, solange überhaupt eine
+ *      Runde existiert (Skipper: "weich, aber schwer gewichtet"). Die Haupt-
+ *      last trägt der Kandidatenraum — Schicht A von roundTripLayers ist
+ *      wiederholungsfrei —, dieses Kriterium ordnet, was danach noch übrig ist.
+ *
+ *   5. MEHR VERSCHIEDENE INSELN.
+ *
+ *   6.–8. DER RÜCKWEG (Skipper 2026-08-07: "ein angenehmer Rückweg, ohne
+ *      Kreuzen oder mit möglichst wenig Kreuzen, ist ein entscheidendes
+ *      Kriterium"). Drei Kennzahlen derselben Frage, von der genauesten zur
+ *      gröbsten — und genau in dieser Reihenfolge, damit die Messung die
+ *      Faustregel schlägt:
+ *
+ *      6. KREUZSTUNDEN NACH DER WENDE, am simulierten Kurs gegen den echten
+ *         Forecast gemessen. Hinaus fährt man mit dem Meltemi im Rücken, heim
+ *         gegen ihn an — eine Kreuzstunde auf dem Rückweg ist die, die weh tut.
+ *      7. LEE-KORRIDOR-TREUE des Heimwegs (Milos–Sifnos–Serifos–Kythnos): die
+ *         Rückweg-Empfehlung der Törnanalyse, an der konkreten Inselkette
+ *         gemessen. Das ist das "oder auch im Windschatten".
+ *      8. UMLAUFSINN, sofern die Wetterlage überhaupt einen vorgibt
+ *         (konzept.umlaufsinnGebot). Bei wenig oder drehendem Wind ist das
+ *         Gebot 'egal' und dieses Kriterium neutral — vorher war `clockwise`
+ *         unbedingt und entschied auch bei Flaute, wo die Drehrichtung nichts
+ *         kostet.
+ *
+ *      Eine Runde GEGEN den Uhrzeigersinn, die nachweislich weniger kreuzt,
+ *      gewinnt deshalb. Alles andere wäre eine Regel, die gegen ihren eigenen
+ *      Zweck arbeitet.
+ *
+ *   9. WENIGER FESTE BEFUNDE (ohne die Sicherheits-Befunde aus Kriterium 1):
+ *      lange Tage, strukturelle Mängel. Hier und nicht oben, weil sie sonst
+ *      das Nicht-Segeln belohnen (siehe Kriterium 1).
+ *
+ *  9a. KREUZSTUNDEN DES GANZEN TÖRNS. Auch der Hinweg soll anliegen, wenn er
+ *      kann — nur eben nachrangig zum Rückweg.
+ *
+ *  10. WENIGER NACHGEBEN auf der Eskalationsleiter. Stand früher weiter oben,
+ *      weil der Doppelschlag sich sonst über die Inselvielfalt zurückkämpfte:
+ *      sechs Doppelschlag-Tage hintereinander erreichten mehr Inseln und
+ *      gewannen — die Ausnahme als Serie. Beide Nachgaben sind inzwischen
+ *      STRUKTURELL gedeckelt (params.doppelschlagMaxPerTrip im Packer,
+ *      nightLegMaxPerTrip in validatePlan), und der Deckel ist die Garantie,
+ *      nicht die Rangfolge.
+ *
+ *  11. WENIGER ANNAHME-BEFUNDE: der abgestufte Rest von Kriterium 1. Bei sonst
+ *      gleichen Plänen ist der vorzuziehen, der weniger auf der
+ *      Persistenz-Annahme ruht.
+ *
+ *  12. Das Wegstunden-Band 5–7 h: Tage, die das Fenster nutzen, statt es zu
  *      verschenken oder zu überziehen.
- *   9. Ein bis zwei Hafentage — das Zielband, nicht möglichst wenige: ganz
- *      ohne Ruhetag ist der Törn so wenig gewollt wie mit vier.
- *  10. Kürzester Hafentage-LAUF: verteilte Ruhetage vor der Halde — fünf am
- *      Stück sind ein anderer Törn als fünf verteilte (maxHarbourRun).
- *  11. Rückweg im westlichen LEE-KORRIDOR (konzept.ts): unter sonst gleichen
- *      Plänen gewinnt der, dessen Heimweg nach der Wende in der Abdeckung
- *      Milos–Sifnos–Serifos–Kythnos läuft — die Rückweg-Empfehlung der
- *      Törnanalyse, präziser als der reine Umlaufsinn.
- *  12. Im Uhrzeigersinn: mit dem Meltemi im Rücken nach Süden, an der
- *      Westseite zurück — die Empfehlung fürs Revier.
- *  13. Frühere Wende: jeder Tag früher ist ein Tag Reserve auf dem Heimweg.
+ *
+ *  13. WEITER SÜDLICH. Von Platz 3 hierher: die Reichweite bleibt ein Wert,
+ *      aber sie entscheidet nichts mehr allein. "Wie weit kommen wir?" ist
+ *      jetzt die Frage des OPTIONSRAUMS (options.ts) — die Hauptroute
+ *      beantwortet "welche Runde ist die beste?". Zwei Fragen, zwei Antworten
+ *      (Skipper 2026-08-07).
+ *
  *  14. Mehr Etappen, damit "einfach liegen bleiben" zuletzt kommt; zum Schluss
  *      die Variante alphabetisch — gleiche Lage, gleiche Antwort.
  */
@@ -1108,28 +1273,45 @@ export function preferred(
   if (!a) return b;
   const ma = metrics(a);
   const mb = metrics(b);
-  const firmA = firmViolations(a.validity).length;
-  const firmB = firmViolations(b.validity).length;
+  /**
+   * Feste Befunde OHNE die Sicherheits-Befunde: die stehen als eigenes,
+   * absolutes Tor an Kriterium 1. Beides in einen Topf zu werfen hiesse, einen
+   * langen Tag gegen eine unmögliche Rückkehr aufzurechnen.
+   */
+  const restA = firmViolations(a.validity).filter((v) => !isSafetyViolation(v)).length;
+  const restB = firmViolations(b.validity).filter((v) => !isSafetyViolation(v)).length;
+  /**
+   * Der Umlaufsinn als Zahl: 1 passend, 0 unpassend — und bei Gebot 'egal'
+   * BEIDE 0, damit das Kriterium dann wirklich nichts entscheidet statt
+   * heimlich zugunsten einer Richtung zu kippen.
+   */
+  const sinn = (m: PlanMetrics): number => (m.umlaufsinnPasst === true ? 1 : 0);
   const cmp: [number, number][] = [
-    [firmA === 0 ? 1 : 0, firmB === 0 ? 1 : 0],
+    // Das einzige absolute Tor.
     [-a.validity.safetyViolations.length, -b.validity.safetyViolations.length],
-    [-firmA, -firmB],
-    // Das Routen-Konzept überschreibt die Reichweite (konzept.ts).
+    // Das Routen-Konzept muss die Lage tragen (konzept.ts) — vor dem
+    // Rahmen-Vertrag, weil ein gekipptes Konzept eine Wetter-Aussage ist und
+    // keine Ambition: den Rahmen zu füllen ist kein Grund, in ein Starkwindfeld
+    // zu segeln.
     [ma.konzeptTraegt ? 1 : 0, mb.konzeptTraegt ? 1 : 0],
-    // Wie weit kommen wir — die Törnfrage.
-    [Math.round(ma.reachNm), Math.round(mb.reachNm)],
-    [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
+    // Der Rundkurs-Vertrag: jeder Törntag eine Etappe, keine Insel zweimal,
+    // möglichst viele Inseln.
+    [ma.legDays, mb.legDays],
+    [-ma.repeatStays, -mb.repeatStays],
     [ma.distinctIslands, mb.distinctIslands],
-    [-assumedViolations(a.validity).length, -assumedViolations(b.validity).length],
-    // Weniger Kreuzen — anliegen vor aufkreuzen (Kriterium 7).
-    [-ma.kreuzTenths, -mb.kreuzTenths],
-    [-ma.bandDevTenths, -mb.bandDevTenths],
-    [-ma.harbourDev, -mb.harbourDev],
-    [-ma.maxHarbourRun, -mb.maxHarbourRun],
-    // Rückweg im Lee-Korridor vor dem groben Umlaufsinn.
+    // Der Rückweg — von der genauesten Kennzahl zur gröbsten.
+    [-ma.kreuzTenthsRueckweg, -mb.kreuzTenthsRueckweg],
     [-ma.rueckwegAbweichung, -mb.rueckwegAbweichung],
-    [ma.clockwise ? 1 : 0, mb.clockwise ? 1 : 0],
-    [-ma.turnDay, -mb.turnDay],
+    [sinn(ma), sinn(mb)],
+    // Lange Tage und strukturelle Mängel — unter dem Rahmen-Vertrag.
+    [-restA, -restB],
+    // Kreuzen auch auf dem Hinweg vermeiden, nachrangig.
+    [-ma.kreuzTenths, -mb.kreuzTenths],
+    [-RELAXATION_STEP[a.relaxedTo], -RELAXATION_STEP[b.relaxedTo]],
+    [-assumedViolations(a.validity).length, -assumedViolations(b.validity).length],
+    [-ma.bandDevTenths, -mb.bandDevTenths],
+    // Wie weit südlich — ein Wert, aber nicht mehr DIE Frage.
+    [Math.round(ma.reachNm), Math.round(mb.reachNm)],
     [ma.stages, mb.stages],
   ];
   for (const [x, y] of cmp) if (x !== y) return x > y ? a : b;
@@ -1271,21 +1453,26 @@ export function completePlan(
     };
   }
 
-  const candidates = buildCandidates(snapshot, startIslandId).filter(
-    (c) =>
-      (opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId) &&
-      (opts.variantId === undefined || c.variantId === opts.variantId),
-  );
-  if (candidates.length === 0) return null;
   const constraint = dayConstraintFor(snapshot, futurePins);
-
   const metrics = planMetricsFor(snapshot);
-  const reach = reachNmFor(snapshot);
+  const daysAvailable = frame.deadlineDay - startDay + 1;
 
   let best: SolveResult | null = null;
-  /** Ohne feste Verletzungen — das Tor, das `preferred` als Kriterium 1 prüft. */
+  /** Ohne feste Verletzungen — sauber im Sinne der vollen Gültigkeit. */
   const firmValid = (r: SolveResult): boolean =>
     firmViolations(r.validity).length === 0;
+  /**
+   * Diese Schicht hat GELIEFERT: ein sicherer Plan, der den Rahmen ausfüllt.
+   * Erst dann lohnt es nicht mehr, die nachrangigen Schichten aufzuzählen.
+   *
+   * Bewusst nicht `firmValid`: ein einzelner langer Tag (Budget-Befund) macht
+   * eine volle Runde nicht schlechter als eine kurze ohne Befund — das sagt
+   * `preferred` inzwischen selbst, und ein Abbruchkriterium, das strenger ist
+   * als die Rangfolge, würde genau die Kandidaten übergehen, die gewinnen.
+   */
+  const traegt = (r: SolveResult): boolean =>
+    r.validity.safetyViolations.length === 0 &&
+    metrics(r).legDays >= Math.min(daysAvailable, metrics(r).stages);
 
   /**
    * Die besten N Kandidaten für die Nachvalidierung gegen die GESEGELTE Kette
@@ -1302,92 +1489,115 @@ export function completePlan(
   };
 
   /**
-   * ALLE Stufen werden durchgerechnet, nicht nur bis die erste etwas Gültiges
-   * liefert.
+   * SCHICHT für SCHICHT (Zielmodell v3). Trägt die erste — wiederholungsfreie
+   * Runden über den vollen Rahmen — einen fest-gültigen Plan, wird gar nicht
+   * erst weitergesucht. Damit kann eine Runde mit Stichfahrt oder eine
+   * verkürzte nur gewinnen, wenn es keine saubere volle Runde gibt.
    *
-   * Vorher brach die Schleife beim ersten gültigen Plan ab — und weil ein
-   * kurzer Törn früher gültig wird als ein weiter, gewann systematisch der
-   * kürzere. Die Leiter war damit keine Eskalation, sondern eine Bremse: dass
-   * Santorin mit einem Doppelschlag erreichbar gewesen wäre, hat der Solver nie
-   * geprüft, sobald Milos ohne einen auskam. Jetzt entscheidet der Vergleich
-   * (`preferred`), und der stellt die Reichweite vor die Bequemlichkeit —
-   * die Stufe zählt erst als Kriterium, wenn zwei Pläne gleich weit kommen.
+   * Das ist die STRUKTURELLE Fassung von "keine Insel doppelt" — stärker als
+   * jede Gewichtung, weil ein Rangkriterium immer noch von genug anderen
+   * Kriterien überstimmt werden kann.
    */
-  for (const [levelIdx, level] of RELAXATION_ORDER.entries()) {
-    const relaxed = relaxedSnapshot(snapshot, level);
+  for (const candidates of candidateLayers(snapshot, startIslandId)) {
+    const inLayer = candidates.filter(
+      (c) =>
+        (opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId) &&
+        (opts.variantId === undefined || c.variantId === opts.variantId),
+    );
+    if (inLayer.length === 0) continue;
 
-    for (const candidate of candidates) {
-      /**
-       * Beschneidung, die das Ergebnis nicht verändert: steht bereits ein
-       * FEST-GÜLTIGER Plan (Kriterium 1: keine festen Verletzungen), kann eine
-       * höhere Eskalationsstufe nur noch gewinnen, wenn sie mindestens GLEICH
-       * WEIT kommt — bei ECHT geringerer Reichweite verliert sie an der
-       * Reichweite, egal was sonst passiert. (Fest-gültig, nicht voll-gültig:
-       * seit die Annahme-Befunde nachrangig ranken, ist das das Tor, das
-       * preferred selbst prüft — die Beschneidung muss dasselbe Tor benutzen.)
-       *
-       * Nur strikt kleiner, nicht kleiner-gleich: bei gleicher Reichweite kann
-       * eine höhere Stufe durchaus noch gewinnen (etwa ein Doppelschlag, der
-       * eine vielfältigere Runde packbar macht) und muss durchgerechnet werden.
-       *
-       * SEIT DEN ROUTEN-KONZEPTEN nur, wenn der bisherige Beste in einem
-       * TRAGENDEN Konzept steht: das Konzept rangiert VOR der Reichweite
-       * (preferred), ein näherer Kandidat in tragendem Konzept kann einen
-       * ferneren in gekipptem also noch schlagen — der darf nicht
-       * weggeschnitten werden.
-       */
-      if (
-        levelIdx > 0 &&
-        best &&
-        firmValid(best) &&
-        metrics(best).konzeptTraegt &&
-        Math.round(reach(candidate.turnIslandId)) <
-          Math.round(reach(best.turnIslandId))
-      ) {
-        continue;
+    /**
+     * ALLE Stufen werden durchgerechnet, nicht nur bis die erste etwas
+     * Gültiges liefert.
+     *
+     * Vorher brach die Schleife beim ersten gültigen Plan ab — und weil ein
+     * kurzer Törn früher gültig wird als ein weiter, gewann systematisch der
+     * kürzere. Die Leiter war damit keine Eskalation, sondern eine Bremse.
+     */
+    for (const [levelIdx, level] of RELAXATION_ORDER.entries()) {
+      const relaxed = relaxedSnapshot(snapshot, level);
+
+      for (const candidate of inLayer) {
+        /**
+         * Beschneidung, die das Ergebnis nicht verändert: steht bereits ein
+         * FEST-GÜLTIGER Plan, kann eine höhere Eskalationsstufe nur noch
+         * gewinnen, wenn sie mindestens gleich viele Etappentage trägt — bei
+         * ECHT weniger verliert sie an Kriterium 2, egal was sonst passiert.
+         *
+         * SEIT ZIELMODELL V3 an den ETAPPENTAGEN und nicht mehr an der
+         * Reichweite: die ist von Rang 3 auf Rang 13 gerutscht und kann eine
+         * Entscheidung nicht mehr allein tragen — eine Beschneidung, die
+         * weiter an ihr hängt, würde Kandidaten wegschneiden, die nach der
+         * neuen Ordnung gewinnen. Nur strikt kleiner: bei gleicher Zahl kann
+         * eine höhere Stufe durchaus noch gewinnen (etwa ein Doppelschlag, der
+         * eine kreuzärmere Runde packbar macht) und muss durchgerechnet werden.
+         */
+        if (
+          levelIdx > 0 &&
+          best &&
+          firmValid(best) &&
+          Math.min(candidate.legs.length, daysAvailable) < metrics(best).legDays
+        ) {
+          continue;
+        }
+
+        /**
+         * Wartetage, die diese Kette braucht, um den Rahmen zu spannen. Der
+         * Vertrag ist "ein Törntag, eine Etappe", also braucht eine Kette mit
+         * genau so vielen Etappen wie Tagen KEINEN Wartetag — und kürzere
+         * Ketten brauchen genau die Differenz. Bis 2026-08-07 stand hier
+         * zusätzlich `harbourDaysMax` (5) als Untergrenze; die hat dem Packer
+         * erlaubt, fünf Tage liegen zu bleiben, wo eine volle Runde möglich
+         * gewesen wäre.
+         */
+        const maxWaitDays = Math.max(0, daysAvailable - candidate.legs.length);
+        const packing = packLegs(candidate.legs, startDay, frame.deadlineDay, relaxed, {
+          maxWaitDays,
+          startIslandId,
+          dayConstraint: constraint,
+        });
+
+        /**
+         * NUR VOLLSTÄNDIGE PACKUNGEN. `packLegs` liefert im Einzeletappen-Zweig
+         * ein Ergebnis mit `verdict: 'infeasible'` UND nicht-leerer
+         * `packed`-Liste — eine abgebrochene Kette. Geprüft wurde bis
+         * 2026-08-07 nur `packed.length`, nie das Verdikt: ein Plan, der auf
+         * halbem Weg endete, wurde akzeptiert, bekam das Wendepunkt-Etikett
+         * des ganzen Kandidaten und wurde unter dem Namen des Ziels
+         * angeboten, das er nie erreicht. Genau so kam eine "Verlängerung nach
+         * Santorin" zustande, die auf Naxos endet.
+         */
+        if (packing.verdict === 'infeasible') continue;
+
+        const future = applyPins(
+          planFromPacking(packing.packed, startDay, frame.deadlineDay, startIslandId),
+          futurePins,
+        );
+        if (!candidateHonoursPins(future, futurePins)) continue;
+        const days = [...pastDays, ...future];
+
+        const plan: Plan = mkPlan(days);
+        // Validity is always judged against the ORIGINAL params — relaxation
+        // may guide the search, never redefine what counts as valid.
+        const validity = validatePlan(plan, snapshot);
+        const result: SolveResult = {
+          plan,
+          validity,
+          relaxedTo: level,
+          variantId: candidate.variantId,
+          // Der Wendepunkt des PLANS, nicht des Vorhabens (planTurn).
+          turnIslandId: planTurn(plan, snapshot)?.islandId ?? startIslandId,
+        };
+        best = preferred(best, result, metrics);
+        noteFinalist(result);
       }
 
-      // Idle days needed to span the frame with THIS candidate's legs. The
-      // target is params.harbourDays, but capping the packer there would make
-      // a plan unbuildable whenever the library holds fewer legs than the trip
-      // has days — the packer could not even reach the pickup day. Exceeding
-      // the target is reported as a structural violation instead (validatePlan).
-      const daysAvailable = frame.deadlineDay - startDay + 1;
-      const maxWaitDays = Math.max(
-        snapshot.params.harbourDaysMax,
-        daysAvailable - candidate.legs.length,
-      );
-      const packing = packLegs(candidate.legs, startDay, frame.deadlineDay, relaxed, {
-        maxWaitDays,
-        startIslandId,
-        dayConstraint: constraint,
-      });
-      if (packing.packed.length === 0 && candidate.legs.length > 0) continue;
-
-      const future = applyPins(
-        planFromPacking(packing.packed, startDay, frame.deadlineDay, startIslandId),
-        futurePins,
-      );
-      if (!candidateHonoursPins(future, futurePins)) continue;
-      const days = [...pastDays, ...future];
-
-      const plan: Plan = mkPlan(days);
-      // Validity is always judged against the ORIGINAL params — relaxation
-      // may guide the search, never redefine what counts as valid.
-      const validity = validatePlan(plan, snapshot);
-      const result: SolveResult = {
-        plan,
-        validity,
-        relaxedTo: level,
-        variantId: candidate.variantId,
-        turnIslandId: candidate.turnIslandId,
-      };
-      best = preferred(best, result, metrics);
-      noteFinalist(result);
+      // Fest-gültig statt voll-gültig — dasselbe Tor wie preferred.
+      if (opts.stopAtFirstValid && best && firmValid(best)) break;
     }
 
-    // Fest-gültig statt voll-gültig — dasselbe Tor wie preferred/Beschneidung.
-    if (opts.stopAtFirstValid && best && firmValid(best)) break;
+    // Diese Schicht trägt — die nachrangigen gar nicht erst aufzählen.
+    if (best && traegt(best) && metrics(best).legDays === daysAvailable) break;
   }
 
   if (!best) return null;
@@ -1406,8 +1616,7 @@ export function completePlan(
    *
    * Nur für die Hauptrouten-Frage (ohne turnIslandId): die Options-Preise
    * (options.ts) vergleichen Kandidaten untereinander, und dafür ist die
-   * kuratierte Rechnung konsistent genug — sechs Options-Aufrufe × fünf
-   * Ketten-Verankerungen wären der teuerste Schritt der ganzen Bewertung.
+   * kuratierte Rechnung konsistent genug.
    */
   if (opts.turnIslandId === undefined && finalists.length > 1) {
     const legsById = legLibrary(snapshot);

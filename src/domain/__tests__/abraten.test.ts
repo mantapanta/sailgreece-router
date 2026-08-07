@@ -16,7 +16,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { assessRouteOption } from '../options.ts';
+import { assessTargetOption } from '../options.ts';
 import {
   KONZEPT_REGLER,
   deriveKonzeptEntscheid,
@@ -147,8 +147,7 @@ describe('Best-Practice-Routen bleiben wählbar — abgeraten ist nicht gesperrt
     const snapshot = revier(23);
     expect(konzeptLageFor(snapshot).eignung.ost).toBe('ungeeignet');
 
-    const ost = snapshot.library.variants.find((v) => v.id === 'ost-runde')!;
-    const opt = assessRouteOption(ost, 'athen', snapshot);
+    const opt = assessTargetOption('mykonos', 'athen', snapshot);
 
     expect(opt.empfehlung).toBe('abgeraten');
     expect(opt.abratenGruende.join(' ')).toContain('trägt die aktuelle Wetterlage nicht');
@@ -160,8 +159,7 @@ describe('Best-Practice-Routen bleiben wählbar — abgeraten ist nicht gesperrt
   it('bei tragender Lage ist dieselbe Route schlicht empfohlen', () => {
     const snapshot = revier(12);
     expect(konzeptLageFor(snapshot).eignung.ost).toBe('geeignet');
-    const ost = snapshot.library.variants.find((v) => v.id === 'ost-runde')!;
-    const opt = assessRouteOption(ost, 'athen', snapshot);
+    const opt = assessTargetOption('mykonos', 'athen', snapshot);
     expect(opt.empfehlung).toBe('empfohlen');
     expect(opt.abratenGruende).toEqual([]);
     expect(opt.konzeptWarnung).toBeNull();
@@ -176,68 +174,86 @@ describe('Best-Practice-Routen bleiben wählbar — abgeraten ist nicht gesperrt
       );
     }
     expect(konzeptLageFor(snapshot).eignung.ost).toBe('grenzwertig');
-    const ost = snapshot.library.variants.find((v) => v.id === 'ost-runde')!;
-    const opt = assessRouteOption(ost, 'athen', snapshot);
+    const opt = assessTargetOption('mykonos', 'athen', snapshot);
     expect(opt.empfehlung).toBe('moeglich');
   });
 
-  it('auch ohne tragfähigen Plan bleibt der beste Versuch stehen — abraten, nicht entfernen', () => {
-    // Sturm über dem ganzen Fenster: der Solver findet zu keinem Ziel mehr
-    // einen Plan ohne Sicherheits-Befunde. Früher verschwand die Route damit
-    // aus dem Angebot (plan: null, keine Vorschau, kein Übernehmen).
+  it('geht gar nichts mehr, bleibt das Ziel sichtbar — aber ohne untergeschobenen Plan', () => {
+    /**
+     * Sturm über dem ganzen Fenster. Das Ziel verschwindet NICHT aus dem
+     * Angebot: es steht da, benannt, mit Begründung. Was nicht mehr passiert,
+     * ist der frühere Ersatzplan — eine Kette, die woanders hinführt, unter
+     * dem Namen dieses Ziels. Abraten heisst ehrlich sein, nicht ausweichen.
+     */
     const snapshot = revier(40);
-    const west = snapshot.library.variants.find((v) => v.id === 'west-runde')!;
-    const opt = assessRouteOption(west, 'athen', snapshot);
+    const opt = assessTargetOption('sued', 'athen', snapshot);
 
     expect(opt.state).toBe('zu');
     expect(opt.empfehlung).toBe('abgeraten');
-    expect(opt.plan).not.toBeNull();
-    expect(opt.abratenGruende.join(' ')).toContain('Sicherheits-Befunde');
-    // Ehrlich bleibt sie trotzdem: einen gültigen Preis hat dieser Plan nicht.
+    expect(opt.reasons.length).toBeGreaterThan(0);
     expect(opt.costLevel).toBeNull();
+    // Entweder es gibt einen Plan, der das Ziel wirklich anläuft — oder keinen.
+    if (opt.plan) {
+      expect(stagesOf(opt.plan).map((s) => s.toIslandId)).toContain('sued');
+    }
   });
 });
 
-describe('Eine Best-Practice-Route wird als sie selbst geplant', () => {
-  it('die West-Runde läuft ihre eigene Kette, nicht den Direktschlag zum selben Wendepunkt', () => {
+/**
+ * ZIELMODELL V3 (2026-08-07) — DIE KURATIERTEN ROUTEN SIND KEINE
+ * ANGEBOTS-EINHEIT MEHR.
+ *
+ * Hier standen zwei Fälle, die festhielten, dass eine Best-Practice-Route "als
+ * sie selbst" geplant wird: ihre eigene Etappenkette zuerst, und bei deren
+ * Scheitern ein Rückfall auf die freie Suche zum selben Wendepunkt.
+ *
+ * Genau dieser Rückfall war der Fehler. Er lieferte einen fremden Plan unter
+ * dem Namen der Route — und das ist der beanstandete Befund des Skippers: "die
+ * Verlängerung nach Santorin führt überhaupt nicht nach Santorin". Ein Name
+ * kann nicht gleichzeitig eine Zusicherung sein und einen Ersatzplan tragen.
+ *
+ * Der Optionsraum fragt deshalb nach ZIEL-INSELN, und die Zusicherung ist
+ * jetzt prüfbar statt gemeint: entweder der Plan enthält das Ziel, oder es
+ * gibt keinen Plan. Die kuratierten Varianten bleiben Seed-Daten für den
+ * Etappen-Graphen.
+ */
+describe('Ein Ziel bekommt nur Pläne, die es anlaufen', () => {
+  it('der Plan zu einem Ziel enthält dieses Ziel — oder es gibt keinen Plan', () => {
     const snapshot = revier(12);
-    const west = snapshot.library.variants.find((v) => v.id === 'west-runde')!;
-    const direkt = snapshot.library.variants.find((v) => v.id === 'direkt-sued')!;
-
-    const optWest = assessRouteOption(west, 'athen', snapshot);
-    const optDirekt = assessRouteOption(direkt, 'athen', snapshot);
-
-    // Beide wenden an derselben Insel — der Wendepunkt allein kann die beiden
-    // Routen also nicht unterscheiden.
-    expect(optWest.turnIslandId).toBe('sued');
-    expect(optDirekt.turnIslandId).toBe('sued');
-
-    const inseln = (o: typeof optWest) =>
-      stagesOf(o.plan!).map((s) => s.toIslandId);
-    expect(inseln(optWest)).toContain('west1');
-    expect(inseln(optWest)).toContain('west2');
-    expect(inseln(optDirekt)).not.toContain('west1');
+    for (const ziel of ['sued', 'west1', 'west2', 'mykonos']) {
+      const opt = assessTargetOption(ziel, 'athen', snapshot);
+      if (!opt.plan) continue;
+      expect(stagesOf(opt.plan).map((s) => s.toIslandId), `Ziel ${ziel}`).toContain(ziel);
+    }
   });
 
-  it('scheitert die kuratierte Kette, schliesst das ZIEL trotzdem nicht', () => {
-    // Zwei-Tage-Fenster: für die dreigliedrige West-Kette samt Rückweg zu kurz,
-    // für den Direktschlag zum selben Wendepunkt reicht es. "Süd geht nicht"
-    // wäre hier falsch — nicht das Ziel scheitert, nur die eine Kette dorthin.
+  it('reicht der Rahmen nicht, wird das Ziel ehrlich zu — kein Ersatzplan unter fremdem Namen', () => {
+    // Zwei-Tage-Fenster: für eine Runde über west2 ist kein Platz. Früher fiel
+    // die Option dann auf eine Kette zum selben Wendepunkt zurück und bot sie
+    // unter dem Namen der West-Runde an.
     const snapshot = revier(12, {
       tripLengthDays: 2,
       returnDeadlineDate: '2026-08-09',
       pickupDate: '2026-08-09',
     });
-    const west = snapshot.library.variants.find((v) => v.id === 'west-runde')!;
-    const opt = assessRouteOption(west, 'athen', snapshot);
+    const opt = assessTargetOption('west2', 'athen', snapshot);
+    if (opt.plan) {
+      expect(stagesOf(opt.plan).map((s) => s.toIslandId)).toContain('west2');
+    } else {
+      expect(opt.state).toBe('zu');
+      expect(opt.reasons.length).toBeGreaterThan(0);
+    }
+  });
 
-    expect(opt.state).not.toBe('zu');
+  it('das nahe Ziel bleibt erreichbar, auch wenn das ferne es nicht ist', () => {
+    const snapshot = revier(12, {
+      tripLengthDays: 2,
+      returnDeadlineDate: '2026-08-09',
+      pickupDate: '2026-08-09',
+    });
+    const opt = assessTargetOption('sued', 'athen', snapshot);
     expect(opt.plan).not.toBeNull();
-    // Der Rückfall auf die freie Suche ist sichtbar: die West-Zwischenstopps
-    // stehen nicht drin, der Wendepunkt schon.
-    const inseln = stagesOf(opt.plan!).map((s) => s.toIslandId);
-    expect(inseln).not.toContain('west2');
-    expect(inseln).toContain('sued');
+    expect(stagesOf(opt.plan!).map((s) => s.toIslandId)).toContain('sued');
   });
 });
 
@@ -341,7 +357,6 @@ describe('Konzept-Regler — wo "zu stark" anfängt, entscheidet der Skipper', (
       konzeptOstMaxKn: 26,
     });
     expect(konzeptLageFor(lockerer).eignung.ost).toBe('geeignet');
-    const ost = lockerer.library.variants.find((v) => v.id === 'ost-runde')!;
-    expect(assessRouteOption(ost, 'athen', lockerer).empfehlung).toBe('empfohlen');
+    expect(assessTargetOption('mykonos', 'athen', lockerer).empfehlung).toBe('empfohlen');
   });
 });

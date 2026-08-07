@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTrip } from '../../app/tripContext.tsx';
 import { usePlanning } from '../../app/planningContext.tsx';
 import { getCurrentGpsPosition } from '../../adapters/geolocation.ts';
+import { DEFAULT_PARAMS } from '../../domain/schema/params.ts';
 
 export function PositionPopover() {
   const { state, dispatch } = useTrip();
@@ -22,7 +23,7 @@ export function PositionPopover() {
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const places = bundle?.library.places ?? [];
-  const tripLengthDays = bundle?.params.tripLengthDays ?? 12;
+  const tripLengthDays = bundle?.params.tripLengthDays ?? DEFAULT_PARAMS.tripLengthDays;
 
   const close = () => {
     setOpen(false);

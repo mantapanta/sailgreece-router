@@ -177,12 +177,20 @@ describe('regression: a thin leg library must not paint perfect weather red', ()
     // the certainty red would imply.
     const snapshot = realSnapshot({ windKn: 32, windFromDeg: 0 });
     const solved = completePlan(snapshot, 'athen')!;
-    // AD-13 REVISED made this STRICTER, not laxer. The return legs used to be
-    // 'unbewertet' beyond the horizon, i.e. neutral — and therefore plannable.
-    // Now they are computed, come out red at 32 kn on the nose, and the solver
-    // honestly finds no sailable trip at all: it falls back to staying put.
-    expect(solved.validity.valid).toBe(false);
-    expect(stagesOf(solved.plan).length).toBe(0);
+    /**
+     * AD-13 REVISED made this STRICTER, not laxer. The return legs used to be
+     * 'unbewertet' beyond the horizon, i.e. neutral — and therefore plannable.
+     * Now they are computed and come out red at 32 kn on the nose.
+     *
+     * ZIELMODELL V3 (2026-08-07): der Solver fällt weiterhin auf "an der Basis
+     * bleiben" zurück — aber dieser Plan ist jetzt formal GÜLTIG. Er hat keine
+     * Verletzung mehr, seit die Hafentage-Befunde entfallen sind, und das ist
+     * richtig so: im Hafen zu liegen ist sicher und pünktlich. Was ihn als
+     * Nicht-Törn kenntlich macht, ist nicht mehr eine Verletzung, sondern die
+     * schlichte Tatsache, dass er nicht segelt — und genau darauf besteht die
+     * Ampel (assess.ts: grün verlangt einen Törn, der stattfindet).
+     */
+    expect(stagesOf(solved.plan)).toHaveLength(0);
     const assessment = assessPlanning({
       ...snapshot,
       trip: { ...snapshot.trip, plan: solved.plan },
