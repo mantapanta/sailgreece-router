@@ -308,6 +308,22 @@ describe('Zielmodell v3 — die Hauptroute erfüllt den Vertrag', () => {
   });
 });
 
+/**
+ * DIE FRIST STEHT HIER, WEIL DIESE TESTS DIE GANZE MASCHINE ANWERFEN.
+ *
+ * `assessPlanning` auf den echten Staging-Daten braucht am 2026-08-07 rund
+ * 3,5–4,5 s: 46 Etappen, 68 volle Runden je Schicht, elf Suchen (Hauptroute
+ * plus zehn Ziele) und 31 Lee-Zonen, die für jeden Forecast-Punkt jeder Stunde
+ * geprüft werden. Vitests Vorgabe von 5 s trifft das im kalten Prozess knapp
+ * nicht — mit einer Fehlermeldung ("Test timed out"), die wie ein Sachfehler
+ * aussieht und keiner ist.
+ *
+ * Die Frist ist bewusst grosszügig und bewusst SICHTBAR: sie ist kein
+ * Freibrief, sondern der Ort, an dem eine Laufzeit-Regression auffällt. Wer
+ * sie erhöhen muss, hat etwas verlangsamt.
+ */
+const VOLLE_BEWERTUNG_MS = 20_000;
+
 describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
   it('Jede Option mit Plan läuft ihre Ziel-Insel wirklich an', () => {
     /**
@@ -323,7 +339,7 @@ describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
       const ziele = stagesOf(opt.plan).map((s) => s.toIslandId);
       expect(ziele, `Option ${opt.routeId} (${opt.name})`).toContain(opt.turnIslandId);
     }
-  });
+  }, VOLLE_BEWERTUNG_MS);
 
   it('Alternativen tragen keine kuratierten Routen-Namen mehr', () => {
     // Die Namen aus variants.json ("Verlängerung Santorin", "Süd-Route bis
@@ -334,7 +350,7 @@ describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
     for (const opt of assessment.routeOptions) {
       expect(kuratiert).not.toContain(opt.name);
     }
-  });
+  }, VOLLE_BEWERTUNG_MS);
 });
 
 describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {

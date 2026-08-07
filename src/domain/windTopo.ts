@@ -115,6 +115,32 @@ function inZone(zone: WindTopoDueseZone, at: Coordinates): boolean {
  * die Kuration muss die Grenze nicht scharf treffen, weil dort ohnehin kaum
  * noch etwas passiert.
  */
+/**
+ * DER GRÖSSTE ABSTAND VON DER INSELMITTE, in dem eine Keule überhaupt noch
+ * greifen kann — die Vorprüfung, die den Peilungs-Aufruf spart.
+ *
+ * Beide Bedingungen unten sind notwendig: `along ≤ obstacleRadiusNm + lobeNm`
+ * (sonst liegt der Punkt hinter dem Keulenende) und `across ≤ 2 ·
+ * obstacleRadiusNm` (die Keule ist am Ende doppelt so breit wie das
+ * Hindernis). Wegen d² = along² + across² kann ein Punkt jenseits der
+ * Hypotenuse aus beiden nie in der Keule liegen — die Prüfung verwirft also
+ * nur, was `leeFactorFor` ohnehin verworfen hätte.
+ *
+ * WARUM ÜBERHAUPT: seit die Zonen aus der Landmaske kommen, sind es 31 statt
+ * 9, und `leeAnsatzAt` fragt für JEDEN Forecast-Punkt JEDER Etappe zu JEDER
+ * Stunde alle durch. Im CPU-Profil vom 2026-08-07 stand `leeFactorFor` damit
+ * mit 480 ms an der Spitze der Bewertung, der grösste Teil davon in
+ * `bearingDeg` — für Inseln am anderen Ende der Ägäis.
+ */
+const reichweiteMemo = new WeakMap<WindTopoLeeZone, number>();
+function maxReichweiteNm(zone: WindTopoLeeZone): number {
+  const gecacht = reichweiteMemo.get(zone);
+  if (gecacht !== undefined) return gecacht;
+  const r = Math.hypot(zone.obstacleRadiusNm + zone.lobeNm, 2 * zone.obstacleRadiusNm);
+  reichweiteMemo.set(zone, r);
+  return r;
+}
+
 function leeFactorFor(
   zone: WindTopoLeeZone,
   at: Coordinates,
@@ -122,6 +148,7 @@ function leeFactorFor(
 ): number | null {
   const d = distanceNm(zone.center, at);
   if (d <= 0) return null;
+  if (d > maxReichweiteNm(zone)) return null;
   // Wohin der Wind WEHT — AD-6 nennt die Richtung, aus der er kommt.
   const downwind = normDeg(windFromDeg + 180);
   const delta = ((bearingDeg(zone.center, at) - downwind) * Math.PI) / 180;
