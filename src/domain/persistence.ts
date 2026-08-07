@@ -158,6 +158,23 @@ function padded(series: (number | null)[], length: number): (number | null)[] {
 }
 
 /**
+ * Dasselbe für eine Markierungs-Serie: die angehängten Stunden sind FALSE.
+ *
+ * Gebraucht für `windAdjusted` (domain/windTopo.ts). Die fortgeschriebenen
+ * Stunden tragen den Düsen-Zuschlag zwar rechnerisch mit — er steckt im
+ * Tagesgang, weil applyWindTopo VOR dieser Fortschreibung läuft —, aber sie
+ * sind nicht selbst korrigiert worden, sondern angenommen. Genau das sagt dort
+ * schon `windAssumed`; die Stunde zusätzlich als korrigiert zu markieren würde
+ * eine zweite, feinere Herkunft behaupten, die es nicht gibt.
+ */
+function paddedFlags(flags: boolean[] | undefined, length: number): boolean[] | undefined {
+  if (!flags) return undefined;
+  const out = new Array<boolean>(length).fill(false);
+  for (let i = 0; i < Math.min(flags.length, length); i++) out[i] = flags[i] ?? false;
+  return out;
+}
+
+/**
  * Last axis index for which ANY location has a real wind value — the model
  * horizon. Wind, not waves: the marine horizon is shorter by design, and the
  * skipper-facing caveat is about the wind forecast running out.
@@ -312,6 +329,7 @@ export function applyPersistenceAssumption(snapshot: PlanningSnapshot): {
       wavePeriodS,
       windAssumed: windFilled.map((f, i) => f || (fc.windAssumed[i] ?? false)),
       waveAssumed: waveFilled.map((f, i) => f || (fc.waveAssumed[i] ?? false)),
+      windAdjusted: paddedFlags(fc.windAdjusted, times.length),
     };
   }
 

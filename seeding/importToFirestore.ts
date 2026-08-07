@@ -23,6 +23,7 @@ import {
   LegsStagingFileSchema,
   VariantsStagingFileSchema,
   KiteSpotsStagingFileSchema,
+  WindTopoStagingFileSchema,
   ConfigStagingFileSchema,
   PolarStagingFileSchema,
 } from '../src/domain/schema/seeding.ts';
@@ -31,6 +32,7 @@ import type {
   LegsStagingFile,
   VariantsStagingFile,
   KiteSpotsStagingFile,
+  WindTopoStagingFile,
   ConfigStagingFile,
   PolarStagingFile,
 } from '../src/domain/schema/seeding.ts';
@@ -180,6 +182,28 @@ async function main() {
     console.warn('HINWEIS: kitespots.json fehlt — die Kite-Ebene bleibt leer.');
   }
 
+  /**
+   * Topografische Windzonen: eigene Datei, eigenes Gate — wie die Kite-Spots.
+   * Kein Pflicht-Import: fehlt sie, gibt es keine Korrektur, und das ist exakt
+   * das Verhalten von vor ihrer Einfuehrung (domain/windTopo.ts).
+   */
+  let windTopo: WindTopoStagingFile | null = null;
+  const windTopoPath = join(DATA, 'windtopo.json');
+  if (existsSync(windTopoPath)) {
+    const file = loadStrict<WindTopoStagingFile>(
+      WindTopoStagingFileSchema,
+      windTopoPath,
+      'Windzonen-Staging',
+    );
+    windTopo = file;
+    if (!file.approved) {
+      skipNotice('Windzonen-Staging', 'windtopo.json');
+      windTopo = null;
+    }
+  } else {
+    console.warn('HINWEIS: windtopo.json fehlt — keine topografische Windkorrektur.');
+  }
+
   const config = loadStrict<ConfigStagingFile>(
     ConfigStagingFileSchema,
     join(DATA, 'config.json'),
@@ -313,6 +337,22 @@ async function main() {
     }
   }
 
+  /**
+   * Windzonen: nur auf doppelte Ids pruefbar. Eine Zone haengt bewusst an
+   * KEINER Insel und an keinem Platz (sie ist eine Flaeche, schema/windTopo.ts)
+   * — es gibt hier also keine Referenz, die ins Leere zeigen koennte. Die
+   * fachliche Pruefung ist die Kalibrierung, und die steht in `kalibriertAus`.
+   */
+  if (windTopo) {
+    const seenZoneIds = new Set<string>();
+    for (const zone of windTopo.zones) {
+      if (seenZoneIds.has(zone.id)) {
+        fail(`Windzone '${zone.id}' ist in windtopo.json doppelt definiert.`);
+      }
+      seenZoneIds.add(zone.id);
+    }
+  }
+
   // Config base references must exist in the staged library (AD-10: return
   // logic finds the base via these ids).
   if (!seenIslandIds.has(config.parameters.baseIslandId)) {
@@ -331,7 +371,8 @@ async function main() {
   console.log(
     `Validierung OK: ${approvedIslands.length}/${islandFiles.length} Inseln freigegeben (${placeCount} Plätze), ` +
       `Etappen: ${legs ? legs.legs.length : 'übersprungen'}, Varianten: ${variants ? variants.variants.length : 'übersprungen'}, ` +
-      `Kite-Spots: ${kiteSpots ? kiteSpots.kiteSpots.length : 'übersprungen'}, Polare: ${polar ? `${polar.polar.twaDeg.length}×${polar.polar.twsKn.length}` : 'übersprungen'}, Config freigegeben.`,
+      `Kite-Spots: ${kiteSpots ? kiteSpots.kiteSpots.length : 'übersprungen'}, ` +
+      `Windzonen: ${windTopo ? windTopo.zones.length : 'übersprungen'}, Polare: ${polar ? `${polar.polar.twaDeg.length}×${polar.polar.twsKn.length}` : 'übersprungen'}, Config freigegeben.`,
   );
   if (DRY_RUN) {
     console.log('--dry: keine Schreibvorgänge.');
@@ -377,6 +418,12 @@ async function main() {
       writes.push({ collection: 'kiteSpots', docId: spotDocId, data: spotRest });
     }
   }
+  if (windTopo) {
+    for (const zone of windTopo.zones) {
+      const { id: zoneDocId, ...zoneRest } = zone;
+      writes.push({ collection: 'windTopoZones', docId: zoneDocId, data: zoneRest });
+    }
+  }
   writes.push({ collection: 'config', docId: 'parameters', data: config.parameters });
   if (polar) {
     // Firestore rejects arrays inside arrays — the polar matrix is stored as
@@ -418,6 +465,14 @@ async function main() {
     );
     stagedIds['kiteSpots'] = new Set(staged.kiteSpots.map((s) => s.id));
   }
+  if (existsSync(windTopoPath)) {
+    const staged = loadStrict<WindTopoStagingFile>(
+      WindTopoStagingFileSchema,
+      windTopoPath,
+      'Windzonen-Staging',
+    );
+    stagedIds['windTopoZones'] = new Set(staged.zones.map((z) => z.id));
+  }
   for (const [coll, ids] of Object.entries(stagedIds)) {
     const remoteDocs = await db.collection(coll).listDocuments();
     const orphans = remoteDocs.map((d) => d.id).filter((id) => !ids.has(id));
@@ -431,7 +486,8 @@ async function main() {
   console.log(
     `Import abgeschlossen: islands=${approvedIslands.length}, places=${placeCount}, ` +
       `legs=${legs ? legs.legs.length : 0}, routes=${variants ? variants.variants.length : 0}, ` +
-      `kiteSpots=${kiteSpots ? kiteSpots.kiteSpots.length : 0}, config/parameters${polar ? ', config/polar' : ''}.`,
+      `kiteSpots=${kiteSpots ? kiteSpots.kiteSpots.length : 0}, ` +
+      `windTopoZones=${windTopo ? windTopo.zones.length : 0}, config/parameters${polar ? ', config/polar' : ''}.`,
   );
   console.log(
     'Hinweis (AD-5): Feldkorrekturen über die Firebase-Konsole müssen ins Staging-JSON zurückgetragen werden, sonst überschreibt der nächste Import sie.',

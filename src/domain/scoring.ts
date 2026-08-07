@@ -30,6 +30,8 @@ import {
 } from './polar.ts';
 import { kreuzSchlaege } from './kreuz.ts';
 import { kursAbschnitteOfPassages } from './kursAbschnitte.ts';
+import { waypointKeyOf } from './forecastKeys.ts';
+import { leeAnsatzAt, leeBewertungsKn, scoringLeeZones } from './windTopo.ts';
 import { hourIndexAt, legWindow, MAX_LEG_HOURS } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -108,10 +110,15 @@ interface LegPoint {
   coordinates: Coordinates;
 }
 
-/** Normative forecast key for the nth waypoint of a leg (AD-3). */
-export function legWaypointKey(legId: string, n: number): string {
-  return `leg:${legId}:${n}`;
-}
+/**
+ * Normative forecast key for the nth waypoint of a leg (AD-3).
+ *
+ * Die Definition wohnt seit 2026-08-07 in domain/forecastKeys.ts — dort, wo
+ * auch die ORTSMENGE aufgezählt wird, die diese Schlüssel trägt. Hier bleibt
+ * nur der Re-Export, damit die bestehenden Aufrufer (Adapter, Tests) sich nicht
+ * umgewöhnen müssen.
+ */
+export { legWaypointKey } from './forecastKeys.ts';
 
 /**
  * Liegezeit an einem Zwischenstopp des Tages — die EINE Quelle dieses Wertes.
@@ -182,7 +189,7 @@ function legPoints(leg: Leg, snapshot: PlanningSnapshot): LegPoint[] | null {
     // Derived legs (e.g. reversed connectors) carry the forecast keys of
     // their ORIGINAL stored leg via waypointKeys — only those were fetched.
     ...leg.waypoints.map((w, n) => ({
-      key: leg.waypointKeys?.[n] ?? legWaypointKey(leg.id, n),
+      key: waypointKeyOf(leg, n),
       coordinates: w,
     })),
     { key: to.id, coordinates: to.coordinates },
@@ -391,6 +398,46 @@ export function assessLeg(
   const startIdx = hourIndexAt(departureMs, snapshot.times);
   if (startIdx === null) return unbewertet('Abfahrtszeit außerhalb der Forecast-Achse');
 
+  /**
+   * DER WINDSCHATTEN IM BEWERTUNGSPFAD (domain/windTopo.ts, Modulkopf).
+   *
+   * Er wird hier gelesen und NICHT im Snapshot angewandt — bewusst: so sieht
+   * ihn genau das, was eine Etappe rechnet, und nichts sonst. Die Nacht-Ampel
+   * eines Liegeplatzes bekommt ihn dadurch nie zu sehen (sie hat ihren
+   * Schutzsektor, und beides zusammen wäre dieselbe Abdeckung zweimal), und im
+   * Worst-Case-Szenario ist er komplett abgeschaltet: der Rückkehr-Check fragt,
+   * ob der Heimweg auch bei voller Meltemi-Lage hält, und diese Frage darf
+   * keine kuratierte Abdeckung beantworten.
+   */
+  const leeZones =
+    scenario === 'worstCase' || params.leeBewertungMaxAbzugKn <= 0
+      ? []
+      : scoringLeeZones(snapshot.library.windTopoZones ?? []);
+  /** Mindestens eine bewertete Stunde ruht auf einer Lee-Korrektur. */
+  let leeGenutzt = false;
+  /**
+   * Wind an EINEM Etappenpunkt, wie die Bewertung ihn sieht: Modellwert, und
+   * wenn der Punkt in einer bewertungsfähigen Lee-Zone liegt, der gekappte
+   * Lee-Wert. Jeder Lesezugriff dieser Simulation läuft hierdurch — es gibt
+   * keinen zweiten Pfad, auf dem eine Stunde den Schatten stumm mitnähme oder
+   * stumm überginge.
+   */
+  const windAtPoint = (
+    pointIdx: number,
+    hourIdx: number,
+  ): { twsKn: number; fromDeg: number } | null => {
+    const p = points[pointIdx];
+    if (!p) return null;
+    const w = windAt(snapshot.forecast[p.key], hourIdx);
+    if (!w || leeZones.length === 0) return w;
+    const hit = leeAnsatzAt(leeZones, p.coordinates, w.fromDeg);
+    if (!hit) return w;
+    const kn = leeBewertungsKn(w.twsKn, hit.factor, params.leeBewertungMaxAbzugKn);
+    if (kn >= w.twsKn) return w;
+    leeGenutzt = true;
+    return { twsKn: kn, fromDeg: w.fromDeg };
+  };
+
   const verdicts: Ampel[] = [];
   const reasons = new Set<string>();
   const breakdown: LegHourBreakdown[] = [];
@@ -472,10 +519,7 @@ export function assessLeg(
         traveled / total < (acc - seg.nm / 2) / total ? seg.fromIdx : seg.toIdx;
       // Worst case for THIS segment's course (most on the nose within the sector).
       const wc = worstCaseWind(params, seg.course);
-      const rawProgressWind = windAt(
-        snapshot.forecast[points[progressPointIdx]!.key],
-        idx,
-      );
+      const rawProgressWind = windAtPoint(progressPointIdx, idx);
       const usedWorstCase = substitutes(rawProgressWind);
       const progressWind = usedWorstCase ? wc : rawProgressWind;
       if (!progressWind)
@@ -488,8 +532,8 @@ export function assessLeg(
 
       // FR16 rule at EVERY point, für JEDEN Kurs dieser Stunde — worst point
       // governs, und der schlechteste Kurs zählt genauso.
-      for (const p of points) {
-        const raw = windAt(snapshot.forecast[p.key], idx);
+      for (let pi = 0; pi < points.length; pi++) {
+        const raw = windAtPoint(pi, idx);
         const w = substitutes(raw) ? wc : raw;
         if (!w) {
           verdicts.push('unbewertet');
@@ -735,6 +779,26 @@ export function assessLeg(
   if (kreuzHours > params.kreuzGelbAbStunden) {
     verdicts.push('gelb');
     reasons.add(kreuzGelbReason(kreuzHours, params));
+  }
+
+  /**
+   * KEIN GRÜN AUS DEM LEE (Sicherung 3, domain/windTopo.ts).
+   *
+   * Ruht diese Etappe auf einer kuratierten Abdeckung, ist sie höchstens gelb.
+   * `worstAmpel` lässt ein Rot dabei Rot — das Lee darf ein Rot aufheben (indem
+   * es gar nicht erst entsteht), es darf aber keinen Tag freisprechen.
+   *
+   * Wie beim Kreuz-Befund darüber ist der Satz bewusst ein ANDERER als der der
+   * FR16-Grenze: der Solver liest nur den roten Satz als Sicherheitsverletzung,
+   * und ein Lee-Vorbehalt ist keine. Die Etappe bleibt gültig, planbar und in
+   * der Rangfolge vor jeder roten — genau der Punkt der Umstellung.
+   */
+  if (leeGenutzt) {
+    verdicts.push('gelb');
+    reasons.add(
+      `Bewertet mit kuratiertem Windschatten (höchstens −${params.leeBewertungMaxAbzugKn} kn) — ` +
+        `steht die Abdeckung nicht, liegt hier mehr Wind als gerechnet`,
+    );
   }
 
   /**

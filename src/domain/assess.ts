@@ -20,6 +20,7 @@ import { worstAmpel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
 import { reachableIslands } from './reach.ts';
 import { applyPersistenceAssumption } from './persistence.ts';
+import { applyWindTopo, leeHinweiseForStage, leeRueckwegSatz } from './windTopo.ts';
 import {
   assessTargetOption,
   deriveDayOptions,
@@ -422,6 +423,12 @@ function assessPlan(
         islandId,
         legAssessments,
       ),
+      /**
+       * Windschatten an den Etappen dieses Tages — gegen dieselbe GESEGELTE
+       * Kette wie alles andere (AD-3). Steht neben der Ampel, nie in ihr:
+       * `ampel` oben ist bereits gebildet und liest diese Liste nicht.
+       */
+      leeHinweise: leeHinweiseForStage(snapshot, legAssessments),
     };
   });
 
@@ -473,13 +480,24 @@ const witnessOf = (r: SolveResult | null): SolveResult | null => {
 };
 
 export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
-  // FIRST step, before anything is judged: extend the hour axis over the whole
-  // trip and fill the gaps with the persistence assumption. A forecast that
-  // does not reach the second week must not mean "no statement" — it means
-  // "statement under a named assumption", flagged per hour and reported per
-  // verdict. Everything downstream therefore sees a complete axis.
+  /**
+   * ERSTER Schritt: der kuratierte DÜSEN-ZUSCHLAG (domain/windTopo.ts). Er
+   * steht VOR der Fortschreibung, weil die ihren typischen Tagesgang aus den
+   * echten Stunden bildet — und echt sind ab hier die korrigierten. Sonst
+   * verschwände der Zuschlag stumm an dem Tag, an dem der Forecast ausläuft.
+   *
+   * Nur nach OBEN: Windschatten wird hier nicht gerechnet, er wird weiter unten
+   * je Etappentag zu einem Hinweis. Die Begründung dieser Asymmetrie steht im
+   * Modulkopf von schema/windTopo.ts.
+   */
+  const { snapshot: topoSnapshot, info: windTopo } = applyWindTopo(rawSnapshot);
+  // ZWEITER Schritt, immer noch bevor irgendetwas bewertet wird: extend the
+  // hour axis over the whole trip and fill the gaps with the persistence
+  // assumption. A forecast that does not reach the second week must not mean
+  // "no statement" — it means "statement under a named assumption", flagged per
+  // hour and reported per verdict. Everything downstream sees a complete axis.
   const { snapshot: rohSnapshot, info: persistence } =
-    applyPersistenceAssumption(rawSnapshot);
+    applyPersistenceAssumption(topoSnapshot);
   const { library, params } = rohSnapshot;
   const { islandId: currentIslandId, note: positionNote } =
     deriveCurrentIsland(rohSnapshot);
@@ -658,11 +676,18 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     decisionPoints.push({ day: tor.day, text: tor.note });
   }
   decisionPoints.sort((a, b) => a.day - b.day);
-  const rueckwegEmpfehlung = mainRoute
-    ? rueckwegEmpfehlungFor(mainRoute, snapshot)
-    : proposal
-      ? rueckwegEmpfehlungFor(proposal, snapshot)
-      : [];
+  const gefahren = mainRoute ?? proposal;
+  const rueckwegEmpfehlung = gefahren
+    ? (() => {
+        const saetze = rueckwegEmpfehlungFor(gefahren, snapshot);
+        // Der Lee-Korridor ist genau die Rückweg-Frage (Skipper 2026-08-07:
+        // "hinter den Inseln krasse Windschatten, die man zum Aufkreuzen für
+        // den Rückweg gut nutzen kann"). Er gehört deshalb in DIESE Liste —
+        // als Hinweis, wie alles aus windTopo.ts, das nach unten korrigiert.
+        const lee = leeRueckwegSatz(gefahren);
+        return lee ? [...saetze, lee] : saetze;
+      })()
+    : [];
 
   /**
    * VERSCHMELZUNG Optionsraum + Alternativ-Routen: die Alternativen SIND die
@@ -797,5 +822,6 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
       return days.length > 0 ? Math.min(...days) : null;
     })(),
     assumptionNote: persistence.note,
+    windTopoNote: windTopo.note,
   };
 }

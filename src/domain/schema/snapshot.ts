@@ -7,6 +7,7 @@ import type { DayReturnCheck, Plan, PlanValidity, RelaxationLevel } from './plan
 import type { KonzeptEntscheid, KonzeptId, TorCheck } from './konzept.ts';
 import type { Polar } from './polar.ts';
 import type { Params } from './params.ts';
+import type { LeeHinweis, WindTopoZone } from './windTopo.ts';
 
 /**
  * AD-3 — engine contract: one snapshot in, one assessment out.
@@ -64,6 +65,23 @@ export interface PointForecast {
   windAssumed: boolean[];
   /** Per hour: wave values stem from the persistence assumption, not the model. */
   waveAssumed: boolean[];
+  /**
+   * Je Stunde: auf `windKn` wurde der kuratierte DÜSEN-ZUSCHLAG angewandt
+   * (domain/windTopo.ts) — der Wert ist damit keiner, den das Modell so
+   * vorhergesagt hat. Dieselbe Rolle wie `windAssumed` für die Persistenz:
+   * jeder Wert, der nicht aus dem Modell stammt, bleibt erkennbar (AD-10).
+   *
+   * NUR NACH OBEN. Ein Windschatten steht hier nie drin — er wird überhaupt
+   * nicht in `windKn` gerechnet, sondern bleibt ein Hinweis an der Etappe
+   * (`StageAssessment.leeHinweise`). Das ist die Asymmetrie aus dem Modulkopf
+   * von schema/windTopo.ts.
+   *
+   * OPTIONAL aus demselben Grund wie `provenance`: die Fixtures der
+   * Domain-Tests und ein Bundle von vor der Umstellung brauchen kein leeres
+   * Array, um eine Ampel zu prüfen, die von Topografie nichts weiss. Fehlend
+   * heisst "nicht korrigiert".
+   */
+  windAdjusted?: boolean[];
 }
 
 /** Position with source precedence (AD-11): 'manual' wins until released. */
@@ -139,6 +157,15 @@ export interface Library {
    * Kite-Bibliothek geladen", nicht "keine Spots im Revier".
    */
   kiteSpots?: KiteSpot[];
+  /**
+   * TOPOGRAFISCHE WINDZONEN (schema/windTopo.ts): die kuratierten Windschatten
+   * und Kanaldüsen des Reviers — was ICON-EU auf 7 km nicht auflöst.
+   *
+   * OPTIONAL wie `kiteSpots`, und aus demselben Grund: fehlend heisst "keine
+   * Kuration geladen", nicht "keine Düsen im Revier". Ohne sie verhält sich die
+   * App exakt wie vor der Einführung (domain/windTopo.ts, applyWindTopo).
+   */
+  windTopoZones?: WindTopoZone[];
 }
 
 export interface PlanningSnapshot {
@@ -672,6 +699,19 @@ export interface StageAssessment {
    * Plans (schema/kite.ts, Modulkopf).
    */
   kiteHinweise: KiteHinweis[];
+  /**
+   * WINDSCHATTEN an den Etappen dieses Tages (domain/windTopo.ts) — die
+   * kuratierte Abdeckung hinter den hohen Inseln, die ICON-EU auf 7 km nicht
+   * auflöst. Die Rückweg-Grösse: hinter welcher Insel lässt sich das Aufkreuzen
+   * abkürzen?
+   *
+   * Bewertet NICHTS. Weder `ampel` noch `abfahrtsEmpfehlung` noch die
+   * Gültigkeit des Plans lesen ein Feld dieser Liste; die Ampel dieses Tages
+   * rechnet mit dem vollen Modellwind. Das ist die Asymmetrie aus dem Modulkopf
+   * von schema/windTopo.ts — Düsen bewerten, Schatten beraten nur. Leer heisst
+   * "kein kuratierter Schatten an diesem Tag", nicht "nicht geprüft".
+   */
+  leeHinweise: LeeHinweis[];
 }
 
 /**
@@ -818,4 +858,14 @@ export interface Assessment {
   assumedFromDay: number | null;
   /** Human-readable description of the assumption actually applied. */
   assumptionNote: string | null;
+  /**
+   * Was der kuratierte DÜSEN-ZUSCHLAG am Forecast geändert hat
+   * (domain/windTopo.ts) — für Fusszeile und Annahme-Detail. Null, wenn keine
+   * Zone gegriffen hat.
+   *
+   * Nur die Düsen: der Windschatten steht an seinen Etappentagen
+   * (`StageAssessment.leeHinweise`) und ändert am Forecast nichts, über das
+   * hier zu berichten wäre.
+   */
+  windTopoNote: string | null;
 }

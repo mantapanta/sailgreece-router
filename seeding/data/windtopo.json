@@ -1,0 +1,230 @@
+{
+  "approved": true,
+  "sourceNote": "Kalibriert 2026-08-07 gegen das Poseidon-Modell (HCMR, 1/30 Grad), Laeufe vom 09. und 10.08.2026, gegen ICON-EU (7 km). ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm. GESTALT DER LEE-ZONEN: seit 2026-08-07 eine leewaertige KEULE hinter der Insel statt eines festen Kreises mit Richtungssektoren — die Bilder zeigen den Schatten bei NNW-Wind SSE der Insel und bei NE-Wind SW davon, ein fester Kreis traf die zweite Lage gar nicht. CONFIDENCE: 'mittel' bedeutet, dass Lage und Ausdehnung der Zone im Modell abgelesen sind und der Faktor vom Ios-Messwert nach Gipfelhoehe abgestuft ist — solche Zonen gehen ueber das Confidence-Tor in Ampel und Routing ein (gekappt auf params.leeBewertungMaxAbzugKn). 'niedrig' bedeutet, dass die Zone nur aus Nachbarn hochgerechnet ist; sie beraet weiterhin nur. 'hoch' ist nirgends vergeben: dafuer muesste der Faktor je Zone an mehreren Windstaerken abgerufen sein, nicht nur einmal an einer Nachbarinsel. NACHTRAG 2026-08-07 (zweite Bildserie, Zoom auf den Westkorridor): Kea, Kythnos, Serifos und Sifnos sind jetzt EINZELN im Modell abgelesen statt von Nachbarn uebertragen; Kythnos steigt damit von 'niedrig' auf 'mittel' und bewertet mit. Die Keulen sind um 2-3 sm verlaengert, aber bewusst am unteren Rand des Sichtbaren: im Westkorridor verschmelzen die Zungen von Kea, Kythnos und Serifos zu einer durchgehenden Bahn, und was darin wie eine 22-sm-Keule aussieht, sind in Wahrheit drei verkettete. Der einzige sauber isolierte Messwert bleibt Ios.",
+  "zones": [
+    {
+      "id": "topo-lee-kea",
+      "name": "Lee Kea",
+      "kind": "lee",
+      "center": {
+        "lat": 37.62,
+        "lon": 24.33
+      },
+      "obstacleRadiusNm": 3,
+      "lobeNm": 12,
+      "factor": 0.45,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Kea 561 m, Insel ~19x9 km. Erste Abdeckung auf dem Heimweg in den Kea-Kanal.",
+      "kalibriertAus": "Gipfelhoehe 561 m. Lee suedlich der Insel im Poseidon-Bild vom 09.08.2026 als geschlossene blaue Flaeche sichtbar, in ICON-EU an derselben Stelle keine Struktur. Skipper-Beobachtung 2026-08-07: beim Durchsteppen ueber mehrere Tage und ueber schwachen wie starken Wind steht die Zone an DERSELBEN Stelle — die LAGE ist damit belegt. Faktor nach Gipfelhoehe vom Ios-Messwert abgestuft, nicht an dieser Insel gemessen. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm. NACHKALIBRIERT 2026-08-07 an den Zoom-Bildern des Poseidon-Laufs vom 10.08. (Kea/Kythnos/Serifos und Milos/Kimolos/Sifnos, 15:00 LT, Meltemi aus NNE ~025 Grad): die Abdeckung ist als zusammenhaengende tuerkise Zunge SSW der Insel unmittelbar sichtbar, Lage und Laenge hier zum ersten Mal direkt an DIESER Insel abgelesen statt von einer Nachbarinsel uebertragen. VORBEHALT: im Westkorridor VERSCHMELZEN die Zungen von Kea, Kythnos und Serifos zu einer durchgehenden Bahn — die Laenge einer EINZELNEN Keule laesst sich darin nicht sauber abgreifen, die Werte sind deshalb am unteren Rand des Sichtbaren angesetzt.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-kythnos",
+      "name": "Lee Kythnos",
+      "kind": "lee",
+      "center": {
+        "lat": 37.4,
+        "lon": 24.42
+      },
+      "obstacleRadiusNm": 3,
+      "lobeNm": 8,
+      "factor": 0.55,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Kythnos ist mit 336 m die NIEDRIGSTE der Korridor-Inseln — kuerzeste Keule, schwaechster Faktor.",
+      "kalibriertAus": "Gipfelhoehe 336 m. NICHT im Modell abgelesen — Lage und Faktor sind aus den Nachbarinseln hochgerechnet. Bleibt deshalb 'niedrig' und beraet nur: eine Ableitung wird durch die Stabilitaet einer anderen Zone nicht belastbarer. Zum Bewerten: diese Insel im Poseidon-Modell nachlesen. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm. HOCHGESTUFT 2026-08-07 von 'niedrig' auf 'mittel': Kythnos war bis dahin die einzige Korridor-Zone, deren Faktor nur aus Serifos hochgerechnet war. Die Zoom-Bilder vom 10.08. (Kea/Kythnos/Serifos, 15:00 LT, NNE ~025 Grad) zeigen ihre Abdeckung als eigene tuerkise Zunge SSW der Insel — damit ist sie abgelesen und bewertet ab jetzt mit. NACHKALIBRIERT 2026-08-07 an den Zoom-Bildern des Poseidon-Laufs vom 10.08. (Kea/Kythnos/Serifos und Milos/Kimolos/Sifnos, 15:00 LT, Meltemi aus NNE ~025 Grad): die Abdeckung ist als zusammenhaengende tuerkise Zunge SSW der Insel unmittelbar sichtbar, Lage und Laenge hier zum ersten Mal direkt an DIESER Insel abgelesen statt von einer Nachbarinsel uebertragen. VORBEHALT: im Westkorridor VERSCHMELZEN die Zungen von Kea, Kythnos und Serifos zu einer durchgehenden Bahn — die Laenge einer EINZELNEN Keule laesst sich darin nicht sauber abgreifen, die Werte sind deshalb am unteren Rand des Sichtbaren angesetzt.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-serifos",
+      "name": "Lee Serifos",
+      "kind": "lee",
+      "center": {
+        "lat": 37.15,
+        "lon": 24.5
+      },
+      "obstacleRadiusNm": 3,
+      "lobeNm": 12,
+      "factor": 0.45,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Serifos 585 m auf ~10 km Breite — der Lehrbuchfall der Ausgangsfrage. ICON-EU mittelt die Insel auf einen flachen Buckel, der gar keinen Schatten wirft.",
+      "kalibriertAus": "Gipfelhoehe 585 m. Lee suedlich der Insel im Poseidon-Bild vom 09.08.2026 als geschlossene blaue Flaeche sichtbar, in ICON-EU an derselben Stelle keine Struktur. Skipper-Beobachtung 2026-08-07: beim Durchsteppen ueber mehrere Tage und ueber schwachen wie starken Wind steht die Zone an DERSELBEN Stelle — die LAGE ist damit belegt. Faktor nach Gipfelhoehe vom Ios-Messwert abgestuft, nicht an dieser Insel gemessen. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm. NACHKALIBRIERT 2026-08-07 an den Zoom-Bildern des Poseidon-Laufs vom 10.08. (Kea/Kythnos/Serifos und Milos/Kimolos/Sifnos, 15:00 LT, Meltemi aus NNE ~025 Grad): die Abdeckung ist als zusammenhaengende tuerkise Zunge SSW der Insel unmittelbar sichtbar, Lage und Laenge hier zum ersten Mal direkt an DIESER Insel abgelesen statt von einer Nachbarinsel uebertragen. VORBEHALT: im Westkorridor VERSCHMELZEN die Zungen von Kea, Kythnos und Serifos zu einer durchgehenden Bahn — die Laenge einer EINZELNEN Keule laesst sich darin nicht sauber abgreifen, die Werte sind deshalb am unteren Rand des Sichtbaren angesetzt.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-sifnos",
+      "name": "Lee Sifnos",
+      "kind": "lee",
+      "center": {
+        "lat": 36.97,
+        "lon": 24.7
+      },
+      "obstacleRadiusNm": 3,
+      "lobeNm": 13,
+      "factor": 0.42,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Sifnos 680 m — die hoechste der vier Korridor-Inseln. Steilkueste im Sueden: die Fallboeen stehen hier besonders scharf.",
+      "kalibriertAus": "Gipfelhoehe 680 m. Lee suedlich der Insel im Poseidon-Bild vom 09.08.2026 als geschlossene blaue Flaeche sichtbar, in ICON-EU an derselben Stelle keine Struktur. Skipper-Beobachtung 2026-08-07: beim Durchsteppen ueber mehrere Tage und ueber schwachen wie starken Wind steht die Zone an DERSELBEN Stelle — die LAGE ist damit belegt. Faktor nach Gipfelhoehe vom Ios-Messwert abgestuft, nicht an dieser Insel gemessen. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm. NACHKALIBRIERT 2026-08-07 an den Zoom-Bildern des Poseidon-Laufs vom 10.08. (Kea/Kythnos/Serifos und Milos/Kimolos/Sifnos, 15:00 LT, Meltemi aus NNE ~025 Grad): die Abdeckung ist als zusammenhaengende tuerkise Zunge SSW der Insel unmittelbar sichtbar, Lage und Laenge hier zum ersten Mal direkt an DIESER Insel abgelesen statt von einer Nachbarinsel uebertragen. VORBEHALT: im Westkorridor VERSCHMELZEN die Zungen von Kea, Kythnos und Serifos zu einer durchgehenden Bahn — die Laenge einer EINZELNEN Keule laesst sich darin nicht sauber abgreifen, die Werte sind deshalb am unteren Rand des Sichtbaren angesetzt.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-syros",
+      "name": "Lee Syros",
+      "kind": "lee",
+      "center": {
+        "lat": 37.4333,
+        "lon": 24.9167
+      },
+      "obstacleRadiusNm": 2.5,
+      "lobeNm": 7,
+      "factor": 0.5,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Syros 442 m. Lag als einzige West-Zone im Bildausschnitt des ersten Poseidon-Screenshots (Ermoupolis mittig).",
+      "kalibriertAus": "Gipfelhoehe 442 m. Lee suedlich der Insel im Poseidon-Bild vom 09.08.2026 als geschlossene blaue Flaeche sichtbar, in ICON-EU an derselben Stelle keine Struktur. Skipper-Beobachtung 2026-08-07: beim Durchsteppen ueber mehrere Tage und ueber schwachen wie starken Wind steht die Zone an DERSELBEN Stelle — die LAGE ist damit belegt. Faktor nach Gipfelhoehe vom Ios-Messwert abgestuft, nicht an dieser Insel gemessen. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-naxos",
+      "name": "Lee Naxos",
+      "kind": "lee",
+      "center": {
+        "lat": 37.06,
+        "lon": 25.42
+      },
+      "obstacleRadiusNm": 5,
+      "lobeNm": 17,
+      "factor": 0.35,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Naxos 1004 m (Zas) — der hoechste Berg der Kykladen und die laengste Lee-Keule des Reviers. Sie deckt bei NE-Meltemi die halbe Strecke nach Ios/Sikinos ab.",
+      "kalibriertAus": "Gipfelhoehe 1004 m. Lee-Keule im Poseidon-Raster vom 10.08.2026 unmittelbar sichtbar (Lage, Laenge und Farbe abgelesen); Faktor nach Gipfelhoehe vom Ios-Messwert abgestuft. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-paros",
+      "name": "Lee Paros",
+      "kind": "lee",
+      "center": {
+        "lat": 37.08,
+        "lon": 25.15
+      },
+      "obstacleRadiusNm": 4,
+      "lobeNm": 13,
+      "factor": 0.4,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Paros 771 m (Profitis Ilias). Bei N-Lagen deckt die Keule den Weg nach Sifnos, bei NE die Bucht von Antiparos.",
+      "kalibriertAus": "Gipfelhoehe 771 m. Lee-Keule im Poseidon-Raster vom 10.08.2026 unmittelbar sichtbar (Lage, Laenge und Farbe abgelesen); Faktor nach Gipfelhoehe vom Ios-Messwert abgestuft. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-ios",
+      "name": "Lee Ios",
+      "kind": "lee",
+      "center": {
+        "lat": 36.7167,
+        "lon": 25.3
+      },
+      "obstacleRadiusNm": 3,
+      "lobeNm": 12,
+      "factor": 0.37,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Ios 713 m. Die einzige Zone, deren Faktor auf einem abgelesenen Zahlenwert beruht statt auf einer Farbe.",
+      "kalibriertAus": "Gipfelhoehe 713 m. DIE GEMESSENE ZONE: der Punktabruf liegt in ihrer Keule. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-lee-amorgos",
+      "name": "Lee Amorgos",
+      "kind": "lee",
+      "center": {
+        "lat": 36.83,
+        "lon": 25.89
+      },
+      "obstacleRadiusNm": 2.5,
+      "lobeNm": 14,
+      "factor": 0.38,
+      "fallboeenNm": 0.5,
+      "sourceNote": "Amorgos 821 m, lang und schmal (~30x6 km) — schmale, aber weit reichende Keule nach SW. Der Rueckweg aus der Ost-Aegaeis laeuft an ihr entlang.",
+      "kalibriertAus": "Gipfelhoehe 821 m. Lee-Keule im Poseidon-Raster vom 10.08.2026 unmittelbar sichtbar (Lage, Laenge und Farbe abgelesen); Faktor nach Gipfelhoehe vom Ios-Messwert abgestuft. ANKER DER KALIBRIERUNG ist der Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios: 'wind: 12 km/h' (6,5 kn) bei freier Anstroemung von rund 32 km/h (17 kn) in derselben Kachel — Faktor 0,37 direkt hinter der Insel. Das ist der einzige GEMESSENE Wert dieser Datei; alle anderen Faktoren sind daraus nach Gipfelhoehe abgestuft. KEULENLAENGE nach der Faustregel lobeNm ~ Gipfelhoehe/60, empirisch aus denselben Bildern: die blaue Lee-Zunge von Naxos (1004 m) reicht dort rund 15-20 sm nach SW, die von Ios (713 m) rund 10-12 sm.",
+      "confidence": "mittel"
+    },
+    {
+      "id": "topo-duese-kea-kanal",
+      "name": "Duese Kea-Kanal (Lavrion–Makronisos)",
+      "kind": "duese",
+      "center": {
+        "lat": 37.65,
+        "lon": 24.15
+      },
+      "radiusNm": 5,
+      "sectors": [
+        {
+          "fromDeg": 330,
+          "toDeg": 50,
+          "factor": 1.3
+        }
+      ],
+      "sourceNote": "Die bekannteste Duese des Reviers und laengst als Text an den Etappen vermerkt (legs.json, windWarnings athen--kea / attika--kea / athen--attika) — was fehlte, war die Zahl. Kanalachse N–S, der Meltemi steht laengs hinein.",
+      "kalibriertAus": "NICHT abgelesen (der Kea-Kanal liegt ausserhalb aller bisherigen Bildausschnitte). Angesetzt am unteren Rand der Literaturspanne fuer Kanalbeschleunigung (+30 %) statt am oberen (+50 %) — eine Duese wird ungebremst bewertet, also muss der Erstwert der vorsichtige sein.",
+      "confidence": "niedrig"
+    },
+    {
+      "id": "topo-duese-steno-kythnou",
+      "name": "Duese Steno Kythnou (Kea–Kythnos)",
+      "kind": "duese",
+      "center": {
+        "lat": 37.51,
+        "lon": 24.38
+      },
+      "radiusNm": 4,
+      "sectors": [
+        {
+          "fromDeg": 340,
+          "toDeg": 40,
+          "factor": 1.22
+        }
+      ],
+      "sourceNote": "Der Durchlass zwischen Kea und Kythnos. Breiter als der Kea-Kanal, also schwaechere Duese — und er liegt unmittelbar noerdlich der Lee-Keule von Kythnos: erst blaest es auf, dann faellt es ab. Genau die Struktur, die ein 7-km-Gitter zu einem gleichmaessigen Band verschmiert.",
+      "kalibriertAus": "Aus dem Kea-Kanal-Wert auf die groessere Kanalbreite heruntergesetzt. Ableitung, keine Messung.",
+      "confidence": "niedrig"
+    },
+    {
+      "id": "topo-duese-paros-naxos",
+      "name": "Duese Paros–Naxos",
+      "kind": "duese",
+      "center": {
+        "lat": 37.07,
+        "lon": 25.29
+      },
+      "radiusNm": 3,
+      "sectors": [
+        {
+          "fromDeg": 340,
+          "toDeg": 20,
+          "factor": 1.3
+        }
+      ],
+      "sourceNote": "Der Kanal zwischen zwei hohen Inseln (Paros 771 m, Naxos 1004 m). Radius auf 3 sm gehalten, damit der Zuschlag die Kanalmitte meint und nicht den Liegeplatz Piso Livadi an seinem Ufer: wie exponiert ein Hafen ist, sagt sein Schutzsektor (shelter.ts).",
+      "kalibriertAus": "SEKTOR AM 07.08.2026 KORRIGIERT, weil das Poseidon-Bild vom 10.08. ihn widerlegt hat: bei Wind aus NE (~035 Grad) zeigt das Raster den Kanal TUERKIS, nicht orange — er liegt dann im Lee von Naxos, und die alte Sektorbreite 330-050 haette dort faelschlich +30 % aufgeschlagen. Der Sektor ist deshalb auf 340-020 verengt, also auf Wind laengs der Kanalachse. Der Faktor selbst ist bei dieser Richtung UNGELESEN — kein Bild zeigt den Kanal bei N-Wind. Deshalb zurueck auf 'niedrig'.",
+      "confidence": "niedrig"
+    },
+    {
+      "id": "topo-duese-paros-antiparos",
+      "name": "Duese Paros–Antiparos",
+      "kind": "duese",
+      "center": {
+        "lat": 37.03,
+        "lon": 25.03
+      },
+      "radiusNm": 2,
+      "sectors": [
+        {
+          "fromDeg": 340,
+          "toDeg": 20,
+          "factor": 1.25
+        }
+      ],
+      "sourceNote": "Der enge, flache Antiparos-Kanal. Radius bewusst klein (2 sm): die Duese steht in der Engstelle, nicht in der ganzen Bucht.",
+      "kalibriertAus": "NICHT abgelesen. Angesetzt unter dem Paros–Naxos-Wert, weil der Kanal kuerzer ist und die flankierenden Hoehen niedriger sind. Sektor mit derselben Begruendung wie dort auf 340-020 verengt: schraeg angestroemt liegt die Engstelle im Lee von Paros statt im Strahl. Ableitung, keine Messung.",
+      "confidence": "niedrig"
+    }
+  ]
+}
