@@ -509,12 +509,15 @@ Tag. Die Karte zeigt daraus je eine Zeile:
 
 ```
 ● ca. 4 sm Kreuz (16 kn) · GELB
-● ca. 10 sm Halbwind (9 kn) · GRÜN
 ```
 
 Gemeldet werden nur Kreuz (bis 60° TWA, plus alles, was gekreuzt werden muss)
 und Halbwind (bis 100°) — raumschots trägt der Wind, und ein Abschnitt, über den
-nichts zu sagen ist, gehört nicht in eine Warnliste. Die Meilen werden je
+nichts zu sagen ist, gehört nicht in eine Warnliste. **Grüne Abschnitte zeigt
+die Karte gar nicht** (Skipper 2026-08-07): eine Warnliste, in der die Hälfte
+der Zeilen „alles in Ordnung" sagt, wird überlesen. Gerechnet werden sie
+weiterhin mit, und `kursAbschnitte` trägt sie unverändert — weggelassen wird nur
+in der Anzeige. Die Meilen werden je
 Kategorie addiert, gemeldet wird der **stärkste** Wind über ihnen (dieselbe
 Doktrin wie bei der Platz-Ampel: die schlechteste Stunde trägt das Urteil). Die
 Schwellen stehen in der Konfiguration (AD-8), Grenzwerte zählen zum milderen

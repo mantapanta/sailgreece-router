@@ -2952,10 +2952,22 @@ button.stage-thumb {
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
+/* Diese Zeile ist Fliesstext und MUSS umbrechen dürfen: das `white-space:
+   nowrap` der Badge-Pille hält eine Warnung wie "ca. 18 sm Kreuz (17 kn) ·
+   davon ca. 4 sm Kreuzschläge · GELB" in einer Zeile — auf dem Telefon schob
+   sie die ganze Seite quer aus dem Screen (Skipper 2026-08-07). Der Punkt sitzt
+   dann per Rand auf Höhe der ERSTEN Zeile statt mittig zum Block. */
 .kurs-zeile {
   font: 600 13px/1.35 var(--font-sans);
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+  white-space: normal;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  max-width: 100%;
+}
+.kurs-zeile .dot {
+  margin-top: 4px;
 }
 .kurs-zeile .urteil {
   font-weight: 700;
