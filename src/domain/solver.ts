@@ -1561,6 +1561,21 @@ export interface Pin {
   /** Island the skipper wants that day to end at; null = harbour day. */
   toIslandId: string | null;
   toPlaceId?: string;
+  /**
+   * NUR GEHALTEN, nicht festgelegt: der Tag bleibt, wo der bestehende Plan ihn
+   * schon hat, ist aber keine Entscheidung des Skippers.
+   *
+   * Der Unterschied zum echten Pin ist die HERKUNFT des Tages. Ein gehaltener
+   * Tag bindet die Suche genauso — er darf sich nicht verschieben —, aber er
+   * bekommt kein `source: 'skipper'`, taucht also nicht als Festlegung in der
+   * Ansicht auf und wird auch nicht mit "Festlegung lösen" wieder frei.
+   *
+   * Warum es das braucht (Skipper 2026-08-07): "es gibt ja eine Route, die bis
+   * dahin festgelegt ist und das neue Leg funktioniert auch, es gibt keinen
+   * Sinn nach hinten zu verändern." Wer Tag 5 ändert, ändert Tag 5 — nicht
+   * rückwirkend Tag 2.
+   */
+  gehalten?: boolean;
 }
 
 /**
@@ -1604,10 +1619,17 @@ function candidateHonoursPins(
   return true;
 }
 
-/** Re-stamp pinned days as skipper-owned and carry their place choice over. */
+/**
+ * Re-stamp pinned days as skipper-owned and carry their place choice over.
+ *
+ * GEHALTENE Tage bleiben aussen vor: sie binden die Suche, sind aber keine
+ * Entscheidung des Skippers (siehe `Pin.gehalten`). Sie hier mitzustempeln
+ * hiesse, den halben Törn als festgelegt auszugeben, weil der Skipper EINEN
+ * Tag geändert hat.
+ */
 function applyPins(days: PlanDay[], pins: Pin[]): PlanDay[] {
   return days.map((d) => {
-    const pin = pins.find((p) => p.day === d.day);
+    const pin = pins.find((p) => p.day === d.day && p.gehalten !== true);
     if (!pin) return d;
     if (d.kind === 'stage') {
       return { ...d, source: 'skipper' as const, toPlaceId: pin.toPlaceId ?? d.toPlaceId };

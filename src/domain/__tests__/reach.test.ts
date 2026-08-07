@@ -147,30 +147,33 @@ function scenario(opts: { windFromDeg?: number | null } = {}) {
   return snapshot;
 }
 
+/** Erster planbarer Tag: der Solver steht an der Basis, nichts liegt davor. */
+const LAGE_AB_BASIS = { startIslandId: 'athen', vorgeschichte: [] };
+
 describe('reachableIslands', () => {
   it('downwind targets get the 100 nm range, upwind targets only 50 nm', () => {
     // Northerly wind: south lies downwind (range 100), north lies upwind (50).
-    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, 'athen');
+    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, LAGE_AB_BASIS);
     expect(reachable).toContain('nah-sued'); //  60 nm downwind < 100
     expect(reachable).not.toContain('nah-nord'); // 60 nm upwind  > 50
   });
 
   it('the same island flips in and out when the wind turns around', () => {
     // Southerly wind: now north is downwind and south is the beat.
-    const reachable = reachableIslands(scenario({ windFromDeg: 180 }), 'athen', 1, 'athen');
+    const reachable = reachableIslands(scenario({ windFromDeg: 180 }), 'athen', 1, LAGE_AB_BASIS);
     expect(reachable).toContain('nah-nord');
     expect(reachable).not.toContain('nah-sued');
   });
 
   it('beyond the best-case range nothing is offered, regardless of wind', () => {
     // 120 nm exceeds even the downwind range — "mehrere Tagesreisen entfernt".
-    expect(reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, 'athen')).not.toContain(
+    expect(reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, LAGE_AB_BASIS)).not.toContain(
       'fern-sued',
     );
   });
 
   it('close targets are offered in both directions', () => {
-    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, 'athen');
+    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, LAGE_AB_BASIS);
     expect(reachable).toContain('dicht'); // 30 nm < 50, even upwind
   });
 
@@ -178,17 +181,20 @@ describe('reachableIslands', () => {
     // Sie stand hier einmal bedingungslos ("eigene Insel immer wählbar") und
     // war damit der Menüeintrag, den der Solver an Tag 1 sicher ablehnte: eine
     // Runde, die an Tag 1 schon wieder zu Hause ist, gibt es nicht. Am ENDE
-    // des Rahmens ist sie dagegen genau das richtige Ziel.
-    // Südwind, damit die 60 sm heim von "nah-sued" raumschots liegen — die
-    // sm-Regel ist hier nicht die Frage.
+    // der Runde ist sie dagegen genau das richtige Ziel.
     const snapshot = scenario({ windFromDeg: 180 });
-    expect(reachableIslands(snapshot, 'athen', 1, 'athen')).not.toContain('athen');
-    expect(reachableIslands(snapshot, 'nah-sued', 11, 'athen')).toContain('athen');
+    expect(reachableIslands(snapshot, 'athen', 1, LAGE_AB_BASIS)).not.toContain('athen');
+    expect(
+      reachableIslands(snapshot, 'nah-sued', 4, {
+        startIslandId: 'athen',
+        vorgeschichte: ['dicht', 'uebermorgen', 'nah-sued'],
+      }),
+    ).toContain('athen');
   });
 
   it('unknown wind falls back to the CONSERVATIVE range, not the generous one', () => {
     // No wind data at all: an unknown direction must not double the window.
-    const reachable = reachableIslands(scenario({ windFromDeg: null }), 'athen', 1, 'athen');
+    const reachable = reachableIslands(scenario({ windFromDeg: null }), 'athen', 1, LAGE_AB_BASIS);
     expect(reachable).toContain('dicht'); //  30 nm ≤ 50
     expect(reachable).not.toContain('nah-sued'); // 60 nm > 50
   });
@@ -198,20 +204,24 @@ describe('reachableIslands', () => {
     // also keine Runde, die sie anläuft: der Solver würde den Pin jedes Mal
     // ablehnen (Bug 2026-08-05: im Dropdown angeboten, bei der Auswahl auf Kea
     // zurückgesprungen).
-    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, 'athen');
+    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, LAGE_AB_BASIS);
     expect(reachable).not.toContain('ohne-etappe');
   });
 
-  it('die ZWEITE Kettenposition ist Tagesziel von MORGEN, nicht von heute', () => {
-    // "uebermorgen" hat keine Etappe ab athen, steht in der Runde aber an
-    // zweiter Position. Der Vertrag ist "ein Törntag, eine Etappe" — die Insel
-    // gehört also an Tag 2, nicht an Tag 1. Ein Doppelschlag könnte sie
-    // theoretisch vorziehen; das Menü rechnet damit bewusst NICHT (reach.ts
-    // Kopfkommentar: 20 Ziele mehr, 19 davon vom Solver abgelehnt).
+  it('nach der ersten Etappe ist die ZWEITE dran — die Runde sagt, was folgt', () => {
+    // "uebermorgen" hat keine Etappe ab athen, steht in der Runde aber direkt
+    // hinter "dicht". An Tag 1 ist es deshalb kein Ziel, an Tag 2 — wenn der
+    // Plan Tag 1 nach "dicht" gelegt hat — genau das nächste.
     const snapshot = scenario({ windFromDeg: 0 });
-    expect(reachableIslands(snapshot, 'athen', 1, 'athen')).not.toContain('uebermorgen');
-    // 90 sm raumschots ab athen — an Tag 2 in Reichweite UND in der Runde.
-    expect(reachableIslands(snapshot, 'athen', 2, 'athen')).toContain('uebermorgen');
+    expect(reachableIslands(snapshot, 'athen', 1, LAGE_AB_BASIS)).not.toContain(
+      'uebermorgen',
+    );
+    expect(
+      reachableIslands(snapshot, 'dicht', 2, {
+        startIslandId: 'athen',
+        vorgeschichte: ['dicht'],
+      }),
+    ).toContain('uebermorgen');
   });
 
   it('three legs away is no day target, even inside the sm range', () => {
@@ -219,7 +229,7 @@ describe('reachableIslands', () => {
     // hinter "uebermorgen", und der Rückweg müsste diese Insel ein zweites Mal
     // anlaufen, als einzigen Liegeplatz. KEINE Runde trägt sie, also darf sie
     // auch nicht im Menü stehen.
-    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, 'athen');
+    const reachable = reachableIslands(scenario({ windFromDeg: 0 }), 'athen', 1, LAGE_AB_BASIS);
     expect(reachable).not.toContain('dritter-schlag');
   });
 
@@ -227,12 +237,14 @@ describe('reachableIslands', () => {
     // Heim von "nah-sued" nach athen gibt es nur als UMGEDREHTE Etappe
     // (gespeichert ist nah-sued--athen); die Aufzählung fährt Etappen in beide
     // Richtungen, sonst stünde am Ende des Törns nichts mehr im Menü.
-    // Vierte Kettenposition: dort schliesst der Ring wieder an der Basis.
-    const reachable = reachableIslands(scenario({ windFromDeg: 180 }), 'nah-sued', 4, 'athen');
+    const reachable = reachableIslands(scenario({ windFromDeg: 180 }), 'nah-sued', 4, {
+      startIslandId: 'athen',
+      vorgeschichte: ['dicht', 'uebermorgen', 'nah-sued'],
+    });
     expect(reachable).toContain('athen'); // 60 nm downwind via reversed leg
   });
 
-  it('lands per stage in the assessment, measured from the PREVIOUS plan island', () => {
+  it('landet je Etappe im Assessment — und folgt dem Weg, den der Plan nimmt', () => {
     const snapshot = scenario({ windFromDeg: 0 });
     snapshot.trip = {
       ...snapshot.trip,
@@ -242,12 +254,15 @@ describe('reachableIslands', () => {
       ]),
     };
     const a = assessPlanning(snapshot);
-    const day2 = a.mainRoute!.stages.find((s) => s.day === 2)!;
-    // Day 2 starts at "dicht" (37.4 N): "fern-sued" at 35.9 N is ~90 nm off —
-    // inside the 100 nm downwind range from THERE (and one leg away), though
-    // not from Athens.
-    expect(day2.reachableIslandIds).toContain('fern-sued');
     const day1 = a.mainRoute!.stages.find((s) => s.day === 1)!;
-    expect(day1.reachableIslandIds).not.toContain('fern-sued');
+    const day2 = a.mainRoute!.stages.find((s) => s.day === 2)!;
+    // Tag 1 startet an der Basis: die direkten Nachbarn stehen zur Wahl
+    // (bei Nordwind die nach Süden — "nah-nord" liegt gegenan).
+    expect(day1.reachableIslandIds).toContain('nah-sued');
+    // Tag 2 startet an "dicht", weil der Plan Tag 1 dorthin gelegt hat — und
+    // die Tage davor bleiben beim Ändern stehen. Angeboten wird deshalb, was
+    // NACH "dicht" kommt, nicht mehr, was ab der Basis ginge.
+    expect(day2.reachableIslandIds).toContain('uebermorgen');
+    expect(day2.reachableIslandIds).not.toContain('nah-sued');
   });
 });

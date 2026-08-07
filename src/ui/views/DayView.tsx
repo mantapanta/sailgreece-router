@@ -419,7 +419,7 @@ function StageEditor({
        */
       setError(
         islandId
-          ? `Kein Round-Trip führt an Tag ${stage.day} nach ${islandName(snapshot, islandId)} und rechtzeitig zur Basis zurück — mit den übrigen Festlegungen zusammen geht dieser Tag nicht auf.`
+          ? `Kein Round-Trip führt an Tag ${stage.day} nach ${islandName(snapshot, islandId)} und von dort rechtzeitig zur Basis zurück — bei unveränderten Tagen davor geht dieser Tag nicht auf.`
           : 'Mit einem Hafentag an diesem Tag lässt sich kein Round-Trip mehr bauen, der rechtzeitig zur Basis zurückkommt.',
       );
       // Fokus auf die Fehlermeldung, sobald sie gerendert ist (EXPERIENCE
@@ -450,8 +450,8 @@ function StageEditor({
       <p className="beschreibung">
         Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
         raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
-        Vortagsziel, die eine Runde an diesem Törntag auch ansteuern kann. Um
-        das Ziel zu halten, legt die App die Tage davor gegebenenfalls neu.
+        Vortagsziel, die eine Runde von dort aus auch ansteuern kann. Die Tage
+        davor bleiben stehen — geändert wird ab hier.
       </p>
       {placesOnIsland.length > 0 && (
         <label>

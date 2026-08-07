@@ -34,11 +34,17 @@
  * verspricht — jede andere ist ein Stellvertreter, der irgendwann auseinander
  * läuft.
  *
- * WAS DAS FÜR DEN VORTAG HEISST: der Pin legt nur DIESEN Tag fest, der Solver
- * darf die Tage davor neu legen (AD-12, `completePlan` plant ab der aktuellen
- * Position). Die sm-Regel misst deshalb weiter ab dem Vortagsziel des
- * AKTUELLEN Plans — sie ist die seemännische Plausibilitätsgrenze —, aber die
- * Runde, die der Solver am Ende baut, kann davor anders laufen.
+ * DIE TAGE DAVOR BLEIBEN STEHEN. Bis 2026-08-07 band ein Pin nur seinen
+ * eigenen Tag, und der Solver legte den Törn ab der aktuellen Position neu —
+ * wer Tag 5 änderte, bekam womöglich auch einen anderen Tag 2. Der Skipper
+ * dazu: „es gibt ja eine Route, die bis dahin festgelegt ist und das neue Leg
+ * funktioniert auch, es gibt keinen Sinn nach hinten zu verändern."
+ *
+ * Deshalb rechnet dieser Filter mit der VORGESCHICHTE des Plans: angeboten
+ * wird, was eine Runde ansteuern kann, die bis zum Vortag genau da entlang
+ * läuft, wo der Plan schon liegt. Das schliesst mehr aus als die blosse
+ * Nachbarschaft — eine Insel, die der Törn vorher schon angelaufen hat, kommt
+ * in einer wiederholungsfreien Runde kein zweites Mal vor.
  *
  * Bewusst ein VORFILTER: er bestimmt nur, was zur Auswahl steht. Ob die
  * konkrete Etappe an ihrem Tag fahrbar ist, beurteilen weiterhin
@@ -52,6 +58,7 @@
 
 import type { PlanningSnapshot } from './schema/snapshot.ts';
 import { bearingDeg, distanceNm, normDeg, twaDeg } from './geo.ts';
+import { islandSequence } from './legs.ts';
 import { roundTripLayers } from './roundTrips.ts';
 import { deadlineFrame, hourIndices, legWindow } from './time.ts';
 
@@ -95,29 +102,38 @@ function representativeWindFromDeg(
 }
 
 /**
- * Welche Insel kann an welchem Törntag Tagesziel sein — gelesen aus DEM
- * Kandidatenraum, den auch der Solver durchsucht (`roundTripLayers`).
+ * Die Lage des Plans, gegen die der Filter rechnet — beides kommt aus dem
+ * Plan, der gerade bewertet wird, und beides ist NICHT das Vortagsziel.
+ */
+export interface Planlage {
+  /**
+   * Insel, ab der der Solver plant: dort steht das Schiff am Morgen des
+   * aktuellen Törntags (`completePlan`s `startIslandId`).
+   */
+  startIslandId: string;
+  /**
+   * Die Etappenziele des bestehenden Plans zwischen Startinsel und dem
+   * fraglichen Tag, als KETTE — Hafentage fallen weg, weil sie keine Etappe
+   * verbrauchen. Leer für den ersten planbaren Tag.
+   */
+  vorgeschichte: string[];
+}
+
+/**
+ * Welche Insel kann NACH dieser Vorgeschichte das nächste Tagesziel sein —
+ * gelesen aus DEM Kandidatenraum, den auch der Solver durchsucht
+ * (`roundTripLayers`).
  *
- * DIE ABBILDUNG KETTENPOSITION → TÖRNTAG ist die des Packers, und sie ist
- * bewusst die STRENGE Lesart: der Vertrag ist "ein Törntag, eine Etappe", also
- * endet die p-te Etappe an Tag `startDay + p − 1`. Wartetage schieben das nach
- * hinten — eine Kette mit `L` Etappen in `D` Tagen hat `D − L` davon frei zu
- * verteilen —, und mehr Spielraum nimmt dieser Filter sich nicht.
+ * DIE VORGESCHICHTE BESTIMMT DIE POSITION. Weil die Tage vor dem geänderten
+ * gehalten werden (`solver.Pin.gehalten`), muss die Runde bis dorthin genau
+ * den Weg des Plans nehmen; das nächste Ziel ist dann die Etappe danach. Das
+ * ist strenger als jede Positionsrechnung und braucht keine: die Runde selbst
+ * sagt, wo der Tag steht.
  *
- * WARUM DER DOPPELSCHLAG HIER NICHT ZÄHLT, obwohl es ihn gibt. Ein Tag mit
- * zwei Etappen zieht die ganze Kette um eine Position nach vorn, das Menü
- * dürfte also auch die Insel an Position N+1 für Tag N anbieten. Gemessen am
- * 2026-08-07 gegen die echte Bibliothek kostet genau das: 20 Ziele mehr im
- * Menü, davon 19 vom Solver abgelehnt — denn eine volle Runde hat `L = D` und
- * damit KEINEN Wartetag (`completePlan`: `maxWaitDays = D − L`), den der
- * Doppelschlag hinterher bräuchte. Der Doppelschlag ist eine Nachgabe der
- * Eskalationsleiter, kein Planungsmittel; ein Menü, das mit ihm rechnet,
- * verspricht mehr, als der Normalfall hält.
- *
- * Die Vorauswahl des Solvers (`solver.kannPinTragen`) rechnet ihn dagegen
- * SEHR WOHL mit: sie darf keinen Kandidaten wegwerfen, der den Pin doch noch
- * tragen könnte. Zwei Richtungen, zwei Fehler — der Filter hier darf nichts
- * versprechen, der dort nichts wegwerfen.
+ * GESUCHT WIRD ALS TEILFOLGE, nicht Position für Position. Ein Doppelschlag-Tag
+ * trägt zwei Etappen und schiebt die Kette gegen die Tage; ein starrer
+ * Positionsvergleich fände dann gar nichts mehr und das Menü wäre LEER —
+ * schlimmer als zu grosszügig, weil es den Tag unbearbeitbar macht.
  *
  * NUR DIE ERSTE TRAGENDE SCHICHT. `completePlan` fragt die Schichten in
  * derselben Vorzugsreihenfolge und bricht ab, sobald eine trägt — der Filter
@@ -126,9 +142,34 @@ function representativeWindFromDeg(
  */
 const tagszieleCache = new WeakMap<PlanningSnapshot, Map<string, Set<string>>>();
 
-function islandsPossibleOnDay(
+/**
+ * Position der LETZTEN Vorgeschichte-Insel in der Kette, oder null, wenn die
+ * Kette die Vorgeschichte nicht in dieser Reihenfolge enthält. 0 heisst
+ * "keine Vorgeschichte" — die Startinsel selbst.
+ */
+function positionNachVorgeschichte(
+  islands: string[],
+  vorgeschichte: string[],
+  maxPosition: number,
+): number | null {
+  let p = 0;
+  for (const id of vorgeschichte) {
+    let gefunden = -1;
+    for (let k = p + 1; k < islands.length; k++) {
+      if (islands[k] === id) {
+        gefunden = k;
+        break;
+      }
+    }
+    if (gefunden < 0) return null;
+    p = gefunden;
+  }
+  return p <= maxPosition ? p : null;
+}
+
+function islandsPossibleNext(
   snapshot: PlanningSnapshot,
-  startIslandId: string,
+  lage: Planlage,
   day: number,
 ): Set<string> {
   let proSnapshot = tagszieleCache.get(snapshot);
@@ -136,28 +177,31 @@ function islandsPossibleOnDay(
     proSnapshot = new Map();
     tagszieleCache.set(snapshot, proSnapshot);
   }
-  const key = `${startIslandId}:${day}`;
+  const key = [day, lage.startIslandId, ...lage.vorgeschichte].join('>');
   const gecacht = proSnapshot.get(key);
   if (gecacht) return gecacht;
 
   const startDay = snapshot.trip.currentDay;
   const daysAvailable = deadlineFrame(snapshot.params).deadlineDay - startDay + 1;
-  /** Position, die dieser Tag ohne Wartetag hätte. */
-  const position = day - startDay + 1;
+  /**
+   * Wie viele Etappen bis zum VORABEND dieses Tages höchstens gefahren sein
+   * können — ein Törntag trägt eine. Ohne diese Schranke fand die Teilfolge
+   * auch Runden, die dieselbe Vorgeschichte-Insel erst kurz vor Schluss
+   * anlaufen: an Tag 2 stand dann die BASIS im Menü, weil es eine Runde gibt,
+   * die über dieselbe Insel an Tag 10 nach Hause fährt.
+   */
+  const maxPosition = Math.max(0, day - startDay);
   const out = new Set<string>();
-  if (position >= 1) {
-    for (const layer of roundTripLayers(snapshot, startIslandId, daysAvailable)) {
-      for (const trip of layer.trips) {
-        const wartetage = Math.max(0, daysAvailable - trip.length);
-        const von = Math.max(1, position - wartetage);
-        const bis = Math.min(position, trip.length);
-        for (let p = von; p <= bis; p++) {
-          out.add(trip[p - 1]!.toIslandId);
-        }
-      }
-      // Die erste Schicht, die überhaupt Runden trägt, entscheidet.
-      if (layer.trips.length > 0) break;
+  for (const layer of roundTripLayers(snapshot, lage.startIslandId, daysAvailable)) {
+    for (const trip of layer.trips) {
+      const islands = islandSequence(trip);
+      const p = positionNachVorgeschichte(islands, lage.vorgeschichte, maxPosition);
+      if (p === null) continue;
+      const naechste = islands[p + 1];
+      if (naechste !== undefined) out.add(naechste);
     }
+    // Die erste Schicht, die überhaupt Runden trägt, entscheidet.
+    if (layer.trips.length > 0) break;
   }
   proSnapshot.set(key, out);
   return out;
@@ -185,23 +229,22 @@ function islandsPossibleOnDay(
  * können (`islandsPossibleOnDay`, Begründung im Kopfkommentar). Ohne die
  * zweite Bedingung steht im Menü, was der Solver hinterher ablehnt.
  *
- * `startIslandId` ist die Insel, ab der der Solver plant — dort steht das
- * Schiff am Morgen des aktuellen Törntags. Sie ist NICHT `fromIslandId`: das
- * ist das Vortagsziel dieses einen Tages, und der liegt in aller Regel später
- * im Törn.
+ * `lage` beschreibt den Plan, nicht den Tag: wo der Solver zu planen beginnt
+ * und welchen Weg der Plan bis zum Vortag schon nimmt. `fromIslandId` ist
+ * davon getrennt das Vortagsziel DIESES Tages — es trägt die sm-Regel.
  */
 export function reachableIslands(
   snapshot: PlanningSnapshot,
   fromIslandId: string,
   day: number,
-  startIslandId: string,
+  lage: Planlage,
 ): string[] {
   const { params, library } = snapshot;
   const from = library.islands.find((i) => i.id === fromIslandId);
   if (!from) return [];
 
   const windFromDeg = representativeWindFromDeg(snapshot, fromIslandId, day);
-  const imKandidatenraum = islandsPossibleOnDay(snapshot, startIslandId, day);
+  const imKandidatenraum = islandsPossibleNext(snapshot, lage, day);
 
   const out: string[] = [];
   for (const island of library.islands) {
