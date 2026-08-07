@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { reachableIslands } from '../reach.ts';
+import { reachableIslands, stopoverIslands } from '../reach.ts';
 import { assessPlanning } from '../assess.ts';
 import { RETURN_CHAIN_ROUTE_ID } from '../schema/route.ts';
 import type { Island } from '../schema/island.ts';
@@ -264,5 +264,121 @@ describe('reachableIslands', () => {
     // NACH "dicht" kommt, nicht mehr, was ab der Basis ginge.
     expect(day2.reachableIslandIds).toContain('uebermorgen');
     expect(day2.reachableIslandIds).not.toContain('nah-sued');
+  });
+});
+
+/**
+ * ZWISCHENSTOPPS (domain/reach.ts `stopoverIslands`) — die zweite Kontextmenge
+ * desselben Editors, mit einer anderen Frage: nicht "wo kann der Tag ENDEN",
+ * sondern "wo kann er unterwegs anhalten, ohne sein Ziel aufzugeben".
+ *
+ * Beide Hälften des Umwegs müssen die Bibliothek liefern — damit bleibt der
+ * Suchraum kuratiert. Keine Ampel- und keine Reichweiten-Regel: am
+ * Zwischenstopp muss das Boot nicht sicher liegen (Skipper 2026-08-07).
+ */
+describe('stopoverIslands', () => {
+  it('nennt die Inseln, die beide Hälften des Umwegs tragen', () => {
+    // Der Ring trägt athen→uebermorgen in beide Richtungen: über dicht
+    // (30 + 60) und über nah-sued (60 + 30). Gleicher Umweg, also entscheidet
+    // die Id — die Reihenfolge ist deterministisch, nicht zufällig.
+    expect(stopoverIslands(scenario(), 'athen', 'uebermorgen')).toEqual([
+      'dicht',
+      'nah-sued',
+    ]);
+  });
+
+  it('lässt Ausgangs- und Zielinsel des Tages selbst weg', () => {
+    const stops = stopoverIslands(scenario(), 'athen', 'dicht');
+    expect(stops).not.toContain('athen');
+    expect(stops).not.toContain('dicht');
+  });
+
+  it('verlangt BEIDE Hälften — eine Insel am Weg zu nichts zählt nicht', () => {
+    // nah-nord hängt als Sackgasse an athen: die erste Hälfte gäbe es, die
+    // zweite nicht. Ein Stopp ist es damit auf KEINEM Weg.
+    expect(stopoverIslands(scenario(), 'athen', 'uebermorgen')).not.toContain(
+      'nah-nord',
+    );
+  });
+
+  it('nutzt Gegenrichtungen — der Graph ist nicht einseitig', () => {
+    // Der Weg athen → nah-sued → uebermorgen existiert NUR umgedreht:
+    // gespeichert sind nah-sued--athen und uebermorgen--nah-sued. Fällt die
+    // Gegenrichtung weg, fällt dieser Stopp weg.
+    expect(stopoverIslands(scenario(), 'athen', 'uebermorgen')).toContain('nah-sued');
+    // Und derselbe Umweg trägt auch den Heimweg.
+    expect(stopoverIslands(scenario(), 'uebermorgen', 'athen')).toContain('nah-sued');
+  });
+
+  it('sortiert nach dem Umweg — der naheliegendste Stopp steht oben', () => {
+    const snapshot = scenario();
+    const zusatz = (fromIslandId: string, toIslandId: string, distanceNm: number) =>
+      makeLeg({
+        id: `${fromIslandId}--${toIslandId}`,
+        fromIslandId,
+        toIslandId,
+        fromPlaceId: `${fromIslandId}-hafen`,
+        toPlaceId: `${toIslandId}-hafen`,
+        distanceNm,
+      });
+
+    // Über dicht: 30 + 60 = 90 sm. Über nah-sued: 60 + 35 = 95 sm.
+    snapshot.library.legs = [
+      ...snapshot.library.legs,
+      zusatz('nah-sued', 'uebermorgen', 35),
+    ];
+    expect(stopoverIslands(snapshot, 'athen', 'uebermorgen')).toEqual([
+      'dicht',
+      'nah-sued',
+    ]);
+
+    // Wird die zweite Hälfte kurz (60 + 10 = 70 sm), dreht sich die Reihenfolge.
+    snapshot.library.legs = [
+      ...snapshot.library.legs.filter((l) => l.id !== 'nah-sued--uebermorgen'),
+      zusatz('nah-sued', 'uebermorgen', 10),
+    ];
+    expect(stopoverIslands(snapshot, 'athen', 'uebermorgen')).toEqual([
+      'nah-sued',
+      'dicht',
+    ]);
+  });
+
+  it('lässt weg, was selbst im besten Fall kein Tag mehr ist', () => {
+    const snapshot = scenario();
+    // Über nah-sued wären es 60 + 60 = 120 sm — mehr als die
+    // Best-Case-Tagesreichweite (100 sm). Das ist kein Zwischenstopp mehr,
+    // sondern ein anderes Tagesziel.
+    snapshot.library.legs = [
+      ...snapshot.library.legs,
+      makeLeg({
+        id: 'nah-sued--uebermorgen',
+        fromIslandId: 'nah-sued',
+        toIslandId: 'uebermorgen',
+        fromPlaceId: 'nah-sued-hafen',
+        toPlaceId: 'uebermorgen-hafen',
+        distanceNm: 60,
+      }),
+    ];
+    expect(stopoverIslands(snapshot, 'athen', 'uebermorgen')).toEqual(['dicht']);
+  });
+
+  it('landet je Etappentag in der Bewertung, gemessen ab der VORTAGS-Insel', () => {
+    const snapshot = scenario();
+    snapshot.trip = {
+      ...snapshot.trip,
+      plan: makePlan([
+        makeStage(1, ['athen--dicht'], 'dicht', 'solver'),
+        makeStage(2, ['dicht--uebermorgen'], 'uebermorgen', 'solver'),
+      ]),
+    };
+    const a = assessPlanning(snapshot);
+    const day2 = a.mainRoute!.stages.find((s) => s.day === 2)!;
+    // Tag 2 fährt dicht → uebermorgen: dazwischen liegt in dieser Welt nichts.
+    expect(day2.stopoverIslandIds).toEqual([]);
+    // Tag 1 fährt athen → dicht, und auch dort gibt es keinen Umweg — beide
+    // Aussagen kommen aus der Bewertung, nicht aus der Ansicht (AD-2).
+    const day1 = a.mainRoute!.stages.find((s) => s.day === 1)!;
+    expect(day1.stopoverIslandIds).toEqual([]);
+    expect(day1.zwischenstopps).toEqual([]);
   });
 });

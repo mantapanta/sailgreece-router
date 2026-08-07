@@ -18,7 +18,7 @@ import type { Leg } from './schema/route.ts';
 import { islandAtEndOfDay, stageNumber, stagesOf } from './schema/plan.ts';
 import { worstAmpel } from './schema/common.ts';
 import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
-import { reachableIslands } from './reach.ts';
+import { reachableIslands, stopoverIslands } from './reach.ts';
 import { applyPersistenceAssumption } from './persistence.ts';
 import { applyWindTopo, leeHinweiseForStage, leeRueckwegSatz } from './windTopo.ts';
 import {
@@ -234,6 +234,10 @@ function sailedChain(
       day: entry.day,
       legIds: entry.kind === 'stage' ? entry.legIds : [],
       placeId: entry.kind === 'stage' ? placeIdOf(entry) : (entry.placeId ?? null),
+      // Die HÄFEN DER ZWISCHENSTOPPS stehen im Plan (Stage.viaPlaceIds) und
+      // nicht in der Platzwahl: sie sind Ankerpunkte der Geometrie, keine
+      // Liegeplätze — am Zwischenstopp wird nicht übernachtet.
+      viaPlaceIds: entry.kind === 'stage' ? (entry.viaPlaceIds ?? null) : null,
     })),
     legLibrary(snapshot),
     snapshot.library.places,
@@ -334,6 +338,8 @@ function assessPlan(
    * dann gilt sein Platz.
    */
   const sailed = sailedChain(ordered, snapshot, placeIdOf);
+  /** Der Bibliotheks-Index — Notnagel für Tage, deren Kette nicht auflöst. */
+  const legsById = legLibrary(snapshot);
 
   /**
    * Die Insel, ab der der Solver plant — dort steht das Schiff am Morgen des
@@ -474,6 +480,36 @@ function assessPlan(
         startIslandId: planStartIslandId,
         vorgeschichte: vorgeschichteBis(entry.day),
       }),
+      /**
+       * DIE ZWISCHENSTOPPS des Tages, aus der GESEGELTEN Kette gelesen — dort
+       * steht der Hafen, an dem wirklich angehalten wird (Skipper-Wahl aus
+       * `viaPlaceIds`, sonst der kuratierte). Kein Ampel-Feld: am Zwischenstopp
+       * muss das Boot nicht sicher liegen (schema/snapshot.ts, Zwischenstopp).
+       */
+      zwischenstopps: legAssessments.slice(0, -1).flatMap((la, i) => {
+        // Ohne auflösbare Etappe gibt es keinen Stopp zu nennen: dass der Tag
+        // eine Referenz verloren hat, meldet die Etappe selbst (`reasons`) —
+        // eine Insel zu erfinden wäre die schlechtere Auskunft.
+        const leg = la.sailedLeg ?? legsById.get(la.legId);
+        if (!leg) return [];
+        return [
+          {
+            islandId: leg.toIslandId,
+            placeId: leg.toPlaceId,
+            placeIsCurated:
+              entry.kind !== 'stage' || (entry.viaPlaceIds?.[i] ?? null) === null,
+          },
+        ];
+      }),
+      /**
+       * Woher ein Zwischenstopp kommen KANN (domain/reach.ts): die Inseln
+       * zwischen Ausgangs- und Zielinsel dieses Tages. Am Hafentag gibt es
+       * keinen Weg, auf dem man anhalten könnte.
+       */
+      stopoverIslandIds:
+        entry.kind === 'stage'
+          ? stopoverIslands(snapshot, fromIslandId, islandId)
+          : [],
       // Die Stunde, gegen die dieser Tag GERECHNET wurde — dieselbe Auflösung,
       // die auch assessLeg benutzt hat (AD-3), damit die Kachel nie eine
       // andere Abfahrt zeigt als die Bewertung darunter. "Vom Skipper" heisst
