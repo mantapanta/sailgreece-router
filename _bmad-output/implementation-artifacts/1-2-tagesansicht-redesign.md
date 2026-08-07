@@ -1294,3 +1294,31 @@ and the 16px input floor landed globally.
   in styles.css: `.konzept-routen`, `.konzept-route-zeile` (+ `.kr-name`/
   `.kr-meta`, 44px Zeilenhöhe). Bei 390px headless geprüft (kein Überlauf,
   Zeilen 295×44). Tests 641 green, build green.
+
+- 2026-08-07 (Nachtrag, derselbe Faden): der benannte Leerzustand von gestern
+  hat gehalten, was er sollte — er hat einen Widerspruch sichtbar gemacht.
+  Skipper: „Macht das Sinn, dass es einerseits beim üblichen Konzept sagt,
+  dass es trägt, aber dann keine Routing-Option im Angebot hat?" Nein. Route 1
+  stand mit „TRÄGT" und leerer Routenliste da, und zwar nicht, weil es keine
+  klassischen Runden gäbe: von den 2947 vollen Runden der Schicht A sind 188
+  klassik. Sie kamen nur nie im Angebot an. Zwei Stellen, beide in der Domäne:
+  `vorauswahl` (solver.ts) kappte jede Schicht auf 120 Kandidaten, und weil
+  ihre beiden obersten Kriterien über den vollen Rahmen bei ALLEN Kandidaten
+  gleich sind, entschied faktisch die Lee-Abweichung und danach das Alphabet
+  der Etappen-Ids — von 188 klassik-Runden blieben 13 mit zwei Wendepunkten.
+  Die Quote gilt jetzt JE KONZEPT (die neue Menge ist eine Obermenge der
+  alten, die Hauptroute kann also nur besser werden). Und `assessTargetOption`
+  (options.ts) suchte allein über den Wendepunkt und las das Konzept danach
+  aus dem gelieferten Plan: der bestgerankte Weg nach MILOS lief über Mykonos,
+  Donousa und Amorgos — ein Ziel im Lee-Korridor, einsortiert unter Route 2.
+  `completePlan` nimmt dafür einen `konzeptId`-Filter (dasselbe Muster wie
+  `variantId`: kein Rückfall im Solver, der Aufrufer entscheidet), und der
+  Optionsraum sucht zuerst im Konzept des Ziels — findet er dort nichts, gilt
+  weiter die freie Suche, damit das Angebot nie ärmer wird als vorher. Gemessen
+  danach: Milos und Polyaigos sind Route-1-Optionen, Santorin bleibt Route 2.
+  Der Leerzustand der Konzept-Karte unterscheidet jetzt ausserdem die drei
+  Fälle, die er vorher zu einem Satz verschmolzen hat (Hauptroute folgt dem
+  Konzept / Ziele ohne tragenden Plan / gar keine volle Runde im Konzept).
+  Preis: die Hauptrouten-Suche auf der echten Bibliothek ist von rund 0,76 s
+  auf 1,2 s gestiegen; die Frist des Meltemi-Tests steht deshalb sichtbar auf
+  VOLLE_BEWERTUNG_MS. Tests 814 green, build green.

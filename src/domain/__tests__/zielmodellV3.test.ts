@@ -38,9 +38,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { assessPlanning } from '../assess.ts';
-import { umlaufsinnGebot, windMittelFor } from '../konzept.ts';
-import { enumerateRoundTrips, roundTripLayers } from '../roundTrips.ts';
 import {
+  konzeptOfIslands,
+  konzeptOfPlan,
+  OST_MARKER_INSELN,
+  umlaufsinnGebot,
+  windMittelFor,
+} from '../konzept.ts';
+import { enumerateRoundTrips, roundTripLayers } from '../roundTrips.ts';
+import { routeIslandSequence } from '../ppr.ts';
+import {
+  candidateLayers,
   completePlan,
   planMetricsFor,
   planTurn,
@@ -484,6 +492,92 @@ describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
   }, VOLLE_BEWERTUNG_MS);
 });
 
+/**
+ * BEIDE KONZEPTE MÜSSEN IM ANGEBOT ANKOMMEN (Skipper 2026-08-07: "Macht das
+ * Sinn, dass es einerseits beim üblichen Konzept sagt, dass es trägt, aber
+ * dann keine Routing-Option im Angebot hat?").
+ *
+ * Nein, es machte keinen Sinn — und es lag an zwei Stellen, die einzeln je
+ * plausibel aussahen:
+ *
+ *   1. `vorauswahl` kappte JEDE Schicht auf 120 Kandidaten. Über den vollen
+ *      Rahmen sind ihre beiden obersten Kriterien bei allen 2947 Runden der
+ *      Schicht A gleich (elf Etappentage, elf Inseln); entschieden hat also
+ *      die Lee-Abweichung und danach das Alphabet der Etappen-Ids. Von 188
+ *      klassik-Runden blieben 13 übrig, mit zwei Wendepunkten — und der
+ *      Optionsraum schöpft seine Ziele aus genau diesen Kandidaten.
+ *   2. `assessTargetOption` suchte allein über den Wendepunkt und las das
+ *      Konzept danach aus dem gelieferten PLAN. Die bestgerankte Runde nach
+ *      Milos lief über Mykonos — ein westliches Ziel, unter Route 2 einsortiert.
+ *
+ * Zusammen hiess das: Route 1 trug die Lage und hatte keine einzige Route.
+ */
+describe('Zielmodell v3 — das Routen-Konzept überlebt bis ins Angebot', () => {
+  const istOst = (islands: string[]): boolean =>
+    islands.some((i) => OST_MARKER_INSELN.has(i));
+
+  it('Die Vorauswahl zieht ihre Quote JE KONZEPT — nicht über das Gesamtfeld', () => {
+    const snapshot = realSnapshot();
+    const [schichtA] = [...candidateLayers(snapshot, 'athen')];
+    const nachKonzept = { klassik: 0, ost: 0 };
+    for (const c of schichtA ?? []) {
+      nachKonzept[konzeptOfIslands(routeIslandSequence(c.legs))] += 1;
+    }
+    /**
+     * Die Quote ist 120 je Konzept, und Schicht A hat von beiden mehr als
+     * genug (2947 Runden, davon 188 klassik) — also schöpft jedes Konzept sie
+     * voll aus. Bricht das nach unten weg, kappt wieder etwas quer über die
+     * Konzepte hinweg, und das Angebot verliert eine ganze Strategie.
+     */
+    expect(nachKonzept.klassik).toBe(120);
+    expect(nachKonzept.ost).toBe(120);
+  });
+
+  it('completePlan mit Konzept-Filter liefert nur Runden DIESES Konzepts', () => {
+    const snapshot = realSnapshot();
+    const solved = completePlan(snapshot, 'athen', [], { konzeptId: 'klassik' });
+    expect(solved).not.toBeNull();
+    const inseln = stagesOf(solved!.plan).map((s) => s.toIslandId);
+    expect(istOst(inseln), inseln.join(' > ')).toBe(false);
+    expect(konzeptOfPlan(solved!.plan)).toBe('klassik');
+    // Und der Rahmen-Vertrag gilt auch für die eingeschränkte Suche.
+    expect(planMetricsFor(snapshot)(solved!).legDays).toBe(11);
+  });
+
+  it('Ein Ziel im Lee-Korridor bekommt eine Route-1-Antwort, keine Ost-Runde', () => {
+    /**
+     * DER GEMESSENE FALL. Vorher lieferte "Ziel Milos" den Plan
+     * kea > syros > MYKONOS > paros > polyaigos > milos > … — eine
+     * Ost-Kykladen-Runde, angeboten unter dem westlichsten Ziel des Reviers.
+     */
+    const assessment = assessPlanning(realSnapshot());
+    const milos = assessment.routeOptions.find((o) => o.turnIslandId === 'milos');
+    expect(milos, 'Milos steht im Optionsraum').toBeDefined();
+    expect(milos!.plan).not.toBeNull();
+    const inseln = stagesOf(milos!.plan!).map((s) => s.toIslandId);
+    expect(istOst(inseln), inseln.join(' > ')).toBe(false);
+    expect(milos!.konzeptId).toBe('klassik');
+  }, VOLLE_BEWERTUNG_MS);
+
+  it('Trägt ein Konzept, führt der Optionsraum eine ANSEHBARE Route darin', () => {
+    /**
+     * Die Aussage der Konzept-Karte, in der Sprache der Daten: `previewIndex`
+     * ist der Zeiger auf den bewerteten Plan, den die Karte als "Etappen
+     * ansehen" anbietet (DayView) — ohne ihn steht das Konzept mit "trägt" und
+     * leerer Routenliste da, und genau das war die Beanstandung.
+     */
+    const assessment = assessPlanning(realSnapshot());
+    for (const k of assessment.konzeptEntscheid.konzepte) {
+      if (k.eignung === 'ungeeignet') continue;
+      const ansehbar = assessment.routeOptions.filter(
+        (o) => o.konzeptId === k.id && o.previewIndex !== null,
+      );
+      expect(ansehbar.length, `${k.name} trägt (${k.eignung}), hat aber keine Route`)
+        .toBeGreaterThan(0);
+    }
+  }, VOLLE_BEWERTUNG_MS);
+});
+
 describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
   it('Stetiger Nordwind gibt den Uhrzeigersinn vor', () => {
     expect(umlaufsinnGebot(realSnapshot({ windKn: 20, windDirDeg: 0 }))).toBe(
@@ -537,7 +631,15 @@ describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
       expect(metrics.rueckwegAbweichung, `${dir}° — Lee-Korridor`).toBe(0);
       expect(metrics.clockwise, `${dir}° — Umlaufsinn als Folge`).toBe(true);
     }
-  });
+    /**
+     * FÜNF volle Hauptrouten-Suchen auf der echten Bibliothek — der Test lief
+     * gemessen 3,8 s und damit knapp unter Vitests Vorgabe von 5 s. Seit die
+     * Vorauswahl ihre Quote JE KONZEPT zieht (solver.ts), sind es 6,1 s: der
+     * Kandidatenraum je Schicht ist grösser, und das ist der Preis dafür, dass
+     * die klassische Runde überhaupt noch im Angebot vorkommt. Die Frist steht
+     * hier sichtbar, damit die nächste Verlangsamung wieder auffällt.
+     */
+  }, VOLLE_BEWERTUNG_MS);
 
   it('bei NNW findet die App JETZT eine Runde im Uhrzeigersinn — vorher gab es keine', () => {
     /**

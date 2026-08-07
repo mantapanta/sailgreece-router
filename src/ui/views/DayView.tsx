@@ -1370,9 +1370,29 @@ function KonzeptPanel({
                       (r) => r.option?.konzeptId === k.id,
                     );
                     if (routen.length === 0) {
+                      /* EIN LEERER ZUSTAND MUSS SAGEN, WARUM (Skipper
+                         2026-08-07: "sagt, dass es trägt, hat aber keine
+                         Routing-Option im Angebot"). Ein Konzept ohne Route
+                         ist genau dann eine Aussage, wenn dabeisteht, ob der
+                         Optionsraum keins seiner Ziele führt oder ob seine
+                         Route schlicht die Hauptroute IST — der zweite Fall
+                         sah bis dahin aus wie der erste. */
+                      const ziele = assessment.routeOptions.filter(
+                        (o) => o.konzeptId === k.id,
+                      );
+                      const istHauptroute = ziele.some(
+                        (o) => o.plan !== null && o.previewIndex === null,
+                      );
                       return (
                         <p className="beschreibung">
-                          Derzeit keine ansehbare Route in diesem Konzept.
+                          {istHauptroute
+                            ? 'Keine zusätzliche Route: die Hauptroute folgt diesem Konzept — ' +
+                              'ihre Etappen stehen unten in der Tagesansicht.'
+                            : ziele.length > 0
+                              ? `Der Optionsraum führt ${ziele.length === 1 ? 'ein Ziel' : `${ziele.length} Ziele`} in diesem Konzept, ` +
+                                'aber zu keinem davon trägt der aktuelle Forecast einen Plan.'
+                              : 'Im aktuellen Törnrahmen gibt es keine volle Runde in diesem Konzept — ' +
+                                'die Beurteilung oben gilt der Wetterlage, nicht dem Angebot.'}
                         </p>
                       );
                     }
