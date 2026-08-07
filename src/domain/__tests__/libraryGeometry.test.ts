@@ -11,7 +11,7 @@
  * bräuchte `resolveJsonModule`, und der Typcheck des Projekts läuft ohne.
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -32,34 +32,23 @@ const legs: Leg[] = (
   JSON.parse(readFileSync(path.join(dataDir, 'legs.json'), 'utf8')) as { legs: Leg[] }
 ).legs;
 
+/**
+ * Die Insel-Dateien werden AUFGEZÄHLT, nicht aufgelistet.
+ *
+ * Bis 2026-08-07 stand hier eine hart kodierte Liste von zwanzig Inseln. Sie
+ * war eine stille Falle: eine neue Etappe nach Donousa liess nicht etwa den
+ * Geometrie-Test anschlagen, sondern `kennt zu jeder Etappe Start- und
+ * Zielplatz` — mit einer Meldung, die nach einem Datenfehler aussah, obwohl
+ * bloss der Test die Insel nicht kannte. Das Verzeichnis weiss besser als eine
+ * Kopie davon, welche Inseln es gibt.
+ */
 const places: Record<string, Coordinates> = (() => {
   const out: Record<string, Coordinates> = {};
-  const islandFiles = [
-    'athen',
-    'attika',
-    'kea',
-    'kythnos',
-    'serifos',
-    'sifnos',
-    'milos',
-    'polyaigos',
-    'folegandros',
-    'santorin',
-    'ios',
-    'paros',
-    'antiparos',
-    'naxos',
-    'koufonisia',
-    'schinoussa',
-    'iraklia',
-    'amorgos',
-    'syros',
-    'mykonos',
-  ];
-  for (const island of islandFiles) {
-    const doc = JSON.parse(
-      readFileSync(path.join(dataDir, 'islands', `${island}.json`), 'utf8'),
-    ) as { places?: { id: string; coordinates: Coordinates }[] };
+  const islandDir = path.join(dataDir, 'islands');
+  for (const file of readdirSync(islandDir).filter((f) => f.endsWith('.json'))) {
+    const doc = JSON.parse(readFileSync(path.join(islandDir, file), 'utf8')) as {
+      places?: { id: string; coordinates: Coordinates }[];
+    };
     for (const place of doc.places ?? []) out[place.id] = place.coordinates;
   }
   return out;

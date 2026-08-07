@@ -20,8 +20,40 @@ const dtf = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 });
 
+/**
+ * DER MEMO VOR `formatToParts` — die teuerste Zeile der ganzen Bewertung.
+ *
+ * Gemessen am 2026-08-07 (CPU-Profil über `assessPlanning` auf den echten
+ * Staging-Daten): `athensOffsetMinutes` stand mit 2,7 s von 6,5 s an der
+ * Spitze der Eigenzeit — 41 % der Rechnung für eine Zeitzonen-Auskunft, die
+ * sich pro Instant nie ändert. `Intl.DateTimeFormat.formatToParts` legt je
+ * Aufruf ein `Date` und eine Teile-Liste an, und der Solver fragt für jede
+ * Etappe jedes Kandidaten jeder Stufe dieselben Stunden immer wieder ab.
+ *
+ * Der Schlüssel ist der EXAKTE Millisekunden-Wert, nicht ein Zeitfenster: eine
+ * Bucket-Bildung müsste behaupten, dass innerhalb des Buckets keine
+ * Sommerzeit-Umstellung liegt, und genau solche Annahmen sind der Grund, dass
+ * dieses Modul überhaupt existiert (AD-9). Bei gleichem Schlüssel ist das
+ * Ergebnis bitgleich — der Memo ändert nichts, er wiederholt nur nicht.
+ *
+ * Die Obergrenze ist eine Speicherbremse, kein Verdrängungsverfahren: ein Törn
+ * fragt einige hundert verschiedene Instants ab, und wer die Grenze reisst,
+ * bekommt eine leere Tabelle statt eines langsam wachsenden Lecks.
+ */
+const offsetMemo = new Map<number, number>();
+const OFFSET_MEMO_MAX = 8192;
+
 /** Offset of Europe/Athens vs UTC in minutes at the given UTC instant. */
 export function athensOffsetMinutes(utcMs: number): number {
+  const gecacht = offsetMemo.get(utcMs);
+  if (gecacht !== undefined) return gecacht;
+  const berechnet = berechneAthensOffsetMinutes(utcMs);
+  if (offsetMemo.size >= OFFSET_MEMO_MAX) offsetMemo.clear();
+  offsetMemo.set(utcMs, berechnet);
+  return berechnet;
+}
+
+function berechneAthensOffsetMinutes(utcMs: number): number {
   const parts = dtf.formatToParts(new Date(utcMs));
   const get = (type: string) =>
     Number(parts.find((p) => p.type === type)?.value ?? '0');

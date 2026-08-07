@@ -7,14 +7,20 @@
  * mit sechs und acht, "Paros–Naxos" als gerade Linie hin und zurück, und eine
  * "Verlängerung nach Santorin", die nicht nach Santorin führt.
  *
- * DER SUCHRAUM IST WINZIG UND EXAKT AUFZÄHLBAR. Über die 39 kuratierten
- * Etappen (60 gerichtete Kanten, 20 Inseln) gibt es von der Basis aus
- * insgesamt 41 wiederholungsfreie Rundkurse bis elf Etappen — und GENAU SECHS,
+ * DER SUCHRAUM IST KLEIN UND EXAKT AUFZÄHLBAR. Über die 46 kuratierten Etappen
+ * (74 gerichtete Kanten, 22 Inseln) gibt es von der Basis aus GENAU 68 Runden,
  * die den vollen Rahmen füllen: elf Etappen, elf verschiedene Inseln, keine
- * Wiederholung. Vier davon laufen Santorin an.
+ * Wiederholung.
  *
- * Die App hat keinen einzigen davon angeboten. Nicht, weil die Suche zu klein
- * gerechnet hätte — sechs Kandidaten kann man vollständig durchrechnen —,
+ * Beim Umbau am 2026-08-07 waren es SECHS — über 39 Etappen und 60 Kanten. Die
+ * sieben Etappen, die am selben Tag aus dem Abgleich mit der Törnanalyse
+ * dazukamen (Naxos–Sifnos, Milos–Serifos, Sifnos–Kythnos, Mykonos–Donousa,
+ * Donousa–Amorgos, Schinoussa–Naxos, Mykonos–Delos/Rinia), haben den Raum
+ * verelffacht. Das ist der ganze Punkt: die Kriterien mussten dafür nicht
+ * angefasst werden, der Bibliothek fehlten Verbindungen.
+ *
+ * Die App hat von den sechs keinen einzigen angeboten. Nicht, weil die Suche zu
+ * klein gerechnet hätte — sechs Kandidaten kann man vollständig durchrechnen —,
  * sondern weil ein zweiter Kandidatengenerator ("Variante bis zum Wendepunkt +
  * Rückfallkette heim") Pendelrouten erzeugte und im Dedup gewann, und weil die
  * Rangfolge die Etappenzahl auf Rang 14 von 14 führte.
@@ -147,19 +153,21 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     expect(RAHMEN).toBe(11);
   });
 
-  it('Schicht A liefert GENAU die sechs wiederholungsfreien 11-Etappen-Runden', () => {
+  it('Schicht A liefert GENAU die 68 wiederholungsfreien 11-Etappen-Runden', () => {
     /**
-     * Die Zahl ist der eigentliche Befund: sechs Runden füllen den Rahmen
-     * sauber, und die App hat keine einzige davon angeboten. Der Suchraum ist
-     * damit vollständig durchrechenbar — es braucht keine Notbremse, sondern
-     * einen engeren Filter. Bricht dieser Test nach unten, ist wieder etwas
-     * still gekappt; nach oben, hat jemand Etappen ergänzt (dann ist die neue
-     * Zahl hier einzutragen und die Zunahme erwünscht).
+     * Die Zahl ist der eigentliche Befund: 68 Runden füllen den Rahmen sauber,
+     * und die App hat lange keine einzige davon angeboten. Der Suchraum ist
+     * vollständig durchrechenbar — es braucht keine Notbremse, sondern einen
+     * engeren Filter. Bricht dieser Test nach unten, ist wieder etwas still
+     * gekappt; nach oben, hat jemand Etappen ergänzt (dann ist die neue Zahl
+     * hier einzutragen und die Zunahme erwünscht).
+     *
+     * 2026-08-07: 6 → 68, durch die sieben Etappen aus der Törnanalyse.
      */
     const snapshot = realSnapshot();
     const [schichtA] = [...roundTripLayers(snapshot, 'athen', 11)];
     expect(schichtA?.gekappt).toBe(false);
-    expect(schichtA?.trips).toHaveLength(6);
+    expect(schichtA?.trips).toHaveLength(68);
   });
 
   it('Keine Runde der Schicht A läuft eine Insel zweimal an', () => {
@@ -174,61 +182,86 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     }
   });
 
-  it('Santorin braucht zehn Etappen — ab Törntag 3 gibt es keine Santorin-Runde mehr', () => {
+  it('Santorin braucht neun Etappen — ab Törntag 4 gibt es keine Santorin-Runde mehr', () => {
     /**
      * Der wahre Sachverhalt hinter der Beanstandung "die Verlängerung nach
      * Santorin führt nicht nach Santorin": Santorin hängt im Graphen nur an
      * Ios, Naxos und Folegandros. Eine Runde dorthin ist deshalb lang.
      *
-     * Die Zahl hat sich am 2026-08-07 verbessert, als Zweitanläufe an anderen
-     * Häfen zugelassen wurden: vorher brauchte Santorin ALLE ELF Etappen und
-     * war ab Törntag 2 unerreichbar, jetzt reichen ZEHN. Die Option bleibt
-     * damit einen Tag länger offen — ohne dass irgendetwas weicher geworden
-     * wäre: die Insel des Zweitanlaufs muss einen zweiten Liegeplatz haben.
+     * Die Zahl ist zweimal gefallen, beide Male ohne dass eine Regel weicher
+     * geworden wäre:
+     *   ELF Etappen (Törntag 1) — Ausgangslage, Santorin nur am ersten Tag.
+     *   ZEHN (Törntag 2), als Zweitanläufe an anderen Häfen zugelassen wurden.
+     *   NEUN (Törntag 3), seit `naxos--sifnos` aus der Törnanalyse existiert:
+     *   der Heimweg von Naxos muss nicht mehr über Paros laufen.
      *
-     * "Santorin geht ab Törntag 3 nicht mehr" ist die richtige Antwort. Falsch
+     * "Santorin geht ab Törntag 4 nicht mehr" ist die richtige Antwort. Falsch
      * war, dass die App das Ziel trotzdem angeboten und einen Plan dazugelegt
      * hat, der nicht dorthin führt.
      */
     const anTag1 = enumerateRoundTrips(realSnapshot({ currentDay: 1 }), 'athen', RAHMEN)
       .filter((t) => islandSequence(t).includes('santorin'));
     expect(anTag1.length).toBeGreaterThan(0);
-    // Zehn Etappen ist das Minimum — keine kürzere Santorin-Runde existiert.
-    expect(Math.min(...anTag1.map((t) => t.length))).toBe(10);
+    // Neun Etappen ist das Minimum — keine kürzere Santorin-Runde existiert.
+    expect(Math.min(...anTag1.map((t) => t.length))).toBe(9);
 
-    // Tag 2 lässt noch zehn Etappen zu, Tag 3 nur noch neun.
-    const anTag2 = enumerateRoundTrips(realSnapshot({ currentDay: 2 }), 'athen', RAHMEN - 1)
-      .filter((t) => islandSequence(t).includes('santorin'));
-    expect(anTag2.length).toBeGreaterThan(0);
-
+    // Tag 3 lässt die neun noch zu, Tag 4 nicht mehr.
     const anTag3 = enumerateRoundTrips(realSnapshot({ currentDay: 3 }), 'athen', RAHMEN - 2)
       .filter((t) => islandSequence(t).includes('santorin'));
-    expect(anTag3).toHaveLength(0);
+    expect(anTag3.length).toBeGreaterThan(0);
+
+    const anTag4 = enumerateRoundTrips(realSnapshot({ currentDay: 4 }), 'athen', RAHMEN - 3)
+      .filter((t) => islandSequence(t).includes('santorin'));
+    expect(anTag4).toHaveLength(0);
   });
 
-  it('Zweitanläufe öffnen die Ost-Kykladen — Amorgos und die Kleinen Kykladen', () => {
+  it('Die Ost-Kykladen sind WIEDERHOLUNGSFREI erreichbar — Amorgos, Donousa, die Kleinen Kykladen', () => {
     /**
      * Die Kalibrierung gegen die Praxis (Skipper 2026-08-07): zwei
-     * professionelle Törnvorschläge laufen Kythnos zweimal an, einer
-     * zusätzlich Paros — jeweils an verschiedenen Häfen. Genau das trägt den
-     * Vorstoß nach Osten, und genau das fehlte uns.
+     * professionelle Törnvorschläge laufen die Ost-Kykladen an, und beide waren
+     * über unseren Graphen nicht darstellbar. Amorgos und Koufonisia kamen in
+     * KEINER wiederholungsfreien Runde vor; Donousa hing als isolierter Knoten
+     * ganz ausserhalb des Graphen, mit eigener Insel-Datei und ohne eine
+     * einzige Etappe.
      *
-     * In den sechs wiederholungsfreien Runden kommen Amorgos und Koufonisia in
-     * KEINER vor. Mit Zweitanläufen sind sie erreichbar — über den vollen
-     * Rahmen, nicht darunter.
+     * Mit `mykonos--donousa`, `donousa--amorgos` und `schinoussa--naxos` ist
+     * das erledigt — und zwar in SCHICHT A, ohne Zweitanlauf. Das ist der
+     * Unterschied zwischen "die Regel war zu streng" und "der Bibliothek
+     * fehlten Verbindungen": angefasst wurde die Bibliothek.
+     */
+    const snapshot = realSnapshot();
+    const [ohne] = [...roundTripLayers(snapshot, 'athen', RAHMEN)];
+    for (const ziel of ['amorgos', 'koufonisia', 'donousa', 'schinoussa']) {
+      expect(
+        (ohne?.trips ?? []).filter((t) => islandSequence(t).includes(ziel)).length,
+        `${ziel} in Schicht A`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('Delos/Rinia bleibt eine Sackgasse — erreichbar NUR über den Zweitanlauf Mykonos', () => {
+    /**
+     * Die Gegenprobe zum Test darüber, und der Grund, dass die Schicht B
+     * überhaupt existiert.
+     *
+     * Rinia hat genau EINEN kuratierten Liegeplatz und genau EINE Etappe
+     * (`mykonos--delos-rinia`, Törnanalyse Route 2 Tag 3). Wer hin will, muss
+     * über Mykonos — und wieder zurück nach Mykonos. Das IST ein Zweitanlauf,
+     * und keine Aufzählung ohne Wiederholung kann ihn hergeben.
+     *
+     * Bewusst so gelassen (Skipper-Entscheid 2026-08-07): ein zweiter Platz auf
+     * Rinia wäre erfunden. Die Insel ist eine Ankerbucht, kein Revier.
      */
     const snapshot = realSnapshot();
     const [ohne, mit] = [...roundTripLayers(snapshot, 'athen', RAHMEN)];
-    for (const ziel of ['amorgos', 'koufonisia']) {
-      expect(
-        (ohne?.trips ?? []).filter((t) => islandSequence(t).includes(ziel)),
-        `${ziel} ohne Zweitanlauf`,
-      ).toHaveLength(0);
-      expect(
-        (mit?.trips ?? []).filter((t) => islandSequence(t).includes(ziel)).length,
-        `${ziel} mit Zweitanlauf`,
-      ).toBeGreaterThan(0);
-    }
+    expect(
+      (ohne?.trips ?? []).filter((t) => islandSequence(t).includes('delos-rinia')),
+      'Delos/Rinia ohne Zweitanlauf',
+    ).toHaveLength(0);
+    expect(
+      (mit?.trips ?? []).filter((t) => islandSequence(t).includes('delos-rinia')).length,
+      'Delos/Rinia mit Zweitanlauf',
+    ).toBeGreaterThan(0);
   });
 });
 

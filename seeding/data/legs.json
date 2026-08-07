@@ -1,6 +1,6 @@
 {
   "approved": true,
-  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin. | Antiparos angebunden (2026-08-06): paros--antiparos und die Gegenrichtung neu, Kurs mit seeding/tools/seaRouteLegs.ts-Logik gegen die Landmaske gelegt und landfrei verifiziert. Endpunkt ist BEWUSST antiparos-agios-georgios und nicht antiparos-town: die Stadt ist auf 15 kn gekappt, auf 15 m LoA begrenzt und trägt die Warnung 'bei Meltemi nicht als Nachtplatz einplanen' — Agios Georgios ist mit 270–90 / 35 kn der einzige Antiparos-Platz, an dem dieses Schiff im August sicher übernachtet. distanceNm ist als einzige Etappe neben milos--polyaigos NICHT recherchiert, sondern aus der Geometrie abgeleitet. | Antiparos–Sifnos ergänzt (2026-08-06): damit ist Antiparos ein Durchgangsknoten statt einer Sackgasse und verbraucht die einzige erlaubte Stichfahrt nicht mehr. Kurs bewusst NÖRDLICH um Sifnos wie paros--sifnos — die Südumfahrung ist 1 sm kürzer, streift aber Kitriani, das in der 250-m-Landmaske fehlt (isOnLand meldet dort offenes Wasser). distanceNm geometrisch abgeleitet. | Kleine Kykladen angebunden (2026-08-06): naxos--koufonisia, koufonisia--schinoussa, schinoussa--iraklia, iraklia--naxos und koufonisia--amorgos. Nur die Hinrichtung gespeichert — die Häfen sind in beiden Richtungen dieselben, reverseLeg erzeugt die Gegenrichtung samt gespiegelter Forecast-Keys (AD-3). Alle Distanzen geometrisch abgeleitet, an naxos--amorgos kalibriert (Geometrie 34.8 gegen 31 sm recherchiert, also eher zu lang als zu kurz). BEWUSST NICHT angebunden: Keros (nur eine Bucht, confidence niedrig, 15 kn — Tagesankerplatz, kein Nachtplatz) und Donousa (liegt nordöstlich abseits, keine recherchierte Verbindung). Schinoussa und Iraklia sind NICHT fährverbunden (guestPickup false) — sie können in einer Runde liegen, aber nie der Gästewechsel-Hafen sein; das erzwingt FR31 selbst. | Nach dem Merge mit main (2026-08-06, verschärfte Ansteuerungszone aus PR #29/#30) mit seeding/tools/seaRouteLegs.ts neu gelegt: fünf der neuen Etappen bekamen zusätzliche Umfahrungspunkte. Die geometrisch abgeleiteten Distanzen sind auf die neuen Kurslängen nachgezogen — am deutlichsten koufonisia--schinoussa (5.6 -> 7.9 sm) und schinoussa--iraklia (2.6 -> 3.5 sm): die Kleine-Kykladen-Passagen sind enger, als die Luftlinie vermuten lässt.",
+  "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin. | Antiparos angebunden (2026-08-06): paros--antiparos und die Gegenrichtung neu, Kurs mit seeding/tools/seaRouteLegs.ts-Logik gegen die Landmaske gelegt und landfrei verifiziert. Endpunkt ist BEWUSST antiparos-agios-georgios und nicht antiparos-town: die Stadt ist auf 15 kn gekappt, auf 15 m LoA begrenzt und trägt die Warnung 'bei Meltemi nicht als Nachtplatz einplanen' — Agios Georgios ist mit 270–90 / 35 kn der einzige Antiparos-Platz, an dem dieses Schiff im August sicher übernachtet. distanceNm ist als einzige Etappe neben milos--polyaigos NICHT recherchiert, sondern aus der Geometrie abgeleitet. | Antiparos–Sifnos ergänzt (2026-08-06): damit ist Antiparos ein Durchgangsknoten statt einer Sackgasse und verbraucht die einzige erlaubte Stichfahrt nicht mehr. Kurs bewusst NÖRDLICH um Sifnos wie paros--sifnos — die Südumfahrung ist 1 sm kürzer, streift aber Kitriani, das in der 250-m-Landmaske fehlt (isOnLand meldet dort offenes Wasser). distanceNm geometrisch abgeleitet. | Kleine Kykladen angebunden (2026-08-06): naxos--koufonisia, koufonisia--schinoussa, schinoussa--iraklia, iraklia--naxos und koufonisia--amorgos. Nur die Hinrichtung gespeichert — die Häfen sind in beiden Richtungen dieselben, reverseLeg erzeugt die Gegenrichtung samt gespiegelter Forecast-Keys (AD-3). Alle Distanzen geometrisch abgeleitet, an naxos--amorgos kalibriert (Geometrie 34.8 gegen 31 sm recherchiert, also eher zu lang als zu kurz). BEWUSST NICHT angebunden: Keros (nur eine Bucht, confidence niedrig, 15 kn — Tagesankerplatz, kein Nachtplatz) und Donousa (liegt nordöstlich abseits, keine recherchierte Verbindung). Schinoussa und Iraklia sind NICHT fährverbunden (guestPickup false) — sie können in einer Runde liegen, aber nie der Gästewechsel-Hafen sein; das erzwingt FR31 selbst. | Nach dem Merge mit main (2026-08-06, verschärfte Ansteuerungszone aus PR #29/#30) mit seeding/tools/seaRouteLegs.ts neu gelegt: fünf der neuen Etappen bekamen zusätzliche Umfahrungspunkte. Die geometrisch abgeleiteten Distanzen sind auf die neuen Kurslängen nachgezogen — am deutlichsten koufonisia--schinoussa (5.6 -> 7.9 sm) und schinoussa--iraklia (2.6 -> 3.5 sm): die Kleine-Kykladen-Passagen sind enger, als die Luftlinie vermuten lässt. | Sieben Etappen der Törnanalyse ergänzt (2026-08-07): Der Abgleich mit zwei professionellen 14-Tage-Törnvorschlägen (aegeansails.gr) und der zugehörigen Törnanalyse zeigte, dass BEIDE Referenzrouten über unseren Graphen nicht darstellbar waren — nicht weil die Kriterien falsch sind, sondern weil Verbindungen fehlten. Aus Route 1 (klassisch): naxos--sifnos (30 sm, Tag 6) und milos--serifos (28 sm, Tag 9). Aus Route 2 (Ost-Kykladen): mykonos--donousa (35 sm, Tag 4), donousa--amorgos (22 sm, Tag 5), schinoussa--naxos (18 sm, Tag 9) und sifnos--kythnos (32 sm, Tag 12, der lange Am-Wind-Schlag im Lee von Serifos). Alle Distanzen aus der Etappen-Tabelle der Analyse übernommen, die Häfen ebenfalls (Naxos-Stadt, Sifnos Kamares, Milos Adamas, Serifos Livadi, Kythnos Merichas, Donousa Stavros, Amorgos Aegiali, Schinoussa Mersini, Naxos Kalandos). Donousa und Delos/Rinia hingen bis dahin an KEINER Etappe — sie hatten eine Insel-Datei, waren im Graphen aber isolierte Knoten, obwohl Route 2 beide anläuft. Dazu mykonos--delos-rinia als einzige Etappe mit GEOMETRISCH ABGELEITETER Distanz: die Analyse nennt für Tag 3 nur die Summe Syros→Mykonos/Rhenia, nicht den Teilschlag. Das steht als windWarning am Leg. Delos/Rinia hat nur einen kuratierten Platz und bleibt damit eine Sackgasse an Mykonos — erreichbar nur über dessen Zweitanlauf, nie als Angelpunkt.",
   "legs": [
     {
       "id": "antiparos--paros",
@@ -135,6 +135,25 @@
       "windWarnings": [
         "Düse Kea-Kanal (Lavrion–Makronisos): Modellwerte glätten die Beschleunigung"
       ]
+    },
+    {
+      "id": "donousa--amorgos",
+      "fromIslandId": "donousa",
+      "toIslandId": "amorgos",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "amorgos-katapola",
+      "distanceNm": 22,
+      "waypoints": [
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        },
+        {
+          "lat": 36.8329,
+          "lon": 25.8331
+        }
+      ],
+      "windWarnings": []
     },
     {
       "id": "folegandros--milos",
@@ -544,6 +563,38 @@
       ]
     },
     {
+      "id": "milos--serifos",
+      "fromIslandId": "milos",
+      "toIslandId": "serifos",
+      "fromPlaceId": "milos-adamas",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 28.2,
+      "waypoints": [
+        {
+          "lat": 36.715,
+          "lon": 24.4353
+        },
+        {
+          "lat": 36.7567,
+          "lon": 24.3997
+        },
+        {
+          "lat": 36.8697,
+          "lon": 24.4326
+        },
+        {
+          "lat": 37.01,
+          "lon": 24.4564
+        },
+        {
+          "lat": 37.1282,
+          "lon": 24.5243
+        }
+      ],
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.65 -> 1.58 (Lee-Faktor 0.86 -> 0.83, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 28 sm plus 0.2 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
+    },
+    {
       "id": "milos--sifnos",
       "fromIslandId": "milos",
       "toIslandId": "sifnos",
@@ -578,6 +629,42 @@
       ],
       "windWarnings": [],
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.61 -> 1.40 (Lee-Faktor 0.90 -> 0.83, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 24 sm plus 1.5 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
+    },
+    {
+      "id": "mykonos--delos-rinia",
+      "fromIslandId": "mykonos",
+      "toIslandId": "delos-rinia",
+      "fromPlaceId": "mykonos-ornos",
+      "toPlaceId": "delos-rinia-miskanti",
+      "distanceNm": 6,
+      "waypoints": [
+        {
+          "lat": 37.4033,
+          "lon": 25.3223
+        },
+        {
+          "lat": 37.4169,
+          "lon": 25.2677
+        }
+      ],
+      "windWarnings": [
+        "Distanz geometrisch abgeleitet, nicht recherchiert — die Törnanalyse nennt für Tag 3 nur die Summe Syros→Mykonos/Rhenia"
+      ]
+    },
+    {
+      "id": "mykonos--donousa",
+      "fromIslandId": "mykonos",
+      "toIslandId": "donousa",
+      "fromPlaceId": "mykonos-ornos",
+      "toPlaceId": "donousa-stavros",
+      "distanceNm": 35,
+      "waypoints": [
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        }
+      ],
+      "windWarnings": []
     },
     {
       "id": "mykonos--paros",
@@ -727,6 +814,27 @@
       ],
       "windWarnings": [
         "Langer Schlag, nur bei stabilem Fenster (Quelle 1: 8h30 / 6h50)"
+      ]
+    },
+    {
+      "id": "naxos--sifnos",
+      "fromIslandId": "naxos",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "naxos-kalandos",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 35.5,
+      "waypoints": [
+        {
+          "lat": 36.911,
+          "lon": 25.4487
+        },
+        {
+          "lat": 36.9359,
+          "lon": 24.7599
+        }
+      ],
+      "windWarnings": [
+        "Distanz aus dem landfreien Kurs (35,5 sm) statt der 30 sm der Törnanalyse — Paros und Antiparos liegen im Weg, ein direkter 30-sm-Kurs existiert nicht"
       ]
     },
     {
@@ -991,6 +1099,32 @@
       ]
     },
     {
+      "id": "schinoussa--naxos",
+      "fromIslandId": "schinoussa",
+      "toIslandId": "naxos",
+      "fromPlaceId": "schinoussa-mersini",
+      "toPlaceId": "naxos-kalandos",
+      "distanceNm": 6.7,
+      "waypoints": [
+        {
+          "lat": 36.8629,
+          "lon": 25.506
+        },
+        {
+          "lat": 36.8762,
+          "lon": 25.4615
+        },
+        {
+          "lat": 36.8967,
+          "lon": 25.4479
+        }
+      ],
+      "windWarnings": [
+        "Distanz aus dem landfreien Kurs (5,2 sm) statt der 18 sm der Törnanalyse — Schinoussa liegt keine sechs Meilen vor der Südküste von Naxos"
+      ],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.17 -> 1.03 (Lee-Faktor 0.81 -> 0.74, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 5.2 sm plus 1.5 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
+    },
+    {
       "id": "serifos--kythnos",
       "fromIslandId": "serifos",
       "toIslandId": "kythnos",
@@ -1083,6 +1217,42 @@
         "Distanz 23.6 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren",
         "Kurs rundet Sifnos im NORDEN wie paros--sifnos. Die Südumfahrung wäre 1 sm kürzer, führt aber dicht an Kitriani vorbei — das Inselchen fehlt in der 250-m-Landmaske, der Kurs sähe dort frei aus, wo Land liegt"
       ]
+    },
+    {
+      "id": "sifnos--kythnos",
+      "fromIslandId": "sifnos",
+      "toIslandId": "kythnos",
+      "fromPlaceId": "sifnos-kamares",
+      "toPlaceId": "kythnos-merichas",
+      "distanceNm": 32.9,
+      "waypoints": [
+        {
+          "lat": 37.108,
+          "lon": 24.5353
+        },
+        {
+          "lat": 37.1835,
+          "lon": 24.54
+        },
+        {
+          "lat": 37.2097,
+          "lon": 24.5182
+        },
+        {
+          "lat": 37.2411,
+          "lon": 24.4469
+        },
+        {
+          "lat": 37.3046,
+          "lon": 24.3565
+        },
+        {
+          "lat": 37.396,
+          "lon": 24.3852
+        }
+      ],
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.43 -> 1.23 (Lee-Faktor 0.89 -> 0.84, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 32 sm plus 0.9 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "sifnos--milos",
