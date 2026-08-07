@@ -831,7 +831,7 @@ export function deriveTorChecks(
       note: erfuellt
         ? `Entscheidungstor ${tor.name}: Festlegung hinter das Tor (Tag ${commit.day}, ${commit.toIslandId}) ist gedeckt — ` +
           `${params.torFensterStunden}-h-Forecast-Fenster steht, Rückweg nach Forecast machbar. Ab hier steigt die Exposition.`
-        : `Entscheidungstor ${tor.name}: Festlegung hinter das Tor (Tag ${commit.day}, ${commit.toIslandId}) ist NICHT gedeckt — ` +
+        : `Entscheidungstor ${tor.name}: Festlegung hinter das Tor (Tag ${commit.day}, ${commit.toIslandId}) ist nicht gedeckt — ` +
           `${gruende.join('; ')}. Empfehlung: vor dem Tor bleiben oder umplanen.`,
     });
   }

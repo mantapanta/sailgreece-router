@@ -116,7 +116,7 @@ describe('altRouteViews', () => {
     );
 
     expect(views[0]!.herkunft).toBe(
-      'Ziel Santorin im Optionsraum · Route 2 · Ost · schliesst · abgeraten · wählbar',
+      'Ziel Santorin im Optionsraum · Route 2 · Ost · schließt · abgeraten · wählbar',
     );
     expect(views[0]!.abratenGruende).toEqual(['Route 2 trägt die Lage nicht']);
   });

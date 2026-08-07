@@ -55,8 +55,8 @@ export const KONZEPT_RUNDE: Record<KonzeptId, string> = {
 export const OPTION_STATE_LABEL: Record<OptionState, string> = {
   offen: 'offen',
   'offen-horizont': 'offen · Vorbehalt',
-  schliesst: 'schliesst',
-  zu: 'zu',
+  schliesst: 'schließt',
+  zu: 'geschlossen',
 };
 
 /**

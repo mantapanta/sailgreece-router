@@ -689,7 +689,7 @@ export function validatePlan(
         violations.push({
           kind: 'deadline',
           day: arrivingStage.day,
-          text: `Ankunft an der Basis erst um ${arrival.toFixed(1)} Uhr — die Rückgabe ist um ${params.returnDeadlineHourAthens}:00 (Athen)`,
+          text: `Ankunft an der Basis erst um ${arrival.toFixed(1).replace('.', ',')} Uhr — die Rückgabe ist um ${params.returnDeadlineHourAthens}:00 (Athen)`,
           assumed: arrivalAssumed,
         });
       }

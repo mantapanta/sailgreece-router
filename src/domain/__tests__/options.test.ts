@@ -432,7 +432,7 @@ describe('Entscheidungspunkte — Vorwarnung statt Nachruf', () => {
 
   it('am letzten Tag heisst es HEUTE, nicht "noch 0 Tage"', () => {
     const points = deriveDecisionPoints([option({})], ppr, 7, 4);
-    expect(points[0]!.text).toContain('HEUTE entscheiden');
+    expect(points[0]!.text).toContain('Heute entscheiden');
   });
 
   it('ausserhalb der Vorwarnzeit bleibt es der schlichte Termin', () => {

@@ -289,13 +289,13 @@ function LegendPopover({
             </div>
             <div className="lg-row lg-wind">
               <span>
-                <WindBarb dirDeg={0} knots={5} size={26} /> 5 kn
+                <WindBarb dirDeg={0} knots={5} size={26} /> 5 kn
               </span>
               <span>
-                <WindBarb dirDeg={0} knots={10} size={26} /> 10 kn
+                <WindBarb dirDeg={0} knots={10} size={26} /> 10 kn
               </span>
               <span>
-                <WindBarb dirDeg={0} knots={25} size={26} /> 25 kn
+                <WindBarb dirDeg={0} knots={25} size={26} /> 25 kn
               </span>
             </div>
             <p className="lg-caption">Schaft zeigt, woher der Wind kommt.</p>
