@@ -183,11 +183,14 @@ export const WindTopoZoneSchema = z
 export type WindTopoZone = z.infer<typeof WindTopoZoneSchema>;
 
 /**
- * DER WINDSCHATTEN AN EINER ETAPPE — ein Hinweis, kein Urteil.
+ * DER WINDSCHATTEN AN EINER ETAPPE.
  *
- * Er steht in `StageAssessment.leeHinweise` neben der Ampel, nie in ihr. Kein
- * Feld dieses Typs wird von Ampel, Solver, Budget oder Gültigkeit gelesen; das
- * ist die Einlösung der Asymmetrie aus dem Modulkopf.
+ * Kein Feld dieses Typs wird von Ampel, Solver, Budget oder Gültigkeit gelesen
+ * — der Hinweis ist die ANZEIGE. Ob der Schatten daneben auch BEWERTET wurde,
+ * entscheidet das Confidence-Tor (domain/windTopo.ts, `scoringLeeZones`), und
+ * `bewertet` sagt es. Der Unterschied muss im Text stehen: "die Ampel rechnet
+ * mit dem vollen Wind" ist für eine bewertende Zone schlicht falsch, und eine
+ * falsche Beruhigung ist schlimmer als keine.
  */
 export interface LeeHinweis {
   zoneId: string;
@@ -202,6 +205,20 @@ export interface LeeHinweis {
    * ankommt. Nichts liest diesen Wert außer der Anzeige.
    */
   leeKn: number;
+  /**
+   * Hat diese Zone die Bewertung des Tages wirklich angefasst? True nur, wenn
+   * sie das Confidence-Tor passiert UND `params.leeBewertungMaxAbzugKn > 0`
+   * ist. Zonen mit `confidence: 'niedrig'` beraten weiterhin bloss.
+   */
+  bewertet: boolean;
+  /**
+   * Der Wind, mit dem die AMPEL gerechnet hat — bei `bewertet: false` der volle
+   * Modellwind, sonst der GEKAPPTE Lee-Wert (`leeBewertungMaxAbzugKn`), der
+   * über `leeKn` liegt, solange die Kappung greift. Die drei Zahlen
+   * nebeneinander sind die ganze Aussage: was das Modell sagt, was die Kuration
+   * erwartet, und was davon in die Bewertung durfte.
+   */
+  angesetztKn: number;
   /** Windrichtung der maßgeblichen Stunde (AD-6: woher). */
   windDirDeg: number;
   /** Stunden der Etappe, in denen der Schatten überhaupt steht. */

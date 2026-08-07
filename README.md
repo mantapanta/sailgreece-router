@@ -621,27 +621,33 @@ kuratiert (AD-4), wie die Schutzsektoren eines Liegeplatzes. Die Daten liegen in
 `src/domain/schema/windTopo.ts`) als **Zonen**: Mittelpunkt, Radius und je
 Windrichtungs-Sektor ein Faktor.
 
-### Die zentrale Regel: Düsen bewerten, Schatten beraten nur
+### Die zentrale Regel: Düsen ungebremst, Schatten nur gebremst
 
-Eine Korrektur nach **oben** (`kind: 'duese'`, Faktor > 1) geht voll in die
-Bewertung ein — liegt sie daneben, war die App zu vorsichtig, und das ist der
-Fehler, den ein Törnplaner machen darf. Jede so angefasste Stunde trägt
+Eine Korrektur nach **oben** (`kind: 'duese'`, Faktor > 1) geht ungebremst in
+die Bewertung ein — liegt sie daneben, war die App zu vorsichtig, und das ist
+der Fehler, den ein Törnplaner machen darf. Jede so angefasste Stunde trägt
 `windAdjusted`, dieselbe Rolle wie `windAssumed` für die Persistenz-Annahme:
 kein Wert, den kein Modell so vorhergesagt hat, bleibt unmarkiert (AD-10).
 
-Eine Korrektur nach **unten** (`kind: 'lee'`, Faktor < 1) geht in **keine**
-Ampel, keinen Solver, kein Budget und keine Gültigkeit ein. Der Grund ist der
-eine Fehler, den dieses Werkzeug nicht machen darf: steht der Schatten nicht
-dort, wo die Kuration ihn behauptet, segelt die Crew bei 26 kn auf einer Etappe,
-die die App grün genannt hat. Der Windschatten ist deshalb ein **Hinweis** an
-der Etappe (`StageAssessment.leeHinweise`) und ein Satz in der
-Rückweg-Empfehlung — dieselbe Doktrin wie bei Kite-Spots und Kurs-Abschnitten.
+Eine Korrektur nach **unten** (`kind: 'lee'`, Faktor < 1) geht seit 2026-08-07
+ebenfalls in Ampel und Routing ein — Grundlage ist die Skipper-Beobachtung, dass
+die Abdeckungszonen im Poseidon-Modell über mehrere Tage und über schwachen wie
+starken Wind an derselben Stelle stehen. Genau das sagt „Topografie, kein
+Wetter" voraus. Aber sie geht **gebremst** ein, durch vier Sicherungen:
 
-Die Asymmetrie ist nicht bloss Konvention, sondern **Schema**: `kind: 'lee'`
+| Sicherung | Wirkung |
+|---|---|
+| **Kappung** (`leeBewertungMaxAbzugKn`, Default 8 kn) | Begrenzt den Abzug. Aus 30 kn werden mit Faktor 0,5 nicht 15, sondern 22. Physikalisch ist ein Lee multiplikativ — die Kappung ist keine Physik, sondern die Schadensgrenze: steht der Schatten nicht, findet die Crew höchstens diese Differenz mehr vor. `0` schaltet die Bewertung ab, dann berät das Lee wieder nur. |
+| **Confidence-Tor** | Nur Zonen mit `confidence` `'mittel'`/`'hoch'` bewerten; `'niedrig'` berät weiter. Damit hat das Feld eine mechanische Folge — eine Zone, deren Faktor nur aus einer anderen abgeleitet ist, kann keine Ampel drehen. Bewusst **kein** Parameter: ein Regler wäre die Einladung, das Tor aufzudrehen statt nachzukalibrieren. Für Düsen gibt es das Tor nicht. |
+| **Kein Grün aus dem Lee** | Eine Etappe, deren Bewertung auf einer Lee-Korrektur ruht, wird höchstens **gelb**. Das Lee darf ein Rot aufheben, es darf keinen Tag freisprechen. Die Etappe bleibt gültig, planbar und in der Rangfolge vor jeder roten — der Solver liest nur rote Sätze als Sicherheitsverletzung. |
+| **Zwei blinde Flecken** | Der Meltemi-Worst-Case des Rückkehr-Checks (AD-13) sieht **nie** ein Lee — er fragt „kommen wir auch bei voller Lage heim?", und diese Frage mit kuratierter Abdeckung zu beantworten hiesse, das Sicherheitsnetz aus dem zu knüpfen, wogegen es sichert. Und die **Nacht-Ampel** eines Liegeplatzes: der hat seinen Schutzsektor bereits kuratiert, beides zusammen wäre dieselbe Abdeckung zweimal gezählt. |
+
+Die Grundasymmetrie ist nicht bloss Konvention, sondern **Schema**: `kind: 'lee'`
 verlangt Faktor < 1, `kind: 'duese'` verlangt Faktor > 1. Eine Lee-Zone, die den
-Wind erhöht, ist kein Konfigurationsfehler, sondern unmöglich. Und im Code gibt
-es genau einen Pfad, der `windKn` anfasst (`applyWindTopo`) — der liest
-ausschliesslich Düsen.
+Wind erhöht, ist kein Konfigurationsfehler, sondern unmöglich. Und strukturell
+bleibt: `applyWindTopo` — der Pfad, der den **Snapshot** ändert — liest weiterhin
+ausschliesslich Düsen. Der Schatten fasst `windKn` nirgends an, er wirkt nur dort,
+wo eine Etappe gerechnet wird (`scoring.ts`), gekappt und an Ort und Stelle.
 
 ### Was ein Lee nicht ist
 
@@ -669,6 +675,26 @@ der Erstkalibrierung traf die Serifos-Zone zunächst keinen einzigen
 Forecast-Ort), und keine Düsen-Zone darf über einem Liegeplatz liegen — wie
 exponiert ein Hafen ist, sagt sein Schutzsektor, nicht eine Fläche für die
 offene Passage.
+
+### Warum die Rückweg-Etappen trotzdem noch rot sind
+
+Gemessen auf der echten Bibliothek bei 26–30 kn aus N/NNE hebt die Lee-Bewertung
+**noch keine** Ampel. Das ist kein Fehler in der Mechanik, sondern eine Aussage
+über die **Abdeckung**: eine Etappe wird gegen ihren *schlechtesten* Punkt
+bewertet (die Doktrin dieses Moduls), und bei den heutigen Zonenradien liegen
+längst nicht alle Punkte im Schatten:
+
+| Rückweg-Etappe | Punkte im Lee (heute) | bei doppeltem Radius |
+|---|---|---|
+| `sifnos--serifos` | 3 / 5 | 5 / 5 |
+| `serifos--kythnos` | 6 / 9 | 9 / 9 |
+| `kythnos--athen` | 1 / 6 | 3 / 6 |
+
+Die zwei Punkte, die bei `sifnos--serifos` noch in der freien Anströmung stehen,
+tragen das Rot — zu Recht, denn man muss durch sie hindurch. Der Hebel liegt
+damit **in der Datei, nicht im Code**: wie weit die Abdeckung wirklich reicht,
+ist die nächste Frage an das Poseidon-Modell. Bis sie beantwortet ist, bleiben
+die Radien konservativ.
 
 ### Und Poseidon direkt?
 

@@ -156,6 +156,36 @@ const ParamsObjectSchema = z.object({
    */
   decisionLookaheadDays: z.number().int().min(1).max(14).default(4),
 
+  /**
+   * WIE VIEL WINDSCHATTEN DIE BEWERTUNG HÖCHSTENS GLAUBT — in kn Abzug
+   * (Skipper-Entscheidung 2026-08-07: die Abdeckungszonen bleiben über Tage
+   * und über schwachen wie starken Wind hinweg stabil, also darf das Lee in
+   * Ampel und Routing eingehen, nicht nur beraten).
+   *
+   * Der kuratierte Faktor bleibt multiplikativ (0,5 heisst "halber Wind"), aber
+   * für die BEWERTUNG wird der Abzug bei diesem Wert gekappt: aus 30 kn werden
+   * mit Faktor 0,5 nicht 15, sondern 30 − 8 = 22 kn.
+   *
+   * DIE KAPPUNG IST KEINE PHYSIK, SIE IST DIE SCHADENSGRENZE. Physikalisch ist
+   * ein Lee multiplikativ, der Abzug also bei 30 kn absolut grösser als bei
+   * 15 kn. Genau deshalb wird gekappt: der Schaden, wenn die Kuration irrt,
+   * wächst mit demselben Absolutbetrag — und er wächst dort, wo er am meisten
+   * weh tut. Steht der Schatten wider Erwarten nicht, findet die Crew maximal
+   * `leeBewertungMaxAbzugKn` mehr Wind vor als die Ampel angenommen hat. Das
+   * ist die Zahl, die man verantworten können muss, und deshalb ist sie ein
+   * Regler und keine Rechnung.
+   *
+   * 0 SCHALTET DIE BEWERTUNG AB — dann berät der Windschatten wieder nur
+   * (Hinweis an der Etappe, Rückweg-Empfehlung), und die App verhält sich
+   * bitgleich wie vor dieser Umstellung. Es braucht keinen zweiten Schalter.
+   *
+   * Was die Kappung NICHT lockert: Düsen (die korrigieren nach oben und sind
+   * ungekappt), der Meltemi-Worst-Case des Rückkehr-Checks (sieht nie ein Lee)
+   * und die Nacht-Ampel eines Liegeplatzes (die hat ihren Schutzsektor —
+   * domain/windTopo.ts, Modulkopf).
+   */
+  leeBewertungMaxAbzugKn: z.number().min(0).max(20).default(8),
+
   // --- place ampel (FR8) ----------------------------------------------------
   /** Unprotected ("Luv") direction: yellow up to this wind, red above. */
   openSectorMaxKn: z.number().positive().default(10),
