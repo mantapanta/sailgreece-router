@@ -148,9 +148,19 @@ describe('roundTrips — Rundkurs-Suche über den Etappen-Graphen', () => {
     expect(a).toEqual(b);
   });
 
-  it('erreicht eine Sackgassen-Insel über die Stichfahrt', () => {
-    // 'fern' hängt nur an 'sued' — ohne Stichfahrt käme sie in keiner Runde
-    // vor (jede Insel nur einmal hiesse: sued wäre zweimal nötig).
+  /**
+   * SACKGASSEN-INSELN und die Regel dahinter (Skipper 2026-08-07, kalibriert
+   * gegen zwei professionelle Törnvorschläge): eine Insel darf ein zweites Mal
+   * angelaufen werden, WENN es ein anderer Hafen ist. Beide Referenzrouten tun
+   * genau das — Kythnos einmal in Loutra und einmal in Mericha.
+   *
+   * Das ist keine Aufweichung, sondern eine schärfere Bedingung als die frühere
+   * "eine Stichfahrt erlaubt": geprüft wird die KAPAZITÄT der Insel, dieselbe
+   * Bedingung, die `validatePlan` (1e) an den fertigen Plan stellt. Eine Insel
+   * mit nur einem Liegeplatz bleibt gesperrt — sonst läge das Boot zweimal am
+   * selben Platz.
+   */
+  function sackgassenSnapshot(plaetzeAufSued: number) {
     const snapshot = diamondSnapshot();
     const fern = makePlace({ id: 'fern-bucht', islandId: 'fern', coordinates: { lat: 37.1, lon: 23.7 } });
     snapshot.library.places.push(fern);
@@ -160,6 +170,11 @@ describe('roundTrips — Rundkurs-Suche über den Etappen-Graphen', () => {
       coordinates: fern.coordinates,
       guestPickup: { ferryReachable: true, sourceNote: 'fixture' },
     });
+    for (let i = 2; i <= plaetzeAufSued; i++) {
+      snapshot.library.places.push(
+        makePlace({ id: `sued-bucht-${i}`, islandId: 'sued', coordinates: { lat: 37.3, lon: 23.8 } }),
+      );
+    }
     snapshot.library.legs.push(
       makeLeg({
         id: 'sued--fern',
@@ -170,13 +185,25 @@ describe('roundTrips — Rundkurs-Suche über den Etappen-Graphen', () => {
         distanceNm: 15,
       }),
     );
-    const trips = enumerateRoundTrips(snapshot, 'athen', 7);
+    return snapshot;
+  }
+
+  it('erreicht eine Sackgassen-Insel über den Zweitanlauf des Angelpunkts', () => {
+    // 'fern' hängt nur an 'sued'. Ohne einen zweiten Anlauf von 'sued' käme sie
+    // in keiner Runde vor — und 'sued' hat hier zwei Liegeplätze, darf also.
+    const trips = enumerateRoundTrips(sackgassenSnapshot(2), 'athen', 7);
     const withFern = trips.filter((t) => routeIslandSequence(t).includes('fern'));
     expect(withFern.length).toBeGreaterThan(0);
-    // Die Stichfahrt kehrt auf derselben Verbindung zurück.
     expect(
       withFern.some((t) => routeIslandSequence(t).join('>').includes('sued>fern>sued')),
     ).toBe(true);
+  });
+
+  it('mit nur EINEM Liegeplatz bleibt der Zweitanlauf gesperrt — und die Sackgasse zu', () => {
+    // Dieselbe Geometrie, aber 'sued' hat nur einen Hafen. Ein zweiter Anlauf
+    // hiesse derselbe Platz zweimal, und genau das ist die Grenze der Regel.
+    const trips = enumerateRoundTrips(sackgassenSnapshot(1), 'athen', 7);
+    expect(trips.filter((t) => routeIslandSequence(t).includes('fern'))).toHaveLength(0);
   });
 
   it('von unterwegs: liefert Fortsetzungen bis zur Basis', () => {
@@ -288,14 +315,12 @@ describe('preferred — die Rangfolge des Zielmodells v3', () => {
     clockwise: true,
     turnDay: 2,
     legDays: 4,
-    repeatStays: 0,
     stages: 4,
     bandDevTenths: 0,
     kreuzTenthsRueckweg: 0,
     kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
-    umlaufsinnPasst: null,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),
@@ -352,15 +377,24 @@ describe('preferred — die Rangfolge des Zielmodells v3', () => {
     expect(preferred(kurz, voll, metrics)).toBe(voll);
   });
 
-  it('Kriterium 3: keine Insel zweimal — die Runde schlägt das Pendeln', () => {
+  it('Wiederholungen werden über die Inselzahl bepreist, nicht über ein zweites Kriterium', () => {
+    /**
+     * Bis 2026-08-07 stand hier ein eigenes Kriterium `repeatStays`. Es ist
+     * entfallen, weil es bei gleicher Etappentag-Zahl RECHNERISCH DASSELBE
+     * sagt: die Zahl der Tagesziele steht fest, also kostet jede Wiederholung
+     * genau eine Insel. Der Test hält fest, dass die Preisbildung trotzdem
+     * stimmt — eine Runde mit Zweitanlauf hat weniger verschiedene Inseln und
+     * verliert deshalb.
+     */
     const runde = mkResult('runde');
-    const pendel = mkResult('pendel');
+    const mitZweitanlauf = mkResult('zweitanlauf');
     const metrics = withMetrics({
-      runde: { repeatStays: 0, distinctIslands: 6 },
-      // Mehr Reichweite hilft dem Pendeln nicht: die steht auf Rang 13.
-      pendel: { repeatStays: 3, distinctIslands: 6, reachNm: 90 },
+      // Beide elf Etappentage; die eine läuft zwei Inseln doppelt an.
+      runde: { legDays: 11, distinctIslands: 11 },
+      // Mehr Reichweite hilft nicht: die steht auf Rang 13.
+      zweitanlauf: { legDays: 11, distinctIslands: 9, reachNm: 90 },
     });
-    expect(preferred(pendel, runde, metrics)).toBe(runde);
+    expect(preferred(mitZweitanlauf, runde, metrics)).toBe(runde);
   });
 
   it('Kriterium 4: mehr verschiedene Inseln', () => {
@@ -386,43 +420,35 @@ describe('preferred — die Rangfolge des Zielmodells v3', () => {
     expect(preferred(gegenan, angenehm, metrics)).toBe(angenehm);
   });
 
-  it('Kriterium 8: der Umlaufsinn entscheidet NUR, wenn die Lage einen vorgibt', () => {
-    const mit = mkResult('mit');
-    const gegen = mkResult('gegen');
-    // Gebot vorhanden: die passende Richtung gewinnt.
-    expect(
-      preferred(gegen, mit, withMetrics({
-        mit: { umlaufsinnPasst: true },
-        gegen: { umlaufsinnPasst: false },
-      })),
-    ).toBe(mit);
-    // Gebot 'egal' (null): beide gleich — der alphabetische Tiebreak greift,
-    // NICHT heimlich eine Richtung.
-    const egal = withMetrics({ mit: { umlaufsinnPasst: null }, gegen: { umlaufsinnPasst: null } });
-    expect(preferred(gegen, mit, egal)).toBe(gegen);
-    expect(preferred(mit, gegen, egal)).toBe(gegen);
-  });
-
-  it('die LAGE schlägt den Preis: der Umlaufsinn gewinnt gegen weniger Kreuzen', () => {
+  it('DER UMLAUFSINN ENTSCHEIDET NICHTS MEHR — nur der Lee-Korridor', () => {
     /**
-     * KORREKTUR 2026-08-07 (Review des Skippers an der Kartenansicht). Hier
-     * stand das Gegenteil — "die Messung schlägt die Faustregel", mit dem
-     * Kreuzstunden-Kriterium über dem Umlaufsinn. Das Ergebnis war eine Runde
-     * gegen den Uhrzeigersinn bei NE-Wind: über die offene Ägäis heim, weil
-     * der Windwinkel dort bequemer liegt.
+     * Zwei Korrekturen an derselben Stelle, beide vom 2026-08-07.
      *
-     * Die beiden Kennzahlen messen NICHT dasselbe. Der Umlaufsinn und der
-     * Lee-Korridor stehen für Abdeckung und Seegang, die Kreuzstunden für
-     * Zeit und Bequemlichkeit. Man kann sie nicht nach "genauer" ordnen — die
-     * exponiertere Frage steht oben.
+     * Zuerst stand das Kreuzstunden-Kriterium über der Lee-Korridor-Treue
+     * ("die Messung schlägt die Faustregel"). Das lieferte bei NE-Wind eine
+     * Runde gegen den Uhrzeigersinn — über die offene Ägäis heim, weil der
+     * Windwinkel dort bequemer liegt. Der Skipper hat es an der Karte gesehen.
+     *
+     * Dann kam der Umlaufsinn als eigenes Kriterium dazwischen — und ist
+     * gleich wieder entfallen. Der Skipper hat ihn gegen zwei professionelle
+     * Törnvorschläge geprüft (aegeansails.gr, beide zwei Wochen, dasselbe
+     * Revier): der eine läuft im Uhrzeigersinn, der andere dagegen. Eine so
+     * scharfe Regel gibt es in der Praxis nicht.
+     *
+     * Was bleibt, ist der Lee-Korridor — und der bringt die Drehrichtung als
+     * FOLGE hervor: wer im Westen unter Land heimkommt, ist vorher nach Osten
+     * hinaus. Genau daran unterscheiden sich auch die beiden Referenzen
+     * (Lee-Abweichung 0 gegen 2).
      */
-    const gegenlaeufig = mkResult('a-gegenlaeufig');
-    const rechtsherum = mkResult('b-rechtsherum');
+    const imLee = mkResult('a-im-lee');
+    const offenSee = mkResult('b-offen-see');
     const metrics = withMetrics({
-      'a-gegenlaeufig': { umlaufsinnPasst: false, kreuzTenthsRueckweg: 5 },
-      'b-rechtsherum': { umlaufsinnPasst: true, kreuzTenthsRueckweg: 40 },
+      // Der Weg über die offene See kreuzt WENIGER — und verliert trotzdem.
+      'a-im-lee': { rueckwegAbweichung: 0, kreuzTenthsRueckweg: 40 },
+      'b-offen-see': { rueckwegAbweichung: 3, kreuzTenthsRueckweg: 5 },
     });
-    expect(preferred(gegenlaeufig, rechtsherum, metrics)).toBe(rechtsherum);
+    expect(preferred(offenSee, imLee, metrics)).toBe(imLee);
+    expect(preferred(imLee, offenSee, metrics)).toBe(imLee);
   });
 
   it('Kriterium 9: lange Tage zählen — aber erst unter dem Rahmen-Vertrag', () => {

@@ -174,28 +174,60 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     }
   });
 
-  it('Santorin braucht den GANZEN Rahmen — ab Tag 2 gibt es keine Santorin-Runde mehr', () => {
+  it('Santorin braucht zehn Etappen — ab Törntag 3 gibt es keine Santorin-Runde mehr', () => {
     /**
-     * Der wahre Sachverhalt hinter Beispiel 3, und er ist schärfer als die
-     * Beanstandung: Santorin hängt im Graphen nur an Ios, Naxos und
-     * Folegandros. Die kürzeste wiederholungsfreie Runde über Santorin braucht
-     * deshalb ALLE ELF Etappen — es gibt keine mit zehn oder weniger.
+     * Der wahre Sachverhalt hinter der Beanstandung "die Verlängerung nach
+     * Santorin führt nicht nach Santorin": Santorin hängt im Graphen nur an
+     * Ios, Naxos und Folegandros. Eine Runde dorthin ist deshalb lang.
      *
-     * "Santorin geht ab Törntag 2 nicht mehr" ist damit die RICHTIGE Antwort.
-     * Falsch war, dass die App das Ziel trotzdem angeboten und einen Plan
-     * dazugelegt hat, der nicht dorthin führt. Dieser Test hält beide Seiten
-     * fest: an Tag 1 existiert die Runde, danach nicht — und keine der beiden
-     * Aussagen darf sich hinter der anderen verstecken.
+     * Die Zahl hat sich am 2026-08-07 verbessert, als Zweitanläufe an anderen
+     * Häfen zugelassen wurden: vorher brauchte Santorin ALLE ELF Etappen und
+     * war ab Törntag 2 unerreichbar, jetzt reichen ZEHN. Die Option bleibt
+     * damit einen Tag länger offen — ohne dass irgendetwas weicher geworden
+     * wäre: die Insel des Zweitanlaufs muss einen zweiten Liegeplatz haben.
+     *
+     * "Santorin geht ab Törntag 3 nicht mehr" ist die richtige Antwort. Falsch
+     * war, dass die App das Ziel trotzdem angeboten und einen Plan dazugelegt
+     * hat, der nicht dorthin führt.
      */
     const anTag1 = enumerateRoundTrips(realSnapshot({ currentDay: 1 }), 'athen', RAHMEN)
       .filter((t) => islandSequence(t).includes('santorin'));
     expect(anTag1.length).toBeGreaterThan(0);
-    for (const trip of anTag1) expect(trip).toHaveLength(11);
+    // Zehn Etappen ist das Minimum — keine kürzere Santorin-Runde existiert.
+    expect(Math.min(...anTag1.map((t) => t.length))).toBe(10);
 
-    for (const currentDay of [2, 3]) {
-      const rest = RAHMEN - currentDay + 1;
-      const alle = enumerateRoundTrips(realSnapshot({ currentDay }), 'athen', rest);
-      expect(alle.filter((t) => islandSequence(t).includes('santorin'))).toHaveLength(0);
+    // Tag 2 lässt noch zehn Etappen zu, Tag 3 nur noch neun.
+    const anTag2 = enumerateRoundTrips(realSnapshot({ currentDay: 2 }), 'athen', RAHMEN - 1)
+      .filter((t) => islandSequence(t).includes('santorin'));
+    expect(anTag2.length).toBeGreaterThan(0);
+
+    const anTag3 = enumerateRoundTrips(realSnapshot({ currentDay: 3 }), 'athen', RAHMEN - 2)
+      .filter((t) => islandSequence(t).includes('santorin'));
+    expect(anTag3).toHaveLength(0);
+  });
+
+  it('Zweitanläufe öffnen die Ost-Kykladen — Amorgos und die Kleinen Kykladen', () => {
+    /**
+     * Die Kalibrierung gegen die Praxis (Skipper 2026-08-07): zwei
+     * professionelle Törnvorschläge laufen Kythnos zweimal an, einer
+     * zusätzlich Paros — jeweils an verschiedenen Häfen. Genau das trägt den
+     * Vorstoß nach Osten, und genau das fehlte uns.
+     *
+     * In den sechs wiederholungsfreien Runden kommen Amorgos und Koufonisia in
+     * KEINER vor. Mit Zweitanläufen sind sie erreichbar — über den vollen
+     * Rahmen, nicht darunter.
+     */
+    const snapshot = realSnapshot();
+    const [ohne, mit] = [...roundTripLayers(snapshot, 'athen', RAHMEN)];
+    for (const ziel of ['amorgos', 'koufonisia']) {
+      expect(
+        (ohne?.trips ?? []).filter((t) => islandSequence(t).includes(ziel)),
+        `${ziel} ohne Zweitanlauf`,
+      ).toHaveLength(0);
+      expect(
+        (mit?.trips ?? []).filter((t) => islandSequence(t).includes(ziel)).length,
+        `${ziel} mit Zweitanlauf`,
+      ).toBeGreaterThan(0);
     }
   });
 });
@@ -319,10 +351,11 @@ describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
 
       const solved = completePlan(snapshot, 'athen')!;
       const metrics = planMetricsFor(snapshot)(solved);
-      expect(metrics.clockwise, `${dir}° — Umlaufsinn`).toBe(true);
-      expect(metrics.umlaufsinnPasst, `${dir}° — Gebot erfüllt`).toBe(true);
-      // Und der Heimweg läuft im westlichen Lee-Korridor, ohne Ausreisser.
+      // Der Umlaufsinn ist KEIN Rangkriterium mehr (siehe unten) — er ergibt
+      // sich aus der Lee-Korridor-Treue. Genau das prüfen die beiden Zeilen:
+      // der Heimweg läuft in Abdeckung, und die Runde ist deshalb rechtsherum.
       expect(metrics.rueckwegAbweichung, `${dir}° — Lee-Korridor`).toBe(0);
+      expect(metrics.clockwise, `${dir}° — Umlaufsinn als Folge`).toBe(true);
     }
   });
 
@@ -359,9 +392,9 @@ describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
 
     // Der Rahmen-Vertrag hält auch hier — die Lage kostet die Richtung, nicht den Törn.
     expect(metrics.legDays).toBe(11);
-    expect(metrics.repeatStays).toBe(0);
+    expect(metrics.distinctIslands).toBe(11);
     // Und die Abweichung wird zugegeben, nicht kaschiert.
-    expect(metrics.umlaufsinnPasst).toBe(false);
+    expect(metrics.clockwise).toBe(false);
     expect(metrics.rueckwegAbweichung).toBeGreaterThan(0);
   });
 
