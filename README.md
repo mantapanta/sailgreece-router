@@ -728,6 +728,33 @@ kein **strategischer** (er macht den Rückweg im Starkwind nicht sicher). Genau
 das sollte eine Planungshilfe sagen, statt eine Sicherheit zu versprechen, die
 in den Zahlen nicht steckt.
 
+### Der Korridor liegt weiter westlich als die kuratierten Kurse
+
+Die zweite Bildserie (Zoom auf Kea–Kythnos–Serifos, Meltemi aus NNE ~025°) zeigt
+die Abdeckung als **zusammenhängende türkise Bahn** von Kea über Kythnos bis
+Serifos. Sie liegt aber nicht auf der Verbindungslinie der Inseln: ein Schatten
+läuft nach **SSW** (Windrichtung + 180°), die kuratierten Etappen laufen
+SSE/NNW. Die Kurse streifen die Abdeckung deshalb nur am Rand.
+
+Gemessen als Anteil der Strecke im Lee, wenn man den ganzen Kurs rechtwinklig
+nach Westen versetzt (Wind aus 025°, Abtastung 0,5 sm; in Klammern der mittlere
+Faktor über die Strecke):
+
+| Etappe | unverändert | +3 sm West | +5 sm West | +7 sm West |
+|---|---|---|---|---|
+| `serifos--kythnos` | 45 % (Ø0,84) | **73 % (Ø0,79)** | 42 % | 21 % |
+| `kythnos--kea` | 34 % (Ø0,83) | **83 % (Ø0,72)** | 60 % | 43 % |
+| `sifnos--serifos` | 17 % (Ø0,91) | 42 % | 58 % | **75 % (Ø0,79)** |
+| `kythnos--athen` | 18 % | 26 % | 29 % | 11 % |
+
+Ein Versatz von rund **3 sm nach Westen** verdoppelt die Abdeckung auf den
+beiden Kernetappen des Korridors; `sifnos--serifos` braucht eher 5–7 sm. Der
+lange Schlag nach Attika profitiert kaum — er quert offenes Wasser.
+
+Das ist eine Frage an die **kuratierten Wegpunkte**, nicht an die Kuration der
+Zonen: der Umweg kostet Distanz und bringt Abdeckung. Solange die Wegpunkte
+liegen, wo sie liegen, bleibt der Befund oben bestehen.
+
 Sichtbar wird die Abdeckung trotzdem an jedem Etappentag — als Hinweiszeile mit
 Modellwind, Lee-Wind und Fallböen-Warnung, und in der Rückweg-Empfehlung.
 
