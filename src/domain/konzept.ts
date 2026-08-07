@@ -414,14 +414,23 @@ function staerksterLauf(
  * dem Rückweg so wenig wie möglich am Wind zu erzeugen — es sei denn es ist
  * wenig Wind, dann geht das, oder auch im Windschatten."
  *
- * Bis dahin war `clockwise` (geo.ts) ein UNBEDINGTES Rangkriterium auf Platz 12
- * von 14 und damit reine Kosmetik: es entschied fast nie etwas, und wenn doch,
- * dann auch bei Flaute, wo die Drehrichtung nichts kostet.
+ * EIN HINWEIS, KEIN RANGKRITERIUM (Stand 2026-08-07). Der Umlaufsinn hat kurz
+ * in `solver.preferred` mitentschieden und ist dort wieder entfallen: der
+ * Skipper hat ihn gegen zwei professionelle Törnvorschläge geprüft, und die
+ * widersprechen sich — der eine (ab Lavrion) läuft im Uhrzeigersinn, der
+ * andere (ab Athen) dagegen, beide aus derselben Quelle. Eine so scharfe Regel
+ * gibt es in der Praxis nicht.
  *
- * Der eigentliche Befund dahinter: `konzeptLageFor` beurteilt die Wetterlage
- * ausschliesslich über die WINDSTÄRKE. Die Windrichtung liegt im Forecast
- * (`windDirDeg`), wurde aber von der gesamten Lage-Beurteilung nie gelesen —
- * eine Revier-Logik, die den Meltemi kennt, ohne je zu prüfen, woher er weht.
+ * Was bleibt, ist der Wert der AUSSAGE: der Skipper soll lesen können, wie der
+ * Wind im Törnfenster steht und was daraus für den Heimweg folgt. Die
+ * Drehrichtung der Runde bestimmt weiterhin der Lee-Korridor
+ * (`rueckwegAbweichung`) — und zwar als Folge, nicht als Vorschrift.
+ *
+ * Der eigentliche Befund dahinter bleibt gültig: `konzeptLageFor` beurteilt die
+ * Wetterlage ausschliesslich über die WINDSTÄRKE. Die Windrichtung liegt im
+ * Forecast (`windDirDeg`), wurde aber von der gesamten Lage-Beurteilung nie
+ * gelesen — eine Revier-Logik, die den Meltemi kennt, ohne je zu prüfen, woher
+ * er weht.
  */
 export type Umlaufsinn = 'im-uhrzeigersinn' | 'gegen-uhrzeigersinn' | 'egal';
 
@@ -694,9 +703,7 @@ export function rueckwegEmpfehlungFor(
 
   /**
    * Der UMLAUFSINN, aus derselben Rechnung, mit der der Solver gerankt hat
-   * (AD-3: eine Rechnung, eine Aussage). Er steht am Schluss, weil er die
-   * gröbste der drei Rückweg-Kennzahlen ist — die gemessenen Kreuzstunden und
-   * die Lee-Korridor-Treue sagen konkreter, was den Heimweg kostet.
+   * (AD-3: eine Rechnung, eine Aussage).
    */
   const gebot = umlaufsinnGebot(snapshot);
   if (gebot !== 'egal') {

@@ -101,12 +101,7 @@ import {
   type PackedLeg,
 } from './ppr.ts';
 import { legIndexWithReverses } from './legs.ts';
-import {
-  konzeptLageFor,
-  konzeptOfPlan,
-  rueckwegAbweichung,
-  umlaufsinnGebot,
-} from './konzept.ts';
+import { konzeptLageFor, konzeptOfPlan, rueckwegAbweichung } from './konzept.ts';
 import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import { roundTripLayers, type RoundTripLayer } from './roundTrips.ts';
@@ -243,20 +238,42 @@ export interface Candidate {
  * letzte. Ein Rundkurs endet wieder an der Basis; seine letzte Insel als
  * Wendepunkt zu lesen ergäbe Reichweite 0.
  */
+/**
+ * Die beiden Kennzahlen, nach denen `makeCandidate` den Wendepunkt bestimmt —
+ * EINMAL je Snapshot vorbereitet statt je Kandidat.
+ *
+ * Vorher schlug jeder Aufruf die Insel-Koordinaten linear in
+ * `library.islands` nach. Bei bis zu 1340 Runden je Schicht und elf
+ * Solver-Aufrufen pro Bewertung (Hauptroute, neun Ziele, FR2-Zeuge) waren das
+ * Hunderttausende Scans — messbar als Sekunden Ladezeit.
+ */
+const kennzahlenCache = new WeakMap<
+  PlanningSnapshot,
+  { reachOf: (id: string) => number; distOf: (id: string) => number }
+>();
+
+function kennzahlenFor(snapshot: PlanningSnapshot) {
+  const cached = kennzahlenCache.get(snapshot);
+  if (cached) return cached;
+  const reachOf = reachNmFor(snapshot);
+  const coords = new Map(snapshot.library.islands.map((i) => [i.id, i.coordinates]));
+  const base = coords.get(snapshot.params.baseIslandId);
+  const distOf = (islandId: string): number => {
+    const island = coords.get(islandId);
+    return base && island ? distanceNm(base, island) : 0;
+  };
+  const eintrag = { reachOf, distOf };
+  kennzahlenCache.set(snapshot, eintrag);
+  return eintrag;
+}
+
 function makeCandidate(
   variantId: string,
   layer: Candidate['layer'],
   legs: Leg[],
   snapshot: PlanningSnapshot,
 ): Candidate {
-  const reachOf = reachNmFor(snapshot);
-  const base = snapshot.library.islands.find(
-    (i) => i.id === snapshot.params.baseIslandId,
-  );
-  const distOf = (islandId: string): number => {
-    const island = snapshot.library.islands.find((i) => i.id === islandId);
-    return base && island ? distanceNm(base.coordinates, island.coordinates) : 0;
-  };
+  const { reachOf, distOf } = kennzahlenFor(snapshot);
   const seq = routeIslandSequence(legs);
   const turnIslandId =
     seq.length > 0
@@ -294,10 +311,36 @@ function makeCandidate(
  * Wiederholung nur gewinnen, wenn es gar keine wiederholungsfreie gibt — die
  * strukturelle Fassung von "keine Insel doppelt, weich aber schwer gewichtet".
  */
+const candidateCache = new WeakMap<PlanningSnapshot, Map<string, Candidate[][]>>();
+
 export function* candidateLayers(
   snapshot: PlanningSnapshot,
   startIslandId: string,
 ): Generator<Candidate[]> {
+  /**
+   * Memo wie in roundTrips.ts, und aus demselben Grund: der Kandidatenraum
+   * hängt nur an Bibliothek, Basis und Startinsel — nicht am Wetter. Eine
+   * Bewertung fragt ihn aber elfmal (Hauptroute, je Ziel im Optionsraum,
+   * FR2-Zeuge). Gecacht wird, was TATSÄCHLICH aufgezählt wurde, damit die
+   * Lazy-Auswertung der Schichten erhalten bleibt.
+   */
+  let proSnapshot = candidateCache.get(snapshot);
+  if (!proSnapshot) {
+    proSnapshot = new Map();
+    candidateCache.set(snapshot, proSnapshot);
+  }
+  const gecacht = proSnapshot.get(startIslandId);
+  if (gecacht) {
+    yield* gecacht;
+    return;
+  }
+  const erzeugt: Candidate[][] = [];
+  const merke = (cs: Candidate[]): Candidate[] => {
+    erzeugt.push(cs);
+    proSnapshot.set(startIslandId, [...erzeugt]);
+    return cs;
+  };
+
   const frame = deadlineFrame(snapshot.params);
   // Ein Törntag, eine Verbindung: so viele Etappen wie Tage übrig sind.
   const daysAvailable = frame.deadlineDay - snapshot.trip.currentDay + 1;
@@ -321,7 +364,7 @@ export function* candidateLayers(
     });
 
     if (layer.layer !== 'verkuerzt') {
-      yield fresh(candidates);
+      yield merke(fresh(candidates));
       continue;
     }
 
@@ -349,7 +392,7 @@ export function* candidateLayers(
       turnIslandId: snapshot.params.baseIslandId,
       legs: [],
     });
-    yield fresh([...candidates, ...rueckfall]);
+    yield merke(fresh([...candidates, ...rueckfall]));
   }
 }
 
@@ -938,7 +981,11 @@ export interface PlanMetrics {
   reachNm: number;
   /** Zahl der VERSCHIEDENEN Inseln, die angelaufen werden. */
   distinctIslands: number;
-  /** Läuft die Runde im Uhrzeigersinn? */
+  /**
+   * Läuft die Runde im Uhrzeigersinn? REIN BESCHREIBEND — seit 2026-08-07
+   * rankt nichts mehr danach (siehe `preferred`). Die Kennzahl bleibt, weil
+   * sie in Diagnose und Tests die Form einer Runde in einem Wort sagt.
+   */
   clockwise: boolean;
   turnDay: number;
   /**
@@ -955,16 +1002,6 @@ export interface PlanMetrics {
    * Ersatzkonstruktionen dafür, dass die Etappenzahl auf Rang 14 von 14 stand.
    */
   legDays: number;
-  /**
-   * ZIELMODELL V3 — Aufenthalte über den ERSTEN je Insel hinaus, Basis
-   * ausgenommen. 0 heisst: eine echte Runde, keine Insel zweimal.
-   *
-   * Gezählt werden AUFENTHALTE, nicht Nächte: aufeinanderfolgende Nächte auf
-   * derselben Insel sind ein Aufenthalt. Dieselbe Zählung wie die
-   * Liegeplatz-Regel in `validatePlan` (1e) — beide lesen `inselAufenthalte`,
-   * damit Rangfolge und Gültigkeit nie zweierlei behaupten können.
-   */
-  repeatStays: number;
   stages: number;
   /**
    * Zielmodell v2 — Summe der Abweichungen der Etappentage vom Wegstunden-Band
@@ -1012,13 +1049,6 @@ export interface PlanMetrics {
    * Weniger ist besser: die Rückweg-Empfehlung der Törnanalyse als Rangmaß.
    */
   rueckwegAbweichung: number;
-  /**
-   * Läuft die Runde in der Drehrichtung, die die Wetterlage vorgibt
-   * (konzept.umlaufsinnGebot)? `null` bei Gebot 'egal' — dann darf die
-   * Drehrichtung nichts entscheiden, und genau das ist der Unterschied zum
-   * früheren unbedingten `clockwise`.
-   */
-  umlaufsinnPasst: boolean | null;
 }
 
 export function planMetricsFor(
@@ -1031,8 +1061,6 @@ export function planMetricsFor(
   const { stageHoursBandMinH, stageHoursBandMaxH } = snapshot.params;
   // Die Konzept-Lage gilt je Snapshot, nicht je Plan — einmal beurteilen.
   const konzeptLage = konzeptLageFor(snapshot);
-  // Ebenso das Umlaufsinn-Gebot: es hängt am Wetterfenster, nicht am Plan.
-  const gebot = umlaufsinnGebot(snapshot);
   // preferred vergleicht jeden Kandidaten gegen den bisherigen Besten — der
   // Beste würde ohne Memo bei jedem Vergleich neu durchgerechnet.
   const memo = new WeakMap<SolveResult, PlanMetrics>();
@@ -1101,21 +1129,6 @@ export function planMetricsFor(
     // Etappen-TAGE, nicht Etappen: ein Doppelschlag-Tag bleibt ein Tag.
     const legDays = stages.length;
 
-    /**
-     * Wiederholungen: Aufenthalte über den ersten je Insel hinaus, Basis
-     * ausgenommen (Start, Ziel und Puffertage liegen dort naturgemäss
-     * mehrfach). Dieselbe Aufenthalts-Zählung wie die Liegeplatz-Regel.
-     */
-    let repeatStays = 0;
-    {
-      const gesehen = new Set<string>();
-      for (const stay of inselAufenthalte(r.plan)) {
-        if (stay.islandId === snapshot.params.baseIslandId) continue;
-        if (gesehen.has(stay.islandId)) repeatStays++;
-        else gesehen.add(stay.islandId);
-      }
-    }
-
     const clockwise = isClockwise(ring);
 
     const m: PlanMetrics = {
@@ -1126,7 +1139,6 @@ export function planMetricsFor(
       clockwise,
       turnDay,
       legDays,
-      repeatStays,
       stages: stages.length,
       bandDevTenths,
       kreuzTenthsRueckweg,
@@ -1138,9 +1150,6 @@ export function planMetricsFor(
         stages.length > 0 ? turnDay : null,
         snapshot.params.baseIslandId,
       ),
-      // 'egal' heisst: die Drehrichtung darf hier nichts entscheiden.
-      umlaufsinnPasst:
-        gebot === 'egal' ? null : clockwise === (gebot === 'im-uhrzeigersinn'),
     };
     memo.set(r, m);
     return m;
@@ -1204,35 +1213,57 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  *      Gewinnerzug — zwei Verbindungen an einem Tag zählten dann doppelt und
  *      machten die Nachgabe zur Norm.
  *
- *   4. WENIGER WIEDERHOLUNGEN. Eine Insel zweimal anzulaufen ist erlaubt, aber
- *      teuer: eine Runde schlägt ein Pendeln immer, solange überhaupt eine
- *      Runde existiert (Skipper: "weich, aber schwer gewichtet"). Die Haupt-
- *      last trägt der Kandidatenraum — Schicht A von roundTripLayers ist
- *      wiederholungsfrei —, dieses Kriterium ordnet, was danach noch übrig ist.
+ *   4. MEHR VERSCHIEDENE INSELN.
  *
- *   5. MEHR VERSCHIEDENE INSELN.
+ *      Ein eigenes Kriterium "weniger Wiederholungen" gab es bis 2026-08-07
+ *      daneben. Es ist entfallen, weil es bei gleicher Etappentag-Zahl
+ *      RECHNERISCH DASSELBE sagt: die Zahl der Tagesziele steht fest, also ist
+ *      jede Wiederholung genau eine verschenkte Insel. Zwei Kennzahlen für
+ *      eine Frage sind die Art Doppelung, die diesen Umbau nötig gemacht hat.
  *
- *   6.–8. DER RÜCKWEG (Skipper 2026-08-07: "ein angenehmer Rückweg, ohne
+ *      Die Zusicherung gegen das PENDELN liegt dafür da, wo sie stärker ist:
+ *      im Kandidatenraum. `roundTrips.MAX_ZWEITANLAEUFE` deckelt Runden auf
+ *      zwei Zweitanläufe, dieselbe Kette hin und zurück bräuchte fünf.
+ *
+ *   6.–7. DER RÜCKWEG (Skipper 2026-08-07: "ein angenehmer Rückweg, ohne
  *      Kreuzen oder mit möglichst wenig Kreuzen, ist ein entscheidendes
- *      Kriterium"). Drei Kennzahlen derselben Frage, von der genauesten zur
- *      gröbsten — und genau in dieser Reihenfolge, damit die Messung die
- *      Faustregel schlägt:
+ *      Kriterium"):
  *
- *      6. KREUZSTUNDEN NACH DER WENDE, am simulierten Kurs gegen den echten
- *         Forecast gemessen. Hinaus fährt man mit dem Meltemi im Rücken, heim
- *         gegen ihn an — eine Kreuzstunde auf dem Rückweg ist die, die weh tut.
- *      7. LEE-KORRIDOR-TREUE des Heimwegs (Milos–Sifnos–Serifos–Kythnos): die
- *         Rückweg-Empfehlung der Törnanalyse, an der konkreten Inselkette
- *         gemessen. Das ist das "oder auch im Windschatten".
- *      8. UMLAUFSINN, sofern die Wetterlage überhaupt einen vorgibt
- *         (konzept.umlaufsinnGebot). Bei wenig oder drehendem Wind ist das
- *         Gebot 'egal' und dieses Kriterium neutral — vorher war `clockwise`
- *         unbedingt und entschied auch bei Flaute, wo die Drehrichtung nichts
- *         kostet.
+ *      6. LEE-KORRIDOR-TREUE des Heimwegs (Milos–Sifnos–Serifos–Kythnos,
+ *         konzept.WEST_LEE_KORRIDOR). Die normative Rückweg-Empfehlung der
+ *         Törnanalyse — eine Wellen- und Expositions-Regel: "kurze Etappen
+ *         zwischen den Abdeckungen, minimaler Aufenthalt in offener See mit
+ *         voll entwickelter Welle".
+ *      7. KREUZSTUNDEN NACH DER WENDE, am simulierten Kurs gegen den echten
+ *         Forecast gemessen.
  *
- *      Eine Runde GEGEN den Uhrzeigersinn, die nachweislich weniger kreuzt,
- *      gewinnt deshalb. Alles andere wäre eine Regel, die gegen ihren eigenen
- *      Zweck arbeitet.
+ *      Die Reihenfolge ist eine Korrektur nach dem Review vom 2026-08-07:
+ *      erst stand 7 vor 6, mit der Begründung "die Messung schlägt die
+ *      Faustregel". Das war falsch. Die Messung war zwar richtig — bei
+ *      NE-Wind liegt der östliche Heimweg wirklich näher am Raumschots —,
+ *      aber `kreuzHours` misst den Seegang überhaupt nicht. Zwei Kennzahlen,
+ *      die Verschiedenes messen, kann man nicht nach "genauer" ordnen. Die
+ *      exponiertere Frage steht oben: Kreuzen ist ein Preis, offene See im
+ *      Meltemi ist eine Lage.
+ *
+ *      DER UMLAUFSINN IST HIER ENTFALLEN (2026-08-07, zweite Korrektur). Er
+ *      stand als eigenes Kriterium zwischen 6 und 7: "läuft die Runde in der
+ *      Drehrichtung, die die Wetterlage vorgibt?". Der Skipper hat ihn gegen
+ *      zwei professionelle Törnvorschläge geprüft — und die widersprechen
+ *      sich: der eine (ab Lavrion) läuft im Uhrzeigersinn, der andere (ab
+ *      Athen) dagegen, beide aus derselben Quelle, dasselbe Revier, dieselbe
+ *      Törnlänge. Eine so scharfe Regel gibt es in der Praxis also nicht.
+ *
+ *      Sie wird auch nicht gebraucht: der Lee-Korridor bringt die Drehrichtung
+ *      als FOLGE hervor, nicht als Dogma. Wer im Westen unter Land heimkommt,
+ *      ist vorher nach Osten hinaus — das IST der Uhrzeigersinn, und genau
+ *      daran unterscheiden sich die beiden Referenzen (Lee-Abweichung 0 gegen
+ *      2). Ein zweites Kriterium für dieselbe Frage hätte nur die Chance
+ *      gehabt, ihr zu widersprechen.
+ *
+ *      `konzept.umlaufsinnGebot` bleibt als HINWEIS in der
+ *      Rückweg-Empfehlung — es sagt dem Skipper, wie der Wind steht, ohne
+ *      ihm die Runde vorzuschreiben.
  *
  *   9. WENIGER FESTE BEFUNDE (ohne die Sicherheits-Befunde aus Kriterium 1):
  *      lange Tage, strukturelle Mängel. Hier und nicht oben, weil sie sonst
@@ -1280,12 +1311,6 @@ export function preferred(
    */
   const restA = firmViolations(a.validity).filter((v) => !isSafetyViolation(v)).length;
   const restB = firmViolations(b.validity).filter((v) => !isSafetyViolation(v)).length;
-  /**
-   * Der Umlaufsinn als Zahl: 1 passend, 0 unpassend — und bei Gebot 'egal'
-   * BEIDE 0, damit das Kriterium dann wirklich nichts entscheidet statt
-   * heimlich zugunsten einer Richtung zu kippen.
-   */
-  const sinn = (m: PlanMetrics): number => (m.umlaufsinnPasst === true ? 1 : 0);
   const cmp: [number, number][] = [
     // Das einzige absolute Tor.
     [-a.validity.safetyViolations.length, -b.validity.safetyViolations.length],
@@ -1297,12 +1322,10 @@ export function preferred(
     // Der Rundkurs-Vertrag: jeder Törntag eine Etappe, keine Insel zweimal,
     // möglichst viele Inseln.
     [ma.legDays, mb.legDays],
-    [-ma.repeatStays, -mb.repeatStays],
     [ma.distinctIslands, mb.distinctIslands],
-    // Der Rückweg — von der genauesten Kennzahl zur gröbsten.
-    [-ma.kreuzTenthsRueckweg, -mb.kreuzTenthsRueckweg],
+    // Der Rückweg: erst die Lage (Lee-Abdeckung), dann der Preis (Kreuzen).
     [-ma.rueckwegAbweichung, -mb.rueckwegAbweichung],
-    [sinn(ma), sinn(mb)],
+    [-ma.kreuzTenthsRueckweg, -mb.kreuzTenthsRueckweg],
     // Lange Tage und strukturelle Mängel — unter dem Rahmen-Vertrag.
     [-restA, -restB],
     // Kreuzen auch auf dem Hinweg vermeiden, nachrangig.
@@ -1471,8 +1494,7 @@ export function completePlan(
    * als die Rangfolge, würde genau die Kandidaten übergehen, die gewinnen.
    */
   const traegt = (r: SolveResult): boolean =>
-    r.validity.safetyViolations.length === 0 &&
-    metrics(r).legDays >= Math.min(daysAvailable, metrics(r).stages);
+    r.validity.safetyViolations.length === 0 && metrics(r).konzeptTraegt;
 
   /**
    * Die besten N Kandidaten für die Nachvalidierung gegen die GESEGELTE Kette
@@ -1596,7 +1618,16 @@ export function completePlan(
       if (opts.stopAtFirstValid && best && firmValid(best)) break;
     }
 
-    // Diese Schicht trägt — die nachrangigen gar nicht erst aufzählen.
+    /**
+     * Diese Schicht trägt — die nachrangigen gar nicht erst aufzählen.
+     *
+     * Geprüft wird, was in `preferred` ÜBER der Schicht-Ordnung steht:
+     * Sicherheit, tragendes Routen-Konzept und der volle Rahmen. Ohne die
+     * Konzept-Bedingung würde eine sichere Ost-Runde aus Schicht A den Abbruch
+     * auslösen, obwohl Schicht B eine West-Runde enthält, die bei gekippter
+     * Ost-Lage gewinnen müsste — das Abbruchkriterium war strenger als die
+     * Rangfolge und hätte genau die Kandidaten übergangen, die zählen.
+     */
     if (best && traegt(best) && metrics(best).legDays === daysAvailable) break;
   }
 

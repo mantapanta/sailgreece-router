@@ -367,6 +367,23 @@ export function remainingReturnLegs(
  * even under the configured worst case. This is the only calculation the
  * worst case binds — it never governs the outbound stages.
  */
+/**
+ * Memo für {@link returnFeasibleStarting}, je Snapshot-Objekt.
+ *
+ * Dieselbe Begründung wie bei `scoring.assessLegCached`, nur eine Ebene höher:
+ * `validatePlan` stellt die Frage "kommen wir von hier noch heim?" für JEDE
+ * Etappe JEDES Kandidaten — und die Antwort hängt nur von (Insel, Starttag,
+ * Szenario, Stichtag) und dem Snapshot ab. Seit der Kandidatenraum
+ * Zweitanläufe kennt (roundTrips.MAX_ZWEITANLAEUFE) sind das Hunderte
+ * Kandidaten je Ziel im Optionsraum, und die Prüfung packt jedes Mal die
+ * ganze Rückfallkette neu.
+ *
+ * Beim Snapshot zählt die OBJEKTIDENTITÄT: relaxierte Params bekommen ein
+ * eigenes Objekt (solver.relaxedSnapshot) und damit einen eigenen Cache — was
+ * richtig ist, denn sie ändern die Antwort.
+ */
+const returnMemo = new WeakMap<PlanningSnapshot, Map<string, Feasibility>>();
+
 export function returnFeasibleStarting(
   islandId: string,
   startDay: number,
@@ -381,9 +398,21 @@ export function returnFeasibleStarting(
   deadlineDay: number = effectiveDeadlineDay(snapshot),
 ): Feasibility {
   if (islandId === snapshot.params.baseIslandId) return 'feasible';
+  let byKey = returnMemo.get(snapshot);
+  if (!byKey) {
+    byKey = new Map();
+    returnMemo.set(snapshot, byKey);
+  }
+  const key = `${islandId}|${startDay}|${scenario}|${deadlineDay}`;
+  const cached = byKey.get(key);
+  if (cached) return cached;
+
   const legs = remainingReturnLegs(islandId, snapshot);
-  if (!legs) return 'infeasible';
-  return packLegsFeasible(legs, startDay, deadlineDay, snapshot, { scenario });
+  const antwort: Feasibility = legs
+    ? packLegsFeasible(legs, startDay, deadlineDay, snapshot, { scenario })
+    : 'infeasible';
+  byKey.set(key, antwort);
+  return antwort;
 }
 
 /** FR19: the Predicted Point of Return for the current position. */
