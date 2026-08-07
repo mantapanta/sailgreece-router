@@ -106,6 +106,11 @@ describe('formatWaveM — Wellenhöhe/-grenze in Metern', () => {
  * Die Warnzeile der Etappenkarte (Skipper 2026-08-06): "ca. 4 sm Kreuz
  * (16 kn)". Gerundet wird bewusst auf die Meile — eine Nachkommastelle täuschte
  * eine Genauigkeit vor, die eine Stunden-Simulation nicht hat.
+ *
+ * Seit der Rückfrage vom 2026-08-07 trennt die Zeile zwei Zahlen, die vorher
+ * beide "Kreuz" hiessen: die Meilen AM WIND (bis 60° TWA, Kurs liegt an) und
+ * die Teilmenge darunter, die wirklich im Zickzack gefahren wird. Nur die
+ * zweite wird durchs Wasser länger.
  */
 describe('formatKursAbschnitt — problematische Abschnitte', () => {
   it('schreibt die Zeile aus dem Feldtest', () => {
@@ -113,18 +118,32 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
       formatKursAbschnitt({
         kategorie: 'kreuz',
         distanceNm: 4.3,
+        kreuzNm: 0,
         maxTwsKn: 16,
         ampel: 'gelb',
       }),
-    ).toBe('ca. 4 sm Kreuz (16 kn)');
+    ).toBe('ca. 4 sm Am Wind (16 kn)');
     expect(
       formatKursAbschnitt({
         kategorie: 'halbwind',
         distanceNm: 9.6,
+        kreuzNm: 0,
         maxTwsKn: 9,
         ampel: 'gruen',
       }),
     ).toBe('ca. 10 sm Halbwind (9 kn)');
+  });
+
+  it('nennt die gekreuzten Meilen getrennt, wo wirklich gekreuzt wird', () => {
+    expect(
+      formatKursAbschnitt({
+        kategorie: 'kreuz',
+        distanceNm: 8.1,
+        kreuzNm: 2.0,
+        maxTwsKn: 17,
+        ampel: 'gelb',
+      }),
+    ).toBe('ca. 8 sm Am Wind (17 kn) · davon ca. 2 sm Kreuz');
   });
 
   it('unter einer Meile bleibt die Nachkommastelle stehen ("ca. 0 sm" wäre keine Angabe)', () => {
@@ -132,17 +151,18 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
       formatKursAbschnitt({
         kategorie: 'kreuz',
         distanceNm: 0.4,
+        kreuzNm: 0.4,
         maxTwsKn: 24,
         ampel: 'rot',
       }),
-    ).toBe('ca. 0,4 sm Kreuz (24 kn)');
+    ).toBe('ca. 0,4 sm Am Wind (24 kn) · davon ca. 0,4 sm Kreuz');
   });
 });
 
 describe('formatKursAmpelRegel — die Schwellen hinter der Farbe', () => {
   it('nennt beide Bänder in der Reihenfolge rot, gelb, grün', () => {
     expect(formatKursAmpelRegel('kreuz', DEFAULT_PARAMS)).toBe(
-      'Kreuz: über 20 kn rot · 10–20 kn gelb · unter 10 kn grün',
+      'Am Wind: über 20 kn rot · 10–20 kn gelb · unter 10 kn grün',
     );
     expect(formatKursAmpelRegel('halbwind', DEFAULT_PARAMS)).toBe(
       'Halbwind: über 30 kn rot · 20–30 kn gelb · unter 20 kn grün',
@@ -152,7 +172,7 @@ describe('formatKursAmpelRegel — die Schwellen hinter der Farbe', () => {
   it('liest die Zahlen aus den Parametern, nicht aus dem Code (AD-8)', () => {
     const scharf = ParamsSchema.parse({ kreuzGelbAbKn: 6, kreuzRotAbKn: 12 });
     expect(formatKursAmpelRegel('kreuz', scharf)).toBe(
-      'Kreuz: über 12 kn rot · 6–12 kn gelb · unter 6 kn grün',
+      'Am Wind: über 12 kn rot · 6–12 kn gelb · unter 6 kn grün',
     );
   });
 });

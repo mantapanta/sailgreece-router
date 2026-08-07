@@ -142,9 +142,29 @@ describe('Zusammenfassung einer Etappe', () => {
       params,
     );
     expect(abschnitte).toEqual([
-      { kategorie: 'kreuz', distanceNm: 6.3, maxTwsKn: 16, ampel: 'gelb' },
-      { kategorie: 'halbwind', distanceNm: 9.6, maxTwsKn: 9, ampel: 'gruen' },
+      { kategorie: 'kreuz', distanceNm: 6.3, kreuzNm: 0, maxTwsKn: 16, ampel: 'gelb' },
+      { kategorie: 'halbwind', distanceNm: 9.6, kreuzNm: 0, maxTwsKn: 9, ampel: 'gruen' },
     ]);
+  });
+
+  /**
+   * "8 sm Kreuz sind doch 13–15 sm zu segelnde Strecke" (Skipper 2026-08-07).
+   *
+   * Sind sie nicht — und genau deshalb stehen die beiden Zahlen getrennt: die
+   * Kategorie reicht bis 60° TWA, und zwischen 50° und 60° liegt der Kurs an.
+   * Nur die Meilen unter `beatTwaDeg` werden im Zickzack gefahren und dabei
+   * durchs Wasser länger.
+   */
+  it('trennt die Meilen am Wind von denen, die wirklich gekreuzt werden', () => {
+    const [kreuz] = kursAbschnitteOfPassages(
+      [
+        passage(2.0, 40, 17, true), // muss gekreuzt werden
+        passage(2.5, 59, 17), // am Wind, liegt an
+        passage(3.6, 53, 17), // am Wind, liegt an
+      ],
+      params,
+    );
+    expect(kreuz).toMatchObject({ distanceNm: 8.1, kreuzNm: 2.0 });
   });
 
   it('der härtere Kurs steht zuerst — auch wenn er später gesegelt wird', () => {
@@ -173,7 +193,7 @@ describe('Zusammenfassung eines ganzen Tages', () => {
     const ersterSchlag = kursAbschnitteOfPassages([passage(4, 45, 12)], params);
     const zweiterSchlag = kursAbschnitteOfPassages([passage(6, 50, 21)], params);
     expect(mergeKursAbschnitte([ersterSchlag, zweiterSchlag], params)).toEqual([
-      { kategorie: 'kreuz', distanceNm: 10, maxTwsKn: 21, ampel: 'rot' },
+      { kategorie: 'kreuz', distanceNm: 10, kreuzNm: 0, maxTwsKn: 21, ampel: 'rot' },
     ]);
   });
 

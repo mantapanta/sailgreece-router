@@ -318,8 +318,21 @@ export type KursKategorie = 'kreuz' | 'halbwind';
  */
 export interface KursAbschnitt {
   kategorie: KursKategorie;
-  /** Summe der Abschnittslängen dieser Kategorie in sm. */
+  /** Summe der Abschnittslängen dieser Kategorie in sm (Länge auf der Karte). */
   distanceNm: number;
+  /**
+   * Davon die Meilen, die wirklich GEKREUZT werden müssen — Kurs enger am
+   * Wind als `params.beatTwaDeg`.
+   *
+   * Der Unterschied ist kein Detail: die Kategorie 'kreuz' fasst alles unter
+   * 60° TWA zusammen (KURS_AM_WIND_BIS_DEG), und zwischen 50° und 60° liegt
+   * der Kurs an — dieselbe Meile kostet dort eine Meile. Erst unter 50° wird
+   * der Zickzack gefahren und aus einer Meile werden bei 40° TWA 1,2 und bei
+   * 20° TWA 1,5. Eine Zeile, die beides "Kreuz" nennt, lädt zum Verrechnen um
+   * den Faktor drei ein (Skipper-Rückfrage 2026-08-07) — deshalb steht die
+   * Teilmenge hier getrennt und die Anzeige nennt beide Zahlen.
+   */
+  kreuzNm: number;
   /**
    * STÄRKSTER Wind über diesen Abschnitten, nicht der mittlere — dieselbe
    * Doktrin wie bei der Platz-Ampel: maßgeblich ist die schlechteste Stunde.

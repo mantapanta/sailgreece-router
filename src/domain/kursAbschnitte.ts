@@ -44,6 +44,21 @@ import type {
 export const KURS_AM_WIND_BIS_DEG = 60;
 export const KURS_HALBWIND_BIS_DEG = 100;
 
+/**
+ * WARUM DIE KATEGORIE 'kreuz' NICHT "gekreuzt" HEISST.
+ *
+ * Sie reicht bis 60° TWA, `params.beatTwaDeg` liegt bei 50: zwischen beiden
+ * liegt der Kurs an, dort ist eine Meile auf der Karte eine Meile durchs
+ * Wasser. Erst darunter wird der Zickzack gefahren, und aus einer Meile werden
+ * bei 40° TWA rund 1,2 und bei 20° TWA rund 1,6 (polar.kreuzFactor).
+ *
+ * Die Zeile trug deshalb zwei völlig verschiedene Aussagen unter EINEM Wort:
+ * "ca. 8 sm Kreuz" las sich wie acht aufzukreuzende Meilen — rund drei Stunden
+ * —, während zwei davon gekreuzt wurden und der Rest anlag: gut eine Stunde
+ * (Skipper-Rückfrage 2026-08-07). Seitdem zählt `KursAbschnitt.kreuzNm` die
+ * Teilmenge mit, und die Anzeige nennt beide Zahlen getrennt.
+ */
+
 /** Reihenfolge der Meldung: der härtere Kurs zuerst. */
 export const KURS_REIHENFOLGE: KursKategorie[] = ['kreuz', 'halbwind'];
 
@@ -92,7 +107,7 @@ export function kursAmpel(
 }
 
 /** Roh-Summe je Kategorie — Meilen addiert, der stärkste Wind gewinnt. */
-type Summe = { distanceNm: number; maxTwsKn: number };
+type Summe = { distanceNm: number; kreuzNm: number; maxTwsKn: number };
 
 function fasse(
   sums: Map<KursKategorie, Summe>,
@@ -105,6 +120,7 @@ function fasse(
       {
         kategorie,
         distanceNm: s.distanceNm,
+        kreuzNm: s.kreuzNm,
         maxTwsKn: s.maxTwsKn,
         ampel: kursAmpel(kategorie, s.maxTwsKn, params),
       },
@@ -116,14 +132,16 @@ function addiere(
   sums: Map<KursKategorie, Summe>,
   kategorie: KursKategorie,
   distanceNm: number,
+  kreuzNm: number,
   twsKn: number,
 ): void {
   const cur = sums.get(kategorie);
   if (cur) {
     cur.distanceNm += distanceNm;
+    cur.kreuzNm += kreuzNm;
     cur.maxTwsKn = Math.max(cur.maxTwsKn, twsKn);
   } else {
-    sums.set(kategorie, { distanceNm, maxTwsKn: twsKn });
+    sums.set(kategorie, { distanceNm, kreuzNm, maxTwsKn: twsKn });
   }
 }
 
@@ -145,7 +163,7 @@ export function kursAbschnitteOfPassages(
     if (!s) continue;
     const kategorie = kursKategorie(s.twaDeg, s.kreuzen);
     if (!kategorie) continue;
-    addiere(sums, kategorie, s.distanceNm, s.twsKn);
+    addiere(sums, kategorie, s.distanceNm, s.kreuzen ? s.distanceNm : 0, s.twsKn);
   }
   return fasse(sums, params);
 }
@@ -163,7 +181,9 @@ export function mergeKursAbschnitte(
 ): KursAbschnitt[] {
   const sums = new Map<KursKategorie, Summe>();
   for (const liste of listen) {
-    for (const a of liste) addiere(sums, a.kategorie, a.distanceNm, a.maxTwsKn);
+    for (const a of liste) {
+      addiere(sums, a.kategorie, a.distanceNm, a.kreuzNm, a.maxTwsKn);
+    }
   }
   return fasse(sums, params);
 }

@@ -166,26 +166,43 @@ export function pointOfSail(twa: number | null): string {
   return 'Vor dem Wind';
 }
 
-/** Das Wort für den Kurs in der Warnzeile der Etappenkarte. */
+/**
+ * Das Wort für den Kurs in der Warnzeile der Etappenkarte.
+ *
+ * 'kreuz' heisst AM WIND, nicht Kreuzen: die Kategorie reicht bis 60° TWA
+ * (KURS_AM_WIND_BIS_DEG), und zwischen 50° und 60° liegt der Kurs an. Das Wort
+ * "Kreuz" bleibt der Teilmenge vorbehalten, die wirklich Schläge fährt
+ * (`KursAbschnitt.kreuzNm`) — sonst liest sich "8 sm Kreuz" wie 12 sm durchs
+ * Wasser, wo 8 gesegelt werden.
+ */
 export const KURS_LABEL: Record<KursKategorie, string> = {
-  kreuz: 'Kreuz',
+  kreuz: 'Am Wind',
   halbwind: 'Halbwind',
 };
 
+/** Meilen der Warnzeile: auf die Meile gerundet, unter 1 sm mit Stelle. */
+function abschnittSm(nm: number): string {
+  return nm < 1 ? nm.toFixed(1).replace('.', ',') : String(Math.round(nm));
+}
+
 /**
- * "ca. 4 sm Kreuz (16 kn)" — die Warnzeile der Etappenkarte.
+ * "ca. 8 sm Am Wind (17 kn) · davon ca. 2 sm Kreuz" — die Warnzeile der
+ * Etappenkarte.
  *
  * "ca." und die runde Meile sind Absicht: die Zahl beantwortet "wie lange geht
  * das so?", und eine Nachkommastelle täuschte dort eine Genauigkeit vor, die
  * eine Stunden-Simulation nicht hat. Nur unter einer Meile bleibt die Stelle
  * stehen — "ca. 0 sm" wäre keine Angabe.
+ *
+ * Der Zusatz steht nur da, wo wirklich gekreuzt wird. Er ist die Antwort auf
+ * die Rückfrage vom 2026-08-07 ("8 sm Kreuz sind doch 13–15 sm zu segelnde
+ * Strecke"): 8 sm am Wind sind 8 sm, solange der Kurs anliegt — nur die 2 sm
+ * darunter werden im Zickzack länger.
  */
 export function formatKursAbschnitt(a: KursAbschnitt): string {
-  const sm =
-    a.distanceNm < 1
-      ? a.distanceNm.toFixed(1).replace('.', ',')
-      : String(Math.round(a.distanceNm));
-  return `ca. ${sm} sm ${KURS_LABEL[a.kategorie]} (${formatKn(a.maxTwsKn)})`;
+  const zeile = `ca. ${abschnittSm(a.distanceNm)} sm ${KURS_LABEL[a.kategorie]} (${formatKn(a.maxTwsKn)})`;
+  if (a.kreuzNm <= 0) return zeile;
+  return `${zeile} · davon ca. ${abschnittSm(a.kreuzNm)} sm Kreuz`;
 }
 
 /**
