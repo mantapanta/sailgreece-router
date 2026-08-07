@@ -59,22 +59,26 @@ describe('formatWindFrom — Windrichtung als Himmelsrichtung und Grad', () => {
 });
 
 /**
- * Der TWA in Segler-Sprache. Reine Anzeige: die Grenzen hier sind die übliche
- * Einteilung und NICHT die Bewertungsschwelle params.upwindTwaDeg — deshalb
- * darf ein Label auch nie als Ampel-Aussage gelesen werden.
+ * Der TWA in Segler-Sprache, in der Einteilung des Skippers (2026-08-07):
+ * unter 55° wird gekreuzt ("gegenan"), 55–80° ist Am Wind, 80–100° Halbwind,
+ * darüber trägt der Wind. Reine Anzeige — NICHT die Bewertungsschwelle
+ * params.upwindTwaDeg; ein Label ist nie eine Ampel-Aussage.
  */
 describe('pointOfSail — Kurs zum Wind als Name', () => {
   it('benennt die Kurse über den ganzen Winkelbereich', () => {
     expect(pointOfSail(10)).toBe('gegenan');
-    expect(pointOfSail(45)).toBe('Am Wind');
+    expect(pointOfSail(45)).toBe('gegenan');
+    expect(pointOfSail(65)).toBe('Am Wind');
     expect(pointOfSail(90)).toBe('Halbwind');
     expect(pointOfSail(120)).toBe('Raumschots');
     expect(pointOfSail(175)).toBe('Vor dem Wind');
   });
 
   it('ist an den Grenzen eindeutig (kein Loch, keine Überschneidung)', () => {
-    expect(pointOfSail(30)).toBe('Am Wind');
-    expect(pointOfSail(60)).toBe('Halbwind');
+    expect(pointOfSail(54.9)).toBe('gegenan');
+    expect(pointOfSail(55)).toBe('Am Wind');
+    expect(pointOfSail(79.9)).toBe('Am Wind');
+    expect(pointOfSail(80)).toBe('Halbwind');
     expect(pointOfSail(100)).toBe('Raumschots');
     expect(pointOfSail(150)).toBe('Vor dem Wind');
   });
@@ -106,6 +110,11 @@ describe('formatWaveM — Wellenhöhe/-grenze in Metern', () => {
  * Die Warnzeile der Etappenkarte (Skipper 2026-08-06): "ca. 4 sm Kreuz
  * (16 kn)". Gerundet wird bewusst auf die Meile — eine Nachkommastelle täuschte
  * eine Genauigkeit vor, die eine Stunden-Simulation nicht hat.
+ *
+ * Seit der Rückfrage vom 2026-08-07 trennt die Zeile zwei Zahlen, die vorher
+ * beide "Kreuz" hiessen: das BAND bis 80° TWA (Kurs liegt an) und die
+ * Teilmenge unter 55°, die wirklich im Zickzack gefahren wird. Nur die zweite
+ * wird durchs Wasser länger.
  */
 describe('formatKursAbschnitt — problematische Abschnitte', () => {
   it('schreibt die Zeile aus dem Feldtest', () => {
@@ -113,6 +122,7 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
       formatKursAbschnitt({
         kategorie: 'kreuz',
         distanceNm: 4.3,
+        kreuzNm: 0,
         maxTwsKn: 16,
         ampel: 'gelb',
       }),
@@ -121,10 +131,35 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
       formatKursAbschnitt({
         kategorie: 'halbwind',
         distanceNm: 9.6,
+        kreuzNm: 0,
         maxTwsKn: 9,
         ampel: 'gruen',
       }),
     ).toBe('ca. 10 sm Halbwind (9 kn)');
+  });
+
+  it('nennt die gekreuzten Meilen getrennt, wo wirklich gekreuzt wird', () => {
+    expect(
+      formatKursAbschnitt({
+        kategorie: 'kreuz',
+        distanceNm: 8.1,
+        kreuzNm: 2.0,
+        maxTwsKn: 17,
+        ampel: 'gelb',
+      }),
+    ).toBe('ca. 8 sm Kreuz (17 kn) · davon ca. 2 sm Kreuzschläge');
+  });
+
+  it('wird der ganze Abschnitt gekreuzt, heisst er so — ohne "davon"', () => {
+    expect(
+      formatKursAbschnitt({
+        kategorie: 'kreuz',
+        distanceNm: 5.6,
+        kreuzNm: 5.6,
+        maxTwsKn: 17,
+        ampel: 'gelb',
+      }),
+    ).toBe('ca. 6 sm Kreuzschläge (17 kn)');
   });
 
   it('unter einer Meile bleibt die Nachkommastelle stehen ("ca. 0 sm" wäre keine Angabe)', () => {
@@ -132,6 +167,7 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
       formatKursAbschnitt({
         kategorie: 'kreuz',
         distanceNm: 0.4,
+        kreuzNm: 0,
         maxTwsKn: 24,
         ampel: 'rot',
       }),

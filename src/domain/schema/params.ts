@@ -28,15 +28,20 @@ const ParamsObjectSchema = z.object({
   /** TWA below this counts as beating ("gegenan"). */
   upwindTwaDeg: z.number().min(0).max(90).default(55),
   /**
-   * DER ENGSTE WINKEL ZUM WIND, DEN DAS SCHIFF SEGELN KANN (Skipper 2026-08-06:
-   * "ich kann maximal 50 Grad TWA segeln, sonst muss gekreuzt werden").
+   * DER ENGSTE WINKEL ZUM WIND, DEN DAS SCHIFF SEGELN KANN (Skipper 2026-08-07:
+   * "zwischen 0 und 55 muss ich zickzack aufkreuzen, was zu längeren Distanzen
+   * führt" — präzisiert die 50° vom 2026-08-06).
    *
    * Liegt der Kurs enger am Wind, wird er NICHT angelegen: es wird gekreuzt,
-   * und auf dem Kurs kommt nur cos(50°)/cos(TWA) der Fahrt an (polar.ts,
+   * und auf dem Kurs kommt nur cos(55°)/cos(TWA) der Fahrt an (polar.ts,
    * kreuzFactor). Der Winkel ist damit keine Anzeigegrösse, sondern die Grenze,
    * an der die Rechnung vom Anliegen aufs Kreuzen umschaltet.
+   *
+   * Er fällt jetzt mit `upwindTwaDeg` (55°) zusammen: was gekreuzt werden muss,
+   * gilt damit auch der FR16-Windregel als "gegenan" — genau die Bedingung,
+   * die `validateParams` unten verlangt.
    */
-  beatTwaDeg: z.number().min(30).max(70).default(50),
+  beatTwaDeg: z.number().min(30).max(70).default(55),
   /**
    * Ab wie vielen KREUZ-STUNDEN eine Etappe gelb wird (Skipper 2026-08-06:
    * Kreuzen "sollte im Routing eher vermieden werden").

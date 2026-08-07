@@ -3,6 +3,7 @@
 import { compassPoint } from '../domain/geo.ts';
 import {
   KURS_AM_WIND_BIS_DEG,
+  KURS_GEGENAN_BIS_DEG,
   KURS_HALBWIND_BIS_DEG,
   kursSchwellen,
 } from '../domain/kursAbschnitte.ts';
@@ -156,36 +157,62 @@ export function formatWindFrom(deg: number | null): string {
 export function pointOfSail(twa: number | null): string {
   if (twa === null) return '–';
   const t = Math.abs(twa);
-  if (t < 30) return 'gegenan';
-  // Die beiden Grenzen, an denen auch GEWARNT wird, kommen aus der Domäne
+  // Die Grenzen, an denen auch GEWARNT wird, kommen aus der Domäne
   // (kursAbschnitte.ts) — eine Zeile, die hier "Am Wind" heisst, muss in der
   // Kreuz-Meldung der Etappenkarte auftauchen und nicht in der Halbwind-Zeile.
+  // Unter 55° liegt kein Kurs mehr an: dort wird gekreuzt, und das Wort dafür
+  // ist "gegenan" (die Abschnittszeile schreibt dann "Kreuzen").
+  if (t < KURS_GEGENAN_BIS_DEG) return 'gegenan';
   if (t < KURS_AM_WIND_BIS_DEG) return 'Am Wind';
   if (t < KURS_HALBWIND_BIS_DEG) return 'Halbwind';
   if (t < 150) return 'Raumschots';
   return 'Vor dem Wind';
 }
 
-/** Das Wort für den Kurs in der Warnzeile der Etappenkarte. */
+/**
+ * Das Wort für den Kurs in der Warnzeile der Etappenkarte — die Einteilung des
+ * Skippers (2026-08-07): Kreuz bis 80° TWA, Halbwind bis 100°, darüber trägt
+ * der Wind und es gibt nichts zu melden.
+ *
+ * "Kreuz" heisst hier das BAND, nicht der Zickzack: gekreuzt wird erst unter
+ * 55°. Was wirklich Schläge fährt, nennt die Zeile getrennt daneben
+ * (`KursAbschnitt.kreuzNm`) — sonst liest sich "8 sm Kreuz" wie 12 sm durchs
+ * Wasser, wo 8 gesegelt werden.
+ */
 export const KURS_LABEL: Record<KursKategorie, string> = {
   kreuz: 'Kreuz',
   halbwind: 'Halbwind',
 };
 
+/** Meilen der Warnzeile: auf die Meile gerundet, unter 1 sm mit Stelle. */
+function abschnittSm(nm: number): string {
+  return nm < 1 ? nm.toFixed(1).replace('.', ',') : String(Math.round(nm));
+}
+
 /**
- * "ca. 4 sm Kreuz (16 kn)" — die Warnzeile der Etappenkarte.
+ * "ca. 8 sm Kreuz (17 kn) · davon ca. 2 sm Kreuzschläge" — die Warnzeile der
+ * Etappenkarte.
  *
  * "ca." und die runde Meile sind Absicht: die Zahl beantwortet "wie lange geht
  * das so?", und eine Nachkommastelle täuschte dort eine Genauigkeit vor, die
  * eine Stunden-Simulation nicht hat. Nur unter einer Meile bleibt die Stelle
  * stehen — "ca. 0 sm" wäre keine Angabe.
+ *
+ * Der Zusatz steht nur da, wo wirklich gekreuzt wird. Er ist die Antwort auf
+ * die Rückfrage vom 2026-08-07 ("8 sm Kreuz sind doch 13–15 sm zu segelnde
+ * Strecke"): 8 sm im Kreuz-Band sind 8 sm, solange der Kurs anliegt — nur die
+ * Meilen unter 55° TWA werden im Zickzack länger.
  */
 export function formatKursAbschnitt(a: KursAbschnitt): string {
-  const sm =
-    a.distanceNm < 1
-      ? a.distanceNm.toFixed(1).replace('.', ',')
-      : String(Math.round(a.distanceNm));
-  return `ca. ${sm} sm ${KURS_LABEL[a.kategorie]} (${formatKn(a.maxTwsKn)})`;
+  const wind = formatKn(a.maxTwsKn);
+  // Wird der ganze Abschnitt gekreuzt, wäre ein "davon" nur Geräusch — dann
+  // heisst er, was er ist.
+  if (a.kreuzNm > 0 && a.kreuzNm >= a.distanceNm - 0.05) {
+    return `ca. ${abschnittSm(a.distanceNm)} sm Kreuzschläge (${wind})`;
+  }
+  const zeile = `ca. ${abschnittSm(a.distanceNm)} sm ${KURS_LABEL[a.kategorie]} (${wind})`;
+  if (a.kreuzNm <= 0) return zeile;
+  return `${zeile} · davon ca. ${abschnittSm(a.kreuzNm)} sm Kreuzschläge`;
 }
 
 /**
