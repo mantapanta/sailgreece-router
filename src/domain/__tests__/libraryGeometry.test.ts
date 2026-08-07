@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { isOnLand, landCrossingNm, pathCrossesLand } from '../searoute.ts';
 import { reverseLeg } from '../legs.ts';
 import { distanceNm } from '../geo.ts';
-import { sailedLegsByDay } from '../legGeometry.ts';
+import { sailedLeg, sailedLegsByDay } from '../legGeometry.ts';
 import type { Place } from '../schema/place.ts';
 import type { Leg } from '../schema/route.ts';
 import type { Coordinates } from '../schema/common.ts';
@@ -42,17 +42,27 @@ const legs: Leg[] = (
  * bloss der Test die Insel nicht kannte. Das Verzeichnis weiss besser als eine
  * Kopie davon, welche Inseln es gibt.
  */
-const places: Record<string, Coordinates> = (() => {
-  const out: Record<string, Coordinates> = {};
+const allPlaces: Place[] = (() => {
+  const out: Place[] = [];
   const islandDir = path.join(dataDir, 'islands');
   for (const file of readdirSync(islandDir).filter((f) => f.endsWith('.json'))) {
     const doc = JSON.parse(readFileSync(path.join(islandDir, file), 'utf8')) as {
-      places?: { id: string; coordinates: Coordinates }[];
+      places?: Place[];
     };
-    for (const place of doc.places ?? []) out[place.id] = place.coordinates;
+    for (const place of doc.places ?? []) out.push(place);
   }
   return out;
 })();
+
+/**
+ * Die `islandId` kommt aus der DATEI, nicht aus dem Platz-Namen. Ein
+ * `id.split('-')[0]` läge bei `delos-rinia-miskanti` ('delos') und
+ * `porto-heli-hafen` ('porto') daneben — und eine Prüfung, die die halbe Insel
+ * gar nicht findet, prüft nichts.
+ */
+const places: Record<string, Coordinates> = Object.fromEntries(
+  allPlaces.map((p) => [p.id, p.coordinates]),
+);
 
 const pathOf = (leg: Leg): Coordinates[] | null => {
   const from = places[leg.fromPlaceId];
@@ -78,6 +88,55 @@ describe('Etappen-Bibliothek: kein Kurs führt über Land', () => {
       .map((l) => `${l.id} (${l.fromPlaceId} -> ${l.toPlaceId})`);
     expect(orphans).toEqual([]);
   });
+
+  it('legt jede Etappe von JEDEM Liegeplatz ihrer Inseln landfrei', () => {
+    /**
+     * DIE LÜCKE, DIE DIESER TEST ZWEI MONATE OFFEN LIESS — und die den
+     * Screenshot-Befund des Skippers vom 2026-08-07 erzeugt hat.
+     *
+     * Geprüft wurden bisher nur die KURATIERTEN Endpunkte einer Etappe. Ein
+     * Plan verankert sie aber an dem Liegeplatz, an dem das Boot wirklich
+     * liegt (legGeometry.ts) — und der wird für die NACHT gewählt, nicht für
+     * die Etappe. Genau dort, wo der Anker die Endpunkte verschiebt, hat der
+     * alte Wächter nicht hingesehen.
+     *
+     * Der Fund: von 620 Kombinationen aus Etappe und Ankerplätzen waren
+     * VIERZEHN unauflösbar — und alle vierzehn hingen an einem einzigen Platz,
+     * `santorin-akrotiri`, dessen kuratierte Koordinate AUF DER LANDMASKE lag.
+     * Von einem Punkt an Land findet `seaRoute` zu keinem Ziel einen Weg. Die
+     * Bewertung rechnete dann auf der Luftlinie quer über Santorin weiter, und
+     * heraus kam eine rote Etappe mit Zahlen, die kein Boot fahren kann.
+     *
+     * NICHT geprüft wird "liegt der Platz im Wasser": Häfen liegen auf der
+     * Küstenlinie, und im 9-m-Raster meldet die Maske sie reihenweise als Land.
+     * Das ist kein Befund. Der Befund ist, ob von dort ein Kurs zustande kommt
+     * — und das prüft diese Schleife für jede Richtung, die der Heimweg bauen
+     * kann.
+     */
+    const gerichtet: Leg[] = [];
+    for (const leg of legs) {
+      gerichtet.push(leg);
+      gerichtet.push(reverseLeg(leg));
+    }
+    const placesOf = (islandId: string): Place[] =>
+      allPlaces.filter((p) => p.islandId === islandId);
+    const kaputt: string[] = [];
+    for (const leg of gerichtet) {
+      for (const von of placesOf(leg.fromIslandId)) {
+        for (const nach of placesOf(leg.toIslandId)) {
+          const s = sailedLeg(leg, allPlaces, {
+            fromPlaceId: von.id,
+            toPlaceId: nach.id,
+            probe: true,
+          });
+          if (s.kursUnaufloesbar) kaputt.push(`${leg.id}: ${von.id} -> ${nach.id}`);
+        }
+      }
+    }
+    expect(kaputt).toEqual([]);
+    // 620 Kombinationen mit je einem Sichtbarkeitsgraphen — das dauert, und die
+    // Frist steht sichtbar hier, damit eine echte Verlangsamung auffällt.
+  }, 120_000);
 
   it('hat keinen Wegpunkt an Land', () => {
     const onLand: string[] = [];
@@ -193,16 +252,6 @@ describe('Routen der Bibliothek: gesegelt ist die Kette lückenlos', () => {
     const rev = reverseLeg(leg);
     if (!legsById.has(rev.id)) legsById.set(rev.id, rev);
   }
-  const allPlaces: Place[] = Object.entries(places).map(([id, coordinates]) => ({
-    id,
-    islandId: id.split('-')[0]!,
-    name: id,
-    type: 'hafen',
-    coordinates,
-    qualities: { schoenheit: 3, restaurant: 3, badestrand: 3 },
-    shelter: { windSectors: [], waveSectors: [], sourceNote: 'Geometrie-Test' },
-  }));
-
   it('hat Routen zu prüfen', () => {
     expect(variants.length).toBeGreaterThan(3);
   });
