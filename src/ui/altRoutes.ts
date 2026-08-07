@@ -1,15 +1,23 @@
 /**
  * DIE EINE IDENTITÄT EINER ALTERNATIV-ROUTE — Name, Farbe, Herkunft.
  *
- * Feedback Skipper 2026-08-06: „Ich verstehe nicht, wie Routen-Konzept &
- * Optionsraum mit den alternativen Routen in der Kartenansicht zusammenpassen.
- * Die Namen sind anders, es ist nicht selbsterklärend."
+ * ZIELMODELL V3 (Skipper 2026-08-07): die KURATIERTEN ROUTEN-NAMEN sind
+ * abgeschafft. Bis dahin hiess eine Alternative wie die Variante, aus deren
+ * Option sie stammte — "Verlängerung Santorin", "Süd-Route bis Naxos". Der
+ * Name war aber nur ein Etikett auf einem Plan, den eine ganz andere Suche
+ * geliefert haben konnte: es gab eine "Verlängerung nach Santorin", die auf
+ * Naxos endete, und zwei Optionen ("bis Paros", "bis Naxos") konnten auf
+ * denselben Plan zusammenfallen, weil beide Ketten dieselbe südlichste Insel
+ * (Sifnos) haben.
  *
- * Die Ursache war keine Logik, sondern die Beschriftung: dieselbe Route hiess
- * auf der Karte „3. Wendepunkt Amorgos" (Listenplatz + Wendeinsel) und im
- * Optionsraum nach ihrem kuratierten Namen („Verlängerung Amorgos"), obwohl
- * beides derselbe `assessment.alternatives`-Eintrag ist: der Optionsraum zeigt
- * per `previewIndex` genau dorthin (assess.ts, VERSCHMELZUNG).
+ * Jede Alternative wird deshalb aus ihrem EIGENEN Plan benannt:
+ *
+ *     Westrunde · 11 Inseln · Wende Milos
+ *
+ * Der Name kann damit nichts mehr behaupten, was der Plan nicht tut — er wird
+ * aus ihm abgelesen. Die kuratierten Varianten bleiben Seed-Daten für den
+ * Etappen-Graphen (jede ihrer Verbindungen steht in legs.json), sind aber
+ * keine Angebots-Einheit mehr.
  *
  * Dieses Modul leitet die Identität EINMAL ab, aus der Bewertung (AD-2 — hier
  * wird nichts geurteilt, nur benannt), und beide Ansichten lesen sie:
@@ -36,6 +44,12 @@ import { altRouteColor } from './altRouteColors.ts';
 export const KONZEPT_KURZ: Record<KonzeptId, string> = {
   klassik: 'Route 1 · West/Zentral',
   ost: 'Route 2 · Ost',
+};
+
+/** Wie die Himmelsrichtung im NAMEN einer Runde heisst (Kurzform fürs Chip). */
+export const KONZEPT_RUNDE: Record<KonzeptId, string> = {
+  klassik: 'Westrunde',
+  ost: 'Ostrunde',
 };
 
 export const OPTION_STATE_LABEL: Record<OptionState, string> = {
@@ -98,16 +112,17 @@ export function altRouteViews(
   return assessment.alternatives.map((plan, index) => {
     const option = optionByIndex.get(index) ?? null;
     const turnName = islandName(plan.turnIslandId);
+    const stageCount = plan.stages.filter((s) => s.kind === 'stage').length;
     return {
       index,
       color: altRouteColor(index),
-      name: option ? option.name : `Tragfähiger Round-Trip über ${turnName}`,
+      name: altRouteName(plan, turnName, option?.konzeptId ?? null),
       turnIslandId: plan.turnIslandId,
       turnName,
-      stageCount: plan.stages.filter((s) => s.kind === 'stage').length,
+      stageCount,
       option,
       herkunft: option
-        ? `Aus dem Optionsraum · ${KONZEPT_KURZ[option.konzeptId]} · ${
+        ? `Ziel ${option.name} im Optionsraum · ${KONZEPT_KURZ[option.konzeptId]} · ${
             OPTION_STATE_LABEL[option.state]
           } · ${EMPFEHLUNG_LABEL[option.empfehlung]}`
         : 'Nachweis der Rest-Trip-Ampel, dass ein tragfähiger Round-Trip existiert — keine Option des Optionsraums.',
@@ -115,6 +130,32 @@ export function altRouteViews(
       plan,
     };
   });
+}
+
+/**
+ * DER NAME einer Alternative, abgelesen an ihrem eigenen Plan.
+ *
+ * Drei Angaben, weil genau die drei den Skipper interessieren und keine davon
+ * lügen kann: welche Himmelsrichtung die Runde nimmt (Routen-Konzept), wie
+ * viele verschiedene Inseln sie anläuft, und wo sie wendet. Eine Runde, die
+ * eine Insel zweimal anläuft, sagt das ebenfalls — das ist der Unterschied,
+ * den der Skipper am Namen sehen will.
+ */
+export function altRouteName(
+  plan: PlanAssessment,
+  turnName: string,
+  konzeptId: KonzeptId | null,
+): string {
+  const ziele = plan.stages
+    .filter((s) => s.kind === 'stage')
+    .map((s) => s.toIslandId);
+  const inseln = new Set(ziele).size;
+  const wiederholt = ziele.length - inseln > 0;
+  const richtung = konzeptId ? KONZEPT_RUNDE[konzeptId] : 'Runde';
+  return (
+    `${richtung} · ${inseln} ${inseln === 1 ? 'Insel' : 'Inseln'}` +
+    `${wiederholt ? ' (eine doppelt)' : ''} · Wende ${turnName}`
+  );
 }
 
 /**

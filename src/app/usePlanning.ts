@@ -27,7 +27,7 @@ import {
   type KonzeptSchwellen,
 } from '../domain/konzept.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
-import type { Params } from '../domain/schema/params.ts';
+import { DEFAULT_PARAMS, type Params } from '../domain/schema/params.ts';
 import { planOutdated, type Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
 
@@ -123,7 +123,7 @@ export function usePlanningEngine() {
 
   // Persisted overrides may stem from an older trip frame: clamp to
   // [1, tripLengthDays] so the engine never sees a day off the axis.
-  const tripLengthDays = bundle?.params.tripLengthDays ?? 12;
+  const tripLengthDays = bundle?.params.tripLengthDays ?? DEFAULT_PARAMS.tripLengthDays;
   const currentDay =
     trip.currentDayOverride !== null
       ? Math.min(Math.max(trip.currentDayOverride, 1), tripLengthDays)

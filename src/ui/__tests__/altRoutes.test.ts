@@ -6,6 +6,12 @@
  * damit war nicht mehr zu sehen, dass die Alternativen die Pläne der Optionen
  * SIND. Diese Tests halten fest, dass beide Ansichten denselben Namen, dieselbe
  * Farbe und eine benannte Herkunft bekommen.
+ *
+ * ZIELMODELL V3 (2026-08-07): der Name kommt nicht mehr aus der Option, sondern
+ * aus dem PLAN. Der Grund war der nächste Befund desselben Skippers — "die
+ * Verlängerung nach Santorin führt überhaupt nicht nach Santorin": ein
+ * kuratierter Name war ein Etikett, das an einer beliebigen Kette hängen
+ * konnte. Ein abgelesener Name kann das nicht.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,15 +31,19 @@ const ISLAND_NAMES: Record<string, string> = {
 };
 const islandName = (id: string) => ISLAND_NAMES[id] ?? id;
 
-/** Nur die Felder, die die Ableitung liest — der Rest gehört der Domäne. */
-function makeAlt(turnIslandId: string, stageDays: number[]): PlanAssessment {
-  const stages = stageDays.map(
-    (day) => ({ day, kind: 'stage', toIslandId: turnIslandId }) as StageAssessment,
+/**
+ * Nur die Felder, die die Ableitung liest — der Rest gehört der Domäne.
+ * `ziele` ist die Insel-Folge der Etappentage: der Name wird daraus abgelesen,
+ * also muss der Test sie setzen können.
+ */
+function makeAlt(turnIslandId: string, ziele: string[]): PlanAssessment {
+  const stages = ziele.map(
+    (id, i) => ({ day: i + 1, kind: 'stage', toIslandId: id }) as StageAssessment,
   );
   return {
     turnIslandId,
-    turnDay: stageDays[Math.floor(stageDays.length / 2)] ?? null,
-    variantId: `variante-${turnIslandId}`,
+    turnDay: Math.ceil(ziele.length / 2),
+    variantId: `runde-${turnIslandId}`,
     stages: [...stages, { day: 99, kind: 'harbour' } as StageAssessment],
   } as PlanAssessment;
 }
@@ -59,29 +69,41 @@ function assessmentOf(
 }
 
 describe('altRouteViews', () => {
-  it('nennt eine Alternative nach IHRER Option — derselbe Name wie im Optionsraum', () => {
+  it('liest den Namen am PLAN ab: Himmelsrichtung, Inselzahl, Wende', () => {
     const views = altRouteViews(
       assessmentOf(
-        [makeAlt('amorgos', [3, 4, 5])],
-        [makeOption({ name: 'Verlängerung Amorgos', previewIndex: 0 })],
+        [makeAlt('amorgos', ['ios', 'amorgos', 'santorin'])],
+        [makeOption({ name: 'Amorgos', previewIndex: 0, konzeptId: 'ost' })],
       ),
       islandName,
     );
 
     expect(views).toHaveLength(1);
-    expect(views[0]!.name).toBe('Verlängerung Amorgos');
+    expect(views[0]!.name).toBe('Ostrunde · 3 Inseln · Wende Amorgos');
     expect(views[0]!.turnName).toBe('Amorgos');
     // Hafentage zählen nicht als Etappen.
     expect(views[0]!.stageCount).toBe(3);
   });
 
+  it('eine doppelt angelaufene Insel steht im Namen — der Unterschied soll sichtbar sein', () => {
+    const views = altRouteViews(
+      assessmentOf(
+        [makeAlt('amorgos', ['ios', 'amorgos', 'ios'])],
+        [makeOption({ name: 'Amorgos', previewIndex: 0, konzeptId: 'ost' })],
+      ),
+      islandName,
+    );
+
+    expect(views[0]!.name).toBe('Ostrunde · 2 Inseln (eine doppelt) · Wende Amorgos');
+  });
+
   it('benennt die Herkunft: Optionsraum, Routen-Konzept, Zustand, Empfehlung', () => {
     const views = altRouteViews(
       assessmentOf(
-        [makeAlt('santorin', [4, 5])],
+        [makeAlt('santorin', ['ios', 'santorin'])],
         [
           makeOption({
-            name: 'Ost-Runde Santorin',
+            name: 'Santorin',
             previewIndex: 0,
             konzeptId: 'ost',
             state: 'schliesst',
@@ -94,26 +116,32 @@ describe('altRouteViews', () => {
     );
 
     expect(views[0]!.herkunft).toBe(
-      'Aus dem Optionsraum · Route 2 · Ost · schliesst · abgeraten · wählbar',
+      'Ziel Santorin im Optionsraum · Route 2 · Ost · schliesst · abgeraten · wählbar',
     );
     expect(views[0]!.abratenGruende).toEqual(['Route 2 trägt die Lage nicht']);
   });
 
   it('markiert den FR2-Zeugen als das, was er ist — keine Option des Optionsraums', () => {
     const views = altRouteViews(
-      assessmentOf([makeAlt('ios', [2, 3])], []),
+      assessmentOf([makeAlt('ios', ['santorin', 'ios'])], []),
       islandName,
     );
 
     expect(views[0]!.option).toBeNull();
-    expect(views[0]!.name).toBe('Tragfähiger Round-Trip über Ios');
+    // Ohne Option ist die Himmelsrichtung unbekannt — der Rest wird trotzdem
+    // am Plan abgelesen, nie erfunden.
+    expect(views[0]!.name).toBe('Runde · 2 Inseln · Wende Ios');
     expect(views[0]!.herkunft).toContain('keine Option des Optionsraums');
   });
 
   it('gibt jeder Alternative die Farbe ihres Listenplatzes — Karte und Tagesansicht zeigen dieselbe', () => {
     const views = altRouteViews(
       assessmentOf(
-        [makeAlt('amorgos', [3]), makeAlt('santorin', [4]), makeAlt('ios', [2])],
+        [
+          makeAlt('amorgos', ['amorgos']),
+          makeAlt('santorin', ['santorin']),
+          makeAlt('ios', ['ios']),
+        ],
         [],
       ),
       islandName,
@@ -123,26 +151,28 @@ describe('altRouteViews', () => {
     expect(views.map((v) => v.color)).toEqual([...ALT_ROUTE_COLORS].slice(0, 3));
   });
 
-  it('teilen sich zwei Optionen einen Plan, gewinnt die erste den Namen — EINE Route, EIN Name', () => {
+  it('teilen sich zwei Optionen einen Plan, bleibt es EINE Route mit EINEM Namen', () => {
     const views = altRouteViews(
       assessmentOf(
-        [makeAlt('amorgos', [3, 4])],
+        [makeAlt('amorgos', ['ios', 'amorgos'])],
         [
-          makeOption({ name: 'Verlängerung Amorgos', previewIndex: 0 }),
-          makeOption({ name: 'Grosse Ostrunde', previewIndex: 0 }),
+          makeOption({ name: 'Amorgos', previewIndex: 0, konzeptId: 'ost' }),
+          makeOption({ name: 'Ios', previewIndex: 0, konzeptId: 'ost' }),
         ],
       ),
       islandName,
     );
 
     expect(views).toHaveLength(1);
-    expect(views[0]!.name).toBe('Verlängerung Amorgos');
+    expect(views[0]!.name).toBe('Ostrunde · 2 Inseln · Wende Amorgos');
+    // Die erste Option gewinnt weiterhin die HERKUNFT — ein Plan, eine Zeile.
+    expect(views[0]!.herkunft).toContain('Ziel Amorgos');
   });
 
   it('ignoriert Optionen ohne eigenen Plan (previewIndex null = Hauptroute)', () => {
     const views = altRouteViews(
       assessmentOf(
-        [makeAlt('ios', [2])],
+        [makeAlt('ios', ['ios'])],
         [makeOption({ name: 'Klassik-Runde', previewIndex: null })],
       ),
       islandName,
@@ -154,7 +184,7 @@ describe('altRouteViews', () => {
 
 describe('altRouteAt', () => {
   const views = altRouteViews(
-    assessmentOf([makeAlt('ios', [2]), makeAlt('amorgos', [3])], []),
+    assessmentOf([makeAlt('ios', ['ios']), makeAlt('amorgos', ['amorgos'])], []),
     islandName,
   );
 

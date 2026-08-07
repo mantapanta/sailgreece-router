@@ -33,8 +33,16 @@ export const PLAN_SCHEMA_VERSION = 1;
  * Etappen unter dem Am-Wind-Winkel dauern länger als bisher gerechnet, und die
  * Rangfolge zieht anliegende Kurse vor. Pläne der v2-Rangfolge sind damit
  * Pläne, die der Solver so nicht mehr vorschlagen würde.
+ *
+ * v4 (2026-08-07, Zielmodell v3): Rundkurs statt Reichweite. Der
+ * Kandidatenraum ist neu (vollständige Aufzählung wiederholungsfreier Runden
+ * statt gekapptem DFS plus Pendel-Generator), und die Rangfolge fragt zuerst
+ * nach Etappentagen, Wiederholungsfreiheit und einem kreuzarmen Rückweg statt
+ * nach Süd-Reichweite. JEDER v3-Plan ist damit veraltet — die alte Rangfolge
+ * hat systematisch Törns geliefert, die den Rahmen verschenken (neun Etappen
+ * in elf Tagen) und Inseln doppelt anlaufen.
  */
-export const SOLVER_ALGORITHM_VERSION = 3;
+export const SOLVER_ALGORITHM_VERSION = 4;
 
 /** Who put this day into the plan. `skipper` days are pins (AD-12). */
 export const PlanSourceSchema = z.enum(['solver', 'skipper']);
@@ -66,7 +74,16 @@ export const StageSchema = z.object({
 });
 export type Stage = z.infer<typeof StageSchema>;
 
-/** A day without a leg — "we stay". Exactly one per plan (params.harbourDays). */
+/**
+ * A day without a leg — "we stay".
+ *
+ * ZIELMODELL V3: eine DATENFORM, kein Planungsziel mehr. Das Wetter kann einen
+ * solchen Tag erzwingen und der Skipper kann einen setzen (AD-12) — aber es
+ * gibt keine Zielzahl und keine Notgrenze mehr, an der er gemessen würde. Was
+ * ihn bewertet, ist die Rangfolge des Solvers: jeder Törntag trägt eine Etappe
+ * (`preferred`, Kriterium `legDays`), ein Tag ohne Etappe ist damit schlicht
+ * eine schlechtere Runde.
+ */
 export const HarbourDaySchema = z.object({
   kind: z.literal('harbour'),
   day: z.number().int().positive(),
