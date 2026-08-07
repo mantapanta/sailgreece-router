@@ -299,12 +299,54 @@ export function assessTargetOption(
 
   const abratenGruende: string[] = [];
   if (konzeptWarnung) abratenGruende.push(konzeptWarnung);
-  const empfehlungBasis: RoutenEmpfehlung =
+  const konzeptEmpfehlung: RoutenEmpfehlung =
     lage.eignung[konzeptId] === 'ungeeignet'
       ? 'abgeraten'
       : lage.eignung[konzeptId] === 'grenzwertig'
         ? 'moeglich'
         : 'empfohlen';
+
+  /**
+   * DIE EMPFEHLUNG FOLGT DER EIGENEN AMPEL — der Widerspruch, den die App bis
+   * 2026-08-07 mit sich selbst hatte.
+   *
+   * Die Ampel dieser Option wird zwei Zeilen weiter oben ausgerechnet
+   * (`worstAmpel` über alle Etappen des Plans) — und sie wirkte auf NICHTS. Die
+   * Empfehlung kam allein aus der Wetter-Eignung des Konzepts, und nur
+   * `safetyViolations` nahmen eine Option aus dem Angebot. Eine rote Etappe
+   * ohne Sicherheits-Befund — "Wind nahe der Aufkreuz-Schwelle", "hartes
+   * Tagesbudget überschritten" — tat gar nichts.
+   *
+   * Der Skipper sah das Ergebnis im Screenshot-Review: zehn Optionen, alle
+   * offen, keine einzige mit einem Vorbehalt, und in ihren Plänen rote
+   * Etappen. Die App bewertete die Etappe rot und empfahl im selben Atemzug die
+   * Route, die sie enthält.
+   *
+   * NICHT AUSBLENDEN, NICHT SPERREN. Bei NNW 22 kn kann eine rote Etappe
+   * unvermeidlich sein; die App verbietet grundsätzlich nicht, sie rät ab
+   * (FR18/AD-13). Was sie nicht darf, ist beides gleichzeitig behaupten —
+   * deshalb höchstens noch 'moeglich', mit der Zahl der roten Tage und ihrem
+   * Befundtext als Grund.
+   *
+   * 'unbewertet' zählt bewusst NICHT herunter: eine Etappe jenseits des
+   * Forecast-Horizonts ist keine schlechte Etappe, und der Vorbehalt darüber
+   * steht schon im `state` ('offen-horizont').
+   */
+  const roteEtappen = legAssessments.filter((l) => l.ampel === 'rot');
+  let empfehlungBasis = konzeptEmpfehlung;
+  if (roteEtappen.length > 0 && empfehlungBasis === 'empfohlen') {
+    empfehlungBasis = 'moeglich';
+  }
+  if (roteEtappen.length > 0) {
+    const gruende = [
+      ...new Set(roteEtappen.flatMap((l) => l.reasons ?? [])),
+    ].slice(0, 3);
+    abratenGruende.push(
+      `${roteEtappen.length === 1 ? 'Eine Etappe dieser Route ist rot' : `${roteEtappen.length} Etappen dieser Route sind rot`}` +
+        `${gruende.length > 0 ? `: ${gruende.join(' ')}` : '.'} ` +
+        'Die Route bleibt wählbar — ob das Wetter sie trägt, entscheidet der Skipper an den einzelnen Etappen.',
+    );
+  }
 
   const doubleDays = stages.filter((s) => s.legIds.length > 1).length;
   const teile: string[] = [];
