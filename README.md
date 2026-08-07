@@ -689,6 +689,37 @@ Poseidon zeigt dort trotzdem Blau, weil es den *Mittelwind* zeigt. Die Taktik
 `fallboeenNm` sagt, ab welchem Abstand das Lee nutzbar wird; der Hinweistext
 sagt es mit.
 
+### Vollständigkeit: alle Inseln ab 250 m
+
+Bis zum Prüf-Befund vom 2026-08-07 hatten nur **neun** der 42 Inseln eine Zone —
+und der `WEST_LEE_KORRIDOR` (konzept.ts) war genau zur Hälfte gedeckt: Kea,
+Kythnos, Serifos, Sifnos ja, aber Milos, Kimolos, Polyaigos, Folegandros,
+Sikinos nicht. Also ausgerechnet die Gegend um den Wendepunkt, den der Solver
+wählt. Der Grund war simpel und schlecht: kuratiert war, was zufällig im
+Bildausschnitt lag.
+
+Jetzt trägt **jede Insel ab 250 m Gipfelhöhe** eine Zone (30 Lee-Zonen). Unter
+250 m wäre die Keule kürzer als der Näherungsradius der Insel selbst, also nicht
+von „keine Zone" zu unterscheiden. Dokos fällt trotz 308 m heraus, weil in
+seinem Lee kein einziger Forecast-Ort dieser Bibliothek liegt — der Wächter
+meldet solche Zonen als stumm.
+
+**Kein Festland** (Attika, Athen, Ermioni, Korfos, Porto Heli, Epidavros),
+obwohl Attika im Korridor steht: das Keulenmodell nähert ein *kompaktes*
+Hindernis durch einen Kreis an, und eine Küstenlinie ist keines. Der Effekt der
+attischen Halbinsel steckt stattdessen in der Düse des Kea-Kanals.
+
+Wirkung, gemessen bei 26–30 kn aus N/NNE: **keine einzige Ampel ändert sich**,
+die Zahl der Lee-Hinweise steigt von 35 auf 56. Genau so soll es sein — 18 der
+30 Zonen stehen auf `niedrig` und beraten nur. Die Südhälfte des Korridors
+spricht jetzt: `milos--polyaigos` nennt vier Zonen statt einer.
+
+**Die lohnendste offene Messung** ist Milos: die Insel ist mit 751 m die höchste
+des westlichen Korridors und der Wendepunkt der aktuellen Route, aber ihre Zunge
+liess sich im Bild nicht vom grossflächigen Gefälle trennen — sie steht deshalb
+auf `niedrig` und fasst keine Ampel an. Ein einziger Punktabruf im Lee von Milos
+würde das auflösen.
+
 ### Stand der Kalibrierung
 
 **Anker ist ein gemessener Wert**, kein abgelesener Farbton: der Punktabruf im
