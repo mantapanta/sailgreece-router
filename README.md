@@ -751,23 +751,34 @@ Ansteuerung aus dem Lee heraus wurde ein Schlag mit 9° TWA. Gelernt daraus:
   schaffen, den die alte Bahn nicht hatte. Die App bewertet ein *Maximum*
   (FR16), nicht ein Mittel — eine Stunde Aufkreuzen über 25 kn macht die Etappe
   rot, egal wie angenehm die übrigen zehn waren.
-- **Der Wechselkurs in einem Satz:** jede zusätzliche Seemeile muss ein Prozent
-  weniger Wind bringen. Dazu harte Deckel von +35 % und +6 sm (≈ eine Stunde).
+- **Der Wechselkurs in einem Satz:** jede zusätzliche Seemeile muss **zehn
+  Prozent** weniger Wind bringen (Skipper-Preis 2026-08-07, nachdem ein Prozent
+  je Meile Umwege von fünf Meilen für zwölf Prozent durchliess). Ein strenger
+  Kurs: er lässt praktisch nur Bahnen zu, die den Schutz fast geschenkt
+  bekommen — eine bessere Linie durch dieselbe Distanz, nicht ein Bogen darum
+  herum. Dazu harte Deckel von +35 % und +6 sm.
 - **Dieselbe Latte wie der Wächter.** Der erste Lauf erzeugte Wegpunkte auf
   Kimolos und im Antiparos-Kanal, die `pathCrossesLand` durchgelassen und
   `libraryGeometry.test.ts` gefunden hat. Das Werkzeug tastet die Landmaske
   jetzt mit derselben Auflösung und denselben Toleranzen ab wie der Test.
 
-Ergebnis: **17 Etappen umgelegt, zusammen +24,2 sm** — im Mittel 0,6 sm je
-Etappe. Die grössten Umwege: `polyaigos--paros` +5,2 sm, `milos--sifnos`
-+4,6 sm, `syros--kythnos` +2,9 sm. Sieben Etappen wurden ganz ohne Umweg besser,
-nur durch einen günstigeren Kurs zum Wind.
+Ergebnis bei diesem Preis: **13 Etappen umgelegt, zusammen +4,8 sm** über die
+ganze Bibliothek. Grösster Umweg `milos--sifnos` +1,5 sm; **sechs Etappen werden
+ganz ohne Umweg besser**, nur durch einen günstigeren Kurs zum Wind. Die
+Belastung sinkt dort, wo es zählt: `paros--polyaigos` −16 %, `milos--sifnos`
+−13 %, `kythnos--serifos` −12 %.
 
-Bei 26–30 kn aus N/NNE gemessen: `syros--kythnos` **rot → gelb** (die erste
-aufgehobene rote Etappe), `serifos--sifnos` gelb → grün. Zwei Etappen gehen
-grün → gelb, bei unveränderter Zeit und Distanz — das ist die Grün-Sperre, nicht
-eine schlechtere Passage: der Kurs führt jetzt durch kuratierte Abdeckung, und
-darauf gibt die App kein bedenkenloses Grün. Alle übrigen 35 bleiben gleich.
+**Was der strenge Preis kostet, ehrlich beziffert.** Bei einem Prozent je Meile
+hätte das Werkzeug 17 Etappen umgelegt (+24,2 sm) und dabei `syros--kythnos` von
+**rot auf gelb** gehoben sowie `serifos--sifnos` von gelb auf grün — beide
+brauchten dafür rund 3 sm Umweg und fallen bei zehn Prozent je Meile heraus. Der
+strenge Kurs erntet also die kostenlosen Verbesserungen und verzichtet auf die
+bezahlten. Bei 26–30 kn aus N/NNE ändert sich damit **keine** Ampel; zwei
+Etappen gehen grün → gelb bei unveränderter Zeit und Distanz, was die
+Grün-Sperre ist und keine schlechtere Passage. Die übrigen 37 bleiben gleich.
+
+Wer den Preis anders setzen will, ändert `UMWEG_STRAFE_PRO_NM` im Werkzeug und
+lässt es neu laufen — es ist idempotent.
 
 Weil der Kurs absichtlich länger wird, ändert dieses Werkzeug als einziges auch
 `distanceNm` — der **gemessene** Umweg wird auf die recherchierte Distanz

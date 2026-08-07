@@ -121,14 +121,22 @@ const MAX_UMWEG_ABS_NM = 6;
  * DER WECHSELKURS zwischen Umweg und Abdeckung — die Skipper-Regel als Zahl,
  * und zwar in einem Satz, dem man widersprechen kann:
  *
- *     JEDE ZUSÄTZLICHE SEEMEILE MUSS EIN PROZENT WENIGER WIND BRINGEN.
+ *     JEDE ZUSÄTZLICHE SEEMEILE MUSS ZEHN PROZENT WENIGER WIND BRINGEN.
+ *
+ * Skipper-Preis vom 2026-08-07, nachdem der erste Ansatz (ein Prozent je
+ * Seemeile) Umwege von fünf Meilen für zwölf Prozent weniger Wind durchliess.
+ * Zehn Prozent je Meile ist ein STRENGER Kurs: er lässt praktisch nur noch
+ * Bahnen zu, die den Schutz fast geschenkt bekommen — eine bessere Linie durch
+ * dieselbe Distanz, nicht ein Bogen darum herum.
+ *
+ * Das ist kein Widerspruch zur Regel "angenehmere lange Fahrt vor kurzer im
+ * Wind": die gilt für die WAHL des Tagesziels, wo es um Stunden geht. Hier geht
+ * es um Meilen innerhalb einer Etappe, und dort ist der Skipper streng.
  *
  * Absolut und nicht relativ bepreist, weil eine Seemeile Umweg auf einer langen
- * Etappe genauso lange dauert wie auf einer kurzen. Ein relativer Preis liess
- * auf den langen Schlägen Umwege von acht Meilen für sechs Prozent weniger Wind
- * durch — rechnerisch ein Gewinn, an Bord eine verschenkte Stunde.
+ * Etappe genauso lange dauert wie auf einer kurzen.
  */
-const UMWEG_STRAFE_PRO_NM = 0.01;
+const UMWEG_STRAFE_PRO_NM = 0.1;
 
 /**
  * Unter diesem Gewinn bleibt die Etappe, wie sie ist. Fünf Prozent weniger Wind
