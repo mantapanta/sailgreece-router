@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   compass,
   formatAthensTime,
+  formatHours,
+  formatKn,
+  formatKnPrecise,
   formatKursAbschnitt,
   formatKursAmpelRegel,
+  formatSm,
   formatWaveM,
   formatWindFrom,
   pointOfSail,
@@ -94,11 +98,11 @@ describe('pointOfSail — Kurs zum Wind als Name', () => {
  */
 describe('formatWaveM — Wellenhöhe/-grenze in Metern', () => {
   it('formatiert mit Dezimalkomma und einer Nachkommastelle', () => {
-    expect(formatWaveM(0.3)).toBe('0,3 m');
+    expect(formatWaveM(0.3)).toBe('0,3\u202fm');
   });
 
   it('zeigt auch ganze Meter mit Nachkommastelle ("1,0 m")', () => {
-    expect(formatWaveM(1)).toBe('1,0 m');
+    expect(formatWaveM(1)).toBe('1,0\u202fm');
   });
 
   it('ohne Wert kein erfundener Wellenwert', () => {
@@ -126,7 +130,7 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
         maxTwsKn: 16,
         ampel: 'gelb',
       }),
-    ).toBe('ca. 4 sm Kreuz (16 kn)');
+    ).toBe('ca. 4 sm Kreuz (16 kn)');
     expect(
       formatKursAbschnitt({
         kategorie: 'halbwind',
@@ -135,7 +139,7 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
         maxTwsKn: 9,
         ampel: 'gruen',
       }),
-    ).toBe('ca. 10 sm Halbwind (9 kn)');
+    ).toBe('ca. 10 sm Halbwind (9 kn)');
   });
 
   it('nennt die gekreuzten Meilen getrennt, wo wirklich gekreuzt wird', () => {
@@ -147,7 +151,7 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
         maxTwsKn: 17,
         ampel: 'gelb',
       }),
-    ).toBe('ca. 8 sm Kreuz (17 kn) · davon 2 sm Kreuzschläge');
+    ).toBe('ca. 8 sm Kreuz (17 kn) · davon 2 sm Kreuzschläge');
   });
 
   it('wird der ganze Abschnitt gekreuzt, heisst er so — ohne "davon"', () => {
@@ -159,7 +163,7 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
         maxTwsKn: 17,
         ampel: 'gelb',
       }),
-    ).toBe('ca. 6 sm Kreuzschläge (17 kn)');
+    ).toBe('ca. 6 sm Kreuzschläge (17 kn)');
   });
 
   it('unter einer Meile bleibt die Nachkommastelle stehen ("ca. 0 sm" wäre keine Angabe)', () => {
@@ -171,24 +175,57 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
         maxTwsKn: 24,
         ampel: 'rot',
       }),
-    ).toBe('ca. 0,4 sm Kreuz (24 kn)');
+    ).toBe('ca. 0,4 sm Kreuz (24 kn)');
   });
 });
 
 describe('formatKursAmpelRegel — die Schwellen hinter der Farbe', () => {
   it('nennt beide Bänder in der Reihenfolge rot, gelb, grün', () => {
     expect(formatKursAmpelRegel('kreuz', DEFAULT_PARAMS)).toBe(
-      'Kreuz: über 20 kn rot · 10–20 kn gelb · unter 10 kn grün',
+      'Kreuz: über 20 kn rot · 10–20 kn gelb · unter 10 kn grün',
     );
     expect(formatKursAmpelRegel('halbwind', DEFAULT_PARAMS)).toBe(
-      'Halbwind: über 30 kn rot · 20–30 kn gelb · unter 20 kn grün',
+      'Halbwind: über 30 kn rot · 20–30 kn gelb · unter 20 kn grün',
     );
   });
 
   it('liest die Zahlen aus den Parametern, nicht aus dem Code (AD-8)', () => {
     const scharf = ParamsSchema.parse({ kreuzGelbAbKn: 6, kreuzRotAbKn: 12 });
     expect(formatKursAmpelRegel('kreuz', scharf)).toBe(
-      'Kreuz: über 12 kn rot · 6–12 kn gelb · unter 6 kn grün',
+      'Kreuz: über 12 kn rot · 6–12 kn gelb · unter 6 kn grün',
     );
+  });
+});
+
+/**
+ * Story 1.5 — die Einheiten-Konvention der Anzeige: deutsches Dezimalkomma und
+ * ein schmales geschütztes Leerzeichen (U+202F) zwischen Zahl und Einheit
+ * (DESIGN.md, Typography). Kein Wert darf in einer schmalen Kachel von seiner
+ * Einheit weggebrochen werden, und kein Rechenweg zeigt einen englischen
+ * Dezimalpunkt.
+ */
+describe('Einheiten-Konvention (Dezimalkomma + U+202F)', () => {
+  it('formatHours trennt Wert und Einheit schmal und geschützt', () => {
+    expect(formatHours(5.5)).toBe('5,5\u202fh');
+  });
+
+  it('formatKn rundet auf ganze Knoten', () => {
+    expect(formatKn(17.6)).toBe('18\u202fkn');
+  });
+
+  it('formatSm zeigt Seemeilen mit einer Nachkommastelle', () => {
+    expect(formatSm(12.34)).toBe('12,3\u202fsm');
+    expect(formatSm(null)).toBe('–');
+  });
+
+  it('formatKnPrecise zeigt die Bootsfahrt mit einer Nachkommastelle', () => {
+    expect(formatKnPrecise(6.45)).toBe('6,5\u202fkn');
+    expect(formatKnPrecise(null)).toBe('–');
+  });
+
+  it('kein Ergebnis enthält einen englischen Dezimalpunkt', () => {
+    for (const s of [formatHours(5.5), formatSm(12.34), formatKnPrecise(6.45), formatWaveM(0.3)]) {
+      expect(s).not.toMatch(/\d\.\d/);
+    }
   });
 });

@@ -517,8 +517,8 @@ export function deriveDecisionPoints(
         day: opt.closesOnDay,
         text: dringend
           ? rest === 0
-            ? `HEUTE entscheiden: ${name} — ab morgen ist diese Option zu${preis}.`
-            : `Noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'}: ${name} schliesst am Tag ${opt.closesOnDay}${preis}.`
+            ? `Heute entscheiden: ${name} — ab morgen ist diese Option geschlossen${preis}.`
+            : `Noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'}: ${name} schließt Tag ${opt.closesOnDay}${preis}.`
           : `Bis Tag ${opt.closesOnDay} entscheiden: ${name} — danach verfällt die Option${preis}.`,
       });
     }

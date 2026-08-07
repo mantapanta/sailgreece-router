@@ -28,7 +28,7 @@ import type { Restaurant } from '../../domain/schema/gastro.ts';
 import type { KiteSpot, KiteSpotTag } from '../../domain/schema/kite.ts';
 import { kiteProfilLabel, kiteSektorLabel, kiteSpotsOfPlace } from '../../domain/kite.ts';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
-import { compass, formatTripDayDate, formatWaveM } from '../format.ts';
+import { compass, formatKn, formatTripDayDate, formatWaveM } from '../format.ts';
 import { resolveMapsEnv } from '../mapsEnv.ts';
 import {
   nightVerdictLine,
@@ -346,8 +346,8 @@ const SECTOR_PRESENTATION: Record<
   SectorRating,
   { cls: string; word: (limitKn: number | null) => string }
 > = {
-  gut: { cls: 'gruen', word: (kn) => `gut · bis ${kn} kn` },
-  maessig: { cls: 'gelb', word: (kn) => `mäßig · bis ${kn} kn` },
+  gut: { cls: 'gruen', word: (kn) => `gut · bis ${kn} kn` },
+  maessig: { cls: 'gelb', word: (kn) => `mäßig · bis ${kn} kn` },
   schwach: { cls: 'rot', word: (kn) => `schwach · bis ${kn} kn` },
   offen: { cls: 'rot', word: () => 'offen' },
 };
@@ -575,7 +575,7 @@ export function PlaceDetailView({
             <div className="value">
               {night?.maxWindKn != null ? (
                 <>
-                  {Math.round(night.maxWindKn)} kn · {compass(night.windDirDeg)}
+                  {formatKn(night.maxWindKn)} · {compass(night.windDirDeg)}
                 </>
               ) : (
                 '–'
@@ -643,7 +643,7 @@ export function PlaceDetailView({
         </div>
         <p className="shelter-legend">
           Schutz je Windrichtung aus den kuratierten Sektoren, bewertet am
-          Meltemi-Worst-Case der Planung (
+          Meltemi-Worst-Case der Planung (kn = Knoten, 
           {snapshot.params.meltemiWorstCase.twsKn} kn); die Wellenwerte sind
           kuratierte Grenzen und bewerten nichts.
         </p>
@@ -658,14 +658,14 @@ export function PlaceDetailView({
             <li key={`w${i}`}>
               Wind {s.fromDeg}°–{s.toDeg}° ({compass(s.fromDeg)}–
               {compass(s.toDeg)}){s.fromDeg > s.toDeg ? ' · über Nord' : ''} bis{' '}
-              {s.maxKn} kn
+              {formatKn(s.maxKn)}
             </li>
           ))}
           {place.shelter.waveSectors.map((s, i) => (
             <li key={`s${i}`}>
               Welle {s.fromDeg}°–{s.toDeg}° ({compass(s.fromDeg)}–
               {compass(s.toDeg)}){s.fromDeg > s.toDeg ? ' · über Nord' : ''} bis{' '}
-              {s.maxM} m
+              {formatWaveM(s.maxM)}
             </li>
           ))}
         </ul>

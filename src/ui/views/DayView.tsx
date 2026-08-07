@@ -68,8 +68,10 @@ import {
   formatHourOfDay,
   formatHours,
   formatKn,
+  formatKnPrecise,
   formatKursAbschnitt,
   formatKursAmpelRegel,
+  formatSm,
   formatStamp,
   formatTripDayDate,
   formatTripDayWeekdayShort,
@@ -168,7 +170,7 @@ function WindBasis({ leg }: { leg: LegAssessment }) {
           <div>
             <dt>Fahrt (Ø)</dt>
             <dd>
-              {leg.avgSpeedKn !== null ? `${leg.avgSpeedKn.toFixed(1)} kn` : '–'}
+              {formatKnPrecise(leg.avgSpeedKn)}
               {leg.sailHours !== null && leg.motorHours !== null && (
                 <>
                   {' · '}
@@ -282,10 +284,10 @@ function Breakdown({
               <td data-label="Zeit (Athen)">
                 {p.etaIso ? formatAthensTime(p.etaIso) : '–'}
               </td>
-              <td data-label="Distanz ab Start">{p.distanceNm.toFixed(1)} sm</td>
+              <td data-label="Distanz ab Start">{formatSm(p.distanceNm)}</td>
               {p.segment ? (
                 <>
-                  <td data-label="Abschnitt">{p.segment.distanceNm.toFixed(1)} sm</td>
+                  <td data-label="Abschnitt">{formatSm(p.segment.distanceNm)}</td>
                   <td data-label="Kurs" title="Anliegender Kurs über Grund, rechtweisend">
                     {formatDeg(p.segment.courseDeg)}
                   </td>
@@ -308,7 +310,7 @@ function Breakdown({
                     {p.segment.kreuzen ? 'Kreuzen' : pointOfSail(p.segment.twaDeg)}
                   </td>
                   <td data-label="Fahrt">
-                    {p.segment.speedKn.toFixed(1)} kn
+                    {formatKnPrecise(p.segment.speedKn)}
                     {p.segment.motoring ? ' (Motor)' : ''}
                     {p.segment.kreuzen ? ' (Kurs)' : ''}
                   </td>
@@ -436,8 +438,8 @@ function StageEditor({
         </select>
       </label>
       <p className="beschreibung">
-        Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
-        raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
+        Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
+        raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
         Vortagsziel, die die Etappen-Bibliothek an einem Tag erreicht.
       </p>
       {placesOnIsland.length > 0 && (
@@ -501,7 +503,7 @@ function StageEditor({
                 onClose();
               } else {
                 setError(
-                  `Der Zwischenstopp lässt sich nicht löschen — es gibt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}, und ein landfreier Direktkurs liess sich nicht berechnen.`,
+                  `Der Zwischenstopp lässt sich nicht löschen — es gibt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}, und ein landfreier Direktkurs ließ sich nicht berechnen.`,
                 );
               }
             }}
@@ -738,7 +740,7 @@ function StageCard({
       {(!isHarbour || stage.pinned) && (
         <div className="chip-list">
           {!isHarbour && distance > 0 && (
-            <span className="chip">{Math.round(distance)} sm</span>
+            <span className="chip">{Math.round(distance)} sm</span>
           )}
           {!isHarbour && (
             <span className="chip" title="Stunden unter Segeln und Motor">
@@ -816,7 +818,7 @@ function StageCard({
                 onPick={(hour) => setDepartureHour(stage.day, hour)}
               />
             ) : (
-              <div className="value">{departureHour}:00</div>
+              <div className="value">{formatHourOfDay(departureHour)}</div>
             )}
             {/* "Früh los, 15:00 vor Anker" (Crowd-Strategie) — als kleiner
                 Hinweis AN DER ABFAHRT, nicht als eigener Kasten weiter unten
@@ -1571,7 +1573,7 @@ function OptionRow({
         </span>
         <span className="badge" title="Entfernung von der Basis zum Wendepunkt">
           bis {islandName(snapshot, option.turnIslandId)}
-          {option.reachNm !== null && ` · ${Math.round(option.reachNm)} sm`}
+          {option.reachNm !== null && ` · ${Math.round(option.reachNm)} sm`}
         </span>
         {option.turnDay !== null && (
           <span className="badge" title="Tag, an dem der Plan den Wendepunkt erreicht">
@@ -2196,7 +2198,7 @@ export function DayView({
                   eine Sache. Der Satz sagt die Kette, die Zeilen darunter
                   tragen sie: derselbe Name, dieselbe Farbe, dieselbe Route. */}
               <p className="beschreibung">
-                Reichweite, Preis und Frist je Route — eine Option schliesst an dem
+                Reichweite, Preis und Frist je Route — eine Option schließt an dem
                 Tag, ab dem kein tragfähiger Restplan mehr existiert. Jede Option
                 IST eine dieser Routen: „Etappen ansehen“ schlägt sie hier oben
                 Tag für Tag auf, und in der Karten-Ansicht liegt genau sie unter
