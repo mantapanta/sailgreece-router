@@ -116,8 +116,7 @@ export function TripStatusLine({
               <p className="caption">
                 Bis zu diesem Törntag ist die Umkehr auch unter dem
                 Meltemi-Worst-Case jederzeit möglich. Danach trägt der aktuelle
-                Forecast den Heimweg — die Tageskarten sagen, woran der Abbruch
-                zu erkennen ist.
+                Forecast den Heimweg.
               </p>
             </>
           )}

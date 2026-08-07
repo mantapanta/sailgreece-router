@@ -26,7 +26,7 @@ import type {
   LegHourBreakdown,
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
-import { planOutdated, type DayReturnCheck } from '../../domain/schema/plan.ts';
+import { planOutdated } from '../../domain/schema/plan.ts';
 import { forecastModelLabel } from '../../domain/schema/models.ts';
 import type { KonzeptEignung } from '../../domain/schema/konzept.ts';
 import {
@@ -36,7 +36,7 @@ import {
   type KonzeptSchwellen,
 } from '../../domain/konzept.ts';
 import { planKey } from '../../domain/solver.ts';
-import { departureHourChoices } from '../../domain/scoring.ts';
+import { departureHourChoices, kreuzGelbReason } from '../../domain/scoring.ts';
 import { AbfahrtMenu } from '../components/AbfahrtMenu.tsx';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { PositionPopover } from '../components/PositionPopover.tsx';
@@ -330,47 +330,47 @@ function Breakdown({
 /**
  * DIE PROBLEMATISCHEN ABSCHNITTE des Tages — "ca. 4 sm Kreuz (16 kn)".
  *
- * Die Kacheln darüber nennen EINEN Wind für den ganzen Tag; die Zeilen hier
- * nennen die Meilen, auf denen er von vorn oder von der Seite kommt. Beides
- * zusammen ist die Antwort auf "was für ein Tag wird das an Bord?" — der
- * Mittelwert allein ist es nicht, denn vier Meilen gegenan verschwinden darin
- * (Skipper 2026-08-06).
+ * Sie stehen als Chip BEI LÄNGE UND DAUER (Skipper 2026-08-07): "14 sm Kreuz"
+ * ist eine Angabe über dieselbe Strecke wie "36 sm" und dieselben Stunden wie
+ * "4,9 h Fahrt" — als eigener getönter Kasten unter den Kacheln war es ein
+ * zweiter Block, der wie ein zweites Urteil über den Tag aussah. Der
+ * Mittelwert der Wind-Kachel allein beantwortet "was für ein Tag wird das an
+ * Bord?" nicht: vier Meilen gegenan verschwinden darin (Skipper 2026-08-06) —
+ * deshalb bleibt die Angabe, sie wird nur kompakt.
  *
  * Fertig gerechnet aus der Bewertung (AD-2): Meilen, Wind und Ampel kommen aus
- * `stage.kursAbschnitte`. Die Ampel steht als Farbe UND als Wort — Farbe allein
- * trägt in dieser App keine Bedeutung —, und der Titel nennt die Schwellen,
- * gegen die gemessen wurde.
+ * `stage.kursAbschnitte`. Der Titel nennt die Schwellen, gegen die gemessen
+ * wurde; das Ampel-Wort steht für Screenreader dabei, sichtbar trägt es die
+ * Karte schon als Badge — zweimal "GELB" auf einer Karte ist Lärm, nicht
+ * Bedeutung.
  *
  * GEZEIGT WIRD NUR, WAS DRÜCKT: grüne Abschnitte bleiben weg (Skipper
- * 2026-08-07). Diese Liste meldet die problematischen Meilen; zehn grüne
- * Halbwind-Meilen sind keine Meldung, sondern ein normaler Segeltag — sie
- * standen nur da und mussten überlesen werden. Gerechnet werden sie weiter
- * (die Fahrtzeit steckt in den Kacheln darüber), sie melden sich bloss nicht
- * mehr. Bleibt nichts übrig, verschwindet der ganze Block.
+ * 2026-08-07). Zehn grüne Halbwind-Meilen sind keine Meldung, sondern ein
+ * normaler Segeltag. Gerechnet werden sie weiter (die Fahrtzeit steckt in den
+ * Kacheln), sie melden sich bloss nicht mehr.
  */
-function KursAbschnitte({
+function KursChips({
   abschnitte,
   params,
 }: {
+  /** Bereits gefiltert: nur die Abschnitte, die gemeldet werden. */
   abschnitte: KursAbschnitt[];
   params: PlanningSnapshot['params'];
 }) {
-  const gemeldet = abschnitte.filter((a) => a.ampel !== 'gruen');
-  if (gemeldet.length === 0) return null;
   return (
-    <div className="kurs-liste">
-      {gemeldet.map((a) => (
+    <>
+      {abschnitte.map((a) => (
         <span
           key={a.kategorie}
-          className={`ampel ampel-${a.ampel} kurs-zeile`}
+          className={`chip kurs-chip ampel-${a.ampel}`}
           title={formatKursAmpelRegel(a.kategorie, params)}
         >
-          <span className="dot" />
+          <span className="dot" aria-hidden="true" />
           {formatKursAbschnitt(a)}
-          <span className="urteil">{AMPEL_LABEL[a.ampel]}</span>
+          <span className="visually-hidden"> — {AMPEL_LABEL[a.ampel]}</span>
         </span>
       ))}
-    </div>
+    </>
   );
 }
 
@@ -566,7 +566,6 @@ function StageCard({
   currentDay,
   onOpenPlace,
   mapId,
-  returnCheck,
   harbourPointer,
   readOnly = false,
 }: {
@@ -579,8 +578,6 @@ function StageCard({
   onOpenPlace: (placeId: string, kiteSpotId?: string) => void;
   /** Null when no Maps key is configured — the panel then stays text-only. */
   mapId: string | null;
-  /** Zielmodell v2 — der Heimweg-Status dieses Tages (Abbruch-Notation). */
-  returnCheck?: DayReturnCheck | null;
   /** Hafentag-Hero: Hinweis auf den nächsten Segeltag ("Weiter am Mi: …"). */
   harbourPointer?: string | null;
   /**
@@ -614,7 +611,31 @@ function StageCard({
   const isToday = stage.day === currentDay;
   const from = isHarbour ? null : stageFrom(snapshot, stage);
   const via = isHarbour ? [] : stageVia(snapshot, stage);
-  const legReasons = stage.legs.flatMap((l) => l.reasons);
+
+  /**
+   * KREUZEN STEHT EINMAL AUF DER KARTE (Skipper 2026-08-07).
+   *
+   * Der Chip bei Länge und Dauer sagt es in Meilen ("ca. 14 sm Kreuz … davon
+   * 4 sm Kreuzschläge"), die Begründungsliste sagte dasselbe noch einmal in
+   * Stunden ("Kurs liegt enger als 50° am Wind — 0,5 h Kreuzschläge nötig").
+   * Zwei Sätze über denselben Befund lesen sich wie zwei Befunde. Gefiltert
+   * wird gegen den EXAKTEN Satz aus der Domäne (`kreuzGelbReason`) statt gegen
+   * ein Teilwort — und nur, solange der Chip wirklich steht: meldet keiner der
+   * Abschnitte etwas (grüner Kreuz-Abschnitt bei wenig Wind), bleibt der Satz
+   * die einzige Stelle, an der die Kreuz-Stunden auftauchen.
+   */
+  const kursGemeldet = stage.kursAbschnitte.filter((a) => a.ampel !== 'gruen');
+  const kreuzImChip = kursGemeldet.some((a) => a.kreuzNm > 0);
+  const kreuzSaetze = new Set(
+    kreuzImChip
+      ? stage.legs
+          .filter((l) => l.kreuzHours !== null && l.kreuzHours > 0)
+          .map((l) => kreuzGelbReason(l.kreuzHours!, params))
+      : [],
+  );
+  const legReasons = stage.legs
+    .flatMap((l) => l.reasons)
+    .filter((r) => !kreuzSaetze.has(r));
   const warn = stage.ampel === 'gelb' || stage.ampel === 'rot';
 
   const stageWord = isHarbour ? 'Hafentag' : `Etappe ${stage.stageNumber ?? '–'}`;
@@ -640,6 +661,34 @@ function StageCard({
     () => departureHourChoices(stage.day),
     [stage.day],
   );
+  /**
+   * Der Hinweis an der Abfahrt-Kachel — zwei Zustände, beide klein:
+   * "empfohlen" bestätigt den Default, "Empfehlung 09:00" ist der Weg zurück
+   * zu ihm. Gefahrene Tage bekommen keinen: dort ist nichts mehr zu wählen.
+   */
+  const empfehlung =
+    stage.kind === 'stage' && stage.day >= currentDay
+      ? stage.abfahrtsEmpfehlung
+      : null;
+  const abfahrtHinweis = empfehlung
+    ? stage.abfahrtVomSkipper
+      ? `Empfehlung ${formatHourOfDay(empfehlung.abfahrtHourAthens)}`
+      : 'empfohlen'
+    : null;
+  const abfahrtHinweisTitel = empfehlung
+    ? [
+        `Früh los: Abfahrt ${formatHourOfDay(empfehlung.abfahrtHourAthens)}, ` +
+          `vor Anker ca. ${formatHourOfDay(empfehlung.ankunftHourAthens)} ` +
+          `(Ziel ${params.zielAnkunftHourAthens}:00).`,
+        empfehlung.hinweis,
+        stage.abfahrtVomSkipper
+          ? `Gerechnet wird mit deiner Abfahrt um ${departureHour}:00.` +
+            (readOnly ? '' : ' Die Kachel gibt den Tag an die Empfehlung zurück.')
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : undefined;
   const lastLeg = stage.legs[stage.legs.length - 1];
   const lastEta =
     lastLeg?.pointPassages[lastLeg.pointPassages.length - 1]?.etaIso ?? null;
@@ -716,6 +765,11 @@ function StageCard({
               {stage.legs.length} Schläge an einem Tag — Ausnahme
             </span>
           )}
+          {/* Kreuz und Halbwind gehören zu Länge und Dauer: sie schlüsseln
+              genau diese beiden Zahlen auf. */}
+          {!isHarbour && (
+            <KursChips abschnitte={kursGemeldet} params={params} />
+          )}
           {stage.pinned && <span className="chip">Festgelegt</span>}
         </div>
       )}
@@ -764,6 +818,23 @@ function StageCard({
             ) : (
               <div className="value">{departureHour}:00</div>
             )}
+            {/* "Früh los, 15:00 vor Anker" (Crowd-Strategie) — als kleiner
+                Hinweis AN DER ABFAHRT, nicht als eigener Kasten weiter unten
+                (Skipper 2026-08-07). Die Empfehlung ist der Default dieser
+                Kachel; solange sie gilt, genügt das Wort. Weicht der Skipper
+                ab, nennt der Hinweis die empfohlene Stunde — zurück geht es
+                über die Kachel selbst, deren Menü die Empfehlung als erste
+                Zeile führt. Ein zweiter Knopf dafür wäre eine zweite Stelle,
+                an der dieselbe Entscheidung fällt (AbfahrtMenu). Alles Weitere
+                — Ankerzeit, Ziel, verfehltes Ziel — steht im Titel. */}
+            {abfahrtHinweis && (
+              <div
+                className={`abfahrt-hinweis${empfehlung!.zielErreicht ? '' : ' verfehlt'}`}
+                title={abfahrtHinweisTitel}
+              >
+                {abfahrtHinweis}
+              </div>
+            )}
           </div>
           <div className="stat-tile">
             <div className="label">Fahrtzeit</div>
@@ -784,12 +855,6 @@ function StageCard({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Kreuz und Halbwind des Tages — direkt unter der Wind-Kachel, weil sie
-          deren Zahl aufschlüsselt: DA kommt der Wind von vorn, SO lange. */}
-      {!isHarbour && (
-        <KursAbschnitte abschnitte={stage.kursAbschnitte} params={params} />
       )}
 
       {/* Die ganze Zeile öffnet das Platzdetail — der Liegeplatz ist das Ziel
@@ -820,48 +885,6 @@ function StageCard({
         </div>
       )}
 
-      {/* "Früh los, 15:00 vor Anker" (Crowd-Strategie): die späteste Abfahrt,
-          deren simulierte Ankunft das Ankerziel noch hält — gerechnet gegen
-          denselben Stunden-Forecast wie die Ampel. Sie ist der DEFAULT der
-          Abfahrt-Kachel; der Übernehmen-Knopf von früher ist damit weg. Weicht
-          der Skipper ab, sagt die Zeile es und bietet den Rückweg an. */}
-      {stage.kind === 'stage' && stage.abfahrtsEmpfehlung && (
-        <div
-          className={`abfahrt-zeile${stage.abfahrtsEmpfehlung.zielErreicht ? '' : ' verfehlt'}`}
-        >
-          {'⏰ '}
-          Empfohlene Abfahrt{' '}
-          <strong>{formatHourOfDay(stage.abfahrtsEmpfehlung.abfahrtHourAthens)}</strong>
-          {' → vor Anker ca. '}
-          <strong>{formatHourOfDay(stage.abfahrtsEmpfehlung.ankunftHourAthens)}</strong>
-          {stage.abfahrtsEmpfehlung.zielErreicht
-            ? ` (Ziel: ${params.zielAnkunftHourAthens}:00)`
-            : ''}
-          {stage.abfahrtsEmpfehlung.hinweis && (
-            <div className="beschreibung">{stage.abfahrtsEmpfehlung.hinweis}</div>
-          )}
-          {/* Hat der Skipper die Abfahrt selbst gesetzt, sagt die Zeile es und
-              gibt den Tag auf Wunsch an die Empfehlung zurück. Den Weg zurück
-              trägt nur der PLAN: an einer nur angesehenen Alternative (readOnly)
-              bleibt die Aussage stehen, der Knopf nicht. */}
-          {stage.abfahrtVomSkipper && (
-            <div className="beschreibung">
-              Gerechnet wird mit deiner Abfahrt um {departureHour}:00.{' '}
-              {!readOnly && (
-                <button
-                  type="button"
-                  className="secondary"
-                  title="Gibt diesen Tag an die Empfehlung zurück — die Bewertung rechnet dann wieder ab der empfohlenen Stunde."
-                  onClick={() => setDepartureHour(stage.day, null)}
-                >
-                  Empfehlung übernehmen
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* ENTSCHEIDUNGSTOR (Törnanalyse): legt sich der Plan an diesem Tag
           hinter ein Tor fest, steht hier, ob 48-h-Fenster und Rückweg die
           Festlegung decken — die Entscheidung am Tag der Entscheidung. Der
@@ -873,16 +896,12 @@ function StageCard({
         </div>
       )}
 
-      {/* Zielmodell v2 — die Abbruch-Notation: geplant wird auf das
-          Wetterfenster, abgesichert wird täglich. Diese Zeile sagt für DIESEN
-          Tag, ob der Heimweg auch im Worst-Case hält oder woran der Skipper
-          den Abbruch erkennt. Neu gerechnet mit jedem Forecast. Der Status
-          steht als Farbe UND im Text — kein Emoji als Bedeutungsträger. */}
-      {returnCheck && (
-        <div className={`return-note status-${returnCheck.status}`}>
-          {returnCheck.note}
-        </div>
-      )}
+      {/* Der Heimweg-Status stand hier als eigene Zeile an JEDER Karte ("Heimweg
+          hält auch bei vollem Meltemi …") und sagte an den meisten Tagen
+          dasselbe: alles gut. Er ist damit entfallen (Skipper 2026-08-07). Die
+          Abbruch-Notation selbst bleibt gerechnet und steht dort, wo sie über
+          den ganzen Törn gelesen wird: in der Trip-Statuszeile ("Meltemi-fest
+          bis Tag n"). */}
 
       {/* KITE-HINWEISE des Tages (domain/kite.ts, Skipper-Wunsch 2026-08-06):
           die kuratierten Spots auf Start- und Ziel-Insel und am Kurs. Sie
@@ -1693,11 +1712,6 @@ export function DayView({
     day,
     assessment.currentIslandId,
   );
-  /** Abbruch-Notation je Tag (Zielmodell v2) — für die Etappen-Cards. */
-  const returnCheckByDay = new Map(
-    (viewRoute?.returnChecks ?? []).map((c) => [c.day, c]),
-  );
-
   /**
    * Eine Alternative ansehen und an den Kopf der Seite springen — sonst
    * schaltete der Knopf im Optionsraum eine Ansicht um, die weit über dem
@@ -1970,7 +1984,6 @@ export function DayView({
             currentDay={day}
             onOpenPlace={onOpenPlace}
             mapId={mapId}
-            returnCheck={returnCheckByDay.get(hero.day) ?? null}
             harbourPointer={harbourPointer}
             readOnly={shownRoute !== null}
           />
@@ -2081,7 +2094,6 @@ export function DayView({
                       currentDay={day}
                       onOpenPlace={onOpenPlace}
                       mapId={mapId}
-                      returnCheck={returnCheckByDay.get(s.day) ?? null}
                       readOnly={shownRoute !== null}
                     />
                   </div>
