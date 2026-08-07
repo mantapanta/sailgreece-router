@@ -147,7 +147,7 @@ describe('formatKursAbschnitt — problematische Abschnitte', () => {
         maxTwsKn: 17,
         ampel: 'gelb',
       }),
-    ).toBe('ca. 8 sm Kreuz (17 kn) · davon ca. 2 sm Kreuzschläge');
+    ).toBe('ca. 8 sm Kreuz (17 kn) · davon 2 sm Kreuzschläge');
   });
 
   it('wird der ganze Abschnitt gekreuzt, heisst er so — ohne "davon"', () => {
