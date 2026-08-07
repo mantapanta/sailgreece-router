@@ -190,7 +190,7 @@ function abschnittSm(nm: number): string {
 }
 
 /**
- * "ca. 8 sm Kreuz (17 kn) · davon ca. 2 sm Kreuzschläge" — die Warnzeile der
+ * "ca. 8 sm Kreuz (17 kn) · davon 2 sm Kreuzschläge" — der Kurs-Chip der
  * Etappenkarte.
  *
  * "ca." und die runde Meile sind Absicht: die Zahl beantwortet "wie lange geht
@@ -212,7 +212,7 @@ export function formatKursAbschnitt(a: KursAbschnitt): string {
   }
   const zeile = `ca. ${abschnittSm(a.distanceNm)} sm ${KURS_LABEL[a.kategorie]} (${wind})`;
   if (a.kreuzNm <= 0) return zeile;
-  return `${zeile} · davon ca. ${abschnittSm(a.kreuzNm)} sm Kreuzschläge`;
+  return `${zeile} · davon ${abschnittSm(a.kreuzNm)} sm Kreuzschläge`;
 }
 
 /**
