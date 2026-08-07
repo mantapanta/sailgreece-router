@@ -338,6 +338,7 @@ describe('leeHinweiseForStage — der Schatten wird ein Satz', () => {
       kreuzExtraNm: 4,
       wenden: 4,
       kreuzTrack: [],
+      headroom: { windKn: null, hours: 3 },
       basis: 'forecast',
       reasons: [],
       nightLeg: false,
