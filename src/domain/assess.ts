@@ -35,6 +35,7 @@ import {
   rueckwegEmpfehlungFor,
 } from './konzept.ts';
 import { empfehleAbfahrt } from './abfahrt.ts';
+import { deriveEngpass } from './engpass.ts';
 import { kiteHinweiseForStage, kiteSpotsForDay } from './kite.ts';
 import { mergeKursAbschnitte } from './kursAbschnitte.ts';
 import { predictedPointOfReturn } from './ppr.ts';
@@ -327,6 +328,7 @@ function assessPlan(
                   kreuzExtraNm: null,
                   wenden: null,
                   kreuzTrack: [],
+                  headroom: { windKn: null, hours: null },
                   basis: 'forecast' as const,
                   reasons: [`Etappe ${legId} nicht in der Bibliothek`],
                   nightLeg: null,
@@ -666,7 +668,7 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   if (konzeptEntscheid.wechselHinweis) {
     decisionPoints.push({
       day: trip.currentDay,
-      text: `HEUTE entscheiden — ${konzeptEntscheid.wechselHinweis}`,
+      text: `Heute entscheiden — ${konzeptEntscheid.wechselHinweis}`,
     });
   }
   // Entscheidungstore der gefahrenen Route: die Festlegung hinter ein Tor
@@ -791,6 +793,14 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     restTripAmpel,
     restTripReasons,
     ppr,
+    // Eine Ebene über den Einzelurteilen: was den Raum bindet und wo er am
+    // dünnsten ist. Steht NACH ppr, weil es dessen Stichtag zitiert.
+    engpass: deriveEngpass({
+      snapshot,
+      mainRoute,
+      routeOptions: routeOptionsMerged,
+      ppr,
+    }),
     // Revier-Sicht der Kite-Ebene: alle Spots, bewertet für HEUTE. Die Karte
     // liest von hier, damit sie nichts rechnet (AD-2).
     kiteSpotsHeute: kiteSpotsForDay(snapshot, trip.currentDay),

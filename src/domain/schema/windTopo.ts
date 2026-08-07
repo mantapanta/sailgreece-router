@@ -173,8 +173,17 @@ export const WindTopoLeeZoneSchema = z.object({
    * Eine Näherung: eine Insel ist kein Kreis. Bewusst so, denn die Alternative
    * wäre ein Polygon je Insel, und die Breite quer zum Wind schwankt darin um
    * weniger, als die Faktoren ohnehin unsicher sind.
+   *
+   * Seit 2026-08-07 GEMESSEN statt geschätzt: `seeding/tools/leeZones.ts`
+   * projiziert die Landzellen der Insel auf die Achse quer zum Wind und mittelt
+   * über das Meltemi-Band. Der Deckel steht deshalb bei 12 sm und nicht mehr
+   * bei 8 — Andros misst 8,9 sm, und ein Deckel, den echte Geometrie reisst,
+   * misst das Falsche. Was eine Halbinsel vom Hindernis trennt, ist ohnehin
+   * nicht diese Zahl, sondern das Festland-Tor des Werkzeugs: reicht die
+   * zusammenhängende Landfläche über ihr eigenes Suchfenster hinaus, bekommt
+   * sie gar keine Zone (Methana, Salamina, Poros).
    */
-  obstacleRadiusNm: z.number().positive().max(8),
+  obstacleRadiusNm: z.number().positive().max(12),
   /**
    * Wie weit der Schatten AB DER LEEKÜSTE reicht, in sm. Am Anfang der Keule
    * gilt `factor`, am Ende wieder 1,0 — dazwischen linear (windTopo.ts).

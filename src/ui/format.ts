@@ -11,6 +11,15 @@ import type { Params } from '../domain/schema/params.ts';
 import type { KursAbschnitt, KursKategorie } from '../domain/schema/snapshot.ts';
 import { dateForTripDay } from '../domain/time.ts';
 
+/**
+ * Narrow no-break space (U+202F) between a number and its unit — the German
+ * convention DESIGN.md mandates ("5,5 h", "18 kn", "17 sm"). No-break, so a
+ * value never wraps away from its unit in a narrow stat tile; narrow, so the
+ * pair still reads as one token. Every unit-bearing helper below uses it, and
+ * so does every literal unit mention in user-visible copy.
+ */
+const NNBSP = ' ';
+
 const dayFmt = new Intl.DateTimeFormat('de-DE', {
   weekday: 'long',
   day: 'numeric',
@@ -91,7 +100,23 @@ export function formatAthensTime(iso: string): string {
 
 export function formatHours(h: number | null): string {
   if (h === null) return '–';
-  return `${h.toFixed(1).replace('.', ',')} h`;
+  return `${h.toFixed(1).replace('.', ',')}${NNBSP}h`;
+}
+
+/**
+ * Seemeilen mit einer Dezimalstelle ("12,3 sm") — die Rechenwege der
+ * Etappen-Aufschlüsselung. Deutsches Dezimalkomma statt des Punkts, den ein
+ * blankes `toFixed` liefert.
+ */
+export function formatSm(v: number | null): string {
+  if (v === null) return '–';
+  return `${v.toFixed(1).replace('.', ',')}${NNBSP}sm`;
+}
+
+/** Knoten mit einer Dezimalstelle ("6,5 kn") — Bootsgeschwindigkeit im Rechenweg. */
+export function formatKnPrecise(v: number | null): string {
+  if (v === null) return '–';
+  return `${v.toFixed(1).replace('.', ',')}${NNBSP}kn`;
 }
 
 /**
@@ -109,13 +134,13 @@ export function formatHourOfDay(h: number | null): string {
 
 export function formatKn(v: number | null): string {
   if (v === null) return '–';
-  return `${Math.round(v)} kn`;
+  return `${Math.round(v)}${NNBSP}kn`;
 }
 
 /** Wellenhöhe/-grenze mit deutschem Dezimalkomma ("0,3 m") — "–" ohne Wert. */
 export function formatWaveM(m: number | null): string {
   if (m === null) return '–';
-  return `${m.toFixed(1).replace('.', ',')} m`;
+  return `${m.toFixed(1).replace('.', ',')}${NNBSP}m`;
 }
 
 export function formatDeg(v: number | null): string {
@@ -208,11 +233,11 @@ export function formatKursAbschnitt(a: KursAbschnitt): string {
   // Wird der ganze Abschnitt gekreuzt, wäre ein "davon" nur Geräusch — dann
   // heisst er, was er ist.
   if (a.kreuzNm > 0 && a.kreuzNm >= a.distanceNm - 0.05) {
-    return `ca. ${abschnittSm(a.distanceNm)} sm Kreuzschläge (${wind})`;
+    return `ca. ${abschnittSm(a.distanceNm)} sm Kreuzschläge (${wind})`;
   }
-  const zeile = `ca. ${abschnittSm(a.distanceNm)} sm ${KURS_LABEL[a.kategorie]} (${wind})`;
+  const zeile = `ca. ${abschnittSm(a.distanceNm)} sm ${KURS_LABEL[a.kategorie]} (${wind})`;
   if (a.kreuzNm <= 0) return zeile;
-  return `${zeile} · davon ${abschnittSm(a.kreuzNm)} sm Kreuzschläge`;
+  return `${zeile} · davon ${abschnittSm(a.kreuzNm)} sm Kreuzschläge`;
 }
 
 /**
@@ -226,5 +251,5 @@ export function formatKursAmpelRegel(
   params: Params,
 ): string {
   const { gelbAbKn, rotAbKn } = kursSchwellen(kategorie, params);
-  return `${KURS_LABEL[kategorie]}: über ${rotAbKn} kn rot · ${gelbAbKn}–${rotAbKn} kn gelb · unter ${gelbAbKn} kn grün`;
+  return `${KURS_LABEL[kategorie]}: über ${rotAbKn} kn rot · ${gelbAbKn}–${rotAbKn} kn gelb · unter ${gelbAbKn} kn grün`;
 }
