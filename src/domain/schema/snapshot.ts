@@ -189,14 +189,21 @@ export interface PlaceNightAssessment {
 }
 
 /**
- * FR30 — one simulated hour of a leg, so the day card can EXPLAIN how
+ * FR30 — one simulated STEP of a leg, so the day card can EXPLAIN how
  * "3,1 h for 17 nm" came about. Produced only by assessLeg (the single
  * calculation path, AD-3); views render it and never recompute.
+ *
+ * Ein Schritt ist höchstens eine Stunde lang und endet spätestens am
+ * KURSWECHSEL: eine Stunde, in der ein Wegpunkt passiert wird, gehört zu zwei
+ * Kursen, und ein Kurs zum Wind, der für beide gälte, gibt es nicht. Deshalb
+ * kann eine Stunde mehrere Zeilen tragen — `hours` sagt, wie lang jede ist.
  */
 export interface LegHourBreakdown {
   /** UTC hour this step was simulated in. */
   timeIso: string;
-  /** Course over the segment being sailed this hour. */
+  /** Länge dieses Schrittes in Stunden (höchstens 1). */
+  hours: number;
+  /** Course over the segment being sailed in this step. */
   courseDeg: number;
   /**
    * AD-6 — Richtung, AUS DER der Wind weht, rechtweisend. Zusammen mit
@@ -238,8 +245,11 @@ export interface LegHourBreakdown {
  * zwei, je nach Speed; genau deshalb fehlten in der alten Tabelle Punkte und
  * andere standen doppelt.
  *
- * Die Wind-/Speed-Werte sind die der Stunde, IN DER der Punkt passiert wurde —
- * keine gemittelte Näherung, sondern der Zustand am Durchfahrtszeitpunkt.
+ * Die Wind-/Speed-Werte sind die des SCHRITTES, in dem der Punkt passiert
+ * wurde — keine gemittelte Näherung, sondern der Zustand am
+ * Durchfahrtszeitpunkt. Ein Schritt endet am Kurswechsel (assessLeg), deshalb
+ * beschreiben Kurs, Wind und Winkel einer Zeile denselben Abschnitt: eine
+ * Zeile mit Kurs 82°, Wind aus 357° und 178° TWA kann es nicht mehr geben.
  *
  * Erzeugt ausschliesslich von assessLeg (AD-3); Views rechnen nichts nach,
  * insbesondere keine Distanzen aus Koordinaten (AD-2).
@@ -264,9 +274,11 @@ export interface PointPassage {
     /** Länge NUR dieses Abschnitts in sm. */
     distanceNm: number;
     /**
-     * Wind und Fahrt der Stunde, in der der Punkt passiert wurde.
-     * `twdDeg` ist die Richtung, AUS DER der Wind weht (AD-6, rechtweisend) —
-     * ohne sie liesse sich der `twaDeg` daneben nicht nachrechnen.
+     * Wind und Fahrt AUF DIESEM ABSCHNITT, zur Durchfahrtszeit. `twdDeg` ist
+     * die Richtung, AUS DER der Wind weht (AD-6, rechtweisend) — ohne sie
+     * liesse sich der `twaDeg` daneben nicht nachrechnen, und genau das ist
+     * die Probe: `twaDeg` ist immer der Winkel zwischen `courseDeg` und
+     * `twdDeg`.
      */
     twdDeg: number;
     twsKn: number;

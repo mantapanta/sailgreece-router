@@ -240,16 +240,21 @@ function Breakdown({
   if (passages.length === 0) {
     return <p className="beschreibung">Keine Berechnung verfügbar (unbewertet).</p>;
   }
-  const sailed = hours.filter((h) => !h.motoring).length;
-  const motored = hours.length - sailed;
-  const gekreuzt = hours.filter((h) => h.kreuzen).length;
+  // Summiert wird die DAUER der Schritte, nicht ihre Zahl: ein Schritt endet
+  // am Kurswechsel und ist damit meist kürzer als eine Stunde (assessLeg).
+  const summe = (auswahl: (h: LegHourBreakdown) => boolean): number =>
+    hours.filter(auswahl).reduce((s, h) => s + h.hours, 0);
+  const simuliert = summe(() => true);
+  const sailed = summe((h) => !h.motoring);
+  const motored = summe((h) => h.motoring);
+  const gekreuzt = summe((h) => h.kreuzen);
   return (
     <div className="breakdown">
       {hours.length > 0 && (
         <p className="beschreibung">
-          {hours.length} simulierte Stunden · {sailed} unter Segeln, {motored} unter
-          Motor
-          {gekreuzt > 0 && ` · ${gekreuzt} davon gekreuzt`}
+          {formatHours(simuliert)} simuliert · {formatHours(sailed)} unter Segeln,{' '}
+          {formatHours(motored)} unter Motor
+          {gekreuzt > 0 && ` · ${formatHours(gekreuzt)} davon gekreuzt`}
           {hours.some((h) => h.worstCase) && ' · Fernbereich gegen Meltemi-Worst-Case'}
         </p>
       )}

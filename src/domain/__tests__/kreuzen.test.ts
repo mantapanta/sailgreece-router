@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import { courseSpeedKn, kreuzFactor, sailSpeedKn } from '../polar.ts';
 import { kreuzSchlaege } from '../kreuz.ts';
-import { assessLeg } from '../scoring.ts';
+import { assessLeg, legWaypointKey } from '../scoring.ts';
 import { preferred, type PlanMetrics, type SolveResult } from '../solver.ts';
 import {
   angleDiffDeg,
@@ -26,7 +26,17 @@ import {
 import { pathCrossesLand } from '../searoute.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
 import type { Coordinates } from '../schema/common.ts';
-import { makePlan, makeStage, northSouthScenario, TEST_POLAR } from './fixtures.ts';
+import {
+  constantForecast,
+  makeLeg,
+  makePlace,
+  makePlan,
+  makeSnapshot,
+  makeStage,
+  makeTimes,
+  northSouthScenario,
+  TEST_POLAR,
+} from './fixtures.ts';
 
 const params = DEFAULT_PARAMS;
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -152,6 +162,115 @@ describe('assessLeg — die Etappe weist das Kreuzen aus', () => {
     expect(a.motorHours!).toBeGreaterThan(0);
     expect(a.kreuzHours).toBe(0);
     expect(a.breakdown.every((h) => !h.kreuzen)).toBe(true);
+  });
+
+  /**
+   * DER KREUZ-ABSCHNITT MITTEN IN DER ETAPPE (Skipper-Befund 2026-08-07:
+   * "hier wird gegen den Wind (TWA 36) geroutet, trotz Regel nicht höher als
+   * TWA 50").
+   *
+   * Die Simulation lief stundenweise und nahm den Kurs des Abschnitts, auf dem
+   * die Stunde BEGANN — für die ganze Stunde. Eine Etappe, die mit einem
+   * kurzen Schlag aus der Bucht heraus anfängt, rechnete damit ihre erste
+   * Stunde komplett auf diesem einen Kurs, und die 4 sm, die danach mit 36°
+   * TWA gegenan gehen, erschienen als Halbwind: kein Kreuzen, keine
+   * Kreuz-Stunden, keine Warnung — und in der Rechnung stand eine Zeile mit
+   * Kurs 82°, Wind aus 357° und 178° TWA, die es nicht geben kann.
+   *
+   * Weil `kreuzTenths` (solver.ts) genau aus diesen Stunden kommt, war das
+   * nicht nur eine falsche Anzeige: die Rangfolge konnte das Aufkreuzen nicht
+   * vermeiden, was sie nicht sah.
+   */
+  describe('Abschnitte innerhalb einer Stunde', () => {
+    /** 0,6 sm nach Süden aus der Bucht, 5,2 sm nach Osten, 4,0 sm nach NO. */
+    const etappe = () => {
+      const start = makePlace({
+        id: 'start-hafen',
+        islandId: 'startinsel',
+        coordinates: { lat: 36.725, lon: 24.45 },
+      });
+      const ziel = makePlace({
+        id: 'ziel-bucht',
+        islandId: 'zielinsel',
+        coordinates: { lat: 36.7668, lon: 24.611 },
+      });
+      const leg = makeLeg({
+        distanceNm: 9.8,
+        waypoints: [
+          { lat: 36.715, lon: 24.45 },
+          { lat: 36.711, lon: 24.5656 },
+        ],
+      });
+      const times = makeTimes();
+      // Meltemi aus Nord, wie am Befundtag: 17 kn aus 357°.
+      const fc = constantForecast(times.length, 17, 357);
+      const snapshot = makeSnapshot({
+        times,
+        polar: TEST_POLAR,
+        forecast: {
+          [start.id]: fc,
+          [ziel.id]: fc,
+          [legWaypointKey(leg.id, 0)]: fc,
+          [legWaypointKey(leg.id, 1)]: fc,
+        },
+        library: {
+          islands: [
+            { id: 'startinsel', name: 'Start', coordinates: start.coordinates },
+            { id: 'zielinsel', name: 'Ziel', coordinates: ziel.coordinates },
+          ],
+          places: [start, ziel],
+          invalidPlaces: [],
+          legs: [],
+          variants: [],
+        },
+      });
+      return { snapshot, leg };
+    };
+
+    it('jede Zeile der Rechnung nennt den TWA IHRES Kurses', () => {
+      const { snapshot, leg } = etappe();
+      const a = assessLeg(leg, 1, snapshot);
+      for (const h of a.breakdown) {
+        expect(h.twaDeg).toBeCloseTo(twaDeg(h.courseDeg, h.twdDeg), 6);
+      }
+      for (const p of a.pointPassages) {
+        if (!p.segment) continue;
+        expect(p.segment.twaDeg).toBeCloseTo(
+          twaDeg(p.segment.courseDeg, p.segment.twdDeg),
+          6,
+        );
+      }
+    });
+
+    it('der Abschnitt mit 36° TWA wird gekreuzt, auch wenn die Stunde anders begann', () => {
+      const { snapshot, leg } = etappe();
+      const a = assessLeg(leg, 1, snapshot);
+      const letzter = a.pointPassages[a.pointPassages.length - 1]!.segment!;
+      expect(letzter.twaDeg).toBeLessThan(params.beatTwaDeg);
+      expect(letzter.kreuzen).toBe(true);
+      expect(a.kreuzHours!).toBeGreaterThan(0);
+      // Der Kreuz-Abschnitt taucht in der Warnliste auf, statt im Halbwind zu
+      // verschwinden — rund die 4 sm des letzten Schlags.
+      const kreuz = a.kursAbschnitte.find((k) => k.kategorie === 'kreuz');
+      expect(kreuz).toBeDefined();
+      expect(kreuz!.distanceNm).toBeGreaterThan(3);
+    });
+
+    it('kein Schritt ist länger als die Stunde, in der er liegt', () => {
+      const { snapshot, leg } = etappe();
+      const a = assessLeg(leg, 1, snapshot);
+      const summe = a.breakdown.reduce((s, h) => s + h.hours, 0);
+      expect(summe).toBeCloseTo(a.totalHours!, 6);
+      for (const h of a.breakdown) expect(h.hours).toBeLessThanOrEqual(1 + 1e-9);
+      // Die Schritte einer Stunde teilen sich deren Zeitstempel.
+      const proStunde = new Map<string, number>();
+      for (const h of a.breakdown) {
+        proStunde.set(h.timeIso, (proStunde.get(h.timeIso) ?? 0) + h.hours);
+      }
+      for (const stunde of proStunde.values()) {
+        expect(stunde).toBeLessThanOrEqual(1 + 1e-9);
+      }
+    });
   });
 
   it('gilt auch ohne Polare — die flache Ersatzfahrt ist die durchs Wasser', () => {

@@ -283,6 +283,13 @@ export function assessLegCached(
  * point; the FR16 wind rule is checked each hour at EVERY leg point (worst
  * point governs). Hours beyond the horizon (null) => 'unbewertet'.
  *
+ * Innerhalb der Stunde wird ABSCHNITTSWEISE gerechnet: ein Schritt endet am
+ * Kurswechsel. Eine Stunde, in der ein Wegpunkt passiert wird, gehört zu zwei
+ * Kursen — und der Kurs entscheidet über den Winkel zum Wind, über die Fahrt
+ * und darüber, ob gekreuzt werden muss. Wer die ganze Stunde auf dem Kurs
+ * rechnet, auf dem sie begann, verliert genau den Schlag, der danach gegenan
+ * geht (siehe __tests__/kreuzen.test.ts, "Abschnitte innerhalb einer Stunde").
+ *
  * `opts.departureOffsetHours` shifts the departure past the day's normal
  * departure time — used for the SECOND leg of a double-leg day, which starts
  * at the real arrival time of the first leg, not at 09:00 again.
@@ -430,161 +437,197 @@ export function assessLeg(
         return unbewertet('Etappe reicht über den Forecast-Horizont hinaus');
     }
 
-    // Current segment by progress.
-    let acc = 0;
-    let seg = segments[segments.length - 1]!;
-    for (const s of segments) {
-      acc += s.nm;
-      if (traveled < acc) {
-        seg = s;
-        break;
-      }
-    }
-    const progressPointIdx =
-      traveled / total < (acc - seg.nm / 2) / total ? seg.fromIdx : seg.toIdx;
-    // Worst case for THIS segment's course (most on the nose within the sector).
-    const wc = worstCaseWind(params, seg.course);
-    const rawProgressWind = windAt(
-      snapshot.forecast[points[progressPointIdx]!.key],
-      idx,
-    );
-    const usedWorstCase = substitutes(rawProgressWind);
-    const progressWind = usedWorstCase ? wc : rawProgressWind;
-    if (!progressWind)
-      return unbewertet('Forecast-Stunden fehlen im Etappenfenster (Horizont)');
-    if (usedWorstCase) {
-      reasons.add(
-        `Fernbereich gegen Meltemi-Worst-Case gerechnet (${wc.twsKn} kn aus ${Math.round(wc.fromDeg)}°)`,
-      );
-    }
-
-    // FR16 rule at EVERY point this hour — worst point governs.
+    // Ein angenommener Wert an EINEM Punkt genügt, um die ganze Etappe zu
+    // kennzeichnen — je Stunde einmal gezählt, nicht je Kursabschnitt.
     for (const p of points) {
-      const fc = snapshot.forecast[p.key];
-      // One assumed hour at ONE point is enough to mark the whole leg: the
-      // ampel is the worst point, so the basis must be the weakest basis.
-      if (fc?.windAssumed[idx]) assumedHours++;
-      const raw = windAt(fc, idx);
-      const w = substitutes(raw) ? wc : raw;
-      if (!w) {
-        verdicts.push('unbewertet');
-        reasons.add('Forecast an einem Wegpunkt unvollständig (Horizont)');
-        continue;
-      }
-      const t = twaDeg(seg.course, w.fromDeg);
-      const v = upwindWindVerdict(t, w.twsKn, params);
-      verdicts.push(v);
-      if (v === 'rot') reasons.add(upwindRotReason(params));
-      if (v === 'gelb') reasons.add('Wind nahe der Aufkreuz-Schwelle');
+      if (snapshot.forecast[p.key]?.windAssumed[idx]) assumedHours++;
     }
-
-    const twa = twaDeg(seg.course, progressWind.fromDeg);
-    twsSum += progressWind.twsKn;
-    twaSum += twa;
-    twdSinSum += Math.sin(rad(progressWind.fromDeg));
-    twdCosSum += Math.cos(rad(progressWind.fromDeg));
-    samples++;
 
     /**
-     * Fahrtmodell: Polare (+Offset, nur in polar.ts) mit KREUZ-MODELL
-     * (polar.ts, `courseSpeedKn`). Unter `beatTwaDeg` wird der Kurs nicht
-     * angelegen, sondern gekreuzt — auf der Ideallinie kommt dann nur
-     * cos(beat)/cos(TWA) der Fahrt an. Motor, sobald Segeln langsamer wäre als
-     * `minSailSpeedKn`; gemessen wird dafür die Fahrt AUF DEM KURS, denn genau
-     * die entscheidet, ob sich Segeln noch lohnt — unter Motor liegt der Kurs
-     * an, gekreuzt wird nicht.
+     * Der Rest DIESER Stunde. Er wird abschnittsweise verbraucht: eine Stunde,
+     * in der ein Wegpunkt passiert wird, gehört zu ZWEI Kursen, und mit ihr
+     * auch die Fahrt und der Winkel zum Wind.
+     *
+     * Vorher lief die ganze Stunde auf dem Kurs, auf dem sie BEGONNEN hatte.
+     * Bei einer Etappe, die mit 0,6 sm aus der Bucht heraus nach Süden
+     * anfängt und dann 5 sm nach Osten läuft, wurde damit die ganze erste
+     * Stunde vor dem Wind gerechnet — und der Schlag, der danach mit 36° TWA
+     * gegenan geht, erschien als Halbwind-Abschnitt: kein Kreuzen, keine
+     * Kreuz-Stunden, keine Warnung. Genau die Zahl, an der der Solver das
+     * Aufkreuzen VERMEIDET (solver.ts, `kreuzTenths`), fehlte damit.
      */
-    let speed: number;
-    let motoring: boolean;
-    let kreuzen: boolean;
-    let sailedTwa: number;
-    let boatSpeed: number;
-    if (polar) {
-      const cs = courseSpeedKn(polar, twa, progressWind.twsKn, params);
-      motoring = cs.speedKn < params.minSailSpeedKn;
-      speed = motoring ? motorSpeedKn(params) : cs.speedKn;
-      kreuzen = cs.kreuzen && !motoring;
-      sailedTwa = kreuzen ? cs.sailedTwaDeg : twa;
-      boatSpeed = kreuzen ? cs.boatSpeedKn : speed;
-    } else {
-      const upwind = twa < params.upwindTwaDeg;
-      motoring = progressWind.twsKn <= params.lightWindMaxTwsKn;
-      const flat = fallbackSpeedKn(upwind, motoring, params);
-      // Auch ohne Polare gilt die Kreuz-Grenze: die flache Ersatzfahrt ist die
-      // Fahrt DURCHS WASSER am Wind, nicht die über der Ideallinie.
-      kreuzen = !motoring && twa < params.beatTwaDeg;
-      speed = kreuzen ? flat * kreuzFactor(twa, params) : flat;
-      sailedTwa = kreuzen ? params.beatTwaDeg : twa;
-      boatSpeed = flat;
-    }
-    if (speed <= 0) {
-      motoring = true;
-      kreuzen = false;
-      speed = motorSpeedKn(params);
-      sailedTwa = twa;
-      boatSpeed = speed;
-    }
+    let stundenRest = 1;
+    while (stundenRest > 1e-9 && traveled < total) {
+      // Current segment by progress.
+      let acc = 0;
+      let seg = segments[segments.length - 1]!;
+      for (const s of segments) {
+        acc += s.nm;
+        if (traveled < acc) {
+          seg = s;
+          break;
+        }
+      }
+      const progressPointIdx =
+        traveled / total < (acc - seg.nm / 2) / total ? seg.fromIdx : seg.toIdx;
+      // Worst case for THIS segment's course (most on the nose within the sector).
+      const wc = worstCaseWind(params, seg.course);
+      const rawProgressWind = windAt(
+        snapshot.forecast[points[progressPointIdx]!.key],
+        idx,
+      );
+      const usedWorstCase = substitutes(rawProgressWind);
+      const progressWind = usedWorstCase ? wc : rawProgressWind;
+      if (!progressWind)
+        return unbewertet('Forecast-Stunden fehlen im Etappenfenster (Horizont)');
+      if (usedWorstCase) {
+        reasons.add(
+          `Fernbereich gegen Meltemi-Worst-Case gerechnet (${wc.twsKn} kn aus ${Math.round(wc.fromDeg)}°)`,
+        );
+      }
 
-    const remaining = total - traveled;
-    const hourFraction = Math.min(1, remaining / speed);
-    const travelBefore = traveled;
-    const elapsedBefore = sailHours + motorHours;
-    traveled += speed * hourFraction;
-    if (motoring) motorHours += hourFraction;
-    else sailHours += hourFraction;
-    if (kreuzen) {
-      kreuzHours += hourFraction;
-      // Der Umweg: durchs Wasser gesegelt minus auf dem Kurs gutgemacht.
-      kreuzExtraNm += (boatSpeed - speed) * hourFraction;
-    }
+      // FR16 rule at EVERY point, für JEDEN Kurs dieser Stunde — worst point
+      // governs, und der schlechteste Kurs zählt genauso.
+      for (const p of points) {
+        const raw = windAt(snapshot.forecast[p.key], idx);
+        const w = substitutes(raw) ? wc : raw;
+        if (!w) {
+          verdicts.push('unbewertet');
+          reasons.add('Forecast an einem Wegpunkt unvollständig (Horizont)');
+          continue;
+        }
+        const t = twaDeg(seg.course, w.fromDeg);
+        const v = upwindWindVerdict(t, w.twsKn, params);
+        verdicts.push(v);
+        if (v === 'rot') reasons.add(upwindRotReason(params));
+        if (v === 'gelb') reasons.add('Wind nahe der Aufkreuz-Schwelle');
+      }
 
-    // FR30: record what this hour contributed, so the day card can explain
-    // the total instead of asking the skipper to trust it.
-    breakdown.push({
-      timeIso: snapshot.times[idx] ?? `+${h}h`,
-      courseDeg: seg.course,
-      twdDeg: progressWind.fromDeg,
-      twsKn: progressWind.twsKn,
-      twaDeg: twa,
-      speedKn: speed,
-      motoring,
-      kreuzen,
-      sailedTwaDeg: sailedTwa,
-      boatSpeedKn: boatSpeed,
-      distanceNm: speed * hourFraction,
-      worstCase: usedWorstCase,
-    });
+      const twa = twaDeg(seg.course, progressWind.fromDeg);
 
-    // FR30 — Durchfahrten: jeder Punkt, dessen Kilometrierung in DIESER Stunde
-    // überfahren wurde, bekommt seine Zeit. Die Zeit wird innerhalb der Stunde
-    // linear interpoliert (konstanter Speed über die Stunde ist genau die
-    // Annahme, mit der auch `traveled` fortgeschrieben wird — keine zweite,
-    // abweichende Modellannahme).
-    while (
-      nextPointIdx < points.length &&
-      cumNm[nextPointIdx]! <= traveled + 1e-9
-    ) {
-      const dist = cumNm[nextPointIdx]!;
-      const hoursIntoStep = speed > 0 ? (dist - travelBefore) / speed : 0;
-      passages.push({
-        pointKey: points[nextPointIdx]!.key,
-        distanceNm: dist,
-        etaIso: new Date(
-          departureMs + (elapsedBefore + hoursIntoStep) * 3600_000,
-        ).toISOString(),
-        segment: {
-          courseDeg: segments[nextPointIdx - 1]?.course ?? seg.course,
-          distanceNm: segments[nextPointIdx - 1]?.nm ?? 0,
-          twdDeg: progressWind.fromDeg,
-          twsKn: progressWind.twsKn,
-          twaDeg: twa,
-          speedKn: speed,
-          motoring,
-          kreuzen,
-          worstCase: usedWorstCase,
-        },
+      /**
+       * Fahrtmodell: Polare (+Offset, nur in polar.ts) mit KREUZ-MODELL
+       * (polar.ts, `courseSpeedKn`). Unter `beatTwaDeg` wird der Kurs nicht
+       * angelegen, sondern gekreuzt — auf der Ideallinie kommt dann nur
+       * cos(beat)/cos(TWA) der Fahrt an. Motor, sobald Segeln langsamer wäre als
+       * `minSailSpeedKn`; gemessen wird dafür die Fahrt AUF DEM KURS, denn genau
+       * die entscheidet, ob sich Segeln noch lohnt — unter Motor liegt der Kurs
+       * an, gekreuzt wird nicht.
+       */
+      let speed: number;
+      let motoring: boolean;
+      let kreuzen: boolean;
+      let sailedTwa: number;
+      let boatSpeed: number;
+      if (polar) {
+        const cs = courseSpeedKn(polar, twa, progressWind.twsKn, params);
+        motoring = cs.speedKn < params.minSailSpeedKn;
+        speed = motoring ? motorSpeedKn(params) : cs.speedKn;
+        kreuzen = cs.kreuzen && !motoring;
+        sailedTwa = kreuzen ? cs.sailedTwaDeg : twa;
+        boatSpeed = kreuzen ? cs.boatSpeedKn : speed;
+      } else {
+        const upwind = twa < params.upwindTwaDeg;
+        motoring = progressWind.twsKn <= params.lightWindMaxTwsKn;
+        const flat = fallbackSpeedKn(upwind, motoring, params);
+        // Auch ohne Polare gilt die Kreuz-Grenze: die flache Ersatzfahrt ist die
+        // Fahrt DURCHS WASSER am Wind, nicht die über der Ideallinie.
+        kreuzen = !motoring && twa < params.beatTwaDeg;
+        speed = kreuzen ? flat * kreuzFactor(twa, params) : flat;
+        sailedTwa = kreuzen ? params.beatTwaDeg : twa;
+        boatSpeed = flat;
+      }
+      if (speed <= 0) {
+        motoring = true;
+        kreuzen = false;
+        speed = motorSpeedKn(params);
+        sailedTwa = twa;
+        boatSpeed = speed;
+      }
+
+      /**
+       * Der Schritt endet, wo der Kurs sich ändert: am Ende dieses Abschnitts,
+       * am Ende der Etappe oder am Ende der Stunde — je nachdem, was zuerst
+       * kommt. `acc` ist die Kilometrierung des Abschnittsendes; die letzte
+       * kann durch Rundung minimal neben `total` liegen.
+       */
+      const letzterAbschnitt = seg === segments[segments.length - 1];
+      const segEnd = letzterAbschnitt ? total : acc;
+      const step = Math.min(stundenRest, (segEnd - traveled) / speed);
+      const travelBefore = traveled;
+      const elapsedBefore = sailHours + motorHours;
+      traveled += speed * step;
+      // Den Kurswechsel exakt treffen: bliebe ein Rundungsrest von Nanometern
+      // stehen, liefe der nächste Durchlauf noch einmal auf demselben
+      // Abschnitt — mit einem Schritt der Länge null.
+      if (segEnd - traveled < 1e-9) traveled = segEnd;
+      stundenRest -= step;
+      if (motoring) motorHours += step;
+      else sailHours += step;
+      if (kreuzen) {
+        kreuzHours += step;
+        // Der Umweg: durchs Wasser gesegelt minus auf dem Kurs gutgemacht.
+        kreuzExtraNm += (boatSpeed - speed) * step;
+      }
+
+      // Mittelwerte über die ZEIT, nicht über die Zeilen: ein Abschnitt von
+      // sechs Minuten darf nicht so schwer wiegen wie einer von einer Stunde.
+      twsSum += progressWind.twsKn * step;
+      twaSum += twa * step;
+      twdSinSum += Math.sin(rad(progressWind.fromDeg)) * step;
+      twdCosSum += Math.cos(rad(progressWind.fromDeg)) * step;
+      samples += step;
+
+      // FR30: record what this step contributed, so the day card can explain
+      // the total instead of asking the skipper to trust it.
+      breakdown.push({
+        timeIso: snapshot.times[idx] ?? `+${h}h`,
+        hours: step,
+        courseDeg: seg.course,
+        twdDeg: progressWind.fromDeg,
+        twsKn: progressWind.twsKn,
+        twaDeg: twa,
+        speedKn: speed,
+        motoring,
+        kreuzen,
+        sailedTwaDeg: sailedTwa,
+        boatSpeedKn: boatSpeed,
+        distanceNm: speed * step,
+        worstCase: usedWorstCase,
       });
-      nextPointIdx += 1;
+
+      // FR30 — Durchfahrten: jeder Punkt, dessen Kilometrierung in DIESEM
+      // Schritt überfahren wurde, bekommt seine Zeit. Die Zeit wird linear
+      // interpoliert (konstanter Speed über den Schritt ist genau die Annahme,
+      // mit der auch `traveled` fortgeschrieben wird — keine zweite,
+      // abweichende Modellannahme). Weil der Schritt am Kurswechsel endet,
+      // beschreiben Kurs, Wind und Winkel dieser Zeile denselben Abschnitt.
+      while (
+        nextPointIdx < points.length &&
+        cumNm[nextPointIdx]! <= traveled + 1e-9
+      ) {
+        const dist = cumNm[nextPointIdx]!;
+        const hoursIntoStep = speed > 0 ? (dist - travelBefore) / speed : 0;
+        passages.push({
+          pointKey: points[nextPointIdx]!.key,
+          distanceNm: dist,
+          etaIso: new Date(
+            departureMs + (elapsedBefore + hoursIntoStep) * 3600_000,
+          ).toISOString(),
+          segment: {
+            courseDeg: segments[nextPointIdx - 1]?.course ?? seg.course,
+            distanceNm: segments[nextPointIdx - 1]?.nm ?? 0,
+            twdDeg: progressWind.fromDeg,
+            twsKn: progressWind.twsKn,
+            twaDeg: twa,
+            speedKn: speed,
+            motoring,
+            kreuzen,
+            worstCase: usedWorstCase,
+          },
+        });
+        nextPointIdx += 1;
+      }
     }
   }
 
