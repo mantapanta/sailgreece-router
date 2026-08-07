@@ -47,6 +47,8 @@ import type { Island } from '../schema/island.ts';
 import type { Place } from '../schema/place.ts';
 import type { Leg, Variant } from '../schema/route.ts';
 import type { PlanningSnapshot } from '../schema/snapshot.ts';
+import type { WindTopoZone } from '../schema/windTopo.ts';
+import { applyWindTopo } from '../windTopo.ts';
 import { collectLocations } from '../../adapters/openMeteo.ts';
 import { constantForecast, makeTimes, TEST_POLAR, TRIP_START } from './fixtures.ts';
 
@@ -59,6 +61,14 @@ const read = <T,>(...p: string[]): T =>
 
 const legs = read<{ legs: Leg[] }>('legs.json').legs;
 const variants = read<{ variants: Variant[] }>('variants.json').variants;
+/**
+ * Die kuratierten Wind-Zonen (Düsen und Lee-Keulen, domain/windTopo.ts) gehören
+ * zur Bibliothek und damit in diesen Snapshot. Ohne sie prüfte der Test eine
+ * Physik, die zur Laufzeit gar nicht gilt: `Library.windTopoZones` ist optional,
+ * eine fehlende Liste heisst schlicht "keine Topographie" — und die Tests wären
+ * grün geblieben, während die App etwas anderes rechnet.
+ */
+const windTopoZones = read<{ zones: WindTopoZone[] }>('windtopo.json').zones;
 
 /** Nur die Inseln, die im Etappen-Graphen überhaupt vorkommen. */
 const graphIslandIds = [...new Set(legs.flatMap((l) => [l.fromIslandId, l.toIslandId]))];
@@ -98,13 +108,13 @@ function realSnapshot(
     ]),
   );
 
-  return {
+  const roh: PlanningSnapshot = {
     fetchedAtIso: `${TRIP_START}T06:00:00Z`,
     modelRunIso: `${TRIP_START}T00:00:00Z`,
     model: 'test',
     times,
     forecast,
-    library: { islands, places, invalidPlaces: [], legs, variants },
+    library: { islands, places, invalidPlaces: [], legs, variants, windTopoZones },
     params,
     polar: TEST_POLAR,
     trip: {
@@ -121,6 +131,13 @@ function realSnapshot(
       stopHoursByDay: {},
     },
   };
+
+  /**
+   * Der DÜSEN-Zuschlag, genau wie `assessPlanning` ihn setzt: als erster
+   * Schritt, bevor irgendetwas bewertet wird. Die Lee-Keulen brauchen das
+   * nicht — die liest `assessLeg` selbst aus `library.windTopoZones`.
+   */
+  return applyWindTopo(roh).snapshot;
 }
 
 const RAHMEN = deadlineFrame({ ...DEFAULT_PARAMS, tripStartDate: TRIP_START }).deadlineDay;
@@ -307,6 +324,45 @@ describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
       // Und der Heimweg läuft im westlichen Lee-Korridor, ohne Ausreisser.
       expect(metrics.rueckwegAbweichung, `${dir}° — Lee-Korridor`).toBe(0);
     }
+  });
+
+  it('bei NNW gibt es GAR KEINE Runde im Uhrzeigersinn — und die App behauptet auch keine', () => {
+    /**
+     * DIE GRENZE DER REGEL, als Test festgehalten statt wegoptimiert.
+     *
+     * Bei 16 kn aus 340° (NNW) liefert der Solver eine Runde GEGEN den
+     * Uhrzeigersinn. Das sieht aus wie der Fehler, den der Skipper am
+     * 2026-08-07 beanstandet hat — ist aber die richtige Antwort, und der
+     * Unterschied ist nachgerechnet: von den 27 packbaren vollen Runden ist
+     * KEINE EINZIGE im Uhrzeigersinn. Es gibt nichts Besseres zu wählen.
+     *
+     * Der Grund ist Geometrie, nicht Rangfolge: Athen liegt nordwestlich der
+     * Kykladen. Bei NNW-Wind läuft die westliche Heimkette (Milos → Sifnos →
+     * Serifos → Kythnos → Athen, Kurse N bis NNO) dead upwind, während der
+     * östliche Heimweg (Kurse um 310°) 30–40° besser anliegt.
+     *
+     * Und die Wind-Topographie kann daran nichts ändern: die Lee-Keulen auf
+     * Kea/Kythnos/Serifos/Sifnos senken die Wind-STÄRKE, aber Kreuzen ist ein
+     * WINKEL-Problem. Abdeckung hilft gegen zu viel Wind, nicht gegen zu spitz.
+     *
+     * Was der Test wirklich absichert: die App gibt bei so einer Lage nicht
+     * vor, die Regel einzuhalten. `umlaufsinnPasst` steht auf false, die
+     * Lee-Abweichung ist sichtbar — und der Rahmen-Vertrag hält trotzdem.
+     */
+    const snapshot = realSnapshot({ windKn: 16, windDirDeg: 340 });
+    // Die grobe Regel sagt weiterhin "im Uhrzeigersinn" — sie kennt nur die
+    // Nord-Komponente, nicht die Kurse der Heimkette.
+    expect(umlaufsinnGebot(snapshot)).toBe('im-uhrzeigersinn');
+
+    const solved = completePlan(snapshot, 'athen')!;
+    const metrics = planMetricsFor(snapshot)(solved);
+
+    // Der Rahmen-Vertrag hält auch hier — die Lage kostet die Richtung, nicht den Törn.
+    expect(metrics.legDays).toBe(11);
+    expect(metrics.repeatStays).toBe(0);
+    // Und die Abweichung wird zugegeben, nicht kaschiert.
+    expect(metrics.umlaufsinnPasst).toBe(false);
+    expect(metrics.rueckwegAbweichung).toBeGreaterThan(0);
   });
 
   it('der Lee-Korridor rankt ÜBER den gemessenen Kreuzstunden des Rückwegs', () => {
