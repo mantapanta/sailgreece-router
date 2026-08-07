@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { loadLibraryBundle } from '../adapters/firestore.ts';
+import { loadLibraryBundle } from '../adapters/library.ts';
 import { collectLocations, fetchForecastBundle } from '../adapters/openMeteo.ts';
 import { assessPlanning } from '../domain/assess.ts';
 import { isLateDeparture } from '../domain/scoring.ts';

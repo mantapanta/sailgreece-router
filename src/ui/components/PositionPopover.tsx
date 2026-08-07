@@ -3,7 +3,7 @@
  * EXPERIENCE Open Question 5 keeps position controls behind this popover;
  * review may flip them to a permanently visible control without archaeology.
  *
- * Popover contract per the Interaction Primitives (AvatarMenu is the copied
+ * Popover contract per the Interaction Primitives (AltRouteMenu is the copied
  * pattern): one at a time, Esc/backdrop/trigger close it, focus moves in on
  * open, is trapped while open and returns to the trigger on close.
  */

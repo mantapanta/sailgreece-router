@@ -377,7 +377,7 @@ function LegendPopover({
  * die halbe Höhe. Jetzt nennt der Chip die gezeigte Route und öffnet die Liste;
  * gewählt wird darin, Hauptroute inklusive.
  *
- * Popover-Kontrakt wie AvatarMenu (Interaction Primitives): eines zur Zeit,
+ * Popover-Kontrakt der Interaction Primitives: eines zur Zeit,
  * Esc/Backdrop/Auslöser schliessen, Fokus geht hinein und zurück zum Auslöser.
  * Der Auslöser ist KEIN Umschalter (kein aria-pressed) — er öffnet ein Menü;
  * welche Route gerade gilt, sagen sein Name und die aria-checked-Zeile.

@@ -16,7 +16,7 @@
  * der Kartenansicht, für die die Chip-Form gebaut wurde, ist mit dem Feedback
  * vom 2026-08-06 entfallen — die Karte trägt keine Etappenzeilen mehr.)
  *
- * Popover-Kontrakt wie AltRouteMenu/AvatarMenu (Interaction Primitives): eines
+ * Popover-Kontrakt wie AltRouteMenu (Interaction Primitives): eines
  * zur Zeit, Esc/Backdrop/Auslöser schliessen, Fokus geht hinein und zurück zum
  * Auslöser. Der Auslöser ist kein Umschalter — er öffnet ein Menü; welche
  * Stunde gilt, sagt sein Text.

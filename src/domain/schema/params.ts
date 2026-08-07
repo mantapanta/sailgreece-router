@@ -2,9 +2,9 @@ import { z } from 'zod';
 import { forecastModelInfo, type ForecastKind } from './models.ts';
 
 /**
- * AD-8: all tuning parameters live in the Firestore `config` document
- * (documents `polar` + `parameters`), not in code — field correction without
- * redeploy. Defaults here mirror PRD FR15/FR16/FR26 and the brief.
+ * AD-8: all tuning parameters live in data, not in code — `seeding/data/`
+ * (`config.json` + `polar.json`), one commit per correction. Defaults here
+ * mirror PRD FR15/FR16/FR26 and the brief.
  * Parameters reach the snapshot RAW; they are applied ONLY in the core (AD-10).
  */
 const ParamsObjectSchema = z.object({
@@ -466,7 +466,7 @@ const ParamsObjectSchema = z.object({
  * Prüft ein Modell-Feld — aber NUR, wenn die Id in der Registry BEKANNT ist.
  *
  * Warum diese Grenze: eine unbekannte Id darf das Schema NICHT scheitern lassen.
- * `parseTolerant` (adapters/firestore.ts) verwirft bei einem Schemafehler das
+ * `parseTolerant` (adapters/library.ts) verwirft bei einem Schemafehler das
  * GANZE Parameter-Dokument und fällt auf DEFAULT_PARAMS zurück — ein Tippfehler
  * in einer Modell-Id würde also stumm die gesamte Abstimmung wegwerfen
  * (Meltemi-Schwellen, Stichtag, Budgets). Dazu driftet der Katalog eines fremden
@@ -500,9 +500,9 @@ function knownModelIssue(
 }
 
 /**
- * Cross-field validation: the config document is editable in Firestore
- * without redeploy (AD-8) — inconsistent combinations must fail loudly
- * instead of silently producing nonsense windows/ampeln.
+ * Cross-field validation: `config.json` is edited by hand (AD-8) —
+ * inconsistent combinations must fail loudly instead of silently producing
+ * nonsense windows/ampeln.
  */
 export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
   const p = ctx.value;

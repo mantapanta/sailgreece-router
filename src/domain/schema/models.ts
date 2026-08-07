@@ -24,8 +24,8 @@
  * THREDDS-Server, also NetCDF via OPeNDAP — und typischerweise auch NCSS
  * (Punkt-Zeitreihen als CSV/JSON über normales HTTP). Der Blocker ist damit
  * NICHT das Dateiformat, sondern CORS plus das fehlende Backend: diese App ist
- * reines Hosting (firebase.json), eine Anbindung bräuchte eine geplante
- * Cloud Function, die die Ortsmenge abruft und nach Firestore legt. Sie würde
+ * ein reines Frontend ohne eigenen Server, eine Anbindung bräuchte eine
+ * geplante Funktion, die die Ortsmenge abruft und ablegt. Sie würde
  * dann als drittes, noch feineres NAHFELD in `mergeNearFar` einhängen —
  * derselbe Mechanismus, kein neuer. Das Nächstbeste an Modellen — feineres
  * Gitter über der Ägäis — steht unten.

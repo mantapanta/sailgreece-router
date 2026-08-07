@@ -69,8 +69,8 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   „Topografische Windkorrektur".
 
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
-@vis.gl/react-google-maps 1.x · Firebase (Authentication + Firestore +
-Hosting) · Vitest 4.
+@vis.gl/react-google-maps 1.x · Vitest 4. Kein Backend, keine Anmeldung: die
+Bibliothek liegt als JSON im Repo und wandert ins Bundle.
 
 ## Schnellstart (Entwicklung)
 
@@ -81,21 +81,21 @@ der `package.json`.
 
 ```bash
 npm install
-cp .env.example .env        # VITE_DATA_SOURCE=local ist der Standard
+cp .env.example .env        # nur die beiden Maps-Werte, sonst nichts
 npm run dev
 ```
 
-`VITE_DATA_SOURCE=local` lädt die Staging-JSONs aus `seeding/data/` direkt —
-die App rechnet damit voll (echte Open-Meteo-Forecasts, alle Bewertungen), ohne
-dass Firestore befüllt sein muss. Ohne Google-Maps-Key zeigt die
-Karten-Ansicht einen Hinweis statt der Karte; alles andere funktioniert.
+Die App liest die Staging-JSONs aus `seeding/data/` direkt (`import.meta.glob`
+in `adapters/library.ts`) und rechnet damit voll: echte Open-Meteo-Forecasts,
+alle Bewertungen, kein Backend, keine Anmeldung. Ohne Google-Maps-Key zeigt
+die Karten-Ansicht einen Hinweis statt der Karte; alles andere funktioniert.
 
-**Die Anmeldung ist auch in der Entwicklung Pflicht.** Vor der Tagesansicht
-steht der Login-Gate (Firebase Authentication, Google Sign-in); die
-`VITE_FIREBASE_*`-Werte müssen also in jedem Fall in der `.env` stehen (siehe
-Schritt 1 und 3). Fehlen sie, zeigt der Login-Screen einen benannten Hinweis
-statt des Google-Buttons — es gibt bewusst keinen Bypass, weder für `local`
-noch für `firestore`.
+**Es gibt keinen Login mehr.** Der frühere Google-Sign-in-Gate (Firebase
+Authentication) ist entfallen: er existierte nur, weil die Firestore-Rules für
+jeden Lesezugriff eine Sitzung verlangten — und er kostete bei jedem
+Vercel-Preview eine neue autorisierte Domain (Firebase kennt dort keine
+Wildcards). Wer die App nicht sehen soll, wird vor der Auslieferung gesperrt
+(Vercel Deployment Protection), nicht in der App.
 
 Verifikation:
 
@@ -106,91 +106,59 @@ npm run build      # tsc --noEmit + vite build
 
 ## Setup für den Betrieb (Philipp)
 
-### 1. Firebase-Projekt, Web-App, Authentication, Firestore
+### 1. Zugriffsschutz (statt Login)
 
-Alles über die CLI — die Konsole braucht es nur für den Sign-in-Provider.
+Die App ist nicht öffentlich gedacht, hat aber keine eigene Anmeldung mehr.
+Der Schutz sitzt eine Ebene höher, bei Vercel: **Deployment Protection**
+(Vercel Authentication oder Passwort) im Projekt → *Settings → Deployment
+Protection*.
 
-1. Anmelden und Projekt verknüpfen:
-
-   ```bash
-   npx -y firebase-tools@latest login
-   npx -y firebase-tools@latest use <projectId>
-   ```
-
-2. Web-App registrieren und Config auslesen:
-
-   ```bash
-   npx -y firebase-tools@latest apps:create WEB "sailgreece-router Web"
-   npx -y firebase-tools@latest apps:sdkconfig WEB
-   ```
-
-   Aus dem Config-Objekt brauchst du `apiKey`, `projectId`, `appId` — und
-   optional `authDomain`, `messagingSenderId`, `storageBucket`.
-
-3. **Authentication einrichten und Google Sign-in aktivieren** (nur in der
-   Konsole möglich, weder CLI noch MCP können das):
-   <https://console.firebase.google.com> → Projekt → **Authentication → Jetzt
-   starten** → **Sign-in method → Google → aktivieren** → Support-E-Mail
-   wählen → Speichern.
-
-   Die beiden Stufen sind unterschiedliche Fehlerbilder, und die App
-   unterscheidet sie:
-   - Authentication nie initialisiert → `auth/configuration-not-found`. Das
-     SDK meldet diesen Fall **gar nicht** an `onAuthStateChanged` (auch
-     `authStateReady()` bleibt hängen), deshalb bricht ein Watchdog nach 8 s
-     ab und zeigt den Hinweis, statt ewig zu laden.
-   - Initialisiert, Google-Provider aus → `auth/operation-not-allowed`.
-
-4. **Autorisierte Domains** prüfen (Authentication → Settings → Authorized
-   domains): `localhost` steht dort per Default, die Hosting-Domain
-   (`<projectId>.web.app` / `.firebaseapp.com`) ebenfalls. Jede weitere Domain
-   (z. B. Vercel-Preview) muss ergänzt werden, sonst schlägt der Login mit
-   `auth/unauthorized-domain` fehl.
-
-5. Firestore-Datenbank anlegen (falls noch nicht vorhanden), Region
-   `europe-west` (z. B. `europe-west1`), Produktionsmodus.
-
-6. Security Rules deployen (angemeldet lesen, niemand schreibt — AD-5):
-
-   ```bash
-   npx -y firebase-tools@latest deploy --only firestore:rules
-   ```
+Das ist genau der Punkt, an dem die frühere Lösung scheiterte: Firebase
+Authentication prüft die aufrufende Domain gegen eine feste Liste
+(*Authorized domains*) und kennt dort **keine Wildcards**. Jede
+Vercel-Deployment-URL ist neu, also starb jedes Preview mit
+`auth/unauthorized-domain`, bis die URL von Hand nachgetragen wurde.
+Deployment Protection greift dagegen für alle Preview-URLs automatisch, ohne
+Liste und ohne Konsole.
 
 ### 2. Google-Maps-Key
 
-1. In der Google Cloud Console (gleiches Projekt): **Maps JavaScript API**
-   aktivieren, API-Key anlegen.
-2. Key doppelt absichern: **HTTP-Referrer-Restriction** (deine
-   Hosting-Domain, z. B. `sailgreece-router.web.app/*`) **und**
-   **API-Restriction** (nur Maps JavaScript API). Der Key liegt als
-   `VITE_`-Variable im Bundle — öffentlich by design, darum die Restriktionen.
+1. In der Google Cloud Console: **Maps JavaScript API** aktivieren, API-Key
+   anlegen.
+2. Key doppelt absichern: **HTTP-Referrer-Restriction** (deine Domain, für
+   Previews z. B. `*.vercel.app/*`) **und** **API-Restriction** (nur Maps
+   JavaScript API). Der Key liegt als `VITE_`-Variable im Bundle — öffentlich
+   by design, darum die Restriktionen.
 3. Pflicht für die Karte: eine **Map ID** anlegen (Map Management) für
    AdvancedMarker. Ohne echte Map-ID zeigt die App einen benannten Hinweis
    statt der Karte — es gibt keinen Demo-Fallback.
 
 ### 3. Umgebungsvariablen
 
-`.env` (aus `.env.example` kopieren):
+`.env` (aus `.env.example` kopieren) — zwei Werte, beide nur für die Karte:
 
 ```bash
-VITE_DATA_SOURCE=firestore          # 'local' = Staging-JSONs statt Firestore
 VITE_GOOGLE_MAPS_API_KEY=<dein Key>
 VITE_GOOGLE_MAPS_MAP_ID=<Map-ID>     # Pflicht für die Karte, kein Demo-Fallback
-
-# Pflicht (Login-Gate), Werte aus `apps:sdkconfig WEB`:
-VITE_FIREBASE_API_KEY=<apiKey>
-VITE_FIREBASE_PROJECT_ID=<projectId>
-VITE_FIREBASE_APP_ID=<appId>
-# optional, sonst aus projectId abgeleitet:
-VITE_FIREBASE_AUTH_DOMAIN=<projectId>.firebaseapp.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=<messagingSenderId>
-VITE_FIREBASE_STORAGE_BUCKET=<storageBucket>
 ```
 
-Der Firebase-API-Key ist — wie der Maps-Key — öffentlich by design: er
-identifiziert das Projekt, er autorisiert nichts. Der Schutz kommt aus den
-Security Rules und der Liste der autorisierten Domains, nicht aus der
-Geheimhaltung des Keys.
+Die Bibliothek braucht keine Variable: sie kommt aus `seeding/data/` und liegt
+im Bundle. `VITE_DATA_SOURCE` und die `VITE_FIREBASE_*`-Werte sind mit dem
+Firestore-Lesepfad entfallen — stehen sie noch in der `.env` oder in den
+Vercel-Projekteinstellungen, werden sie schlicht ignoriert.
+
+### 3a. Firebase-Projekt (nur noch fürs Seeding)
+
+Für `npm run seed:import` braucht es weiterhin ein Firebase-Projekt mit
+Firestore und einen Service-Account (siehe Schritt 4). Die App liest dort
+nichts mehr — Authentication und die Web-App-Registrierung sind damit
+gegenstandslos, `firestore.rules` deckt nur noch den Import ab:
+
+```bash
+npx -y firebase-tools@latest login
+npx -y firebase-tools@latest use <projectId>
+npx -y firebase-tools@latest deploy --only firestore:rules
+```
 
 ### 4. Seeding: Review → Freigabe → Import
 
@@ -244,50 +212,46 @@ Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
    (`Import abgeschlossen: … kiteSpots=0`) nennt die Zahlen — sie ist die
    Kontrolle, nicht der Exit-Code.
 
-   Feldkorrekturen über die Firebase-Konsole sind als Notweg erlaubt —
-   müssen aber ins Staging-JSON zurückgetragen werden, sonst überschreibt
-   der nächste Import sie (AD-5).
+   Der Import ist seit dem Wegfall des Firestore-Lesepfads **nicht mehr der
+   Weg in die App** — er füllt nur noch die Datenbank. Was die App zeigt,
+   steht in `seeding/data/`. Feldkorrekturen über die Firebase-Konsole wirken
+   entsprechend nirgends mehr; korrigiert wird im Staging-JSON (AD-5).
 
-### 5. Deploy (klassisches Firebase Hosting)
+### 5. Deploy
 
 ```bash
-npm run build          # baut nach dist/
-firebase deploy        # Hosting (dist/) + Rules
+npm run build          # baut nach dist/, rein statisch
 ```
 
-Manuell, kein CI — reicht für einen Nutzer und 9 Tage (AD-8).
+Auf Vercel ist der Push der Deploy: jeder Commit auf `main` geht nach
+Produktion, jeder Branch bekommt ein Preview. Weil die Bibliothek im Bundle
+steckt, bringt derselbe Push **Code und Daten** — ein separater Datenschritt
+entfällt.
 
 ### Neue Bibliotheksdaten sind in der App nicht sichtbar
 
-Ein Merge nach `main` bringt **Code**, keine **Daten**. Restaurants
-(`place.restaurants`, Subebene des Platzes) und Kite-Spots (eigene Collection
-`kiteSpots`) leben in Firestore und kommen dort nur durch einen neuen Import
-an. Im local-Modus (`VITE_DATA_SOURCE=local`) sind sie sofort da, weil die
-Staging-JSONs direkt gelesen werden — das `approved`-Flag gilt nur für den
-Import, nicht für den local-Modus. Wer die Ebene im Deploy vermisst, geht
-diese vier Schritte der Reihe nach durch:
+Seit die App die Staging-JSONs direkt liest, ist das fast immer ein
+Deploy-Problem und kein Datenproblem — ein Merge nach `main` bringt beides
+zugleich. Der Reihe nach:
 
-1. **Freigabe:** trägt die Staging-Datei `approved: true`? Eine Datei ohne
-   Freigabe wird bei *jedem* Import stillschweigend übersprungen — der Lauf
-   endet trotzdem mit Exit 0.
-2. **Import:** `npm run seed:import` erneut laufen lassen und die Schlusszeile
-   lesen. Restaurants haben **kein eigenes Dokument** — sie stecken in den
-   `places`-Dokumenten und wandern nur mit einem erneuten Insel-Import mit.
-3. **Rules:** `firebase deploy --only firestore:rules`. Eine Collection ohne
-   eigenen Block fällt in den Catch-All und ist gesperrt; der Adapter fängt
-   die Ablehnung für `kiteSpots` und `windTopoZones` bewusst ab, damit eine
-   fehlende Regel nicht die ganze Bibliothek mitnimmt — die Ebene bleibt dann
-   still leer, mit einer Meldung in der Browser-Konsole.
-4. **Bundle:** `npm run build && firebase deploy` — die neuen Karten
-   (Gastro, Kite) stecken im Bundle, nicht in den Daten.
+1. **Deploy:** ist der Commit mit der geänderten Staging-Datei wirklich
+   deployt? `dist/` wird bei jedem Build neu aus `seeding/data/` erzeugt.
+2. **Schema:** eine Datei, die das Zod-Schema verletzt, wird tolerant
+   behandelt — der Platz erscheint als 'unbewertet', die Kite- oder
+   Topo-Ebene bleibt leer. Die Browser-Konsole nennt Datei und Feld.
+3. **Ort der Daten:** Restaurants (`place.restaurants`) sind eine Subebene des
+   Platzes und stecken in der Insel-Datei; Kite-Spots stehen in
+   `kitespots.json`, Windzonen in `windtopo.json`.
+
+Das `approved`-Flag spielt hier **keine** Rolle: es gilt nur für den Import
+nach Firestore, nicht für das, was die App liest.
 
 ## Tuning-Parameter
 
 Alle fachlichen Parameter (Polar-Offset +0,5 kn, Motorfahrt 8 kn,
 FR16-Budgets, Aufkreuz-Schwelle 25 kn, Gelb-Reserve, Zeitfenster,
-Forecast-Modell …) liegen im Firestore-Dokument `config/parameters`
-(bzw. `seeding/data/config.json` im local-Modus) — Feldkorrektur ohne
-Redeploy.
+Forecast-Modell …) liegen in `seeding/data/config.json` — eine Feldkorrektur
+ist ein Commit, und der Push ist der Deploy.
 
 ### Forecast-Modelle: Nahfeld + Fernfeld
 
@@ -397,20 +361,17 @@ eine Verbindung.
 src/
   domain/          # purer Core: schema/ (Zod), time, polar, scoring,
                    # ampel, options, ppr, persistence, assess, searoute,
-                   # legGeometry, kite — kein React/Firebase/fetch,
+                   # legGeometry, kite — kein React, kein fetch,
                    # Zeit/Törntag/Position werden injiziert (AD-2)
     data/          # landmass.ts — GENERIERTE Küstenlinien des Reviers
                    # (seeding/tools/extractLandmass.ts)
     __tests__/     # Vitest-Fixturen (Referenzfälle Sektorsemantik, 25-kn-Regel,
                    # Budgets, Polar-Interpolation+Offset, Athens→UTC)
-  adapters/        # openMeteo (Snapshot-Builder), firebase (eine einzige
-                   # App-Initialisierung, lazy), auth (Google Sign-in),
-                   # firestore (read-only, toleranter Parse, local-Modus),
-                   # geolocation
-  ui/              # drei Views + Login-Gate + Komponenten, Vanilla CSS
-  app/             # Provider (QueryClient staleTime 1 h, AuthContext mit
-                   # Login-Gate, TripContext-Reducer mit localStorage,
-                   # manual > gps), View-Switch ohne Router
+  adapters/        # openMeteo (Snapshot-Builder), library (Staging-JSONs
+                   # read-only, toleranter Parse), geolocation
+  ui/              # drei Views + Komponenten, Vanilla CSS
+  app/             # Provider (QueryClient staleTime 1 h, TripContext-Reducer
+                   # mit localStorage, manual > gps), View-Switch ohne Router
 seeding/           # Staging-JSON je Insel (approved-Flag), Review-Generator,
   data/            # islands/*.json, legs.json, variants.json, kitespots.json,
                    # windtopo.json, config.json, polar.json — je Datei ein
@@ -418,8 +379,8 @@ seeding/           # Staging-JSON je Insel (approved-Flag), Review-Generator,
   review/          # generierte FR24-Review-Sichten
   tools/           # extractLandmass (Küstenlinien zuschneiden),
                    # seaRouteLegs (Etappenkurse landfrei legen)
-firebase.json      # Hosting -> dist/
-firestore.rules    # read: nur angemeldet, write: false
+firebase.json      # nur noch Firestore-Rules-Ziel (Hosting ungenutzt)
+firestore.rules    # deckt das Seeding-Ziel ab; die App liest Firestore nicht
 ```
 
 ## Ein Segelboot fährt nicht durch eine Insel
@@ -557,7 +518,7 @@ entscheiden weiterhin FR16-Windregel und Fahrtbudgets.
 
 Das Board kommt mit — also muss die App sagen, wo man es benutzen kann. Die
 Kite-Spots sind eine **eigene Bibliothek** (`seeding/data/kitespots.json`,
-Firestore-Sammlung `kiteSpots`, Schema `src/domain/schema/kite.ts`) und keine
+Import-Sammlung `kiteSpots`, Schema `src/domain/schema/kite.ts`) und keine
 Subebene des Platzes wie die Gastronomie: ein Spot liegt dort, wo Wind und
 Wasser stimmen, und das ist regelmässig nicht der Hafen — Mikri Vigla liegt 5 sm
 von Naxos-Stadt, der Pounda-Kanal gehört zu Paros, geankert wird auf Antiparos.
@@ -632,7 +593,7 @@ im 7-km-Gitter schlicht nicht enthalten sind:
 sondern Topografie. Sie liegen bei gleicher Windrichtung immer an derselben
 Stelle — also sind sie Ortskenntnis, und Ortskenntnis ist in dieser App
 kuratiert (AD-4), wie die Schutzsektoren eines Liegeplatzes. Die Daten liegen in
-`seeding/data/windtopo.json` (Firestore-Sammlung `windTopoZones`, Schema
+`seeding/data/windtopo.json` (Import-Sammlung `windTopoZones`, Schema
 `src/domain/schema/windTopo.ts`).
 
 **Zwei Gestalten, weil es zwei Phänomene sind** — als diskriminierte Union, die
@@ -900,8 +861,8 @@ Modellwind, Lee-Wind und Fallböen-Warnung, und in der Rückweg-Empfehlung.
 
 Ginge — kostet aber ein Backend, das dieses Projekt nicht hat. HCMR verteilt
 über THREDDS (OPeNDAP, typischerweise auch NCSS für Punkt-Zeitreihen); der
-Blocker ist CORS plus reines Hosting. Eine geplante Cloud Function könnte die
-Ortsmenge abrufen und nach Firestore legen; Poseidon hinge dann als drittes,
+Blocker ist CORS plus das fehlende Backend. Eine geplante Funktion könnte die
+Ortsmenge abrufen und ablegen; Poseidon hinge dann als drittes,
 noch feineres **Nahfeld** in `mergeNearFar` — derselbe Mechanismus, kein neuer.
 Die Korrektur hier ersetzt das nicht, sie holt den Teil, der planbar ist.
 
@@ -912,7 +873,7 @@ Die Korrektur hier ersetzt das nicht, sie holt den Teil, der planbar ist.
   (ICON-EU, EWAM), Météo-France / Copernicus Marine. Die Fusszeile der App
   nennt die tatsächlich AKTIVEN Quellen — aus der Registry gerendert
   (`src/domain/schema/models.ts`), damit die Angabe nicht veraltet, wenn das
-  Modell in Firestore umgestellt wird. Die Werte werden unverändert
+  Modell in `config.json` umgestellt wird. Die Werte werden unverändert
   durchgereicht (harter Schnitt an der Nahtstelle, kein Blending), es liegen
   also keine veränderten Daten im Sinne der GeoNutzV vor.
 - Seezeichen-Overlay von [OpenSeaMap](https://www.openseamap.org)
