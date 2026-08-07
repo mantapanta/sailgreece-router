@@ -52,8 +52,10 @@ function passage(
 
 describe('Kategorie eines Abschnitts', () => {
   it('gegenan und am Wind sind Kreuz, halbwind ist Halbwind', () => {
+    // Einteilung des Skippers (2026-08-07): Kreuz bis 80°, Halbwind bis 100°.
     expect(kursKategorie(20, false)).toBe('kreuz');
     expect(kursKategorie(57, false)).toBe('kreuz'); // der Fall aus dem Feldtest
+    expect(kursKategorie(75, false)).toBe('kreuz');
     expect(kursKategorie(83, false)).toBe('halbwind');
   });
 
@@ -63,16 +65,17 @@ describe('Kategorie eines Abschnitts', () => {
   });
 
   it('an den Grenzen kippt die Kategorie erst OBERHALB', () => {
-    expect(kursKategorie(59.9, false)).toBe('kreuz');
-    expect(kursKategorie(60, false)).toBe('halbwind');
+    expect(kursKategorie(79.9, false)).toBe('kreuz');
+    expect(kursKategorie(80, false)).toBe('halbwind');
     expect(kursKategorie(99.9, false)).toBe('halbwind');
     expect(kursKategorie(100, false)).toBeNull();
   });
 
   it('ein Abschnitt, der gekreuzt werden MUSS, ist Kreuz — egal welcher Winkel', () => {
-    // beatTwaDeg darf bis 70° konfiguriert werden; dann liegt ein Kreuz-
-    // Abschnitt oberhalb der 60°-Beschriftung und muss trotzdem Kreuz heissen.
-    expect(kursKategorie(65, true)).toBe('kreuz');
+    // beatTwaDeg darf bis 70° konfiguriert werden — und ein Abschnitt, der
+    // gekreuzt wird, heisst Kreuz, auch wenn sein Winkel über der Beschriftung
+    // läge.
+    expect(kursKategorie(85, true)).toBe('kreuz');
   });
 
   it('das Vorzeichen des TWA ist gleichgültig (Bug an Bug)', () => {
@@ -151,9 +154,9 @@ describe('Zusammenfassung einer Etappe', () => {
    * "8 sm Kreuz sind doch 13–15 sm zu segelnde Strecke" (Skipper 2026-08-07).
    *
    * Sind sie nicht — und genau deshalb stehen die beiden Zahlen getrennt: die
-   * Kategorie reicht bis 60° TWA, und zwischen 50° und 60° liegt der Kurs an.
-   * Nur die Meilen unter `beatTwaDeg` werden im Zickzack gefahren und dabei
-   * durchs Wasser länger.
+   * Kategorie reicht bis 80° TWA, gekreuzt wird aber erst unter 55°. Nur die
+   * Meilen unter `beatTwaDeg` werden im Zickzack gefahren und dabei durchs
+   * Wasser länger.
    */
   it('trennt die Meilen am Wind von denen, die wirklich gekreuzt werden', () => {
     const [kreuz] = kursAbschnitteOfPassages(

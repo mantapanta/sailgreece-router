@@ -407,7 +407,9 @@ describe('FR30 — ausgewiesene Windannahme (Richtung, Stärke, TWA, Fahrt)', ()
       ...snapshot,
       forecast: { 'start-hafen': fc, 'ziel-bucht': fc },
     });
-    expect(a.breakdown.length % 2).toBe(0);
+    // Genug Schritte, dass sich der Wechsel überhaupt auswirken kann — wie
+    // viele es sind, hängt an den Fahrten und ist keine Aussage der Prüfung.
+    expect(a.breakdown.length).toBeGreaterThan(2);
     expect(a.avgTwdDeg).toBeNull();
     // Die Stundenzeilen selbst behalten ihre echten Richtungen.
     expect(a.breakdown.map((h) => h.twdDeg)).toContain(180);

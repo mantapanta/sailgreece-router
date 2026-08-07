@@ -1,9 +1,12 @@
 /**
- * KREUZ-MODELL (Skipper 2026-08-06): "Ich kann maximal 50 Grad TWA segeln,
- * sonst muss gekreuzt werden … was im Routing eher vermieden werden sollte."
+ * KREUZ-MODELL (Skipper 2026-08-06/07): "Ich kann maximal 50 Grad TWA segeln,
+ * sonst muss gekreuzt werden … was im Routing eher vermieden werden sollte",
+ * präzisiert am 2026-08-07 auf "zwischen 0 und 55 muss ich zickzack aufkreuzen"
+ * — der engste segelbare Winkel steht als `params.beatTwaDeg` (55°).
  *
  * Drei Ebenen, drei Fragen:
- *   1. Rechnet die Fahrt richtig, wenn der Kurs enger am Wind liegt als 50°?
+ *   1. Rechnet die Fahrt richtig, wenn der Kurs enger am Wind liegt als der
+ *      engste segelbare Winkel (params.beatTwaDeg, 55°)?
  *   2. Weist die Etappe das Kreuzen aus, statt eine anliegende Fahrt zu
  *      behaupten — und rät sie davon ab, ohne es zu verbieten?
  *   3. Vermeidet die Rangfolge Kreuzen, ohne Reichweite oder Vielfalt zu
@@ -42,7 +45,7 @@ const params = DEFAULT_PARAMS;
 const rad = (d: number) => (d * Math.PI) / 180;
 
 describe('polar — Kreuzen unter dem engsten segelbaren Winkel', () => {
-  it('liegt der Kurs an (TWA >= 50°), wird nichts gekreuzt', () => {
+  it('liegt der Kurs an (TWA >= beatTwaDeg), wird nichts gekreuzt', () => {
     const cs = courseSpeedKn(TEST_POLAR, 90, 12, params);
     expect(cs.kreuzen).toBe(false);
     expect(cs.speedKn).toBeCloseTo(sailSpeedKn(TEST_POLAR, 90, 12, params), 10);
@@ -50,7 +53,7 @@ describe('polar — Kreuzen unter dem engsten segelbaren Winkel', () => {
     expect(kreuzFactor(90, params)).toBe(1);
   });
 
-  it('an der Grenze selbst ist der Übergang stetig (Faktor 1 bei genau 50°)', () => {
+  it('an der Grenze selbst ist der Übergang stetig (Faktor 1 bei genau beatTwaDeg)', () => {
     expect(kreuzFactor(params.beatTwaDeg, params)).toBeCloseTo(1, 10);
     const knapp = courseSpeedKn(TEST_POLAR, params.beatTwaDeg + 0.01, 12, params);
     const drunter = courseSpeedKn(TEST_POLAR, params.beatTwaDeg - 0.01, 12, params);
@@ -59,7 +62,7 @@ describe('polar — Kreuzen unter dem engsten segelbaren Winkel', () => {
     expect(drunter.speedKn).toBeCloseTo(knapp.speedKn, 2);
   });
 
-  it('darunter wird gekreuzt: gesegelt bei 50°, auf dem Kurs kommt cos(50)/cos(TWA) an', () => {
+  it('darunter wird gekreuzt: gesegelt bei beatTwaDeg, auf dem Kurs kommt cos(beat)/cos(TWA) an', () => {
     const cs = courseSpeedKn(TEST_POLAR, 22, 12, params);
     expect(cs.kreuzen).toBe(true);
     expect(cs.sailedTwaDeg).toBe(params.beatTwaDeg);
@@ -68,7 +71,7 @@ describe('polar — Kreuzen unter dem engsten segelbaren Winkel', () => {
       10,
     );
     expect(cs.speedKn).toBeCloseTo(
-      cs.boatSpeedKn * (Math.cos(rad(50)) / Math.cos(rad(22))),
+      cs.boatSpeedKn * (Math.cos(rad(params.beatTwaDeg)) / Math.cos(rad(22))),
       10,
     );
     // Der Umweg ist real: durchs Wasser läuft das Boot deutlich schneller als
@@ -76,7 +79,7 @@ describe('polar — Kreuzen unter dem engsten segelbaren Winkel', () => {
     expect(cs.speedKn).toBeLessThan(cs.boatSpeedKn * 0.75);
   });
 
-  it('rechnet den Umweg nicht mehr schön — die alte Faltung cos(50−TWA) war zu gut', () => {
+  it('rechnet den Umweg nicht mehr schön — die alte Faltung cos(beat−TWA) war zu gut', () => {
     const cs = courseSpeedKn(TEST_POLAR, 22, 12, params);
     const alt = cs.boatSpeedKn * Math.cos(rad(params.beatTwaDeg - 22));
     expect(cs.speedKn).toBeLessThan(alt);
@@ -84,8 +87,8 @@ describe('polar — Kreuzen unter dem engsten segelbaren Winkel', () => {
     expect(cs.speedKn / alt).toBeLessThan(0.8);
   });
 
-  it('bei 0° TWA bleibt die klassische Am-Wind-VMG cos(50) übrig', () => {
-    expect(kreuzFactor(0, params)).toBeCloseTo(Math.cos(rad(50)), 10);
+  it('bei 0° TWA bleibt die klassische Am-Wind-VMG cos(beat) übrig', () => {
+    expect(kreuzFactor(0, params)).toBeCloseTo(Math.cos(rad(params.beatTwaDeg)), 10);
   });
 
   it('faltet jeden Winkel wie die Polare selbst (−22°, 338° sind derselbe Fall)', () => {
@@ -96,7 +99,7 @@ describe('polar — Kreuzen unter dem engsten segelbaren Winkel', () => {
 });
 
 describe('assessLeg — die Etappe weist das Kreuzen aus', () => {
-  /** Kurs 000° (nordwärts), Wind aus 022° => TWA 22, also unter 50°. */
+  /** Kurs 000° (nordwärts), Wind aus 022° => TWA 22, also unter beatTwaDeg. */
   const kreuzEtappe = () =>
     northSouthScenario({ windKn: 12, windFromDeg: 22, southbound: false });
 
@@ -299,7 +302,7 @@ describe('kreuz — der Zickzack: zwei Bugs, 100° Wende, längere Strecke', () 
     expect(kreuzSchlaege(from, nach(0, 20), 90, params)).toBeNull();
   });
 
-  it('segelt beide Bugs bei genau 50° zum Wind — 100° Kursänderung je Wende', () => {
+  it('segelt beide Bugs bei genau beatTwaDeg zum Wind — 2×beat Kursänderung je Wende', () => {
     // Kurs 000°, Wind aus 022° => TWA 22, muss gekreuzt werden.
     const k = kreuzSchlaege(from, nach(0, 20), 22, params)!;
     expect(k).not.toBeNull();
@@ -307,10 +310,10 @@ describe('kreuz — der Zickzack: zwei Bugs, 100° Wende, längere Strecke', () 
     for (const s of k.schlaege) {
       expect(twaDeg(s.courseDeg, 22)).toBeCloseTo(params.beatTwaDeg, 6);
     }
-    // Genau zwei Kurse, und zwischen ihnen liegen die 100°.
+    // Genau zwei Kurse, und zwischen ihnen liegt der doppelte Wendewinkel.
     const kurse = [...new Set(k.schlaege.map((s) => Math.round(s.courseDeg)))];
     expect(kurse).toHaveLength(2);
-    expect(angleDiffDeg(kurse[0]!, kurse[1]!)).toBeCloseTo(100, 0);
+    expect(angleDiffDeg(kurse[0]!, kurse[1]!)).toBeCloseTo(2 * params.beatTwaDeg, 0);
     expect(new Set(k.schlaege.map((s) => s.bug))).toEqual(
       new Set(['backbord', 'steuerbord']),
     );

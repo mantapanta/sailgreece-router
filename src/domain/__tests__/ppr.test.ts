@@ -156,7 +156,9 @@ function doubleLegWorld(opts: { afternoon28kn: boolean }): {
     toIslandId: 'mitte',
     fromPlaceId: a.id,
     toPlaceId: b.id,
-    distanceNm: 12,
+    // 10 sm gegenan sind bei beatTwaDeg 55° rund 17,5 sm durchs Wasser — zwei
+    // davon passen knapp in den Tag, und genau das prüft der erste Test.
+    distanceNm: 10,
   });
   const legBC = makeLeg({
     id: 'mitte--nord',
@@ -164,7 +166,7 @@ function doubleLegWorld(opts: { afternoon28kn: boolean }): {
     toIslandId: 'nord',
     fromPlaceId: b.id,
     toPlaceId: c.id,
-    distanceNm: 12,
+    distanceNm: 10,
   });
   const times = makeTimes(12);
   const mkFc = (): PointForecast => {

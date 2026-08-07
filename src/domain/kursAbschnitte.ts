@@ -31,26 +31,33 @@ import type {
 } from './schema/snapshot.ts';
 
 /**
- * Die übliche Einteilung der Kurse zum Wind, an der GEMELDET wird — bis 60° am
- * Wind, bis 100° halbwind. Das sind die Grenzen, die auch die Rechnung
- * beschriftet (ui/format.ts, `pointOfSail`), und sie stehen hier, damit Label
- * und Warnung nicht auseinanderlaufen können: eine Zeile, die "Am Wind" heisst,
- * muss in der Kreuz-Meldung auftauchen und nicht in der Halbwind-Meldung.
+ * DIE EINTEILUNG DER KURSE ZUM WIND (Skipper 2026-08-07): "Kreuz ist alles,
+ * was zwischen TWA 55 und 80 Grad ist, 80 bis 100 ist Halbwind und 100 bis 180
+ * ist Downwind" — und darunter, zwischen 0 und 55, muss zickzack aufgekreuzt
+ * werden.
+ *
+ * Daraus die drei Grenzen unten. Sie stehen hier und nicht in der Anzeige,
+ * damit Label und Warnung nicht auseinanderlaufen können: eine Zeile, die
+ * "Halbwind" heisst, muss in der Halbwind-Meldung auftauchen und nicht in der
+ * Kreuz-Meldung.
  *
  * Ausdrücklich NICHT die Schwellen der Bewertung: ob eine Etappe als Aufkreuzer
  * gilt, entscheidet `params.upwindTwaDeg` (FR16), und ob wirklich gekreuzt
- * werden muss, `params.beatTwaDeg`. Diese Zahlen hier beschriften nur.
+ * werden muss, `params.beatTwaDeg` (55°, konfigurierbar). Diese Zahlen hier
+ * beschriften nur — `KURS_GEGENAN_BIS_DEG` bildet den Default ab, damit ein
+ * Label auch ohne Params-Zugriff (ui/format.ts) stimmt.
  */
-export const KURS_AM_WIND_BIS_DEG = 60;
+export const KURS_GEGENAN_BIS_DEG = 55;
+export const KURS_AM_WIND_BIS_DEG = 80;
 export const KURS_HALBWIND_BIS_DEG = 100;
 
 /**
- * WARUM DIE KATEGORIE 'kreuz' NICHT "gekreuzt" HEISST.
+ * WARUM DIE KREUZ-ZEILE ZWEI ZAHLEN NENNT.
  *
- * Sie reicht bis 60° TWA, `params.beatTwaDeg` liegt bei 50: zwischen beiden
- * liegt der Kurs an, dort ist eine Meile auf der Karte eine Meile durchs
- * Wasser. Erst darunter wird der Zickzack gefahren, und aus einer Meile werden
- * bei 40° TWA rund 1,2 und bei 20° TWA rund 1,6 (polar.kreuzFactor).
+ * Die Kategorie reicht bis 80° TWA, gekreuzt wird aber erst unter 55°: dazwischen
+ * liegt der Kurs an, dort ist eine Meile auf der Karte eine Meile durchs Wasser.
+ * Erst darunter wird der Zickzack gefahren, und aus einer Meile werden bei 40°
+ * TWA rund 1,3 und bei 20° TWA rund 1,7 (polar.kreuzFactor).
  *
  * Die Zeile trug deshalb zwei völlig verschiedene Aussagen unter EINEM Wort:
  * "ca. 8 sm Kreuz" las sich wie acht aufzukreuzende Meilen — rund drei Stunden
