@@ -167,6 +167,14 @@ const RAHMEN = deadlineFrame({ ...DEFAULT_PARAMS, tripStartDate: TRIP_START }).d
  */
 const VOLLE_BEWERTUNG_MS = 20_000;
 
+/**
+ * Die Frist für den Menü-Wächter weiter unten: er rechnet EINEN vollen
+ * Solver-Lauf je angebotenem Tagesziel, an einer Stichprobe von vier
+ * Törntagen also rund vierzig. Das ist der Preis dafür, die Zusage des Menüs
+ * gegen die echte Bibliothek zu prüfen statt gegen eine Miniatur.
+ */
+const ETAPPEN_MENUE_MS = 120_000;
+
 describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
   it('Der Törnrahmen ist elf Tage — elf Tage, elf Etappen', () => {
     expect(RAHMEN).toBe(11);
@@ -482,6 +490,71 @@ describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
       expect(kuratiert).not.toContain(opt.name);
     }
   }, VOLLE_BEWERTUNG_MS);
+});
+
+/**
+ * DAS ETAPPEN-MENÜ HÄLT, WAS ES ANBIETET.
+ *
+ * Der Befund des Skippers vom 2026-08-07: „Alle Optionen, die mir Menü Etappe
+ * ändern angeboten werden, sollten dann tatsächlich auch möglich sein. Hier
+ * habe ich Paros ausgewählt und das war ja auch angezeigt und dann sagt mir
+ * die App, dass das nicht möglich ist."
+ *
+ * Es war kein Einzelfall. Gemessen an der ausgelieferten Bibliothek (mildes
+ * Fenster, 14 kn aus Nord) lehnte der Solver 126 von 208 angebotenen Zielen
+ * ab — sechs von zehn. Zwei Ursachen, beide gezählt:
+ *
+ *   76 — `reach.ts` fragte den vollen Etappen-Index nach zwei Hops ab dem
+ *        Vortagsziel, der Solver sucht aber Runden über den AUSGEDÜNNTEN
+ *        Aufzählungs-Graphen. Paros ab Serifos ist genau das: die abgeleitete
+ *        Etappe (31,2 sm) steht in der Bibliothek und fehlt im Graphen.
+ *   50 — `solver.vorauswahl` kappte je Schicht auf 120 Kandidaten nach einer
+ *        Rangfolge, die den Pin nicht kannte. Passende Runden gab es, sie
+ *        standen nur nicht unter den ersten 120.
+ *
+ * Dieser Test ist der Wächter darüber. Er ist teuer (ein voller Solver-Lauf je
+ * angebotenem Ziel), deshalb prüft er eine Stichprobe von Törntagen über den
+ * ganzen Rahmen statt aller elf.
+ */
+describe('Zielmodell v3 — das Etappen-Menü verspricht nichts, was der Solver ablehnt', () => {
+  it('Jedes angebotene Tagesziel lässt sich auch übernehmen', () => {
+    const snapshot = realSnapshot();
+    const frei = completePlan(snapshot, 'athen', []);
+    expect(frei).not.toBeNull();
+    const mitPlan: PlanningSnapshot = {
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: frei!.plan },
+    };
+    const assessment = assessPlanning(mitPlan);
+    const stichprobe = [1, 4, 7, RAHMEN];
+
+    const angeboten: string[] = [];
+    const abgelehnt: string[] = [];
+    for (const stage of assessment.mainRoute!.stages) {
+      if (!stichprobe.includes(stage.day)) continue;
+      for (const islandId of stage.reachableIslandIds) {
+        angeboten.push(`Tag ${stage.day} → ${islandId}`);
+        const solved = completePlan(mitPlan, assessment.currentIslandId!, [
+          { day: stage.day, toIslandId: islandId },
+        ]);
+        if (!solved) abgelehnt.push(`Tag ${stage.day} → ${islandId}`);
+      }
+    }
+
+    // Der Test darf nicht dadurch grün werden, dass gar nichts mehr im Menü
+    // steht: der Filter ist eine Zusage, keine Sperre.
+    expect(angeboten.length).toBeGreaterThan(30);
+    /**
+     * WAS ÜBRIG BLEIBT, ist die Wetter-Restmenge: der Filter ist ein Vorfilter
+     * aus Geographie und Kandidatenraum, die Fahrbarkeit eines Tages
+     * entscheidet erst die Simulation. Bei 14 kn aus Nord ist das an dieser
+     * Stichprobe genau EIN Ziel (Santorin an Tag 7, das im Rahmen nicht mehr
+     * aufgeht). Der Editor benennt diesen Fall jetzt auch als das, was er ist.
+     *
+     * Steigt die Zahl, ist der Filter wieder grosszügiger als die Suche.
+     */
+    expect(abgelehnt, abgelehnt.join(', ')).toHaveLength(1);
+  }, ETAPPEN_MENUE_MS);
 });
 
 describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {

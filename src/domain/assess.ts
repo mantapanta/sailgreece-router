@@ -334,6 +334,15 @@ function assessPlan(
    */
   const sailed = sailedChain(ordered, snapshot, placeIdOf);
 
+  /**
+   * Die Insel, ab der der Solver plant — dort steht das Schiff am Morgen des
+   * aktuellen Törntags. Der Kontextfilter der Etappenwahl (reach.ts) braucht
+   * sie, weil er denselben Kandidatenraum liest wie `completePlan`, und der
+   * hängt an DIESER Insel, nicht am Vortagsziel des einzelnen Tages.
+   */
+  const planStartIslandId =
+    islandAtEndOfDay(plan, snapshot.trip.currentDay - 1) ?? snapshot.params.baseIslandId;
+
   // Entscheidungstore dieses Plans — einmal je Plan, dann je Tag zugeordnet.
   const torChecks = deriveTorChecks(plan, snapshot);
 
@@ -441,7 +450,12 @@ function assessPlan(
       stopHoursPerStop,
       stopHoursTotal:
         Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
-      reachableIslandIds: reachableIslands(snapshot, fromIslandId, entry.day),
+      reachableIslandIds: reachableIslands(
+        snapshot,
+        fromIslandId,
+        entry.day,
+        planStartIslandId,
+      ),
       // Die Stunde, gegen die dieser Tag GERECHNET wurde — dieselbe Auflösung,
       // die auch assessLeg benutzt hat (AD-3), damit die Kachel nie eine
       // andere Abfahrt zeigt als die Bewertung darunter. "Vom Skipper" heisst
