@@ -70,25 +70,48 @@ const norm = (d: number) => ((d % 360) + 360) % 360;
 const noPointSector = (s: { fromDeg: number; toDeg: number }) =>
   norm(s.fromDeg) !== norm(s.toDeg);
 
+/** Was die Zone tut — und damit, welche GESTALT sie hat (siehe unten). */
+export const WindTopoKindSchema = z.enum(['lee', 'duese']);
+export type WindTopoKind = z.infer<typeof WindTopoKindSchema>;
+
+/** Felder, die beide Zonenarten tragen. */
+const gemeinsam = {
+  /**
+   * Kebab-case mit Pflicht-Präfix `topo-`. Wie bei den Kite-Spots kein
+   * Schmuck: `serifos-sued` könnte ebensogut ein Liegeplatz sein, und in
+   * einem Hinweistext oder einem Firestore-Dokument wäre dann nicht zu sehen,
+   * welche Bibliothek gemeint ist.
+   */
+  id: z.string().regex(/^topo-[a-z0-9-]+$/),
+  name: z.string().min(1),
+  /** Woher die Ortskenntnis stammt (Poseidon-Vergleich, Revierführer, Törn). */
+  sourceNote: z.string().min(1),
+  /**
+   * WELCHE VERGLEICHE HINTER DEN ZAHLEN STEHEN — Pflichtfeld, weil ein Faktor
+   * ohne seine Kalibrierung eine erfundene Zahl ist. Hier steht die Lage
+   * (Datum, Uhrzeit, Windrichtung, Stärke), aus der er abgelesen wurde.
+   */
+  kalibriertAus: z.string().min(1),
+  confidence: ConfidenceSchema,
+};
+
 /**
- * EIN Windrichtungs-Sektor mit seinem Faktor.
+ * EIN WINDRICHTUNGS-SEKTOR MIT SEINEM FAKTOR — nur für Düsen.
  *
- * Der Faktor hängt am Sektor und nicht an der Zone, weil die Geometrie es tut:
- * der Schatten von Serifos liegt bei Nord anders als bei Nordost, und im
- * Kea-Kanal düst es nur, wenn der Wind längs des Kanals steht. Eine Zone mit
- * einem Faktor für alle Richtungen wäre eine Behauptung über Richtungen, die
- * nie verglichen wurden.
+ * Eine Düse steht fest im Raum UND an einer Richtung: im Kea-Kanal beschleunigt
+ * es nur, wenn der Wind längs des Kanals steht. Deshalb Sektoren.
+ *
+ * Lee-Zonen haben KEINE Sektoren mehr (bis 2026-08-07 hatten sie welche). Der
+ * Grund steht bei `WindTopoLeeZoneSchema`: ein Schatten steht nicht in einer
+ * Richtung, er steht HINTER der Insel und dreht mit dem Wind. Das ist Geometrie
+ * und keine Sektorliste.
  */
 export const WindTopoSectorSchema = z
   .object({
     fromDeg: z.number().min(0).max(360),
     toDeg: z.number().min(0).max(360),
-    /**
-     * Multiplikator auf die Modell-Windgeschwindigkeit. < 1 = Abdeckung,
-     * > 1 = Beschleunigung; welches von beiden erlaubt ist, entscheidet
-     * `kind` der Zone (siehe Modulkopf).
-     */
-    factor: z.number().positive(),
+    /** Multiplikator auf die Modell-Windgeschwindigkeit; für Düsen stets > 1. */
+    factor: z.number().gt(1).max(2),
   })
   .refine(noPointSector, {
     message: 'Punkt-Sektor (fromDeg === toDeg) verboten — er würde zum Vollkreis',
@@ -96,90 +119,98 @@ export const WindTopoSectorSchema = z
 export type WindTopoSector = z.infer<typeof WindTopoSectorSchema>;
 
 /**
- * Was die Zone tut — und damit, in welche Richtung sie wirken DARF.
- * 'lee' beraten nur, 'duese' bewerten (Modulkopf).
+ * DIE DÜSE: ein fester Kreis plus Richtungssektoren.
+ *
+ * Für eine Kanaldüse ist das die richtige Gestalt — der Kanal liegt, wo er
+ * liegt, und er düst nur bei Wind längs seiner Achse.
  */
-export const WindTopoKindSchema = z.enum(['lee', 'duese']);
-export type WindTopoKind = z.infer<typeof WindTopoKindSchema>;
+export const WindTopoDueseZoneSchema = z.object({
+  ...gemeinsam,
+  kind: z.literal('duese'),
+  /** Mitte der Engstelle. */
+  center: CoordinatesSchema,
+  /**
+   * Radius der Wirkfläche in sm. Gedeckelt, weil eine Düse mit 30 sm Radius
+   * keine Engstelle mehr beschreibt, sondern das halbe Revier.
+   */
+  radiusNm: z.number().positive().max(12),
+  sectors: z.array(WindTopoSectorSchema).min(1),
+});
+export type WindTopoDueseZone = z.infer<typeof WindTopoDueseZoneSchema>;
 
-export const WindTopoZoneSchema = z
-  .object({
-    /**
-     * Kebab-case mit Pflicht-Präfix `topo-`. Wie bei den Kite-Spots kein
-     * Schmuck: `serifos-sued` könnte ebensogut ein Liegeplatz sein, und in
-     * einem Hinweistext oder einem Firestore-Dokument wäre dann nicht zu sehen,
-     * welche Bibliothek gemeint ist.
-     */
-    id: z.string().regex(/^topo-[a-z0-9-]+$/),
-    name: z.string().min(1),
-    kind: WindTopoKindSchema,
-    /** Mittelpunkt der Wirkfläche — NICHT der Gipfel der Insel. */
-    center: CoordinatesSchema,
-    /**
-     * Radius der Wirkfläche in sm. Gedeckelt, weil eine Zone mit 30 sm Radius
-     * keine Ortskenntnis mehr wäre, sondern eine Aussage über das halbe Revier:
-     * ein Lee reicht wenige Meilen, ein Kanal ist wenige Meilen breit.
-     */
-    radiusNm: z.number().positive().max(12),
-    sectors: z.array(WindTopoSectorSchema).min(1),
-    /**
-     * NUR bei 'lee': ab welchem Abstand zur Küste das Lee nutzbar ist. Näher
-     * dran stehen die katabatischen Fallböen (Modulkopf) — und die stehen genau
-     * dort, wo eine Schatten-Taktik hinführt. Fehlt der Wert, sagt der Hinweis
-     * nichts dazu, statt eine Zahl zu erfinden.
-     */
-    fallboeenNm: z.number().min(0).max(5).optional(),
-    /** Woher die Ortskenntnis stammt (Poseidon-Vergleich, Revierführer, Törn). */
-    sourceNote: z.string().min(1),
-    /**
-     * WELCHE VERGLEICHE HINTER DEM FAKTOR STEHEN — Pflichtfeld, weil ein Faktor
-     * ohne seine Kalibrierung eine erfundene Zahl ist. Hier steht die Lage
-     * (Datum, Uhrzeit, Windrichtung, Stärke), aus der er abgelesen wurde.
-     */
-    kalibriertAus: z.string().min(1),
-    confidence: ConfidenceSchema,
-  })
-  .check((ctx) => {
-    const z0 = ctx.value;
-    // DIE ASYMMETRIE ALS SCHEMA (Modulkopf). Ein 'lee' mit factor > 1 würde den
-    // Wind erhöhen, ohne je bewertet zu werden — die Korrektur verschwände
-    // spurlos; ein 'duese' mit factor < 1 würde den Wind senken und dabei die
-    // Ampel anfassen. Genau die beiden Fälle, die es nicht geben darf.
-    for (const s of z0.sectors) {
-      if (z0.kind === 'lee' && s.factor >= 1) {
-        ctx.issues.push({
-          code: 'custom',
-          message: `${z0.id}: eine Lee-Zone muss abdecken (factor < 1), hier steht ${s.factor}. Beschleunigung gehört in eine Zone mit kind: 'duese' — nur die wird bewertet.`,
-          input: z0,
-        });
-      }
-      if (z0.kind === 'duese' && s.factor <= 1) {
-        ctx.issues.push({
-          code: 'custom',
-          message: `${z0.id}: eine Düsen-Zone muss beschleunigen (factor > 1), hier steht ${s.factor}. Abdeckung gehört in eine Zone mit kind: 'lee' — sie berät, statt zu bewerten.`,
-          input: z0,
-        });
-      }
-    }
-    // Ein Deckel nach oben, damit ein verrutschtes Komma (13 statt 1.3) nicht
-    // aus 20 kn einen Orkan macht, der den ganzen Törn rot färbt.
-    for (const s of z0.sectors) {
-      if (s.factor > 2) {
-        ctx.issues.push({
-          code: 'custom',
-          message: `${z0.id}: factor ${s.factor} mehr als verdoppelt den Wind — Düsen im Revier liegen bei 1,2–1,5. Vermutlich ein verrutschtes Komma.`,
-          input: z0,
-        });
-      }
-    }
-    if (z0.kind === 'duese' && z0.fallboeenNm !== undefined) {
-      ctx.issues.push({
-        code: 'custom',
-        message: `${z0.id}: fallboeenNm gehört zu einer Lee-Zone — in einer Düse gibt es keinen Windschatten, unter dem man zu dicht heranfahren könnte.`,
-        input: z0,
-      });
-    }
-  });
+/**
+ * DER WINDSCHATTEN: eine LEEWÄRTIGE KEULE hinter einem Hindernis — sie dreht
+ * mit dem Wind.
+ *
+ * WARUM NICHT MEHR EIN KREIS MIT SEKTOREN (Stand bis 2026-08-07). Die
+ * Poseidon-Bilder vom 10.08. zeigen es unmittelbar: bei Wind aus NNW liegt der
+ * Schatten von Sikinos SSE der Insel, bei Wind aus NE liegt der Schatten von
+ * Naxos SW davon. Ein fest im Süden platzierter Kreis trifft die erste Lage
+ * halb und die zweite gar nicht — er würde die Absenkung dort ansetzen, wo gar
+ * kein Schatten steht. Bei einer Zone, die BEWERTET, ist das kein Schönheits-
+ * fehler, sondern genau der Fehlermodus, gegen den die Sicherungen gebaut sind.
+ *
+ * Ein Schatten ist keine Richtungseigenschaft eines Ortes, sondern eine
+ * geometrische Folge: er liegt IMMER hinter dem Hindernis, und wo hinten ist,
+ * sagt der Wind. Deshalb beschreibt eine Lee-Zone jetzt das HINDERNIS (Insel)
+ * und wie weit sein Schatten reicht; wo er im Wasser liegt, rechnet
+ * domain/windTopo.ts je Stunde aus.
+ *
+ * Das erledigt zwei alte Notbehelfe von selbst: die schwächeren NE-Sektoren
+ * ("schräg angeströmt steht der Schatten schlechter") und die Frage, wie gross
+ * man den Kreis macht, damit er beide Windlagen halbwegs trifft.
+ */
+export const WindTopoLeeZoneSchema = z.object({
+  ...gemeinsam,
+  kind: z.literal('lee'),
+  /** Mittelpunkt der INSEL, die den Schatten wirft — nicht der Wirkfläche. */
+  center: CoordinatesSchema,
+  /**
+   * Halbe Breite des Hindernisses quer zum Wind, in sm — sie bestimmt, wie
+   * BREIT der Schatten ist, und ab wo er beginnt (an der Leeküste, nicht in der
+   * Inselmitte).
+   *
+   * Eine Näherung: eine Insel ist kein Kreis. Bewusst so, denn die Alternative
+   * wäre ein Polygon je Insel, und die Breite quer zum Wind schwankt darin um
+   * weniger, als die Faktoren ohnehin unsicher sind.
+   */
+  obstacleRadiusNm: z.number().positive().max(8),
+  /**
+   * Wie weit der Schatten AB DER LEEKÜSTE reicht, in sm. Am Anfang der Keule
+   * gilt `factor`, am Ende wieder 1,0 — dazwischen linear (windTopo.ts).
+   *
+   * Der lineare Abfall ist die ehrlichste einfache Form: dass der Schatten mit
+   * der Entfernung ausläuft, ist im Raster unmittelbar zu sehen; WIE er
+   * ausläuft, ist es nicht. Eine Exponentialfunktion wäre eine Genauigkeit, die
+   * nicht in den Daten steckt.
+   */
+  lobeNm: z.number().positive().max(25),
+  /**
+   * Der Faktor DIREKT hinter der Leeküste — das Maximum der Abdeckung. Nach
+   * `lobeNm` ist er auf 1,0 ausgelaufen.
+   */
+  factor: z.number().gt(0).lt(1),
+  /**
+   * Ab welchem Abstand zur Küste das Lee nutzbar ist. Näher dran stehen die
+   * katabatischen Fallböen (Modulkopf) — und die stehen genau dort, wo eine
+   * Schatten-Taktik hinführt. Fehlt der Wert, sagt der Hinweis nichts dazu,
+   * statt eine Zahl zu erfinden.
+   */
+  fallboeenNm: z.number().min(0).max(5).optional(),
+});
+export type WindTopoLeeZone = z.infer<typeof WindTopoLeeZoneSchema>;
+
+/**
+ * DIE ASYMMETRIE IST GESTALT GEWORDEN. Bis 2026-08-07 war sie eine Prüfung
+ * ("kind 'lee' verlangt factor < 1"); jetzt sind es zwei verschiedene Typen mit
+ * verschiedenen Feldern. Eine Lee-Zone, die den Wind erhöht, ist damit nicht
+ * mehr bloss verboten — sie ist nicht mehr hinschreibbar: `factor` einer
+ * Lee-Zone ist `gt(0).lt(1)`, der einer Düse `gt(1)`.
+ */
+export const WindTopoZoneSchema = z.discriminatedUnion('kind', [
+  WindTopoLeeZoneSchema,
+  WindTopoDueseZoneSchema,
+]);
 export type WindTopoZone = z.infer<typeof WindTopoZoneSchema>;
 
 /**

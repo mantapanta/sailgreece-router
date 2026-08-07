@@ -618,8 +618,24 @@ sondern Topografie. Sie liegen bei gleicher Windrichtung immer an derselben
 Stelle — also sind sie Ortskenntnis, und Ortskenntnis ist in dieser App
 kuratiert (AD-4), wie die Schutzsektoren eines Liegeplatzes. Die Daten liegen in
 `seeding/data/windtopo.json` (Firestore-Sammlung `windTopoZones`, Schema
-`src/domain/schema/windTopo.ts`) als **Zonen**: Mittelpunkt, Radius und je
-Windrichtungs-Sektor ein Faktor.
+`src/domain/schema/windTopo.ts`).
+
+**Zwei Gestalten, weil es zwei Phänomene sind** — als diskriminierte Union, die
+Felder sind nicht mischbar:
+
+- Eine **Düse** ist ein fester Kreis plus Richtungssektoren. Ein Kanal liegt, wo
+  er liegt, und er düst nur bei Wind längs seiner Achse.
+- Ein **Windschatten** ist eine leewärtige **Keule** hinter der Insel: Hindernis
+  (Mittelpunkt + Radius), Keulenlänge, und ein Faktor, der von der Leeküste bis
+  zum Keulenende auf 1,0 ausläuft. Wo die Keule im Wasser liegt, rechnet
+  `domain/windTopo.ts` je Stunde aus — **sie dreht mit dem Wind.**
+
+Die Keule ersetzt seit 2026-08-07 einen festen Kreis mit Sektoren, und zwar
+wegen einer Falsifikation: die Poseidon-Bilder vom 10.08. zeigen den Schatten
+von Sikinos bei NNW-Wind SSE der Insel und den von Naxos bei NE-Wind SW davon.
+Ein fest im Süden platzierter Kreis traf die zweite Lage gar nicht — er hätte
+die Absenkung dort angesetzt, wo kein Schatten steht. Bei einer Zone, die
+bewertet, ist das kein Schönheitsfehler.
 
 ### Die zentrale Regel: Düsen ungebremst, Schatten nur gebremst
 
@@ -660,15 +676,25 @@ sagt es mit.
 
 ### Stand der Kalibrierung
 
-Die Faktoren der Erstkuration (2026-08-07) sind **Erstschätzungen aus einem
-einzigen Kartenvergleich**, an der Farbskala eines Rasterbildes abgelesen —
-deshalb durchgängig `confidence: 'niedrig'`, und jede Zone nennt in
-`kalibriertAus`, woraus ihr Faktor stammt und ob er abgelesen oder abgeleitet
-wurde. Vor dem Törn nachkalibrieren: 8–12 repräsentative Meltemi-Lagen (N 5 Bft,
-NNE 6 Bft, NE 4 Bft …), Poseidon und ICON-EU zur gleichen Stunde nebeneinander,
-Verhältnis an den Wegpunkten ablesen. Das ist eine Saison-Aufgabe, keine
-tägliche — genau deshalb sind Screenshots hier die **Kalibrier**quelle und nicht
-die Datenquelle.
+**Anker ist ein gemessener Wert**, kein abgelesener Farbton: der Punktabruf im
+Poseidon-Modell vom 10.08.2026, 15:00 LT, südlich von Ios — `wind: 12 km/h`
+(6,5 kn) bei rund 32 km/h (17 kn) freier Anströmung in derselben Kachel, also
+Faktor **0,37** direkt hinter der Insel. Alle anderen Faktoren sind daraus nach
+Gipfelhöhe abgestuft. Die Keulenlängen folgen der Faustregel `lobeNm ≈
+Gipfelhöhe / 60`, ebenfalls empirisch aus denselben Bildern (Naxos, 1004 m:
+Lee-Zunge ~15–20 sm; Ios, 713 m: ~10–12 sm).
+
+`confidence` ist dabei ein **Tor**, keine Verzierung:
+
+- **`'mittel'`** = Lage und Ausdehnung sind im Modell abgelesen, der Faktor ist
+  vom Ios-Messwert nach Höhe abgestuft. Diese Zonen bewerten mit.
+- **`'niedrig'`** = die Zone ist nur aus Nachbarn hochgerechnet (Kythnos, die
+  drei Düsen ausser Kea-Kanal). Sie beraten weiter, drehen aber keine Ampel.
+- **`'hoch'`** ist nirgends vergeben: dafür müsste der Faktor je Zone an
+  mehreren Windstärken abgerufen sein, nicht einmal an einer Nachbarinsel.
+
+Screenshots sind damit die **Kalibrier**quelle und nicht die Datenquelle —
+nachkalibriert wird pro Saison, nicht täglich.
 
 Zwei Tests halten die Kuration ehrlich: keine Zone darf wirkungslos sein (bei
 der Erstkalibrierung traf die Serifos-Zone zunächst keinen einzigen
@@ -676,25 +702,34 @@ Forecast-Ort), und keine Düsen-Zone darf über einem Liegeplatz liegen — wie
 exponiert ein Hafen ist, sagt sein Schutzsektor, nicht eine Fläche für die
 offene Passage.
 
-### Warum die Rückweg-Etappen trotzdem noch rot sind
+### Der Lee-Korridor rettet den Rückweg nicht — und das ist die richtige Antwort
 
-Gemessen auf der echten Bibliothek bei 26–30 kn aus N/NNE hebt die Lee-Bewertung
-**noch keine** Ampel. Das ist kein Fehler in der Mechanik, sondern eine Aussage
-über die **Abdeckung**: eine Etappe wird gegen ihren *schlechtesten* Punkt
-bewertet (die Doktrin dieses Moduls), und bei den heutigen Zonenradien liegen
-längst nicht alle Punkte im Schatten:
+Gemessen auf der echten Bibliothek bei 26–30 kn aus N bis NE hebt die
+Lee-Bewertung **keine** rote Etappe des westlichen Korridors. Das ist kein
+Fehler der Mechanik, sondern der Befund. Eine Etappe wird gegen ihren
+*schlechtesten* Punkt bewertet, und der Faktor je Punkt sieht so aus (Wind aus
+Nord, `—` = kein Schatten):
 
-| Rückweg-Etappe | Punkte im Lee (heute) | bei doppeltem Radius |
-|---|---|---|
-| `sifnos--serifos` | 3 / 5 | 5 / 5 |
-| `serifos--kythnos` | 6 / 9 | 9 / 9 |
-| `kythnos--athen` | 1 / 6 | 3 / 6 |
+```
+sifnos--serifos    kamares —  wp0 —  wp1 0,45  wp2 0,45  livadi 0,45
+serifos--kythnos   livadi 0,45  wp0 0,45  wp1 0,45  wp2..wp6 —  merichas —
+kythnos--athen     loutra 0,91  wp0 —  wp1 0,64  wp2 —  wp3 —  alimos —
+```
 
-Die zwei Punkte, die bei `sifnos--serifos` noch in der freien Anströmung stehen,
-tragen das Rot — zu Recht, denn man muss durch sie hindurch. Der Hebel liegt
-damit **in der Datei, nicht im Code**: wie weit die Abdeckung wirklich reicht,
-ist die nächste Frage an das Poseidon-Modell. Bis sie beantwortet ist, bleiben
-die Radien konservativ.
+Das Muster ist bei jeder Etappe dasselbe: **Abdeckung an den Enden, freier Wind
+in der Mitte.** Die Korridor-Etappen queren genau die Lücken zwischen den
+Inseln, und die Lücken sind der Ort, an dem der Meltemi steht. `serifos--kythnos`
+hat 20 sm offenes Wasser zwischen den beiden Schatten — kein Windschatten macht
+die segelbar, und die App hat recht, wenn sie das rot nennt.
+
+Damit ist auch klar, was der Lee-Korridor wirklich ist: ein **taktischer**
+Vorteil (wo man die Schläge unter Land legt, wo man ausruht, wo man loskommt),
+kein **strategischer** (er macht den Rückweg im Starkwind nicht sicher). Genau
+das sollte eine Planungshilfe sagen, statt eine Sicherheit zu versprechen, die
+in den Zahlen nicht steckt.
+
+Sichtbar wird die Abdeckung trotzdem an jedem Etappentag — als Hinweiszeile mit
+Modellwind, Lee-Wind und Fallböen-Warnung, und in der Rückweg-Empfehlung.
 
 ### Und Poseidon direkt?
 

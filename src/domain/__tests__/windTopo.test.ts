@@ -10,10 +10,23 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { distanceNm } from '../geo.ts';
-import { WindTopoZoneSchema, type WindTopoZone } from '../schema/windTopo.ts';
+import {
+  WindTopoDueseZoneSchema,
+  WindTopoLeeZoneSchema,
+  WindTopoZoneSchema,
+  type WindTopoDueseZone,
+  type WindTopoLeeZone,
+  type WindTopoZone,
+} from '../schema/windTopo.ts';
 import { WindTopoStagingFileSchema } from '../schema/seeding.ts';
 import type { LegAssessment } from '../schema/snapshot.ts';
-import { applyWindTopo, leeHinweiseForStage, leeRueckwegSatz } from '../windTopo.ts';
+import {
+  applyWindTopo,
+  leeAnsatzAt,
+  leeBewertungsKn,
+  leeHinweiseForStage,
+  leeRueckwegSatz,
+} from '../windTopo.ts';
 import { assessLeg } from '../scoring.ts';
 import { placeNightAmpel } from '../ampel.ts';
 import {
@@ -29,8 +42,8 @@ const MITTE = { lat: 37.0, lon: 24.5 };
 /** Rund 12 sm östlich — sicher ausserhalb jeder Zone dieser Tests. */
 const WEIT_WEG = { lat: 37.0, lon: 24.75 };
 
-function duese(over: Partial<WindTopoZone> = {}): WindTopoZone {
-  return WindTopoZoneSchema.parse({
+function duese(over: Record<string, unknown> = {}): WindTopoDueseZone {
+  return WindTopoDueseZoneSchema.parse({
     id: 'topo-duese-test',
     name: 'Testdüse',
     kind: 'duese',
@@ -44,14 +57,20 @@ function duese(over: Partial<WindTopoZone> = {}): WindTopoZone {
   });
 }
 
-function lee(over: Partial<WindTopoZone> = {}): WindTopoZone {
-  return WindTopoZoneSchema.parse({
+/**
+ * Die Testinsel liegt bei MITTE und wirft eine 10-sm-Keule nach Lee. Bei Wind
+ * aus 010 Grad liegt der Schatten also SUEDLICH von MITTE — das ist die
+ * Geometrie, die alle Faelle hier abklopfen.
+ */
+function lee(over: Record<string, unknown> = {}): WindTopoLeeZone {
+  return WindTopoLeeZoneSchema.parse({
     id: 'topo-lee-test',
     name: 'Testlee',
     kind: 'lee',
     center: MITTE,
-    radiusNm: 5,
-    sectors: [{ fromDeg: 340, toDeg: 40, factor: 0.5 }],
+    obstacleRadiusNm: 3,
+    lobeNm: 10,
+    factor: 0.5,
     fallboeenNm: 0.5,
     sourceNote: 'fixture',
     kalibriertAus: 'fixture',
@@ -59,6 +78,11 @@ function lee(over: Partial<WindTopoZone> = {}): WindTopoZone {
     ...over,
   });
 }
+
+/** 6 sm suedlich von MITTE — bei Nordwind mitten in der Keule. */
+const IM_LEE_SUED = { lat: 36.9, lon: 24.5 };
+/** 6 sm noerdlich von MITTE — bei Nordwind in LUV, also nie im Schatten. */
+const IN_LUV_NORD = { lat: 37.1, lon: 24.5 };
 
 /** Snapshot mit einem Platz in der Zone und einem weit ausserhalb. */
 function snapshotMitZonen(zones: WindTopoZone[], windDirDeg = 10) {
@@ -164,41 +188,38 @@ describe('applyWindTopo — der Schatten bewertet NICHT', () => {
   });
 });
 
-describe('WindTopoZoneSchema — die Asymmetrie ist Schema, nicht Konvention', () => {
-  const basis = {
+describe('WindTopoZoneSchema — die Asymmetrie ist GESTALT, nicht nur Prüfung', () => {
+  const gemeinsam = {
     id: 'topo-x',
     name: 'X',
     center: MITTE,
-    radiusNm: 4,
     sourceNote: 'q',
     kalibriertAus: 'q',
     confidence: 'niedrig' as const,
   };
+  const leeForm = { ...gemeinsam, kind: 'lee', obstacleRadiusNm: 3, lobeNm: 10 };
+  const dueseForm = { ...gemeinsam, kind: 'duese', radiusNm: 4 };
 
+  /**
+   * Seit die beiden Arten getrennte Typen sind, ist eine Lee-Zone mit
+   * factor > 1 nicht mehr bloss verboten, sondern nicht hinschreibbar: das Feld
+   * selbst ist `gt(0).lt(1)`.
+   */
   it('lehnt eine Lee-Zone ab, die den Wind erhöht', () => {
-    const r = WindTopoZoneSchema.safeParse({
-      ...basis,
-      kind: 'lee',
-      sectors: [{ fromDeg: 340, toDeg: 40, factor: 1.2 }],
-    });
-    expect(r.success).toBe(false);
-    expect(JSON.stringify(r.error?.issues)).toContain('abdecken');
+    expect(WindTopoZoneSchema.safeParse({ ...leeForm, factor: 1.2 }).success).toBe(false);
   });
 
   it('lehnt eine Düsen-Zone ab, die den Wind senkt', () => {
     const r = WindTopoZoneSchema.safeParse({
-      ...basis,
-      kind: 'duese',
+      ...dueseForm,
       sectors: [{ fromDeg: 340, toDeg: 40, factor: 0.8 }],
     });
     expect(r.success).toBe(false);
-    expect(JSON.stringify(r.error?.issues)).toContain('beschleunigen');
   });
 
   it('lehnt ein verrutschtes Komma ab (factor > 2)', () => {
     const r = WindTopoZoneSchema.safeParse({
-      ...basis,
-      kind: 'duese',
+      ...dueseForm,
       sectors: [{ fromDeg: 340, toDeg: 40, factor: 13 }],
     });
     expect(r.success).toBe(false);
@@ -206,40 +227,96 @@ describe('WindTopoZoneSchema — die Asymmetrie ist Schema, nicht Konvention', (
 
   it('lehnt den Punkt-Sektor ab, der still zum Vollkreis würde', () => {
     const r = WindTopoZoneSchema.safeParse({
-      ...basis,
-      kind: 'duese',
+      ...dueseForm,
       sectors: [{ fromDeg: 350, toDeg: 350, factor: 1.3 }],
     });
     expect(r.success).toBe(false);
   });
 
-  it('lehnt Fallböen an einer Düse ab', () => {
-    const r = WindTopoZoneSchema.safeParse({
-      ...basis,
-      kind: 'duese',
-      sectors: [{ fromDeg: 340, toDeg: 40, factor: 1.3 }],
-      fallboeenNm: 0.5,
-    });
-    expect(r.success).toBe(false);
+  /**
+   * Die Felder sind nicht mehr mischbar: eine Lee-Zone hat keine `sectors`, eine
+   * Düse keine Keule. Der Schatten dreht mit dem Wind (Geometrie), die Düse
+   * nicht (Sektoren) — wer beides mischt, hat eines von beiden missverstanden.
+   */
+  it('lässt eine Lee-Zone ohne Keulenmasse nicht durch', () => {
+    const { obstacleRadiusNm: _o, lobeNm: _l, ...ohne } = leeForm;
+    expect(WindTopoZoneSchema.safeParse({ ...ohne, factor: 0.5 }).success).toBe(false);
+  });
+
+  it('lässt eine Düse ohne Sektoren nicht durch', () => {
+    expect(WindTopoZoneSchema.safeParse(dueseForm).success).toBe(false);
   });
 
   it('verlangt das Präfix topo-', () => {
-    const r = WindTopoZoneSchema.safeParse({
-      ...basis,
-      id: 'serifos-sued',
-      kind: 'lee',
-      sectors: [{ fromDeg: 340, toDeg: 40, factor: 0.5 }],
-    });
+    const r = WindTopoZoneSchema.safeParse({ ...leeForm, id: 'serifos-sued', factor: 0.5 });
     expect(r.success).toBe(false);
+  });
+});
+
+/**
+ * DIE KEULE DREHT MIT DEM WIND — der Grund, warum die Sektor-Fassung ersetzt
+ * wurde. Die Poseidon-Bilder vom 10.08. zeigen den Schatten bei NNW-Wind SSE der
+ * Insel und bei NE-Wind SW davon; ein fest im Süden platzierter Kreis traf die
+ * zweite Lage gar nicht und hätte die Absenkung dort angesetzt, wo kein Schatten
+ * steht.
+ */
+describe('leeAnsatzAt — die Keule steht hinter der Insel', () => {
+  const zone = lee({ confidence: 'mittel' });
+
+  it('deckt bei Nordwind den Ort im Süden, nicht den im Norden', () => {
+    expect(leeAnsatzAt([zone], IM_LEE_SUED, 10)).not.toBeNull();
+    expect(leeAnsatzAt([zone], IN_LUV_NORD, 10)).toBeNull();
+  });
+
+  it('dreht mit: bei Südwind ist es genau umgekehrt', () => {
+    expect(leeAnsatzAt([zone], IN_LUV_NORD, 190)).not.toBeNull();
+    expect(leeAnsatzAt([zone], IM_LEE_SUED, 190)).toBeNull();
+  });
+
+  it('lässt den Schatten mit der Entfernung auslaufen', () => {
+    // 6 sm südlich: 3 sm hinter der Leeküste, also 30 % der 10-sm-Keule.
+    const nah = leeAnsatzAt([zone], IM_LEE_SUED, 10);
+    // 12 sm südlich: 9 sm hinter der Küste, fast am Keulenende.
+    const fern = leeAnsatzAt([zone], { lat: 36.8, lon: 24.5 }, 10);
+    expect(nah!.factor).toBeCloseTo(0.5 + 0.5 * 0.3, 1);
+    expect(fern!.factor).toBeGreaterThan(nah!.factor);
+    expect(fern!.factor).toBeLessThan(1);
+  });
+
+  it('endet hinter der Keule', () => {
+    // 24 sm südlich — 21 sm hinter der Küste, weit jenseits der 10-sm-Keule.
+    expect(leeAnsatzAt([zone], { lat: 36.6, lon: 24.5 }, 10)).toBeNull();
+  });
+
+  it('greift nicht seitlich neben der Insel', () => {
+    // 6 sm südlich, aber 6 sm westlich versetzt — quer weiter als das Hindernis.
+    expect(leeAnsatzAt([zone], { lat: 36.9, lon: 24.375 }, 10)).toBeNull();
+  });
+
+  /**
+   * Zwei Schatten übereinander werden NICHT multipliziert: das würde den Wind
+   * rechnerisch fast auslöschen, und diese Behauptung hat niemand nachgemessen.
+   */
+  it('stapelt überlappende Lee-Zonen nicht, sondern nimmt die vorsichtigere', () => {
+    const zweite = lee({ id: 'topo-lee-test2', factor: 0.3, confidence: 'mittel' });
+    const beide = leeAnsatzAt([zone, zweite], IM_LEE_SUED, 10);
+    const einzeln = leeAnsatzAt([zone], IM_LEE_SUED, 10);
+    expect(beide!.factor).toBeCloseTo(einzeln!.factor, 6);
   });
 });
 
 describe('leeHinweiseForStage — der Schatten wird ein Satz', () => {
   const times = makeTimes(1);
+  /**
+   * Die Etappe läuft von IN_LUV_NORD nach IM_LEE_SUED, die schattenwerfende
+   * Insel steht bei MITTE dazwischen: bei Wind aus 010 Grad liegt der Zielpunkt
+   * 3 sm hinter ihrer Leeküste, der Startpunkt in Luv. Genau ein Punkt im
+   * Schatten — mehr braucht der Hinweis nicht.
+   */
   const leg = makeLeg({
     id: 'a--b',
-    fromPlaceId: 'drin',
-    toPlaceId: 'draussen',
+    fromPlaceId: 'luv',
+    toPlaceId: 'lee',
     waypoints: [],
   });
 
@@ -290,14 +367,14 @@ describe('leeHinweiseForStage — der Schatten wird ein Satz', () => {
     return makeSnapshot({
       times,
       forecast: {
-        drin: constantForecast(times.length, 24, windDirDeg),
-        draussen: constantForecast(times.length, 24, windDirDeg),
+        luv: constantForecast(times.length, 24, windDirDeg),
+        lee: constantForecast(times.length, 24, windDirDeg),
       },
       library: {
         islands: [],
         places: [
-          makePlace({ id: 'drin', coordinates: MITTE }),
-          makePlace({ id: 'draussen', coordinates: WEIT_WEG }),
+          makePlace({ id: 'luv', coordinates: IN_LUV_NORD }),
+          makePlace({ id: 'lee', coordinates: IM_LEE_SUED }),
         ],
         invalidPlaces: [],
         legs: [leg],
@@ -311,7 +388,9 @@ describe('leeHinweiseForStage — der Schatten wird ein Satz', () => {
     const [h] = leeHinweiseForStage(snap([lee()]), [legAssessment()]);
     expect(h).toBeDefined();
     expect(h!.modellKn).toBe(24);
-    expect(h!.leeKn).toBeCloseTo(12, 6);
+    // 3 sm hinter der Leeküste einer 10-sm-Keule: der Faktor ist schon auf
+    // 0,5 + 0,5 × 0,3 ≈ 0,65 ausgelaufen — 24 × 0,65 ≈ 15,5 kn.
+    expect(h!.leeKn).toBeCloseTo(15.5, 1);
     expect(h!.stunden).toBe(3);
     expect(h!.legId).toBe('a--b');
   });
@@ -335,8 +414,9 @@ describe('leeHinweiseForStage — der Schatten wird ein Satz', () => {
     const s = snap([lee({ confidence: 'mittel' })]);
     const [h] = leeHinweiseForStage(s, [legAssessment()]);
     expect(h!.bewertet).toBe(true);
-    // Faktor 0,5 auf 24 kn wäre 12 — gekappt auf 24 − 8 = 16.
-    expect(h!.leeKn).toBeCloseTo(12, 6);
+    // 24 × 0,65 ≈ 15,5 — der Abzug von 8,5 kn liegt über der Kappung, also
+    // rechnet die Ampel mit 24 − 8 = 16 kn.
+    expect(h!.leeKn).toBeCloseTo(15.5, 1);
     expect(h!.angesetztKn).toBeCloseTo(16, 6);
     expect(h!.text).not.toContain('BEWERTET NICHTS');
     expect(h!.text).toContain('16 kn');
@@ -351,8 +431,19 @@ describe('leeHinweiseForStage — der Schatten wird ein Satz', () => {
     expect(h!.text).toContain('BEWERTET NICHTS');
   });
 
-  it('schweigt, wenn der Wind nicht aus dem Sektor der Zone kommt', () => {
-    expect(leeHinweiseForStage(snap([lee()], 180), [legAssessment()])).toEqual([]);
+  it('schweigt, wenn kein Punkt der Etappe im Schatten liegt', () => {
+    // Wind aus Ost: die Keule zeigt nach Westen, beide Etappenpunkte liegen
+    // quer daneben.
+    expect(leeHinweiseForStage(snap([lee()], 90), [legAssessment()])).toEqual([]);
+  });
+
+  it('folgt dem Wind: bei Südwind meldet er den NÖRDLICHEN Punkt', () => {
+    const [h] = leeHinweiseForStage(snap([lee()], 180), [legAssessment()]);
+    // Dieselbe Insel, dieselbe Etappe — nur liegt der Schatten jetzt auf der
+    // anderen Seite, und der Hinweis kommt trotzdem. Genau das konnte die
+    // Sektor-Fassung nicht.
+    expect(h).toBeDefined();
+    expect(h!.windDirDeg).toBe(180);
   });
 
   it('schweigt für eine Etappe, die nicht simuliert werden konnte', () => {
@@ -455,9 +546,21 @@ describe('seeding/data/windtopo.json', () => {
       ),
     ];
 
-    const stumm = zones
-      .filter((z) => !orte.some((o) => distanceNm(o.coordinates, z.center) <= z.radiusNm))
-      .map((z) => z.id);
+    /**
+     * Bei einer Lee-Keule hängt die Wirkfläche an der Windrichtung, also wird
+     * gegen die Meltemi-Richtungen geprüft, für die diese Kuration überhaupt
+     * gedacht ist (N, NNE, NE). Trifft eine Zone in KEINER davon einen
+     * Forecast-Ort, ist sie im Revier dieser App wirkungslos.
+     */
+    const MELTEMI = [0, 22, 45];
+    const trifft = (z: WindTopoZone): boolean =>
+      z.kind === 'duese'
+        ? orte.some((o) => distanceNm(o.coordinates, z.center) <= z.radiusNm)
+        : MELTEMI.some((dir) =>
+            orte.some((o) => leeAnsatzAt([z], o.coordinates, dir) !== null),
+          );
+
+    const stumm = zones.filter((z) => !trifft(z)).map((z) => z.id);
     expect(stumm, `Zonen ohne einen einzigen Forecast-Ort: ${stumm.join(', ')}`).toEqual([]);
   });
 
@@ -472,7 +575,7 @@ describe('seeding/data/windtopo.json', () => {
       JSON.parse(readFileSync('seeding/data/windtopo.json', 'utf8')) as {
         zones: WindTopoZone[];
       }
-    ).zones.filter((z) => z.kind === 'duese');
+    ).zones.filter((z): z is WindTopoDueseZone => z.kind === 'duese');
     const places = readdirSync('seeding/data/islands').flatMap(
       (f) =>
         (
@@ -497,29 +600,32 @@ describe('seeding/data/windtopo.json', () => {
  */
 describe('assessLeg — der Windschatten in der Bewertung', () => {
   /**
-   * Eine kurze Nord-Süd-Etappe, ganz innerhalb EINER Lee-Zone. Eigenes
-   * Szenario statt `northSouthScenario`: dessen Plätze liegen 24 sm
-   * auseinander, und eine Zone, die beide deckt, sprengte den Radius-Deckel
-   * des Schemas (max 12 sm) — zu Recht, denn ein Lee ist keine 24 sm lang.
-   * Hier sind es 6 sm, und die Zone deckt beide Enden.
+   * Geometrie dieser Gruppe: die Etappe läuft von 37,05 nach 37,15 (Kurs 000°),
+   * die schattenwerfende Insel steht mit ihrer Mitte bei 37,20 — also GENAU IN
+   * LUV, wenn der Wind aus Nord kommt. Die Keule reicht dann der Etappe entlang
+   * nach Süden über beide Punkte: das ist der Rückweg unter Serifos in klein.
+   *
+   * Wind aus 000° heisst zugleich Kurs 000° gegenan (TWA 0) — dieselbe Lage,
+   * die den Rückweg im Meltemi rot macht.
    */
-  const SUED = { lat: 37.05, lon: 24.5 };
-  const NORD = { lat: 37.15, lon: 24.5 };
-
-  const ueberDerEtappe = (over: Partial<WindTopoZone> = {}) =>
-    WindTopoZoneSchema.parse({
+  const ueberDerEtappe = (over: Record<string, unknown> = {}) =>
+    WindTopoLeeZoneSchema.parse({
       id: 'topo-lee-etappe',
       name: 'Lee Testinsel',
       kind: 'lee',
-      center: { lat: 37.1, lon: 24.5 },
-      radiusNm: 5,
-      sectors: [{ fromDeg: 340, toDeg: 120, factor: 0.5 }],
+      center: { lat: 37.2, lon: 24.5 },
+      obstacleRadiusNm: 2,
+      lobeNm: 12,
+      factor: 0.5,
       fallboeenNm: 0.5,
       sourceNote: 'fixture',
       kalibriertAus: 'fixture',
       confidence: 'mittel',
       ...over,
     });
+
+  const SUED = { lat: 37.05, lon: 24.5 };
+  const NORD = { lat: 37.15, lon: 24.5 };
 
   function szenario(
     windKn: number,
@@ -529,7 +635,6 @@ describe('assessLeg — der Windschatten in der Bewertung', () => {
   ) {
     const sued = makePlace({ id: 'sued-hafen', islandId: 'sued', coordinates: SUED });
     const nord = makePlace({ id: 'nord-hafen', islandId: 'nord', coordinates: NORD });
-    // Nordwärts: Kurs 000°, damit Wind aus 022° gegenan steht.
     const leg = makeLeg({
       id: 'sued--nord',
       fromIslandId: 'sued',
@@ -560,37 +665,41 @@ describe('assessLeg — der Windschatten in der Bewertung', () => {
   }
 
   it('hebt ein Rot auf: 28 kn gegenan werden mit Abdeckung segelbar', () => {
-    const ohne = szenario(28, 22, []);
-    expect(assessLeg(ohne.leg, 1, ohne.snapshot).ampel).toBe('rot');
-    expect(assessLeg(ohne.leg, 1, ohne.snapshot).reasons.join(' ')).toContain(
-      'Aufkreuzen gegenan',
-    );
+    const ohne = szenario(28, 0, []);
+    const a = assessLeg(ohne.leg, 1, ohne.snapshot);
+    expect(a.ampel).toBe('rot');
+    expect(a.reasons.join(' ')).toContain('Aufkreuzen gegenan');
 
-    const mit = szenario(28, 22, [ueberDerEtappe()]);
-    const a = assessLeg(mit.leg, 1, mit.snapshot);
-    expect(a.ampel).not.toBe('rot');
-    expect(a.reasons.join(' ')).toContain('kuratiertem Windschatten');
+    const mit = szenario(28, 0, [ueberDerEtappe()]);
+    const b = assessLeg(mit.leg, 1, mit.snapshot);
+    expect(b.ampel).not.toBe('rot');
+    expect(b.reasons.join(' ')).toContain('kuratiertem Windschatten');
   });
 
-  it('kappt den Abzug — gerechnet wird mit 28 − 8, nicht mit 28 × 0,5', () => {
-    const { snapshot, leg } = szenario(28, 22, [ueberDerEtappe()]);
+  it('nimmt nie mehr als die Kappung weg — auch dicht hinter der Insel nicht', () => {
+    const { snapshot, leg } = szenario(28, 0, [ueberDerEtappe()]);
     const a = assessLeg(leg, 1, snapshot);
-    // Voller Faktor wären 14 kn. Die Kappung lässt nur 8 kn Abzug zu.
-    expect(a.breakdown[0]!.twsKn).toBeCloseTo(20, 6);
+    // Der volle Faktor gäbe dicht hinter der Küste ~15 kn. Die Kappung lässt
+    // 8 kn Abzug zu, also nie unter 20 — in KEINER Stunde der Etappe.
+    expect(a.breakdown.length).toBeGreaterThan(0);
+    for (const h of a.breakdown) expect(h.twsKn).toBeGreaterThanOrEqual(20 - 1e-9);
+    // Und irgendwo muss die Abdeckung auch wirklich gegriffen haben.
+    expect(Math.min(...a.breakdown.map((h) => h.twsKn))).toBeLessThan(28);
   });
 
   it('macht aus einem Grün höchstens Gelb — das Lee spricht keinen Tag frei', () => {
-    const ohne = szenario(16, 90, [], { distanceNm: 6 });
+    // 1 sm bei 16 kn: kurz genug, dass weder Budget noch Kreuz-Stunden anschlagen.
+    const ohne = szenario(16, 0, [], { distanceNm: 1 });
     expect(assessLeg(ohne.leg, 1, ohne.snapshot).ampel).toBe('gruen');
 
-    const mit = szenario(16, 90, [ueberDerEtappe()], { distanceNm: 6 });
+    const mit = szenario(16, 0, [ueberDerEtappe()], { distanceNm: 1 });
     const a = assessLeg(mit.leg, 1, mit.snapshot);
     expect(a.ampel).toBe('gelb');
     expect(a.reasons.join(' ')).toContain('steht die Abdeckung nicht');
   });
 
   it('lässt eine Zone mit niedrigem Vertrauen gar nicht erst in die Rechnung', () => {
-    const { snapshot, leg } = szenario(28, 22, [
+    const { snapshot, leg } = szenario(28, 0, [
       ueberDerEtappe({ confidence: 'niedrig' }),
     ]);
     const a = assessLeg(leg, 1, snapshot);
@@ -599,11 +708,23 @@ describe('assessLeg — der Windschatten in der Bewertung', () => {
   });
 
   it('schaltet mit leeBewertungMaxAbzugKn = 0 komplett ab', () => {
-    const { snapshot, leg } = szenario(28, 22, [ueberDerEtappe()]);
+    const { snapshot, leg } = szenario(28, 0, [ueberDerEtappe()]);
     snapshot.params = { ...snapshot.params, leeBewertungMaxAbzugKn: 0 };
     const a = assessLeg(leg, 1, snapshot);
     expect(a.breakdown[0]!.twsKn).toBeCloseTo(28, 6);
     expect(a.ampel).toBe('rot');
+  });
+
+  /**
+   * Dass die Keule mit dem Wind dreht, hat eine Kehrseite, und die ist gewollt:
+   * steht der Wind aus SÜD, liegt die Etappe in LUV der Insel — dann gibt es
+   * keinen Schatten, und die Bewertung bekommt auch keinen.
+   */
+  it('greift nicht, wenn die Etappe in Luv der Insel liegt', () => {
+    const { snapshot, leg } = szenario(28, 180, [ueberDerEtappe()]);
+    const a = assessLeg(leg, 1, snapshot);
+    expect(a.breakdown[0]!.twsKn).toBeCloseTo(28, 6);
+    expect(a.reasons.join(' ')).not.toContain('Windschatten');
   });
 
   /**
@@ -613,7 +734,7 @@ describe('assessLeg — der Windschatten in der Bewertung', () => {
    * sichert.
    */
   it('lässt den Meltemi-Worst-Case NIE ein Lee sehen', () => {
-    const { snapshot, leg } = szenario(28, 22, [ueberDerEtappe()]);
+    const { snapshot, leg } = szenario(28, 0, [ueberDerEtappe()]);
     const a = assessLeg(leg, 1, snapshot, { scenario: 'worstCase' });
     expect(a.breakdown[0]!.twsKn).toBeCloseTo(28, 6);
     expect(a.reasons.join(' ')).not.toContain('Windschatten');
@@ -627,7 +748,7 @@ describe('assessLeg — der Windschatten in der Bewertung', () => {
   it('lässt die Nacht-Ampel eines Liegeplatzes unberührt', () => {
     const platz = makePlace({
       id: 'im-lee',
-      coordinates: { lat: 37.1, lon: 24.5 },
+      coordinates: SUED,
       shelter: {
         windSectors: [{ fromDeg: 0, toDeg: 360, maxKn: 20 }],
         waveSectors: [{ fromDeg: 0, toDeg: 360, maxM: 2 }],
@@ -638,7 +759,7 @@ describe('assessLeg — der Windschatten in der Bewertung', () => {
     const bauen = (zones: WindTopoZone[]) =>
       makeSnapshot({
         times,
-        forecast: { 'im-lee': constantForecast(times.length, 28, 10) },
+        forecast: { 'im-lee': constantForecast(times.length, 28, 0) },
         library: {
           islands: [],
           places: [platz],
@@ -653,5 +774,19 @@ describe('assessLeg — der Windschatten in der Bewertung', () => {
     expect(ohne.ampel).toBe('rot');
     expect(mit.ampel).toBe(ohne.ampel);
     expect(mit.maxWindKn).toBe(ohne.maxWindKn);
+  });
+});
+
+describe('leeBewertungsKn — die Kappung', () => {
+  it('lässt den vollen Faktor gelten, solange er unter der Kappung bleibt', () => {
+    expect(leeBewertungsKn(28, 0.9, 8)).toBeCloseTo(25.2, 6);
+  });
+
+  it('kappt den Abzug, wenn der Faktor tiefer greift', () => {
+    expect(leeBewertungsKn(28, 0.5, 8)).toBeCloseTo(20, 6);
+  });
+
+  it('gibt bei Kappung 0 den Modellwind zurück — der Aus-Schalter', () => {
+    expect(leeBewertungsKn(28, 0.5, 0)).toBeCloseTo(28, 6);
   });
 });

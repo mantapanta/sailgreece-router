@@ -66,9 +66,14 @@ import type {
   PlanningSnapshot,
   PointForecast,
 } from './schema/snapshot.ts';
-import type { LeeHinweis, WindTopoZone } from './schema/windTopo.ts';
+import type {
+  LeeHinweis,
+  WindTopoDueseZone,
+  WindTopoLeeZone,
+  WindTopoZone,
+} from './schema/windTopo.ts';
 import { sectorContains } from './ampel.ts';
-import { compassPoint, distanceNm } from './geo.ts';
+import { bearingDeg, compassPoint, distanceNm, normDeg } from './geo.ts';
 import { forecastCoordinates, waypointKeyOf } from './forecastKeys.ts';
 
 export interface WindTopoInfo {
@@ -86,9 +91,65 @@ const LEER: WindTopoInfo = {
   note: null,
 };
 
-/** Liegt der Ort in der Wirkfläche der Zone? */
-function inZone(zone: WindTopoZone, at: Coordinates): boolean {
+/** Liegt der Ort in der Wirkfläche der DÜSE? (Ein Kanal liegt, wo er liegt.) */
+function inZone(zone: WindTopoDueseZone, at: Coordinates): boolean {
   return distanceNm(at, zone.center) <= zone.radiusNm;
+}
+
+/**
+ * DIE LEE-KEULE — liegt der Ort im Windschatten dieses Hindernisses, und wie
+ * stark ist die Abdeckung dort?
+ *
+ * Gerechnet wird im WINDFESTEN Rahmen: der Ort wird auf die Achse "mit dem Wind
+ * ab Inselmitte" projiziert. `along` ist die Strecke nach Lee, `across` der
+ * seitliche Versatz. Im Schatten liegt, was hinter der Leeküste
+ * (`along > obstacleRadiusNm`), innerhalb der Keulenlänge und nicht seitlich
+ * daneben liegt.
+ *
+ * Genau deshalb dreht der Schatten mit dem Wind, ohne dass die Kuration je
+ * Richtung etwas hinschreiben müsste — das war der Fehler der Sektor-Fassung
+ * (schema/windTopo.ts, WindTopoLeeZoneSchema).
+ *
+ * Der Faktor läuft linear von `factor` an der Leeküste auf 1,0 am Keulenende
+ * aus. Ein Ort ganz am Rand der Keule bekommt damit fast keine Absenkung mehr —
+ * die Kuration muss die Grenze nicht scharf treffen, weil dort ohnehin kaum
+ * noch etwas passiert.
+ */
+function leeFactorFor(
+  zone: WindTopoLeeZone,
+  at: Coordinates,
+  windFromDeg: number,
+): number | null {
+  const d = distanceNm(zone.center, at);
+  if (d <= 0) return null;
+  // Wohin der Wind WEHT — AD-6 nennt die Richtung, aus der er kommt.
+  const downwind = normDeg(windFromDeg + 180);
+  const delta = ((bearingDeg(zone.center, at) - downwind) * Math.PI) / 180;
+  const along = d * Math.cos(delta);
+  const across = Math.abs(d * Math.sin(delta));
+  // In LUV gibt es keinen Schatten — das ist die halbe Aussage der Keule.
+  if (along < 0) return null;
+  /**
+   * Abstand hinter der LEEKÜSTE, nach unten auf 0 geklemmt statt abgeschnitten.
+   *
+   * Ein Punkt INNERHALB des Hindernisradius ist nicht "kein Lee", sondern das
+   * tiefste Lee: eine Insel ist kein Kreis, und der Hafen an ihrer Leeküste
+   * liegt regelmässig noch innerhalb des Radius, mit dem wir sie annähern
+   * (Serifos-Livadi 1,4 sm von der Inselmitte bei einem Radius von 3 sm). Ihn
+   * auszuschliessen hiesse, ausgerechnet die stärkste Abdeckung zu verwerfen.
+   */
+  const abKueste = Math.max(0, along - zone.obstacleRadiusNm);
+  if (abKueste > zone.lobeNm) return null;
+  /**
+   * Die Keule wird nach Lee BREITER — ein Nachlauf fächert auf, und am Ende der
+   * Keule ist er hier doppelt so breit wie das Hindernis (rund 14° Halbwinkel,
+   * die übliche Grössenordnung für Insel-Nachläufe). Eine Konstante und kein
+   * Feld je Zone: die Auffächerung ist Strömungsmechanik, nicht Ortskenntnis,
+   * und ein Regler dafür wäre ein Knopf, an dem niemand etwas ablesen kann.
+   */
+  const t = abKueste / zone.lobeNm;
+  if (across > zone.obstacleRadiusNm * (1 + t)) return null;
+  return zone.factor + (1 - zone.factor) * t;
 }
 
 /**
@@ -105,11 +166,11 @@ function inZone(zone: WindTopoZone, at: Coordinates): boolean {
  * (ampel.windSectorLimitKn).
  */
 function factorFor(
-  zones: readonly WindTopoZone[],
+  zones: readonly WindTopoDueseZone[],
   at: Coordinates,
   windFromDeg: number,
-): { factor: number; zone: WindTopoZone } | null {
-  let best: { factor: number; zone: WindTopoZone } | null = null;
+): { factor: number; zone: WindTopoDueseZone } | null {
+  let best: { factor: number; zone: WindTopoDueseZone } | null = null;
   for (const zone of zones) {
     if (!inZone(zone, at)) continue;
     for (const s of zone.sectors) {
@@ -133,7 +194,7 @@ export function applyWindTopo(snapshot: PlanningSnapshot): {
   info: WindTopoInfo;
 } {
   const duesen = (snapshot.library.windTopoZones ?? []).filter(
-    (z) => z.kind === 'duese',
+    (z): z is WindTopoDueseZone => z.kind === 'duese',
   );
   if (duesen.length === 0) return { snapshot, info: LEER };
 
@@ -199,9 +260,10 @@ export function applyWindTopo(snapshot: PlanningSnapshot): {
  * `confidence`; das ist ein Datenschritt mit Begründung im Feld
  * `kalibriertAus`, kein Schalter.
  */
-export function scoringLeeZones(zones: readonly WindTopoZone[]): WindTopoZone[] {
+export function scoringLeeZones(zones: readonly WindTopoZone[]): WindTopoLeeZone[] {
   return zones.filter(
-    (z) => z.kind === 'lee' && (z.confidence === 'mittel' || z.confidence === 'hoch'),
+    (z): z is WindTopoLeeZone =>
+      z.kind === 'lee' && (z.confidence === 'mittel' || z.confidence === 'hoch'),
   );
 }
 
@@ -224,16 +286,25 @@ export function leeBewertungsKn(
 /**
  * Der Lee-Faktor an einem Ort für eine Windrichtung, oder null.
  *
- * Überlappung: `factorFor` nimmt den GRÖSSTEN Faktor, bei Lee-Zonen (< 1) also
- * den, der am nächsten an 1 liegt — die vorsichtigere Aussage über den
- * Schatten. Begründung wie dort.
+ * ÜBERLAPPUNG: der Faktor NÄHER AN 1 gewinnt — die vorsichtigere Aussage über
+ * den Schatten. Liegt ein Ort im Lee zweier Inseln, wird also NICHT multipliziert:
+ * zwei Abdeckungen übereinander würden den Wind rechnerisch fast auslöschen, und
+ * das ist genau die Sorte Behauptung, die niemand nachgemessen hat. Wer mehr
+ * Abdeckung ausweisen will, kalibriert die Zone, statt zwei zu stapeln —
+ * dieselbe Regel wie bei den Schutzsektoren (ampel.windSectorLimitKn).
  */
 export function leeAnsatzAt(
-  zones: readonly WindTopoZone[],
+  zones: readonly WindTopoLeeZone[],
   at: Coordinates,
   windFromDeg: number,
-): { factor: number; zone: WindTopoZone } | null {
-  return factorFor(zones, at, windFromDeg);
+): { factor: number; zone: WindTopoLeeZone } | null {
+  let best: { factor: number; zone: WindTopoLeeZone } | null = null;
+  for (const zone of zones) {
+    const f = leeFactorFor(zone, at, windFromDeg);
+    if (f === null) continue;
+    if (!best || f > best.factor) best = { factor: f, zone };
+  }
+  return best;
 }
 
 /** Die Forecast-Punkte einer gesegelten Etappe (Start, Wegpunkte, Ziel). */
@@ -261,7 +332,7 @@ function legForecastPoints(
  * zählt: dass die Zahl kuratiert ist und wie weit man ihr trauen darf.
  */
 function leeText(
-  zone: WindTopoZone,
+  zone: WindTopoLeeZone,
   modellKn: number,
   leeKn: number,
   angesetztKn: number,
@@ -311,7 +382,9 @@ export function leeHinweiseForStage(
   snapshot: PlanningSnapshot,
   legs: LegAssessment[],
 ): LeeHinweis[] {
-  const lees = (snapshot.library.windTopoZones ?? []).filter((z) => z.kind === 'lee');
+  const lees = (snapshot.library.windTopoZones ?? []).filter(
+    (z): z is WindTopoLeeZone => z.kind === 'lee',
+  );
   if (lees.length === 0) return [];
   // Dieselbe Menge und dieselbe Kappung wie im Bewertungspfad (scoring.ts) —
   // aus denselben Funktionen, damit der Hinweis nicht behaupten kann, etwas sei
@@ -340,9 +413,6 @@ export function leeHinweiseForStage(
     if (stundenIdx.length === 0) continue;
 
     for (const zone of lees) {
-      const drin = punkte.filter((p) => inZone(zone, p.coordinates));
-      if (drin.length === 0) continue;
-
       let stunden = 0;
       let best: {
         modellKn: number;
@@ -351,32 +421,40 @@ export function leeHinweiseForStage(
         basis: DataBasis;
       } | null = null;
 
+      /**
+       * WELCHE PUNKTE IM SCHATTEN LIEGEN, HÄNGT AN DER STUNDE — seit die Keule
+       * mit dem Wind dreht (leeFactorFor), lässt sich das nicht mehr einmal
+       * vorab filtern. Dreht der Wind über die Etappe von N auf NE, wandert der
+       * Schatten mit, und die Punkte darin wechseln. Genau das soll er.
+       */
       for (const i of stundenIdx) {
-        // Der stärkste Punkt IN der Zone trägt die Stunde: der Schatten ist
-        // eine Aussage über die Fläche, und die schwächste Ecke darin würde die
+        // Der stärkste beschattete Punkt trägt die Stunde: der Schatten ist eine
+        // Aussage über eine Fläche, und die schwächste Ecke darin würde die
         // Abdeckung grösser aussehen lassen, als sie ist.
         let modellKn: number | null = null;
         let dir: number | null = null;
+        let faktor: number | null = null;
         let assumed = false;
-        for (const p of drin) {
+        for (const p of punkte) {
           const fc = snapshot.forecast[p.key];
           const kn = fc?.windKn[i];
           const d = fc?.windDirDeg[i];
           if (typeof kn !== 'number' || typeof d !== 'number') continue;
+          const f = leeAnsatzAt([zone], p.coordinates, d);
+          if (!f) continue;
           if (modellKn === null || kn > modellKn) {
             modellKn = kn;
             dir = d;
+            faktor = f.factor;
             assumed = fc?.windAssumed[i] ?? false;
           }
         }
-        if (modellKn === null || dir === null) continue;
-        const hit = factorFor([zone], drin[0]!.coordinates, dir);
-        if (!hit) continue;
+        if (modellKn === null || dir === null || faktor === null) continue;
         stunden++;
         if (!best || modellKn > best.modellKn) {
           best = {
             modellKn,
-            leeKn: modellKn * hit.factor,
+            leeKn: modellKn * faktor,
             windDirDeg: dir,
             basis: assumed ? 'annahme' : 'forecast',
           };
