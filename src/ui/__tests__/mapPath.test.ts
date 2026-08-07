@@ -95,6 +95,7 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
     abfahrtsEmpfehlung: null,
     torCheck: null,
     kiteHinweise: [],
+    leeHinweise: [],
   });
 
   return {

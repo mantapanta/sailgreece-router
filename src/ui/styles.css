@@ -1796,6 +1796,42 @@ button.stage-capsule:only-child::after {
   color: var(--kite-spot);
 }
 
+/* WINDSCHATTEN-Zeilen (domain/windTopo.ts). Bewusst dieselbe ruhige Form wie
+   eine nicht-passende Kite-Zeile und bewusst OHNE Ampel-Farbe: der Hinweis
+   bewertet nichts, und ein grüner Kasten neben einer gelben Etappe läse sich
+   wie ein zweites, freundlicheres Urteil über denselben Tag. Kein Knopf — es
+   gibt keine Zone-Detailseite, und ein Klickziel, das nichts öffnet, ist eine
+   Zusage, die die Karte nicht hält. */
+.lee-zeilen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+
+.lee-zeile {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  border: 1px solid var(--border-hairline);
+  border-left: 4px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--ink-secondary);
+  padding: var(--space-2) var(--space-3);
+  font: 400 13.5px/1.45 var(--font-sans);
+}
+
+.lee-zeile .glyph {
+  color: var(--ink-tertiary);
+  flex: 0 0 auto;
+}
+
+.lee-zeile .text {
+  flex: 1 1 auto;
+}
+
 /* Zusammengefasste Spots: die Zahl, die die Zeilenliste weglässt. */
 .kite-weitere {
   margin: 0;

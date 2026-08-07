@@ -5,6 +5,7 @@ import { PlaceSchema } from './place.ts';
 import { LegSchema, RouteSchema, VariantSchema } from './route.ts';
 import { ParamsSchema } from './params.ts';
 import { PolarSchema } from './polar.ts';
+import { WindTopoZoneSchema } from './windTopo.ts';
 
 /**
  * Staging file per island (seeding/data/islands/<id>.json).
@@ -68,6 +69,23 @@ export const KiteSpotsStagingFileSchema = z.object({
   kiteSpots: z.array(KiteSpotSchema).min(1),
 });
 export type KiteSpotsStagingFile = z.infer<typeof KiteSpotsStagingFileSchema>;
+
+/**
+ * TOPOGRAFISCHE WINDZONEN (seeding/data/windtopo.json) — Windschatten und
+ * Kanaldüsen des Reviers, eine Datei, ein Freigabe-Gate.
+ *
+ * `zones` darf LEER sein, anders als bei allen anderen Staging-Dateien: eine
+ * leere Kuration ist hier ein gültiger Zustand ("noch nicht kalibriert") und
+ * schaltet die Korrektur schlicht ab (domain/windTopo.ts). Eine Datei, die
+ * mindestens eine Zone verlangte, zwänge zum Erfinden einer Zone, nur damit die
+ * Datei existieren darf — genau die Sorte Zahl, die diese Codebasis nicht will.
+ */
+export const WindTopoStagingFileSchema = z.object({
+  approved: z.boolean(),
+  sourceNote: z.string().min(1),
+  zones: z.array(WindTopoZoneSchema),
+});
+export type WindTopoStagingFile = z.infer<typeof WindTopoStagingFileSchema>;
 
 export const ConfigStagingFileSchema = z.object({
   approved: z.boolean(),

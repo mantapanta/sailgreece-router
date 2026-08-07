@@ -920,6 +920,31 @@ function StageCard({
         </div>
       )}
 
+      {/* WINDSCHATTEN an den Etappen des Tages (domain/windTopo.ts, Skipper
+          2026-08-07): die kuratierte Abdeckung hinter den hohen Inseln, die
+          ICON-EU auf 7 km nicht auflöst — die Grösse für die Rückweg-Planung.
+
+          Ohne Ampel-Farbe, und das ist dieselbe Entscheidung wie bei den
+          Kite-Zeilen, nur schärfer: ein Lee-Hinweis darf NIE wie ein zweites,
+          freundlicheres Urteil über denselben Tag aussehen. Die Etappe hat
+          genau eine Ampel, und die rechnet mit dem vollen Modellwind — das
+          steht im Text, den die Domäne formuliert (AD-2). */}
+      {stage.leeHinweise.length > 0 && (
+        <div className="lee-zeilen">
+          {stage.leeHinweise.map((h) => (
+            <p className="lee-zeile" key={`${h.zoneId}-${h.legId}`}>
+              <span className="glyph" aria-hidden="true">
+                ▚
+              </span>
+              <span className="text">
+                Windschatten: {h.text}
+                {h.basis === 'annahme' && ' (Annahme jenseits des Forecast-Horizonts)'}
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
+
       {isHarbour && harbourPointer && (
         <div className="next-sailing">{harbourPointer}</div>
       )}

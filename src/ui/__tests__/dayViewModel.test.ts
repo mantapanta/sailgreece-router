@@ -43,6 +43,7 @@ function makeStage(
     abfahrtsEmpfehlung: null,
     torCheck: null,
     kiteHinweise: [],
+    leeHinweise: [],
     ...over,
   };
 }

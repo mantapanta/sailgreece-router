@@ -17,13 +17,27 @@
  * 'marine'`; welcher Host das ist, weiss allein der Adapter. Die Domäne lernt
  * keinen Hostnamen.
  *
- * POSEIDON (HCMR) FEHLT — und zwar nicht aus Versehen: das griechische
- * Poseidon-System verteilt ausschliesslich NetCDF über THREDDS/OPeNDAP, ohne
- * CORS. Diese App ist reines Hosting ohne Backend (firebase.json), also bräuchte
- * es NetCDF-Reader, bilineare Gitter-Interpolation und einen Proxy. Bei
- * Open-Meteo ist Poseidon ebenfalls nicht dabei (kein HCMR, kein SKIRON, kein
- * WRF-Griechenland). Das Nächstbeste — feineres Gitter über der Ägäis — steht
- * unten.
+ * POSEIDON (HCMR) FEHLT — und zwar nicht aus Versehen. Das griechische
+ * Poseidon-System rechnet 1/30° (~3,7 km) über echter Ägäis-Topografie und wäre
+ * für dieses Revier das bessere Modell; bei Open-Meteo ist es nicht dabei (kein
+ * HCMR, kein SKIRON, kein WRF-Griechenland). HCMR verteilt selbst über einen
+ * THREDDS-Server, also NetCDF via OPeNDAP — und typischerweise auch NCSS
+ * (Punkt-Zeitreihen als CSV/JSON über normales HTTP). Der Blocker ist damit
+ * NICHT das Dateiformat, sondern CORS plus das fehlende Backend: diese App ist
+ * reines Hosting (firebase.json), eine Anbindung bräuchte eine geplante
+ * Cloud Function, die die Ortsmenge abruft und nach Firestore legt. Sie würde
+ * dann als drittes, noch feineres NAHFELD in `mergeNearFar` einhängen —
+ * derselbe Mechanismus, kein neuer. Das Nächstbeste an Modellen — feineres
+ * Gitter über der Ägäis — steht unten.
+ *
+ * WAS STATTDESSEN GESCHIEHT (2026-08-07): der SYSTEMATISCHE Teil dessen, was
+ * Poseidon mehr sieht — Windschatten hinter den hohen Inseln, Düsen in den
+ * Kanälen —, ist keine Wetterlage, sondern Topografie: er steht bei gleicher
+ * Windrichtung immer an derselben Stelle. Er wird deshalb KURATIERT statt
+ * abgerufen (schema/windTopo.ts, domain/windTopo.ts), asymmetrisch angewandt
+ * (Düsen bewerten, Schatten beraten nur) und aus Poseidon-Vergleichen
+ * kalibriert. Das ersetzt eine Anbindung nicht, aber es holt genau den Teil,
+ * der planbar ist.
  */
 
 /** Welche Open-Meteo-API das Modell bedient. Der Adapter mappt das auf den Host. */

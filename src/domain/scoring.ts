@@ -30,6 +30,7 @@ import {
 } from './polar.ts';
 import { kreuzSchlaege } from './kreuz.ts';
 import { kursAbschnitteOfPassages } from './kursAbschnitte.ts';
+import { waypointKeyOf } from './forecastKeys.ts';
 import { hourIndexAt, legWindow, MAX_LEG_HOURS } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -108,10 +109,15 @@ interface LegPoint {
   coordinates: Coordinates;
 }
 
-/** Normative forecast key for the nth waypoint of a leg (AD-3). */
-export function legWaypointKey(legId: string, n: number): string {
-  return `leg:${legId}:${n}`;
-}
+/**
+ * Normative forecast key for the nth waypoint of a leg (AD-3).
+ *
+ * Die Definition wohnt seit 2026-08-07 in domain/forecastKeys.ts — dort, wo
+ * auch die ORTSMENGE aufgezählt wird, die diese Schlüssel trägt. Hier bleibt
+ * nur der Re-Export, damit die bestehenden Aufrufer (Adapter, Tests) sich nicht
+ * umgewöhnen müssen.
+ */
+export { legWaypointKey } from './forecastKeys.ts';
 
 /**
  * Liegezeit an einem Zwischenstopp des Tages — die EINE Quelle dieses Wertes.
@@ -182,7 +188,7 @@ function legPoints(leg: Leg, snapshot: PlanningSnapshot): LegPoint[] | null {
     // Derived legs (e.g. reversed connectors) carry the forecast keys of
     // their ORIGINAL stored leg via waypointKeys — only those were fetched.
     ...leg.waypoints.map((w, n) => ({
-      key: leg.waypointKeys?.[n] ?? legWaypointKey(leg.id, n),
+      key: waypointKeyOf(leg, n),
       coordinates: w,
     })),
     { key: to.id, coordinates: to.coordinates },

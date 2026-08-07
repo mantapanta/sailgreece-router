@@ -61,6 +61,13 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Spot (`domain/kite.ts`). Bewertet wird davon nichts: kein Feld geht in Ampel,
   Solver oder Plan ein. Ausführlich unten: „Kite-Spots".
 
+- **Topografische Windkorrektur:** Windschatten und Kanaldüsen, die ICON-EU auf
+  7 km nicht auflöst (`domain/windTopo.ts`). Sie sind kuratiert, nicht
+  gerechnet, weil sie Topografie sind und kein Wetter — bei gleicher
+  Windrichtung liegen sie immer an derselben Stelle. Angewandt wird
+  **asymmetrisch**: Düsen bewerten, Schatten beraten nur. Ausführlich unten:
+  „Topografische Windkorrektur".
+
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
 @vis.gl/react-google-maps 1.x · Firebase (Authentication + Firestore +
 Hosting) · Vitest 4.
@@ -207,7 +214,7 @@ Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
 
 3. **Freigeben:** Nach der Prüfung in jeder Staging-Datei
    (`seeding/data/islands/*.json`, `legs.json`, `variants.json`,
-   `kitespots.json`, `config.json`, `polar.json`) das Feld `approved` auf
+   `kitespots.json`, `windtopo.json`, `config.json`, `polar.json`) das Feld `approved` auf
    `true` setzen. Die Polare erst
    freigeben, nachdem das Transkript gegen die Original-Exportdatei
    („Fountaine Pajot 45.txt") verifiziert wurde.
@@ -268,9 +275,9 @@ diese vier Schritte der Reihe nach durch:
    `places`-Dokumenten und wandern nur mit einem erneuten Insel-Import mit.
 3. **Rules:** `firebase deploy --only firestore:rules`. Eine Collection ohne
    eigenen Block fällt in den Catch-All und ist gesperrt; der Adapter fängt
-   die Ablehnung für `kiteSpots` bewusst ab, damit eine fehlende Regel nicht
-   die ganze Bibliothek mitnimmt — die Ebene bleibt dann still leer, mit einer
-   Meldung in der Browser-Konsole.
+   die Ablehnung für `kiteSpots` und `windTopoZones` bewusst ab, damit eine
+   fehlende Regel nicht die ganze Bibliothek mitnimmt — die Ebene bleibt dann
+   still leer, mit einer Meldung in der Browser-Konsole.
 4. **Bundle:** `npm run build && firebase deploy` — die neuen Karten
    (Gastro, Kite) stecken im Bundle, nicht in den Daten.
 
@@ -394,7 +401,8 @@ src/
                    # manual > gps), View-Switch ohne Router
 seeding/           # Staging-JSON je Insel (approved-Flag), Review-Generator,
   data/            # islands/*.json, legs.json, variants.json, kitespots.json,
-                   # config.json, polar.json — je Datei ein Freigabe-Gate
+                   # windtopo.json, config.json, polar.json — je Datei ein
+                   # Freigabe-Gate
   review/          # generierte FR24-Review-Sichten
   tools/           # extractLandmass (Küstenlinien zuschneiden),
                    # seaRouteLegs (Etappenkurse landfrei legen)
@@ -589,6 +597,87 @@ nicht recherchiert**. Jeder Eintrag trägt darum `confidence: 'mittel'` oder
 nichts, und ein Hinweis, den man vor Ort prüft, ist mehr wert als eine leere
 Karte. Der Vorbehalt liegt damit in der Anzeige, nicht im Import. Sektor,
 Koordinate und Zulässigkeit eines Spots gehören vor Ort geprüft.
+
+## Topografische Windkorrektur
+
+Geroutet wird mit ICON-EU (7 km). Der Vergleich mit **Poseidon** (HCMR, 1/30° ≈
+3,7 km über echter Ägäis-Topografie, Skipper 2026-08-07) zeigt zwei Dinge, die
+im 7-km-Gitter schlicht nicht enthalten sind:
+
+1. **Windschatten** südlich jeder hohen Insel. Serifos ist 10 km breit und
+   585 m hoch — bei 7 km Gitter anderthalb Zellen, und die Höhe wird beim
+   Gitter-Mitteln zu einem flachen Buckel. Ein flacher Buckel wirft keinen
+   Schatten. Ein Lee reicht 5–15 Hindernishöhen weit, hier also 3–8 km: genau
+   die Grössenordnung, die unter das Gitter fällt.
+2. **Düsen** in den Kanälen (Kea-Kanal, Steno Kythnou, Paros–Naxos,
+   Paros–Antiparos): lokal +20–30 %, weggeglättet. Für sie trug die Etappe
+   bereits einen Warntext (`Leg.windWarnings`) — was fehlte, war die Zahl.
+
+**Warum das kuratiert wird statt abgerufen:** Lee und Düse sind kein Wetter,
+sondern Topografie. Sie liegen bei gleicher Windrichtung immer an derselben
+Stelle — also sind sie Ortskenntnis, und Ortskenntnis ist in dieser App
+kuratiert (AD-4), wie die Schutzsektoren eines Liegeplatzes. Die Daten liegen in
+`seeding/data/windtopo.json` (Firestore-Sammlung `windTopoZones`, Schema
+`src/domain/schema/windTopo.ts`) als **Zonen**: Mittelpunkt, Radius und je
+Windrichtungs-Sektor ein Faktor.
+
+### Die zentrale Regel: Düsen bewerten, Schatten beraten nur
+
+Eine Korrektur nach **oben** (`kind: 'duese'`, Faktor > 1) geht voll in die
+Bewertung ein — liegt sie daneben, war die App zu vorsichtig, und das ist der
+Fehler, den ein Törnplaner machen darf. Jede so angefasste Stunde trägt
+`windAdjusted`, dieselbe Rolle wie `windAssumed` für die Persistenz-Annahme:
+kein Wert, den kein Modell so vorhergesagt hat, bleibt unmarkiert (AD-10).
+
+Eine Korrektur nach **unten** (`kind: 'lee'`, Faktor < 1) geht in **keine**
+Ampel, keinen Solver, kein Budget und keine Gültigkeit ein. Der Grund ist der
+eine Fehler, den dieses Werkzeug nicht machen darf: steht der Schatten nicht
+dort, wo die Kuration ihn behauptet, segelt die Crew bei 26 kn auf einer Etappe,
+die die App grün genannt hat. Der Windschatten ist deshalb ein **Hinweis** an
+der Etappe (`StageAssessment.leeHinweise`) und ein Satz in der
+Rückweg-Empfehlung — dieselbe Doktrin wie bei Kite-Spots und Kurs-Abschnitten.
+
+Die Asymmetrie ist nicht bloss Konvention, sondern **Schema**: `kind: 'lee'`
+verlangt Faktor < 1, `kind: 'duese'` verlangt Faktor > 1. Eine Lee-Zone, die den
+Wind erhöht, ist kein Konfigurationsfehler, sondern unmöglich. Und im Code gibt
+es genau einen Pfad, der `windKn` anfasst (`applyWindTopo`) — der liest
+ausschliesslich Düsen.
+
+### Was ein Lee nicht ist
+
+Gleichmässig ruhig. Unter der Abfallkante einer Steilküste stehen katabatische
+**Fallböen**; sie drehen und schlagen deutlich über dem Gradientwind ein, und
+Poseidon zeigt dort trotzdem Blau, weil es den *Mittelwind* zeigt. Die Taktik
+„so dicht wie möglich unter Land aufkreuzen" fährt genau dort hinein.
+`fallboeenNm` sagt, ab welchem Abstand das Lee nutzbar wird; der Hinweistext
+sagt es mit.
+
+### Stand der Kalibrierung
+
+Die Faktoren der Erstkuration (2026-08-07) sind **Erstschätzungen aus einem
+einzigen Kartenvergleich**, an der Farbskala eines Rasterbildes abgelesen —
+deshalb durchgängig `confidence: 'niedrig'`, und jede Zone nennt in
+`kalibriertAus`, woraus ihr Faktor stammt und ob er abgelesen oder abgeleitet
+wurde. Vor dem Törn nachkalibrieren: 8–12 repräsentative Meltemi-Lagen (N 5 Bft,
+NNE 6 Bft, NE 4 Bft …), Poseidon und ICON-EU zur gleichen Stunde nebeneinander,
+Verhältnis an den Wegpunkten ablesen. Das ist eine Saison-Aufgabe, keine
+tägliche — genau deshalb sind Screenshots hier die **Kalibrier**quelle und nicht
+die Datenquelle.
+
+Zwei Tests halten die Kuration ehrlich: keine Zone darf wirkungslos sein (bei
+der Erstkalibrierung traf die Serifos-Zone zunächst keinen einzigen
+Forecast-Ort), und keine Düsen-Zone darf über einem Liegeplatz liegen — wie
+exponiert ein Hafen ist, sagt sein Schutzsektor, nicht eine Fläche für die
+offene Passage.
+
+### Und Poseidon direkt?
+
+Ginge — kostet aber ein Backend, das dieses Projekt nicht hat. HCMR verteilt
+über THREDDS (OPeNDAP, typischerweise auch NCSS für Punkt-Zeitreihen); der
+Blocker ist CORS plus reines Hosting. Eine geplante Cloud Function könnte die
+Ortsmenge abrufen und nach Firestore legen; Poseidon hinge dann als drittes,
+noch feineres **Nahfeld** in `mergeNearFar` — derselbe Mechanismus, kein neuer.
+Die Korrektur hier ersetzt das nicht, sie holt den Teil, der planbar ist.
 
 ## Attribution
 
