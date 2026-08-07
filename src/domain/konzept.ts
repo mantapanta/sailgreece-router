@@ -694,9 +694,7 @@ export function rueckwegEmpfehlungFor(
 
   /**
    * Der UMLAUFSINN, aus derselben Rechnung, mit der der Solver gerankt hat
-   * (AD-3: eine Rechnung, eine Aussage). Er steht am Schluss, weil er die
-   * gröbste der drei Rückweg-Kennzahlen ist — die gemessenen Kreuzstunden und
-   * die Lee-Korridor-Treue sagen konkreter, was den Heimweg kostet.
+   * (AD-3: eine Rechnung, eine Aussage).
    */
   const gebot = umlaufsinnGebot(snapshot);
   if (gebot !== 'egal') {

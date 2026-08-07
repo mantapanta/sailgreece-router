@@ -31,7 +31,14 @@ import { describe, expect, it } from 'vitest';
 import { assessPlanning } from '../assess.ts';
 import { umlaufsinnGebot, windMittelFor } from '../konzept.ts';
 import { enumerateRoundTrips, roundTripLayers } from '../roundTrips.ts';
-import { completePlan, planTurn } from '../solver.ts';
+import {
+  completePlan,
+  planMetricsFor,
+  planTurn,
+  preferred,
+  type PlanMetrics,
+  type SolveResult,
+} from '../solver.ts';
 import { islandSequence } from '../legs.ts';
 import { stagesOf } from '../schema/plan.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
@@ -264,6 +271,61 @@ describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
   it('Bei wenig Wind entscheidet die Drehrichtung nichts', () => {
     // Skipper: "es sei denn es ist wenig Wind, dann geht das".
     expect(umlaufsinnGebot(realSnapshot({ windKn: 5, windDirDeg: 0 }))).toBe('egal');
+  });
+
+  it('MELTEMI-LAGE ROUTET IM UHRZEIGERSINN — und der Rückweg bleibt im Lee', () => {
+    /**
+     * REGRESSION zum Review des Skippers (2026-08-07, Kartenansicht): "Gegen
+     * den Uhrzeigersinn geroutet, was nach allen recherchierten Regeln wegen
+     * der Windrichtung keinen Sinn macht. Hier scheint irgendwie eine falsche
+     * Optimierungsregel zu hoch priorisiert worden sein."
+     *
+     * Er hatte recht, und zwar auch gegen die ERSTE Fassung dieses Umbaus. Dort
+     * standen die gemessenen Kreuzstunden des Rückwegs ÜBER der
+     * Lee-Korridor-Treue, mit der Begründung "die Messung schlägt die
+     * Faustregel". Bei 16 kn aus 45° — der klassischen Meltemi-Richtung —
+     * lieferte das eine Runde gegen den Uhrzeigersinn: den Westweg hinunter,
+     * quer nach Osten, und über die offene Ägäis nach Nordwesten heim.
+     *
+     * Die Messung war nicht falsch: bei NE-Wind liegt dieser Heimweg wirklich
+     * näher am Raumschots. Falsch war die Annahme, der Lee-Korridor sei bloss
+     * eine gröbere Näherung derselben Frage. Er ist eine WELLEN- und
+     * EXPOSITIONS-Regel ("minimaler Aufenthalt in offener See mit voll
+     * entwickelter Welle", konzept.ts) — davon misst `kreuzHours` nichts.
+     *
+     * Geprüft über das ganze nördliche Meltemi-Band, nicht nur an einem Wert:
+     * eine Rangfolge, die nur bei 0° stimmt, hat nichts bewiesen.
+     */
+    for (const dir of [0, 10, 20, 30, 45]) {
+      const snapshot = realSnapshot({ windKn: 16, windDirDeg: dir });
+      expect(umlaufsinnGebot(snapshot), `${dir}°`).toBe('im-uhrzeigersinn');
+
+      const solved = completePlan(snapshot, 'athen')!;
+      const metrics = planMetricsFor(snapshot)(solved);
+      expect(metrics.clockwise, `${dir}° — Umlaufsinn`).toBe(true);
+      expect(metrics.umlaufsinnPasst, `${dir}° — Gebot erfüllt`).toBe(true);
+      // Und der Heimweg läuft im westlichen Lee-Korridor, ohne Ausreisser.
+      expect(metrics.rueckwegAbweichung, `${dir}° — Lee-Korridor`).toBe(0);
+    }
+  });
+
+  it('der Lee-Korridor rankt ÜBER den gemessenen Kreuzstunden des Rückwegs', () => {
+    /**
+     * Dieselbe Korrektur als Eigenschaft der Rangfolge statt als Szenario:
+     * ein Heimweg quer über die offene See gewinnt NICHT, nur weil er im
+     * Windwinkel bequemer liegt. Kreuzen ist ein Preis, offene See im Meltemi
+     * ist eine Lage.
+     */
+    const snapshot = realSnapshot({ windKn: 16, windDirDeg: 45 });
+    const metrics = planMetricsFor(snapshot);
+    const solved = completePlan(snapshot, 'athen')!;
+    const mk = (over: Partial<PlanMetrics>) => (r: SolveResult) =>
+      ({ ...metrics(solved), ...(r.variantId === 'offen-see' ? over : {}) });
+    const imLee = { ...solved, variantId: 'a-im-lee' };
+    const offenSee = { ...solved, variantId: 'offen-see' };
+    expect(
+      preferred(offenSee, imLee, mk({ rueckwegAbweichung: 3, kreuzTenthsRueckweg: 10 })),
+    ).toBe(imLee);
   });
 
   it('Das Windmittel ist windstärke-gewichtet und meldet seine Kohärenz', () => {

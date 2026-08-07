@@ -1214,25 +1214,37 @@ const RELAXATION_STEP: Record<RelaxationLevel, number> = {
  *
  *   6.–8. DER RÜCKWEG (Skipper 2026-08-07: "ein angenehmer Rückweg, ohne
  *      Kreuzen oder mit möglichst wenig Kreuzen, ist ein entscheidendes
- *      Kriterium"). Drei Kennzahlen derselben Frage, von der genauesten zur
- *      gröbsten — und genau in dieser Reihenfolge, damit die Messung die
- *      Faustregel schlägt:
+ *      Kriterium"). Drei Kennzahlen — und ihre Reihenfolge ist eine
+ *      KORREKTUR vom selben Tag, nach dem Review der ersten Fassung:
  *
- *      6. KREUZSTUNDEN NACH DER WENDE, am simulierten Kurs gegen den echten
- *         Forecast gemessen. Hinaus fährt man mit dem Meltemi im Rücken, heim
- *         gegen ihn an — eine Kreuzstunde auf dem Rückweg ist die, die weh tut.
- *      7. LEE-KORRIDOR-TREUE des Heimwegs (Milos–Sifnos–Serifos–Kythnos): die
- *         Rückweg-Empfehlung der Törnanalyse, an der konkreten Inselkette
- *         gemessen. Das ist das "oder auch im Windschatten".
- *      8. UMLAUFSINN, sofern die Wetterlage überhaupt einen vorgibt
+ *      6. LEE-KORRIDOR-TREUE des Heimwegs (Milos–Sifnos–Serifos–Kythnos,
+ *         konzept.WEST_LEE_KORRIDOR). Die normative Rückweg-Empfehlung der
+ *         Törnanalyse.
+ *      7. UMLAUFSINN, sofern die Wetterlage überhaupt einen vorgibt
  *         (konzept.umlaufsinnGebot). Bei wenig oder drehendem Wind ist das
- *         Gebot 'egal' und dieses Kriterium neutral — vorher war `clockwise`
- *         unbedingt und entschied auch bei Flaute, wo die Drehrichtung nichts
- *         kostet.
+ *         Gebot 'egal' und dieses Kriterium neutral — anders als das frühere
+ *         unbedingte `clockwise`, das auch bei Flaute entschied.
+ *      8. KREUZSTUNDEN NACH DER WENDE, am simulierten Kurs gegen den echten
+ *         Forecast gemessen.
  *
- *      Eine Runde GEGEN den Uhrzeigersinn, die nachweislich weniger kreuzt,
- *      gewinnt deshalb. Alles andere wäre eine Regel, die gegen ihren eigenen
- *      Zweck arbeitet.
+ *      ERST STAND 8 AUF PLATZ 6, mit der Begründung "die Messung schlägt die
+ *      Faustregel". Das war falsch, und der Skipper hat es sofort gesehen: bei
+ *      Wind aus 45° (die klassische Meltemi-Richtung) lieferte der Solver eine
+ *      Runde GEGEN den Uhrzeigersinn — den Westweg hinunter, quer nach Osten,
+ *      und über die offene Ägäis nach Nordwesten heim.
+ *
+ *      Die Messung war dabei nicht falsch: dieser Heimweg liegt bei NE-Wind
+ *      wirklich näher am Raumschots als der Weg die Westkette hinauf. Falsch
+ *      war die Annahme, der Lee-Korridor sei bloss eine grobe Näherung
+ *      derselben Frage. Er ist eine WELLEN- und EXPOSITIONS-Regel: "kurze
+ *      Etappen zwischen den Abdeckungen, minimaler Aufenthalt in offener See
+ *      mit voll entwickelter Welle" (konzept.ts). Davon misst `kreuzHours`
+ *      nichts — der Seegang steht in keiner seiner Zahlen.
+ *
+ *      Zwei Kennzahlen, die Verschiedenes messen, kann man nicht nach
+ *      "genauer" ordnen. Die exponiertere Frage steht oben: Kreuzen ist ein
+ *      Preis, offene See im Meltemi ist eine Lage. Die Kreuzstunden
+ *      entscheiden weiterhin — unter denen, die im Korridor bleiben.
  *
  *   9. WENIGER FESTE BEFUNDE (ohne die Sicherheits-Befunde aus Kriterium 1):
  *      lange Tage, strukturelle Mängel. Hier und nicht oben, weil sie sonst
@@ -1299,10 +1311,10 @@ export function preferred(
     [ma.legDays, mb.legDays],
     [-ma.repeatStays, -mb.repeatStays],
     [ma.distinctIslands, mb.distinctIslands],
-    // Der Rückweg — von der genauesten Kennzahl zur gröbsten.
-    [-ma.kreuzTenthsRueckweg, -mb.kreuzTenthsRueckweg],
+    // Der Rückweg: erst die Lage (Lee, Drehrichtung), dann der Preis (Kreuzen).
     [-ma.rueckwegAbweichung, -mb.rueckwegAbweichung],
     [sinn(ma), sinn(mb)],
+    [-ma.kreuzTenthsRueckweg, -mb.kreuzTenthsRueckweg],
     // Lange Tage und strukturelle Mängel — unter dem Rahmen-Vertrag.
     [-restA, -restB],
     // Kreuzen auch auf dem Hinweg vermeiden, nachrangig.

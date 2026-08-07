@@ -373,7 +373,7 @@ describe('preferred — die Rangfolge des Zielmodells v3', () => {
     expect(preferred(wenige, viele, metrics)).toBe(viele);
   });
 
-  it('Kriterium 6: weniger Kreuzen auf dem RÜCKWEG entscheidet den Rest', () => {
+  it('Kriterium 8: weniger Kreuzen auf dem RÜCKWEG entscheidet unter Gleichen', () => {
     // Skipper 2026-08-07: "ein angenehmer Rückweg, ohne Kreuzen oder mit
     // möglichst wenig Kreuzen, ist ein entscheidendes Kriterium".
     const angenehm = mkResult('angenehm');
@@ -403,14 +403,26 @@ describe('preferred — die Rangfolge des Zielmodells v3', () => {
     expect(preferred(mit, gegen, egal)).toBe(gegen);
   });
 
-  it('die Messung schlägt die Faustregel: weniger Kreuzen gewinnt gegen den Umlaufsinn', () => {
+  it('die LAGE schlägt den Preis: der Umlaufsinn gewinnt gegen weniger Kreuzen', () => {
+    /**
+     * KORREKTUR 2026-08-07 (Review des Skippers an der Kartenansicht). Hier
+     * stand das Gegenteil — "die Messung schlägt die Faustregel", mit dem
+     * Kreuzstunden-Kriterium über dem Umlaufsinn. Das Ergebnis war eine Runde
+     * gegen den Uhrzeigersinn bei NE-Wind: über die offene Ägäis heim, weil
+     * der Windwinkel dort bequemer liegt.
+     *
+     * Die beiden Kennzahlen messen NICHT dasselbe. Der Umlaufsinn und der
+     * Lee-Korridor stehen für Abdeckung und Seegang, die Kreuzstunden für
+     * Zeit und Bequemlichkeit. Man kann sie nicht nach "genauer" ordnen — die
+     * exponiertere Frage steht oben.
+     */
     const gegenlaeufig = mkResult('a-gegenlaeufig');
     const rechtsherum = mkResult('b-rechtsherum');
     const metrics = withMetrics({
       'a-gegenlaeufig': { umlaufsinnPasst: false, kreuzTenthsRueckweg: 5 },
       'b-rechtsherum': { umlaufsinnPasst: true, kreuzTenthsRueckweg: 40 },
     });
-    expect(preferred(rechtsherum, gegenlaeufig, metrics)).toBe(gegenlaeufig);
+    expect(preferred(gegenlaeufig, rechtsherum, metrics)).toBe(rechtsherum);
   });
 
   it('Kriterium 9: lange Tage zählen — aber erst unter dem Rahmen-Vertrag', () => {
