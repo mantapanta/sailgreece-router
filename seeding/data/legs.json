@@ -214,11 +214,15 @@
       "toIslandId": "naxos",
       "fromPlaceId": "iraklia-agios-georgios",
       "toPlaceId": "naxos-stadt",
-      "distanceNm": 17.2,
+      "distanceNm": 18.1,
       "waypoints": [
         {
-          "lat": 36.9719,
-          "lon": 25.3813
+          "lat": 36.9351,
+          "lon": 25.3911
+        },
+        {
+          "lat": 37.0078,
+          "lon": 25.3221
         },
         {
           "lat": 37.0877,
@@ -228,7 +232,8 @@
       "windWarnings": [
         "Kurs rundet die Südwestecke von Naxos auf denselben Wegpunkten wie naxos--amorgos",
         "Distanz 17.2 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren; Kalibrierung an naxos--amorgos: Geometrie 34.8 sm gegen 31 sm recherchiert, der Wert liegt also eher zu hoch"
-      ]
+      ],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.86 -> 0.80 (Lee-Faktor 0.53 -> 0.53, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 17.2 sm plus 0.9 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "kea--athen",
@@ -269,23 +274,36 @@
       "distanceNm": 18,
       "waypoints": [
         {
-          "lat": 37.685,
-          "lon": 24.3
+          "lat": 37.6689,
+          "lon": 24.3059
         },
         {
-          "lat": 37.6,
-          "lon": 24.24
+          "lat": 37.6413,
+          "lon": 24.2798
         },
         {
-          "lat": 37.518,
-          "lon": 24.2723
+          "lat": 37.6013,
+          "lon": 24.2631
+        },
+        {
+          "lat": 37.5612,
+          "lon": 24.2661
+        },
+        {
+          "lat": 37.5421,
+          "lon": 24.268
+        },
+        {
+          "lat": 37.4688,
+          "lon": 24.2896
         },
         {
           "lat": 37.4157,
           "lon": 24.3597
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.64 -> 0.58 (Lee-Faktor 0.80 -> 0.73, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     },
     {
       "id": "kea--syros",
@@ -334,7 +352,7 @@
       "toIslandId": "amorgos",
       "fromPlaceId": "koufonisia-chora",
       "toPlaceId": "amorgos-katapola",
-      "distanceNm": 14.0,
+      "distanceNm": 14,
       "waypoints": [
         {
           "lat": 36.93,
@@ -422,19 +440,32 @@
           "lon": 24.3597
         },
         {
-          "lat": 37.518,
-          "lon": 24.2723
+          "lat": 37.4688,
+          "lon": 24.2896
         },
         {
-          "lat": 37.6,
-          "lon": 24.24
+          "lat": 37.5421,
+          "lon": 24.268
         },
         {
-          "lat": 37.685,
-          "lon": 24.3
+          "lat": 37.5612,
+          "lon": 24.2661
+        },
+        {
+          "lat": 37.6013,
+          "lon": 24.2631
+        },
+        {
+          "lat": 37.6413,
+          "lon": 24.2798
+        },
+        {
+          "lat": 37.6689,
+          "lon": 24.3059
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.64 -> 0.58 (Lee-Faktor 0.80 -> 0.73, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     },
     {
       "id": "kythnos--serifos",
@@ -442,38 +473,43 @@
       "toIslandId": "serifos",
       "fromPlaceId": "kythnos-merichas",
       "toPlaceId": "serifos-livadi",
-      "distanceNm": 17,
+      "distanceNm": 17.1,
       "waypoints": [
         {
           "lat": 37.396,
           "lon": 24.3852
         },
         {
-          "lat": 37.3595,
-          "lon": 24.3775
-        },
-        {
           "lat": 37.3147,
           "lon": 24.3617
         },
         {
-          "lat": 37.2969,
-          "lon": 24.3591
+          "lat": 37.2829,
+          "lon": 24.3601
         },
         {
-          "lat": 37.23,
-          "lon": 24.555
+          "lat": 37.1889,
+          "lon": 24.3637
         },
         {
-          "lat": 37.132,
-          "lon": 24.548
+          "lat": 37.1161,
+          "lon": 24.419
+        },
+        {
+          "lat": 37.1051,
+          "lon": 24.4861
+        },
+        {
+          "lat": 37.111,
+          "lon": 24.5123
         },
         {
           "lat": 37.1282,
           "lon": 24.5243
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.72 -> 0.64 (Lee-Faktor 0.82 -> 0.73, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 17 sm plus 0.1 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "milos--polyaigos",
@@ -518,7 +554,7 @@
       "toIslandId": "sifnos",
       "fromPlaceId": "milos-adamas",
       "toPlaceId": "sifnos-kamares",
-      "distanceNm": 24,
+      "distanceNm": 28.6,
       "waypoints": [
         {
           "lat": 36.715,
@@ -533,11 +569,24 @@
           "lon": 24.4057
         },
         {
-          "lat": 36.8268,
-          "lon": 24.5159
+          "lat": 36.7715,
+          "lon": 24.5335
+        },
+        {
+          "lat": 36.7778,
+          "lon": 24.5902
+        },
+        {
+          "lat": 36.8663,
+          "lon": 24.6604
+        },
+        {
+          "lat": 36.9778,
+          "lon": 24.6499
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.61 -> 1.29 (Lee-Faktor 0.90 -> 0.79, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 24 sm plus 4.6 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "mykonos--paros",
@@ -568,25 +617,22 @@
           "lon": 25.3813
         },
         {
-          "lat": 36.9291,
-          "lon": 25.4178
+          "lat": 36.9068,
+          "lon": 25.439
         },
         {
-          "lat": 36.911,
-          "lon": 25.4487
+          "lat": 36.893,
+          "lon": 25.5564
         },
         {
-          "lat": 36.93,
-          "lon": 25.6
-        },
-        {
-          "lat": 36.8329,
-          "lon": 25.8331
+          "lat": 36.8688,
+          "lon": 25.6489
         }
       ],
       "windWarnings": [
         "Nur mit vorgedachtem Fähr-Exit über Naxos (Eskalationsleiter Quelle 1)"
-      ]
+      ],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.77 -> 0.69 (Lee-Faktor 0.75 -> 0.75, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     },
     {
       "id": "naxos--koufonisia",
@@ -733,7 +779,7 @@
       "toIslandId": "ios",
       "fromPlaceId": "paros-naoussa",
       "toPlaceId": "ios-ormos",
-      "distanceNm": 32,
+      "distanceNm": 32.7,
       "waypoints": [
         {
           "lat": 37.133,
@@ -752,23 +798,32 @@
           "lon": 25.2994
         },
         {
-          "lat": 36.7536,
-          "lon": 25.2534
+          "lat": 36.9946,
+          "lon": 25.3332
+        },
+        {
+          "lat": 36.8581,
+          "lon": 25.3041
+        },
+        {
+          "lat": 36.7727,
+          "lon": 25.2537
         },
         {
           "lat": 36.7279,
           "lon": 25.2469
         },
         {
-          "lat": 36.7094,
-          "lon": 25.2624
+          "lat": 36.7092,
+          "lon": 25.2608
         },
         {
           "lat": 36.7213,
           "lon": 25.2609
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.74 -> 0.66 (Lee-Faktor 0.84 -> 0.73, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 32 sm plus 0.7 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "paros--naxos",
@@ -816,12 +871,20 @@
       "distanceNm": 26,
       "waypoints": [
         {
-          "lat": 37.09,
-          "lon": 25.05
+          "lat": 37.086,
+          "lon": 25.1466
         },
         {
-          "lat": 37.02,
-          "lon": 24.93
+          "lat": 37.0636,
+          "lon": 25.0844
+        },
+        {
+          "lat": 37.0215,
+          "lon": 24.9976
+        },
+        {
+          "lat": 37.0222,
+          "lon": 24.824
         },
         {
           "lat": 37.0445,
@@ -834,7 +897,8 @@
       ],
       "windWarnings": [
         "Insel-Beschleunigungszonen zwischen Sifnos und Paros"
-      ]
+      ],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.79 -> 0.74 (Lee-Faktor 0.95 -> 0.87, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     },
     {
       "id": "paros--syros",
@@ -861,30 +925,39 @@
       "toIslandId": "paros",
       "fromPlaceId": "polyaigos-manolis",
       "toPlaceId": "paros-parikia",
-      "distanceNm": 33,
+      "distanceNm": 38.2,
       "waypoints": [
         {
           "lat": 36.7813,
           "lon": 24.5979
         },
         {
-          "lat": 36.7925,
-          "lon": 24.6126
+          "lat": 36.9268,
+          "lon": 24.7412
         },
         {
-          "lat": 36.7918,
-          "lon": 24.6399
+          "lat": 36.9259,
+          "lon": 25.0207
         },
         {
-          "lat": 37.0636,
-          "lon": 25.0844
+          "lat": 36.934,
+          "lon": 25.0715
+        },
+        {
+          "lat": 36.9496,
+          "lon": 25.0813
+        },
+        {
+          "lat": 37.0664,
+          "lon": 25.1015
         },
         {
           "lat": 37.086,
           "lon": 25.1466
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.55 -> 1.15 (Lee-Faktor 0.81 -> 0.71, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 33 sm plus 5.2 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "santorin--folegandros",
@@ -892,7 +965,7 @@
       "toIslandId": "folegandros",
       "fromPlaceId": "santorin-vlychada",
       "toPlaceId": "folegandros-karavostasi",
-      "distanceNm": 25,
+      "distanceNm": 25.5,
       "waypoints": [
         {
           "lat": 36.3422,
@@ -901,11 +974,20 @@
         {
           "lat": 36.3588,
           "lon": 25.3478
+        },
+        {
+          "lat": 36.4282,
+          "lon": 25.2745
+        },
+        {
+          "lat": 36.5479,
+          "lon": 25.1375
         }
       ],
       "windWarnings": [
         "Offener Schlag westwärts, kein Schutz unterwegs"
-      ]
+      ],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.27 -> 1.14 (Lee-Faktor 1.00 -> 0.98, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 25 sm plus 0.5 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "schinoussa--iraklia",
@@ -935,38 +1017,43 @@
       "toIslandId": "kythnos",
       "fromPlaceId": "serifos-livadi",
       "toPlaceId": "kythnos-merichas",
-      "distanceNm": 17,
+      "distanceNm": 17.1,
       "waypoints": [
         {
           "lat": 37.1282,
           "lon": 24.5243
         },
         {
-          "lat": 37.132,
-          "lon": 24.548
+          "lat": 37.111,
+          "lon": 24.5123
         },
         {
-          "lat": 37.23,
-          "lon": 24.555
+          "lat": 37.1051,
+          "lon": 24.4861
         },
         {
-          "lat": 37.2969,
-          "lon": 24.3591
+          "lat": 37.1161,
+          "lon": 24.419
+        },
+        {
+          "lat": 37.1889,
+          "lon": 24.3637
+        },
+        {
+          "lat": 37.2829,
+          "lon": 24.3601
         },
         {
           "lat": 37.3147,
           "lon": 24.3617
         },
         {
-          "lat": 37.3595,
-          "lon": 24.3775
-        },
-        {
           "lat": 37.396,
           "lon": 24.3852
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.72 -> 0.64 (Lee-Faktor 0.82 -> 0.73, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 17 sm plus 0.1 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "serifos--sifnos",
@@ -974,22 +1061,19 @@
       "toIslandId": "sifnos",
       "fromPlaceId": "serifos-livadi",
       "toPlaceId": "sifnos-kamares",
-      "distanceNm": 13,
+      "distanceNm": 15.3,
       "waypoints": [
         {
-          "lat": 37.1257,
-          "lon": 24.5277
+          "lat": 37.0747,
+          "lon": 24.534
         },
         {
-          "lat": 37.122,
-          "lon": 24.532
-        },
-        {
-          "lat": 37.01,
-          "lon": 24.615
+          "lat": 37.0035,
+          "lon": 24.5462
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.72 -> 0.67 (Lee-Faktor 0.85 -> 0.80, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 13 sm plus 2.3 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "sifnos--antiparos",
@@ -1024,11 +1108,23 @@
       "toIslandId": "milos",
       "fromPlaceId": "sifnos-kamares",
       "toPlaceId": "milos-adamas",
-      "distanceNm": 24,
+      "distanceNm": 28.6,
       "waypoints": [
         {
-          "lat": 36.8268,
-          "lon": 24.5159
+          "lat": 36.9778,
+          "lon": 24.6499
+        },
+        {
+          "lat": 36.8663,
+          "lon": 24.6604
+        },
+        {
+          "lat": 36.7778,
+          "lon": 24.5902
+        },
+        {
+          "lat": 36.7715,
+          "lon": 24.5335
         },
         {
           "lat": 36.7747,
@@ -1043,7 +1139,8 @@
           "lon": 24.4353
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.61 -> 1.29 (Lee-Faktor 0.90 -> 0.79, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 24 sm plus 4.6 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "sifnos--paros",
@@ -1062,17 +1159,26 @@
           "lon": 24.6315
         },
         {
-          "lat": 37.02,
-          "lon": 24.93
+          "lat": 37.0222,
+          "lon": 24.824
         },
         {
-          "lat": 37.09,
-          "lon": 25.05
+          "lat": 37.0215,
+          "lon": 24.9976
+        },
+        {
+          "lat": 37.0636,
+          "lon": 25.0844
+        },
+        {
+          "lat": 37.086,
+          "lon": 25.1466
         }
       ],
       "windWarnings": [
         "Insel-Beschleunigungszonen zwischen Sifnos und Paros"
-      ]
+      ],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.79 -> 0.74 (Lee-Faktor 0.95 -> 0.87, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     },
     {
       "id": "sifnos--serifos",
@@ -1080,22 +1186,19 @@
       "toIslandId": "serifos",
       "fromPlaceId": "sifnos-kamares",
       "toPlaceId": "serifos-livadi",
-      "distanceNm": 13,
+      "distanceNm": 15.3,
       "waypoints": [
         {
-          "lat": 37.01,
-          "lon": 24.615
+          "lat": 37.0035,
+          "lon": 24.5462
         },
         {
-          "lat": 37.122,
-          "lon": 24.532
-        },
-        {
-          "lat": 37.1257,
-          "lon": 24.5277
+          "lat": 37.0747,
+          "lon": 24.534
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.72 -> 0.67 (Lee-Faktor 0.85 -> 0.80, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 13 sm plus 2.3 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "syros--kythnos",
@@ -1103,26 +1206,31 @@
       "toIslandId": "kythnos",
       "fromPlaceId": "syros-ermoupoli",
       "toPlaceId": "kythnos-loutra",
-      "distanceNm": 27,
+      "distanceNm": 29.9,
       "waypoints": [
         {
-          "lat": 37.4441,
-          "lon": 24.9541
+          "lat": 37.3999,
+          "lon": 24.9791
         },
         {
-          "lat": 37.4879,
-          "lon": 24.9528
+          "lat": 37.3789,
+          "lon": 24.9525
         },
         {
-          "lat": 37.5087,
-          "lon": 24.9213
+          "lat": 37.358,
+          "lon": 24.8722
         },
         {
-          "lat": 37.52,
-          "lon": 24.8849
+          "lat": 37.4095,
+          "lon": 24.7732
+        },
+        {
+          "lat": 37.4769,
+          "lon": 24.6024
         }
       ],
-      "windWarnings": []
+      "windWarnings": [],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.97 -> 0.81 (Lee-Faktor 1.00 -> 0.91, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 27 sm plus 2.9 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
       "id": "syros--mykonos",
@@ -1133,16 +1241,12 @@
       "distanceNm": 21,
       "waypoints": [
         {
-          "lat": 37.5361,
-          "lon": 25.1606
+          "lat": 37.4665,
+          "lon": 25.0739
         },
         {
-          "lat": 37.5259,
-          "lon": 25.1594
-        },
-        {
-          "lat": 37.52,
-          "lon": 25.1865
+          "lat": 37.4912,
+          "lon": 25.2028
         },
         {
           "lat": 37.4169,
@@ -1155,7 +1259,8 @@
       ],
       "windWarnings": [
         "Andros/Tinos-Sektor: Düsenwirkung zwischen den Inseln"
-      ]
+      ],
+      "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.29 -> 1.19 (Lee-Faktor 1.00 -> 1.00, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     }
   ]
 }

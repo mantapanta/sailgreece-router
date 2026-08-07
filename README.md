@@ -728,7 +728,60 @@ kein **strategischer** (er macht den Rückweg im Starkwind nicht sicher). Genau
 das sollte eine Planungshilfe sagen, statt eine Sicherheit zu versprechen, die
 in den Zahlen nicht steckt.
 
-### Der Korridor liegt weiter westlich als die kuratierten Kurse
+### Die Kurse liegen jetzt im Schatten (`leeWaypoints.ts`)
+
+**Skipper-Regel 2026-08-07:** „Ein Katamaran segelt bei Wind und Welle einfach
+nicht besonders gut. Insgesamt ist eine angenehmere, längere Fahrt grundsätzlich
+einer kürzeren im Wind vorzuziehen." Damit ist die Zielgrösse der Etappen-
+Bibliothek nicht mehr die kürzeste Linie, sondern die geschützteste, die man in
+vertretbarer Zeit fährt.
+
+`seeding/tools/leeWaypoints.ts` setzt das um: je Insel-Paar sucht es zwei
+Kontrollpunkte auf einem Raster seitlicher Versätze, legt den Kurs landfrei und
+bewertet ihn. Die Zielfunktion ist **nicht** blosse Abdeckung — das war der
+erste Versuch, und er hat `paros--sifnos` von grün auf rot gedreht, weil der
+Bogen in Sifnos' Schatten führte, Kamares aber im Nordwesten liegt: die
+Ansteuerung aus dem Lee heraus wurde ein Schlag mit 9° TWA. Gelernt daraus:
+
+- **Belastung statt Abdeckung.** Der Lee-Faktor wird mit dem Kurs zum Wind
+  gewichtet (gegenan × 2,0, halbwind × 1,0, raum × 0,7). Die Gewichte stehen
+  schon in den Parametern: `kreuzGelbAbKn` 10 gegen `halbwindGelbAbKn` 20 —
+  derselbe Wind ist gegenan doppelt so unangenehm.
+- **Eine harte Schranke obendrauf.** Ein Umweg darf keinen Kreuz-Abschnitt
+  schaffen, den die alte Bahn nicht hatte. Die App bewertet ein *Maximum*
+  (FR16), nicht ein Mittel — eine Stunde Aufkreuzen über 25 kn macht die Etappe
+  rot, egal wie angenehm die übrigen zehn waren.
+- **Der Wechselkurs in einem Satz:** jede zusätzliche Seemeile muss ein Prozent
+  weniger Wind bringen. Dazu harte Deckel von +35 % und +6 sm (≈ eine Stunde).
+- **Dieselbe Latte wie der Wächter.** Der erste Lauf erzeugte Wegpunkte auf
+  Kimolos und im Antiparos-Kanal, die `pathCrossesLand` durchgelassen und
+  `libraryGeometry.test.ts` gefunden hat. Das Werkzeug tastet die Landmaske
+  jetzt mit derselben Auflösung und denselben Toleranzen ab wie der Test.
+
+Ergebnis: **17 Etappen umgelegt, zusammen +24,2 sm** — im Mittel 0,6 sm je
+Etappe. Die grössten Umwege: `polyaigos--paros` +5,2 sm, `milos--sifnos`
++4,6 sm, `syros--kythnos` +2,9 sm. Sieben Etappen wurden ganz ohne Umweg besser,
+nur durch einen günstigeren Kurs zum Wind.
+
+Bei 26–30 kn aus N/NNE gemessen: `syros--kythnos` **rot → gelb** (die erste
+aufgehobene rote Etappe), `serifos--sifnos` gelb → grün. Zwei Etappen gehen
+grün → gelb, bei unveränderter Zeit und Distanz — das ist die Grün-Sperre, nicht
+eine schlechtere Passage: der Kurs führt jetzt durch kuratierte Abdeckung, und
+darauf gibt die App kein bedenkenloses Grün. Alle übrigen 35 bleiben gleich.
+
+Weil der Kurs absichtlich länger wird, ändert dieses Werkzeug als einziges auch
+`distanceNm` — der **gemessene** Umweg wird auf die recherchierte Distanz
+addiert, und `distanceNote` sagt in jeder betroffenen Etappe, wer das getan hat
+und um wie viel. Ohne das würde die Simulation den neuen Weg mit der alten Länge
+rechnen: Abdeckung geschenkt, ohne den Umweg zu bezahlen.
+
+**Eine Bahn je Paar, nicht je Richtung:** der Schatten ist eine Eigenschaft des
+Wassers, nicht der Fahrtrichtung, und 21 der 30 Paare sind ohnehin nur in einer
+Richtung gespeichert (die Gegenrichtung wird gespiegelt abgeleitet). Der Preis
+ist genannt: auf dem Hinweg raumschots kostet die Abdeckung Fahrt, ohne viel
+Bequemlichkeit zu bringen.
+
+### Wie der Korridor gefunden wurde
 
 Die zweite Bildserie (Zoom auf Kea–Kythnos–Serifos, Meltemi aus NNE ~025°) zeigt
 die Abdeckung als **zusammenhängende türkise Bahn** von Kea über Kythnos bis

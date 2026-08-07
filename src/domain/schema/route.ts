@@ -31,6 +31,22 @@ export const LegSchema = z.object({
   windWarnings: z.array(z.string()).default([]),
   /** Distance originally referenced to another base (e.g. 'lavrion'). */
   rebasedFrom: z.string().optional(),
+  /**
+   * WARUM `distanceNm` NICHT MEHR DIE RECHERCHIERTE ZAHL IST.
+   *
+   * Die Distanzen der Bibliothek sind recherchiert und geprüft; seaRouteLegs.ts
+   * fasst sie ausdrücklich nicht an, auch wenn es die Wegpunkte umlegt. Es gibt
+   * genau einen Fall, in dem sie sich trotzdem ändern MUSS: wenn ein Werkzeug
+   * den Kurs bewusst verlängert (leeWaypoints.ts legt den Rückweg in den
+   * Windschatten). Bliebe die alte Zahl stehen, würde die Simulation den neuen,
+   * längeren Weg mit der alten Länge rechnen — Abdeckung geschenkt, ohne den
+   * Umweg zu bezahlen. Genau die Sorte stiller Schönrechnung, die diese
+   * Codebasis nicht duldet.
+   *
+   * Gesetzt heisst: hier steht, WER die Distanz verändert hat und um wie viel.
+   * Fehlt das Feld, ist `distanceNm` die recherchierte Zahl.
+   */
+  distanceNote: z.string().optional(),
 });
 export type Leg = z.infer<typeof LegSchema>;
 
