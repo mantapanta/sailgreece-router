@@ -36,6 +36,7 @@ import type {
   DayOption,
 } from './schema/snapshot.ts';
 import { worstAmpel, type Ampel } from './schema/common.ts';
+import type { KonzeptId } from './schema/konzept.ts';
 import { assessLeg } from './scoring.ts';
 import {
   packLegsFeasible,
@@ -225,16 +226,36 @@ export function assessTargetOption(
   if (!currentIslandId) return leer({ reasons: ['Keine Position gesetzt'] });
 
   /**
-   * EINE Suche, kein Fallback. Bis 2026-08-07 löste der Optionsraum zweimal:
-   * erst die kuratierte Kette der Variante, dann — wenn die nicht trug — eine
-   * freie Suche zum selben Wendepunkt. Der zweite Versuch lieferte einen
-   * völlig anderen Plan, der trotzdem unter dem Namen der Variante ausgeliefert
-   * wurde. Mit abgeschafften Routen-Namen ist der Zweig gegenstandslos.
+   * DIE SUCHE BLEIBT IM KONZEPT DES ZIELS — und fällt erst dann heraus, wenn
+   * es dort nichts gibt (Skipper 2026-08-07: "Route 1 sagt, dass sie trägt,
+   * hat aber keine Routing-Option im Angebot").
+   *
+   * Vorher stand hier eine Suche allein über den Wendepunkt. Sie lieferte die
+   * bestgerankte Runde dorthin — und die lief bei einem WESTLICHEN Ziel
+   * gemessen über Mykonos, Donousa und Amorgos. Weil das Konzept ein paar
+   * Zeilen weiter unten aus dem PLAN gelesen wird (und nicht aus dem Ziel),
+   * wanderten damit die drei westlichsten Ziele des Optionsraums — Milos,
+   * Polyaigos, Sifnos — geschlossen in Route 2. Route 1 blieb ohne eine
+   * einzige Option, während das Konzept-Panel darüber "trägt" sagte.
+   *
+   * Ein Ziel im Lee-Korridor ist eine Frage an Route 1, und sie verdient eine
+   * Route-1-Antwort. Der Rückfall auf die freie Suche bleibt, damit der
+   * Optionsraum nie ÄRMER wird als vorher: gibt es zum Ziel keine Runde im
+   * eigenen Konzept, ist die Runde im anderen immer noch die ehrliche Antwort
+   * auf "wie weit kommen wir noch" — sie wird dann auch als solche etikettiert.
    */
-  const solved = completePlan(snapshot, currentIslandId, [], {
-    turnIslandId: targetIslandId,
-    stopAtFirstValid: true,
-  });
+  const zielKonzept = konzeptOfIslands([targetIslandId]);
+  const suche = (konzeptId?: KonzeptId) =>
+    completePlan(snapshot, currentIslandId, [], {
+      turnIslandId: targetIslandId,
+      konzeptId,
+      stopAtFirstValid: true,
+    });
+  const imKonzept = suche(zielKonzept);
+  const solved =
+    imKonzept && stagesOf(imKonzept.plan).some((s) => s.toIslandId === targetIslandId)
+      ? imKonzept
+      : suche();
   if (!solved) {
     reasons.push('Zu diesem Ziel lässt sich mit aktuellem Forecast kein Restplan bauen');
     // 'zu' UND 'abgeraten': das Ziel bleibt sichtbar und benannt, aber es hängt

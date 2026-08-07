@@ -103,10 +103,12 @@ import {
 import { legIndexWithReverses } from './legs.ts';
 import {
   konzeptLageFor,
+  konzeptOfIslands,
   konzeptOfPlan,
   rueckwegAbweichung,
   WEST_LEE_KORRIDOR,
 } from './konzept.ts';
+import type { KonzeptId } from './schema/konzept.ts';
 import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import { roundTripLayers, type RoundTripLayer } from './roundTrips.ts';
@@ -295,12 +297,12 @@ function makeCandidate(
 }
 
 /**
- * Wie viele Kandidaten je Schicht VOLLSTÄNDIG durchgerechnet werden.
+ * Wie viele Kandidaten je Schicht UND JE ROUTEN-KONZEPT vollständig
+ * durchgerechnet werden.
  *
- * Der Grund steht bei `vorauswahl`. Die Zahl ist grosszügig gewählt: bei 68
- * Kandidaten (der Bibliothek vor den abgeleiteten Etappen) greift sie gar
- * nicht, und selbst danach bleiben mehr Runden übrig, als je zur Auswahl
- * standen.
+ * Der Grund steht bei `vorauswahl`. JE KONZEPT, seit 2026-08-07: als eine
+ * Zahl über die ganze Schicht hat diese Kappung das Konzept-Angebot der App
+ * still zerstört — die Begründung steht dort.
  */
 const KANDIDATEN_JE_SCHICHT = 120;
 
@@ -333,6 +335,23 @@ const KANDIDATEN_JE_SCHICHT = 120;
  * oder 4 verloren — es sei denn, er wäre über die Kreuzstunden zurückgekommen,
  * und dafür müsste er erst einmal gleich viele Etappentage, gleich viele
  * Inseln und gleiche Lee-Treue haben. Genau die stehen in der Spitzengruppe.
+ *
+ * DIE QUOTE JE KONZEPT (Skipper 2026-08-07: "Route 1 sagt, dass sie trägt,
+ * hat aber keine Routing-Option im Angebot"). Genau daran ist die Annahme des
+ * letzten Absatzes gescheitert. Über den vollen Rahmen sind die beiden
+ * OBERSTEN Kriterien bei JEDEM Kandidaten der Schicht A gleich — elf
+ * Etappentage, elf verschiedene Inseln —, sie ordnen also nichts. Was übrig
+ * bleibt, ist die Lee-Abweichung und danach das Alphabet der Etappen-Ids. Von
+ * 2947 vollen Runden waren 188 klassik; nach der Kappung auf 120 blieben 13,
+ * mit noch zwei verschiedenen Wendepunkten — und weil `zielInseln`
+ * (options.ts) den Optionsraum aus GENAU diesen Kandidaten schöpft, hatte die
+ * klassische Runde faktisch kein Angebot mehr, egal was die Wetterlage sagte.
+ *
+ * Die Kappung gilt deshalb JE KONZEPT. Sie bleibt eine Vorauswahl nach
+ * derselben Ordnung, nur zieht sie ihre Spitzengruppe aus beiden Konzepten
+ * statt aus dem Gesamtfeld — die Menge ist damit eine OBERMENGE der alten
+ * (jeder alte Kandidat ist unter den besten 120 seines eigenen Konzepts), die
+ * Hauptroute kann also nur besser werden, nie schlechter.
  */
 function vorauswahl(
   candidates: Candidate[],
@@ -361,6 +380,7 @@ function vorauswahl(
     const seq = routeIslandSequence(c.legs);
     return {
       c,
+      konzept: konzeptOfIslands(seq),
       legDays: Math.min(c.legs.length, daysAvailable),
       distinct: new Set(seq).size,
       abweichung: abweichungRoh(seq, c.turnIslandId),
@@ -377,7 +397,16 @@ function vorauswahl(
       a.abgeleitet - b.abgeleitet ||
       a.key.localeCompare(b.key),
   );
-  return bewertet.slice(0, KANDIDATEN_JE_SCHICHT).map((x) => x.c);
+  // Die Quote je Konzept — die Reihenfolge der Sortierung bleibt erhalten,
+  // damit der Kandidatenraum deterministisch bleibt.
+  const genommen: Record<KonzeptId, number> = { klassik: 0, ost: 0 };
+  const out: Candidate[] = [];
+  for (const x of bewertet) {
+    if (genommen[x.konzept] >= KANDIDATEN_JE_SCHICHT) continue;
+    genommen[x.konzept] += 1;
+    out.push(x.c);
+  }
+  return out;
 }
 
 /**
@@ -1588,6 +1617,24 @@ export function completePlan(
      * Törn geliefert.
      */
     stopAtFirstValid?: boolean;
+    /**
+     * Nur Kandidaten betrachten, die DIESEM Routen-Konzept folgen
+     * (`konzept.konzeptOfIslands` über die rohe Inselfolge).
+     *
+     * Der Grund ist derselbe wie beim `variantId`-Filter, eine Ebene höher:
+     * ohne ihn beantwortet `turnIslandId` allein die Frage, und der Solver
+     * liefert die bestgerankte Kette zum Wendepunkt — bei Milos gemessen eine
+     * Runde über Mykonos. Das ist eine Route-2-Runde, die unter einem
+     * Route-1-Ziel ausgeliefert wird; der Optionsraum hat sie danach
+     * konsequenterweise als Ost einsortiert (options.ts liest das Konzept aus
+     * dem PLAN), und das Konzept-Panel stand mit "trägt" und leerer
+     * Routenliste da.
+     *
+     * Bewusst OHNE Rückfall im Solver: findet das Konzept nichts, entscheidet
+     * der Aufrufer, ob er die Frage ohne Konzept noch einmal stellt
+     * (options.ts tut das) — dasselbe Muster wie bei `variantId`.
+     */
+    konzeptId?: KonzeptId;
   } = {},
 ): SolveResult | null {
   const frame = deadlineFrame(snapshot.params);
@@ -1663,7 +1710,9 @@ export function completePlan(
     const inLayer = candidates.filter(
       (c) =>
         (opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId) &&
-        (opts.variantId === undefined || c.variantId === opts.variantId),
+        (opts.variantId === undefined || c.variantId === opts.variantId) &&
+        (opts.konzeptId === undefined ||
+          konzeptOfIslands(routeIslandSequence(c.legs)) === opts.konzeptId),
     );
     if (inLayer.length === 0) continue;
 
