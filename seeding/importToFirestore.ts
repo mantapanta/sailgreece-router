@@ -256,6 +256,28 @@ async function main() {
           `Etappe ${leg.id}: 'waypointKeys' ist NICHT kuratierbar (wird nur von abgeleiteten Etappen im Core gesetzt).`,
         );
       }
+      /**
+       * Eine ABGELEITETE Etappe darf nicht behaupten, was nur die Recherche
+       * hergibt. Ihre Distanz ist gemessen, nicht geprüft — und Düsen-Warntexte
+       * entstehen aus Ortskenntnis, nicht aus einem Sichtbarkeitsgraphen. Wer
+       * eine solche Etappe recherchiert, nimmt `abgeleitet` heraus; dann darf
+       * sie alles, was eine kuratierte darf.
+       */
+      if (leg.abgeleitet === true) {
+        if (leg.windWarnings.length > 0) {
+          fail(
+            `Etappe ${leg.id}: 'abgeleitet' und 'windWarnings' zugleich — eine abgeleitete ` +
+              'Etappe kennt keine Düsen. Entweder die Warnung ist recherchiert (dann gehört ' +
+              "'abgeleitet' weg), oder sie ist erfunden (dann gehört sie weg).",
+          );
+        }
+        if (leg.rebasedFrom !== undefined) {
+          fail(
+            `Etappe ${leg.id}: 'abgeleitet' und 'rebasedFrom' zugleich — eine gemessene Distanz ` +
+              'ist auf nichts umbasiert.',
+          );
+        }
+      }
       if (leg.kursUnaufloesbar !== undefined) {
         fail(
           `Etappe ${leg.id}: 'kursUnaufloesbar' ist NICHT kuratierbar — es ist ein BEFUND, ` +

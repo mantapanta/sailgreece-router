@@ -451,6 +451,7 @@ describe('preferred — Kreuzen wird vermieden, aber nichts wird ihm geopfert', 
     kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
+    abgeleiteteEtappen: 0,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),

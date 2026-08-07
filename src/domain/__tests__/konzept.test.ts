@@ -198,6 +198,7 @@ describe('preferred — das Konzept überschreibt die Reichweite', () => {
     kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
+    abgeleiteteEtappen: 0,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),

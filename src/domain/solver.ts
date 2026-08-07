@@ -101,7 +101,12 @@ import {
   type PackedLeg,
 } from './ppr.ts';
 import { legIndexWithReverses } from './legs.ts';
-import { konzeptLageFor, konzeptOfPlan, rueckwegAbweichung } from './konzept.ts';
+import {
+  konzeptLageFor,
+  konzeptOfPlan,
+  rueckwegAbweichung,
+  WEST_LEE_KORRIDOR,
+} from './konzept.ts';
 import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
 import { roundTripLayers, type RoundTripLayer } from './roundTrips.ts';
@@ -290,6 +295,92 @@ function makeCandidate(
 }
 
 /**
+ * Wie viele Kandidaten je Schicht VOLLSTÄNDIG durchgerechnet werden.
+ *
+ * Der Grund steht bei `vorauswahl`. Die Zahl ist grosszügig gewählt: bei 68
+ * Kandidaten (der Bibliothek vor den abgeleiteten Etappen) greift sie gar
+ * nicht, und selbst danach bleiben mehr Runden übrig, als je zur Auswahl
+ * standen.
+ */
+const KANDIDATEN_JE_SCHICHT = 120;
+
+/**
+ * DIE VORAUSWAHL — und warum sie nichts verschenkt.
+ *
+ * Seit die Bibliothek die abgeleiteten Etappen trägt (deriveLegs.ts), ist der
+ * Raum nicht mehr klein: bei mittlerem Grad 13 gibt es über 300 000 volle
+ * Runden statt 68. Der Solver rechnete bis dahin JEDEN Kandidaten in JEDER
+ * Entspannungsstufe durch — das sind vier Packungen mit Wetter-Simulation je
+ * Runde, und bei 300 000 Runden ist das keine Bewertung mehr, sondern ein
+ * Serverraum.
+ *
+ * DER SCHLÜSSEL: sechs der obersten sieben Kriterien in `preferred` hängen gar
+ * nicht am Wetter. Sie stehen schon an der KETTE fest, bevor irgendetwas
+ * simuliert wurde:
+ *
+ *   Etappentage       = min(Kettenlänge, verfügbare Tage)
+ *   verschiedene Inseln = Zahl der Ziele ohne Dopplung
+ *   Lee-Abweichung    = reine Geographie (konzept.WEST_LEE_KORRIDOR)
+ *   abgeleitete Etappen = steht am Leg
+ *
+ * Nur die Sicherheits-Befunde und die Kreuzstunden brauchen die Simulation.
+ * Also wird nach dem statischen Teil vorsortiert und nur die Spitze voll
+ * bewertet — die Kandidaten, die danach noch gewinnen könnten.
+ *
+ * WAS DAS NICHT IST: eine Kappung nach Gefühl. Die Vorauswahl benutzt DIESELBE
+ * Ordnung wie die Rangfolge selbst, nur ihren wetterunabhängigen Anfang. Ein
+ * Kandidat, der hier ausscheidet, hätte in `preferred` schon an Kriterium 3
+ * oder 4 verloren — es sei denn, er wäre über die Kreuzstunden zurückgekommen,
+ * und dafür müsste er erst einmal gleich viele Etappentage, gleich viele
+ * Inseln und gleiche Lee-Treue haben. Genau die stehen in der Spitzengruppe.
+ */
+function vorauswahl(
+  candidates: Candidate[],
+  daysAvailable: number,
+  snapshot: PlanningSnapshot,
+): Candidate[] {
+  if (candidates.length <= KANDIDATEN_JE_SCHICHT) return candidates;
+  const base = snapshot.params.baseIslandId;
+  /**
+   * Die Lee-Treue des Rückwegs OHNE Plan — dieselbe Zählung wie
+   * `konzept.rueckwegAbweichungInseln` am fertigen Plan, nur an der rohen
+   * Insel-Folge: alles NACH dem Wendepunkt, was nicht im West-Korridor liegt.
+   */
+  const abweichungRoh = (seq: string[], turnIslandId: string): number => {
+    const turn = seq.lastIndexOf(turnIslandId);
+    if (turn < 0) return 0;
+    const out = new Set<string>();
+    for (const island of seq.slice(turn + 1)) {
+      if (island === base) continue;
+      if (WEST_LEE_KORRIDOR.has(island)) continue;
+      out.add(island);
+    }
+    return out.size;
+  };
+  const bewertet = candidates.map((c) => {
+    const seq = routeIslandSequence(c.legs);
+    return {
+      c,
+      legDays: Math.min(c.legs.length, daysAvailable),
+      distinct: new Set(seq).size,
+      abweichung: abweichungRoh(seq, c.turnIslandId),
+      abgeleitet: c.legs.filter((l) => l.abgeleitet === true).length,
+      // Determinismus-Anker: bei sonst gleichem Stand entscheidet die Kette.
+      key: c.legs.map((l) => l.id).join('>'),
+    };
+  });
+  bewertet.sort(
+    (a, b) =>
+      b.legDays - a.legDays ||
+      b.distinct - a.distinct ||
+      a.abweichung - b.abweichung ||
+      a.abgeleitet - b.abgeleitet ||
+      a.key.localeCompare(b.key),
+  );
+  return bewertet.slice(0, KANDIDATEN_JE_SCHICHT).map((x) => x.c);
+}
+
+/**
  * Der Kandidatenraum, in VORZUGS-SCHICHTEN (Zielmodell v3).
  *
  * WAS HIER VORHER SCHIEFLIEF. Es gab zwei Generatoren nebeneinander. Der
@@ -358,10 +449,14 @@ export function* candidateLayers(
   };
 
   for (const layer of roundTripLayers(snapshot, startIslandId, daysAvailable)) {
-    const candidates = layer.trips.map((legs) => {
-      const c = makeCandidate('runde', layer.layer, legs, snapshot);
-      return { ...c, variantId: `runde-${c.turnIslandId}-${legs.length}` };
-    });
+    const candidates = vorauswahl(
+      layer.trips.map((legs) => {
+        const c = makeCandidate('runde', layer.layer, legs, snapshot);
+        return { ...c, variantId: `runde-${c.turnIslandId}-${legs.length}` };
+      }),
+      daysAvailable,
+      snapshot,
+    );
 
     if (layer.layer !== 'verkuerzt') {
       yield merke(fresh(candidates));
@@ -1049,6 +1144,23 @@ export interface PlanMetrics {
    * Weniger ist besser: die Rückweg-Empfehlung der Törnanalyse als Rangmaß.
    */
   rueckwegAbweichung: number;
+  /**
+   * Wie viele ABGELEITETE Etappen die Runde benutzt (`Leg.abgeleitet`).
+   *
+   * Weniger ist besser — aber nur als eines von vierzehn Kriterien. Das ist die
+   * Umsetzung des Skipper-Entscheids vom 2026-08-07: „diese Routen sollten eher
+   * empfohlene Best Practices sein und daher bevorzugt werden — aber warum
+   * sollte man nicht hinfahren, wenn der Wind es erlaubt und es diese roten
+   * Strecken vermeidet?"
+   *
+   * Eine kuratierte Etappe trägt eine recherchierte Distanz und, wo es sie
+   * gibt, die Düsen-Warntexte des Reviers. Eine abgeleitete trägt nur eine
+   * gemessene Kurslänge. Der Unterschied ist echt und gehört in die Rangfolge —
+   * aber er wiegt weniger als der Rahmen-Vertrag, weniger als die Zahl der
+   * Inseln und weniger als die Lee-Treue des Rückwegs. Wo genau, steht in
+   * `preferred`.
+   */
+  abgeleiteteEtappen: number;
 }
 
 export function planMetricsFor(
@@ -1150,6 +1262,12 @@ export function planMetricsFor(
         stages.length > 0 ? turnDay : null,
         snapshot.params.baseIslandId,
       ),
+      // Gezählt wird die ETAPPE, nicht der Tag: ein Doppelschlag mit einer
+      // kuratierten und einer abgeleiteten Verbindung ist halb so weit von der
+      // Recherche entfernt wie einer mit zweien.
+      abgeleiteteEtappen: stages
+        .flatMap((s) => s.legIds)
+        .filter((id) => legs.get(id)?.abgeleitet === true).length,
     };
     memo.set(r, m);
     return m;
@@ -1325,6 +1443,27 @@ export function preferred(
     [ma.distinctIslands, mb.distinctIslands],
     // Der Rückweg: erst die Lage (Lee-Abdeckung), dann der Preis (Kreuzen).
     [-ma.rueckwegAbweichung, -mb.rueckwegAbweichung],
+    /**
+     * BEST PRACTICE VOR GEOMETRIE — aber nicht um jeden Preis.
+     *
+     * Skipper-Entscheid 2026-08-07: „diese Routen sollten eher empfohlene Best
+     * Practices sein und daher bevorzugt werden — aber warum sollte man nicht
+     * hinfahren, wenn der Wind es erlaubt und es diese roten Strecken
+     * vermeidet?"
+     *
+     * Hier steht das „bevorzugt": unter Runden, die den Rahmen gleich gut
+     * füllen, gleich viele Inseln sehen und gleich lee-treu heimfahren, gewinnt
+     * die aus recherchierten Etappen. Eine abgeleitete Verbindung trägt nur
+     * eine gemessene Kurslänge, keine geprüfte Distanz und keine
+     * Düsen-Warntexte — das ist ein echter Unterschied.
+     *
+     * Und hier steht das „nicht um jeden Preis": ÜBER diesem Kriterium stehen
+     * der Rahmen-Vertrag, die Zahl der Inseln und die Lee-Treue des Rückwegs.
+     * Genau daran scheitert der Fall, der den Umbau ausgelöst hat — die Runde
+     * über Polyaigos → Paros → Sifnos verlässt den Lee-Korridor und verliert
+     * schon eine Zeile weiter oben, bevor die Herkunft überhaupt gefragt wird.
+     */
+    [-ma.abgeleiteteEtappen, -mb.abgeleiteteEtappen],
     [-ma.kreuzTenthsRueckweg, -mb.kreuzTenthsRueckweg],
     // Lange Tage und strukturelle Mängel — unter dem Rahmen-Vertrag.
     [-restA, -restB],

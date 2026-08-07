@@ -3,6 +3,425 @@
   "sourceNote": "Brief-Addendum 2026-07-30 (Quelle 1: Etappenplan Plan A/B, Rückfallhäfen-Kette, Distanzen; Quelle 2: Düsenzonen). Distanzen ab Basis auf Alimos rebasiert (Quell-Etappenplan war Lavrion-basiert). Vor Freigabe prüfen. | FR9-Rundrouten ergänzt (2026-08-03): neue Etappen-Distanzen aus dem Feldtest-Addendum 2026-08-02 übernommen; bereits importierte Etappen behalten ihre getesteten Werte (Konflikt kythnos--serifos: 17 sm importiert schlägt 31 sm Notiz); milos--polyaigos geometrisch berechnet und als solches markiert. | Kurse landfrei gelegt (2026-08-05, seeding/tools/seaRouteLegs.ts gegen src/domain/data/landmass.ts): 25 Etappen bekamen Umfahrungspunkte, 9 Wegpunkte lagen AUF LAND (u.a. zwei mitten auf Naxos, einer auf Kythnos) und wurden verworfen. distanceNm blieb unverändert — die recherchierten Distanzen sind weiter maßgeblich, die Wegpunkte beschreiben nur den fahrbaren Weg dorthin. | Antiparos angebunden (2026-08-06): paros--antiparos und die Gegenrichtung neu, Kurs mit seeding/tools/seaRouteLegs.ts-Logik gegen die Landmaske gelegt und landfrei verifiziert. Endpunkt ist BEWUSST antiparos-agios-georgios und nicht antiparos-town: die Stadt ist auf 15 kn gekappt, auf 15 m LoA begrenzt und trägt die Warnung 'bei Meltemi nicht als Nachtplatz einplanen' — Agios Georgios ist mit 270–90 / 35 kn der einzige Antiparos-Platz, an dem dieses Schiff im August sicher übernachtet. distanceNm ist als einzige Etappe neben milos--polyaigos NICHT recherchiert, sondern aus der Geometrie abgeleitet. | Antiparos–Sifnos ergänzt (2026-08-06): damit ist Antiparos ein Durchgangsknoten statt einer Sackgasse und verbraucht die einzige erlaubte Stichfahrt nicht mehr. Kurs bewusst NÖRDLICH um Sifnos wie paros--sifnos — die Südumfahrung ist 1 sm kürzer, streift aber Kitriani, das in der 250-m-Landmaske fehlt (isOnLand meldet dort offenes Wasser). distanceNm geometrisch abgeleitet. | Kleine Kykladen angebunden (2026-08-06): naxos--koufonisia, koufonisia--schinoussa, schinoussa--iraklia, iraklia--naxos und koufonisia--amorgos. Nur die Hinrichtung gespeichert — die Häfen sind in beiden Richtungen dieselben, reverseLeg erzeugt die Gegenrichtung samt gespiegelter Forecast-Keys (AD-3). Alle Distanzen geometrisch abgeleitet, an naxos--amorgos kalibriert (Geometrie 34.8 gegen 31 sm recherchiert, also eher zu lang als zu kurz). BEWUSST NICHT angebunden: Keros (nur eine Bucht, confidence niedrig, 15 kn — Tagesankerplatz, kein Nachtplatz) und Donousa (liegt nordöstlich abseits, keine recherchierte Verbindung). Schinoussa und Iraklia sind NICHT fährverbunden (guestPickup false) — sie können in einer Runde liegen, aber nie der Gästewechsel-Hafen sein; das erzwingt FR31 selbst. | Nach dem Merge mit main (2026-08-06, verschärfte Ansteuerungszone aus PR #29/#30) mit seeding/tools/seaRouteLegs.ts neu gelegt: fünf der neuen Etappen bekamen zusätzliche Umfahrungspunkte. Die geometrisch abgeleiteten Distanzen sind auf die neuen Kurslängen nachgezogen — am deutlichsten koufonisia--schinoussa (5.6 -> 7.9 sm) und schinoussa--iraklia (2.6 -> 3.5 sm): die Kleine-Kykladen-Passagen sind enger, als die Luftlinie vermuten lässt. | Sieben Etappen der Törnanalyse ergänzt (2026-08-07): Der Abgleich mit zwei professionellen 14-Tage-Törnvorschlägen (aegeansails.gr) und der zugehörigen Törnanalyse zeigte, dass BEIDE Referenzrouten über unseren Graphen nicht darstellbar waren — nicht weil die Kriterien falsch sind, sondern weil Verbindungen fehlten. Aus Route 1 (klassisch): naxos--sifnos (30 sm, Tag 6) und milos--serifos (28 sm, Tag 9). Aus Route 2 (Ost-Kykladen): mykonos--donousa (35 sm, Tag 4), donousa--amorgos (22 sm, Tag 5), schinoussa--naxos (18 sm, Tag 9) und sifnos--kythnos (32 sm, Tag 12, der lange Am-Wind-Schlag im Lee von Serifos). Alle Distanzen aus der Etappen-Tabelle der Analyse übernommen, die Häfen ebenfalls (Naxos-Stadt, Sifnos Kamares, Milos Adamas, Serifos Livadi, Kythnos Merichas, Donousa Stavros, Amorgos Aegiali, Schinoussa Mersini, Naxos Kalandos). Donousa und Delos/Rinia hingen bis dahin an KEINER Etappe — sie hatten eine Insel-Datei, waren im Graphen aber isolierte Knoten, obwohl Route 2 beide anläuft. Dazu mykonos--delos-rinia als einzige Etappe mit GEOMETRISCH ABGELEITETER Distanz: die Analyse nennt für Tag 3 nur die Summe Syros→Mykonos/Rhenia, nicht den Teilschlag. Das steht als windWarning am Leg. Delos/Rinia hat nur einen kuratierten Platz und bleibt damit eine Sackgasse an Mykonos — erreichbar nur über dessen Zweitanlauf, nie als Angelpunkt.",
   "legs": [
     {
+      "id": "amorgos--antiparos",
+      "fromIslandId": "amorgos",
+      "toIslandId": "antiparos",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "antiparos-town",
+      "distanceNm": 36,
+      "waypoints": [
+        {
+          "lat": 36.8557,
+          "lon": 25.5138
+        },
+        {
+          "lat": 36.869,
+          "lon": 25.4798
+        },
+        {
+          "lat": 36.9874,
+          "lon": 25.1155
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 36 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> antiparos-town, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--delos-rinia",
+      "fromIslandId": "amorgos",
+      "toIslandId": "delos-rinia",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "delos-rinia-miskanti",
+      "distanceNm": 46.7,
+      "waypoints": [
+        {
+          "lat": 36.8019,
+          "lon": 25.742
+        },
+        {
+          "lat": 37.1473,
+          "lon": 25.5941
+        },
+        {
+          "lat": 37.209,
+          "lon": 25.5341
+        },
+        {
+          "lat": 37.4169,
+          "lon": 25.2677
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 46.7 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> delos-rinia-miskanti, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--folegandros",
+      "fromIslandId": "amorgos",
+      "toIslandId": "folegandros",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "folegandros-karavostasi",
+      "distanceNm": 40.6,
+      "waypoints": [
+        {
+          "lat": 36.637,
+          "lon": 25.3567
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.6 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> folegandros-karavostasi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--ios",
+      "fromIslandId": "amorgos",
+      "toIslandId": "ios",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "ios-manganari",
+      "distanceNm": 20.9,
+      "waypoints": [
+        {
+          "lat": 36.6472,
+          "lon": 25.375
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 20.9 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> ios-manganari, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--iraklia",
+      "fromIslandId": "amorgos",
+      "toIslandId": "iraklia",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "iraklia-agios-georgios",
+      "distanceNm": 15.1,
+      "waypoints": [
+        {
+          "lat": 36.8557,
+          "lon": 25.5138
+        },
+        {
+          "lat": 36.869,
+          "lon": 25.4798
+        },
+        {
+          "lat": 36.873,
+          "lon": 25.4603
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 15.1 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> iraklia-agios-georgios, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--mykonos",
+      "fromIslandId": "amorgos",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "mykonos-kalafatis",
+      "distanceNm": 41.6,
+      "waypoints": [
+        {
+          "lat": 36.8019,
+          "lon": 25.742
+        },
+        {
+          "lat": 37.1153,
+          "lon": 25.6052
+        },
+        {
+          "lat": 37.4316,
+          "lon": 25.4315
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 41.6 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> mykonos-kalafatis, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--paros",
+      "fromIslandId": "amorgos",
+      "toIslandId": "paros",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "paros-piso-livadi",
+      "distanceNm": 26.7,
+      "waypoints": [
+        {
+          "lat": 36.8912,
+          "lon": 25.5341
+        },
+        {
+          "lat": 36.9217,
+          "lon": 25.4247
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 26.7 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> paros-piso-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--santorin",
+      "fromIslandId": "amorgos",
+      "toIslandId": "santorin",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "santorin-amoudi",
+      "distanceNm": 27.6,
+      "waypoints": [
+        {
+          "lat": 36.4727,
+          "lon": 25.3631
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 27.6 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> santorin-amoudi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "amorgos--schinoussa",
+      "fromIslandId": "amorgos",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "amorgos-kalotaritissa",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 11.7,
+      "waypoints": [
+        {
+          "lat": 36.847,
+          "lon": 25.5388
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 11.7 sm ist die GEMESSENE Länge des landfreien Kurses amorgos-kalotaritissa -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--delos-rinia",
+      "fromIslandId": "antiparos",
+      "toIslandId": "delos-rinia",
+      "fromPlaceId": "antiparos-town",
+      "toPlaceId": "delos-rinia-miskanti",
+      "distanceNm": 23.7,
+      "waypoints": [
+        {
+          "lat": 37.047,
+          "lon": 25.094
+        },
+        {
+          "lat": 37.0961,
+          "lon": 25.1239
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 23.7 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-town -> delos-rinia-miskanti, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--donousa",
+      "fromIslandId": "antiparos",
+      "toIslandId": "donousa",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "donousa-stavros",
+      "distanceNm": 42,
+      "waypoints": [
+        {
+          "lat": 36.934,
+          "lon": 25.0715
+        },
+        {
+          "lat": 36.911,
+          "lon": 25.4487
+        },
+        {
+          "lat": 36.949,
+          "lon": 25.5416
+        },
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 42 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> donousa-stavros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--folegandros",
+      "fromIslandId": "antiparos",
+      "toIslandId": "folegandros",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "folegandros-karavostasi",
+      "distanceNm": 22.1,
+      "waypoints": [
+        {
+          "lat": 36.9641,
+          "lon": 25.0403
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 22.1 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> folegandros-karavostasi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--ios",
+      "fromIslandId": "antiparos",
+      "toIslandId": "ios",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "ios-ormos",
+      "distanceNm": 20.6,
+      "waypoints": [
+        {
+          "lat": 36.934,
+          "lon": 25.0715
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 20.6 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> ios-ormos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--iraklia",
+      "fromIslandId": "antiparos",
+      "toIslandId": "iraklia",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "iraklia-alimia",
+      "distanceNm": 21.5,
+      "waypoints": [
+        {
+          "lat": 36.934,
+          "lon": 25.0715
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 21.5 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> iraklia-alimia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--koufonisia",
+      "fromIslandId": "antiparos",
+      "toIslandId": "koufonisia",
+      "fromPlaceId": "antiparos-town",
+      "toPlaceId": "koufonisia-chora",
+      "distanceNm": 27.5,
+      "waypoints": [
+        {
+          "lat": 36.9874,
+          "lon": 25.1155
+        },
+        {
+          "lat": 36.9141,
+          "lon": 25.4348
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 27.5 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-town -> koufonisia-chora, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--kythnos",
+      "fromIslandId": "antiparos",
+      "toIslandId": "kythnos",
+      "fromPlaceId": "antiparos-town",
+      "toPlaceId": "kythnos-loutra",
+      "distanceNm": 39.4,
+      "waypoints": [
+        {
+          "lat": 37.4358,
+          "lon": 24.4536
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 39.4 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-town -> kythnos-loutra, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--milos",
+      "fromIslandId": "antiparos",
+      "toIslandId": "milos",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "milos-pollonia",
+      "distanceNm": 28.1,
+      "waypoints": [
+        {
+          "lat": 36.979,
+          "lon": 25.0152
+        },
+        {
+          "lat": 36.9819,
+          "lon": 24.9865
+        },
+        {
+          "lat": 36.793,
+          "lon": 24.6268
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 28.1 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> milos-pollonia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--mykonos",
+      "fromIslandId": "antiparos",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "antiparos-town",
+      "toPlaceId": "mykonos-ornos",
+      "distanceNm": 25.5,
+      "waypoints": [
+        {
+          "lat": 37.047,
+          "lon": 25.094
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 25.5 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-town -> mykonos-ornos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--naxos",
+      "fromIslandId": "antiparos",
+      "toIslandId": "naxos",
+      "fromPlaceId": "antiparos-town",
+      "toPlaceId": "naxos-stadt",
+      "distanceNm": 18.2,
+      "waypoints": [
+        {
+          "lat": 37.047,
+          "lon": 25.094
+        },
+        {
+          "lat": 37.0961,
+          "lon": 25.1239
+        },
+        {
+          "lat": 37.1302,
+          "lon": 25.1626
+        },
+        {
+          "lat": 37.16,
+          "lon": 25.225
+        },
+        {
+          "lat": 37.154,
+          "lon": 25.2683
+        },
+        {
+          "lat": 37.1483,
+          "lon": 25.2973
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 18.2 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-town -> naxos-stadt, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "antiparos--paros",
       "fromIslandId": "antiparos",
       "toIslandId": "paros",
@@ -38,6 +457,86 @@
       ]
     },
     {
+      "id": "antiparos--polyaigos",
+      "fromIslandId": "antiparos",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "polyaigos-mersini",
+      "distanceNm": 25.5,
+      "waypoints": [
+        {
+          "lat": 36.9641,
+          "lon": 25.0403
+        },
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 25.5 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> polyaigos-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--santorin",
+      "fromIslandId": "antiparos",
+      "toIslandId": "santorin",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "santorin-amoudi",
+      "distanceNm": 34.7,
+      "waypoints": [
+        {
+          "lat": 36.934,
+          "lon": 25.0715
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 34.7 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> santorin-amoudi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--schinoussa",
+      "fromIslandId": "antiparos",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "antiparos-town",
+      "toPlaceId": "schinoussa-mersini",
+      "distanceNm": 24.3,
+      "waypoints": [
+        {
+          "lat": 36.9874,
+          "lon": 25.1155
+        },
+        {
+          "lat": 36.8629,
+          "lon": 25.506
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 24.3 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-town -> schinoussa-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "antiparos--serifos",
+      "fromIslandId": "antiparos",
+      "toIslandId": "serifos",
+      "fromPlaceId": "antiparos-agios-georgios",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 27.1,
+      "waypoints": [
+        {
+          "lat": 36.979,
+          "lon": 25.0152
+        },
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 27.1 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-agios-georgios -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "antiparos--sifnos",
       "fromIslandId": "antiparos",
       "toIslandId": "sifnos",
@@ -63,6 +562,27 @@
         "Distanz 23.6 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren",
         "Kurs rundet Sifnos im NORDEN wie paros--sifnos. Die Südumfahrung wäre 1 sm kürzer, führt aber dicht an Kitriani vorbei — das Inselchen fehlt in der 250-m-Landmaske, der Kurs sähe dort frei aus, wo Land liegt"
       ]
+    },
+    {
+      "id": "antiparos--syros",
+      "fromIslandId": "antiparos",
+      "toIslandId": "syros",
+      "fromPlaceId": "antiparos-town",
+      "toPlaceId": "syros-finikas",
+      "distanceNm": 23.7,
+      "waypoints": [
+        {
+          "lat": 37.0466,
+          "lon": 25.0668
+        },
+        {
+          "lat": 37.358,
+          "lon": 24.8722
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 23.7 sm ist die GEMESSENE Länge des landfreien Kurses antiparos-town -> syros-finikas, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "athen--attika",
@@ -137,6 +657,425 @@
       ]
     },
     {
+      "id": "attika--kythnos",
+      "fromIslandId": "attika",
+      "toIslandId": "kythnos",
+      "fromPlaceId": "attika-sounion",
+      "toPlaceId": "kythnos-fikiada",
+      "distanceNm": 22.9,
+      "waypoints": [
+        {
+          "lat": 37.6467,
+          "lon": 24.0183
+        },
+        {
+          "lat": 37.4059,
+          "lon": 24.3624
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 22.9 sm ist die GEMESSENE Länge des landfreien Kurses attika-sounion -> kythnos-fikiada, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--donousa",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "donousa",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "donousa-stavros",
+      "distanceNm": 35.3,
+      "waypoints": [
+        {
+          "lat": 37.4169,
+          "lon": 25.2677
+        },
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 35.3 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> donousa-stavros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--folegandros",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "folegandros",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "folegandros-karavostasi",
+      "distanceNm": 49.8,
+      "waypoints": [
+        {
+          "lat": 37.0961,
+          "lon": 25.1239
+        },
+        {
+          "lat": 37.0466,
+          "lon": 25.097
+        },
+        {
+          "lat": 36.9496,
+          "lon": 25.0813
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 49.8 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> folegandros-karavostasi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--ios",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "ios",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "ios-ormos",
+      "distanceNm": 45,
+      "waypoints": [
+        {
+          "lat": 37.4057,
+          "lon": 25.2447
+        },
+        {
+          "lat": 37.3932,
+          "lon": 25.2633
+        },
+        {
+          "lat": 37.3738,
+          "lon": 25.2561
+        },
+        {
+          "lat": 37.1483,
+          "lon": 25.2973
+        },
+        {
+          "lat": 36.7279,
+          "lon": 25.2469
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 45 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> ios-ormos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--iraklia",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "iraklia",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "iraklia-agios-georgios",
+      "distanceNm": 35.7,
+      "waypoints": [
+        {
+          "lat": 37.4057,
+          "lon": 25.2447
+        },
+        {
+          "lat": 37.3932,
+          "lon": 25.2633
+        },
+        {
+          "lat": 37.3738,
+          "lon": 25.2561
+        },
+        {
+          "lat": 37.0877,
+          "lon": 25.3328
+        },
+        {
+          "lat": 36.9719,
+          "lon": 25.3813
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 35.7 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> iraklia-agios-georgios, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--kea",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "kea",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "kea-korissia",
+      "distanceNm": 50,
+      "waypoints": [
+        {
+          "lat": 37.402,
+          "lon": 25.2448
+        },
+        {
+          "lat": 37.3958,
+          "lon": 25.2116
+        },
+        {
+          "lat": 37.5118,
+          "lon": 24.9059
+        },
+        {
+          "lat": 37.6899,
+          "lon": 24.3608
+        },
+        {
+          "lat": 37.6866,
+          "lon": 24.3356
+        },
+        {
+          "lat": 37.6785,
+          "lon": 24.3173
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 50 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> kea-korissia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--koufonisia",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "koufonisia",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "koufonisia-pori",
+      "distanceNm": 36.6,
+      "waypoints": [
+        {
+          "lat": 37.4169,
+          "lon": 25.2677
+        },
+        {
+          "lat": 37.209,
+          "lon": 25.5341
+        },
+        {
+          "lat": 37.1473,
+          "lon": 25.5941
+        },
+        {
+          "lat": 37.0781,
+          "lon": 25.608
+        },
+        {
+          "lat": 36.9587,
+          "lon": 25.614
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 36.6 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> koufonisia-pori, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--kythnos",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "kythnos",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "kythnos-loutra",
+      "distanceNm": 40.6,
+      "waypoints": [
+        {
+          "lat": 37.402,
+          "lon": 25.2448
+        },
+        {
+          "lat": 37.358,
+          "lon": 24.8722
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.6 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> kythnos-loutra, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--naxos",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "naxos",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "naxos-stadt",
+      "distanceNm": 20.2,
+      "waypoints": [
+        {
+          "lat": 37.4057,
+          "lon": 25.2447
+        },
+        {
+          "lat": 37.3932,
+          "lon": 25.2633
+        },
+        {
+          "lat": 37.3738,
+          "lon": 25.2561
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 20.2 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> naxos-stadt, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--paros",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "paros",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "paros-naoussa",
+      "distanceNm": 18.3,
+      "waypoints": [
+        {
+          "lat": 37.4057,
+          "lon": 25.2447
+        },
+        {
+          "lat": 37.3932,
+          "lon": 25.2633
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 18.3 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> paros-naoussa, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--polyaigos",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "polyaigos-manolis",
+      "distanceNm": 50.6,
+      "waypoints": [
+        {
+          "lat": 37.402,
+          "lon": 25.2448
+        },
+        {
+          "lat": 37.3827,
+          "lon": 25.2167
+        },
+        {
+          "lat": 36.9017,
+          "lon": 24.7406
+        },
+        {
+          "lat": 36.7813,
+          "lon": 24.5979
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 50.6 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> polyaigos-manolis, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--schinoussa",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 37.6,
+      "waypoints": [
+        {
+          "lat": 37.4057,
+          "lon": 25.2447
+        },
+        {
+          "lat": 37.3932,
+          "lon": 25.2633
+        },
+        {
+          "lat": 37.3738,
+          "lon": 25.2561
+        },
+        {
+          "lat": 37.0877,
+          "lon": 25.3328
+        },
+        {
+          "lat": 36.9719,
+          "lon": 25.3813
+        },
+        {
+          "lat": 36.9141,
+          "lon": 25.4348
+        },
+        {
+          "lat": 36.8715,
+          "lon": 25.4947
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 37.6 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--serifos",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "serifos",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 40.2,
+      "waypoints": [
+        {
+          "lat": 37.4057,
+          "lon": 25.2447
+        },
+        {
+          "lat": 37.1296,
+          "lon": 24.5405
+        },
+        {
+          "lat": 37.1282,
+          "lon": 24.5243
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.2 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--sifnos",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 38.1,
+      "waypoints": [
+        {
+          "lat": 37.402,
+          "lon": 25.2448
+        },
+        {
+          "lat": 37.3827,
+          "lon": 25.2167
+        },
+        {
+          "lat": 36.9359,
+          "lon": 24.7599
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 38.1 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "delos-rinia--syros",
+      "fromIslandId": "delos-rinia",
+      "toIslandId": "syros",
+      "fromPlaceId": "delos-rinia-miskanti",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 15.6,
+      "waypoints": [
+        {
+          "lat": 37.402,
+          "lon": 25.2448
+        },
+        {
+          "lat": 37.3958,
+          "lon": 25.2116
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 15.6 sm ist die GEMESSENE Länge des landfreien Kurses delos-rinia-miskanti -> syros-ermoupoli, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "donousa--amorgos",
       "fromIslandId": "donousa",
       "toIslandId": "amorgos",
@@ -154,6 +1093,248 @@
         }
       ],
       "windWarnings": []
+    },
+    {
+      "id": "donousa--ios",
+      "fromIslandId": "donousa",
+      "toIslandId": "ios",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "ios-manganari",
+      "distanceNm": 35.4,
+      "waypoints": [
+        {
+          "lat": 36.9009,
+          "lon": 25.6146
+        },
+        {
+          "lat": 36.6611,
+          "lon": 25.3982
+        },
+        {
+          "lat": 36.6472,
+          "lon": 25.375
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 35.4 sm ist die GEMESSENE Länge des landfreien Kurses donousa-stavros -> ios-manganari, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "donousa--iraklia",
+      "fromIslandId": "donousa",
+      "toIslandId": "iraklia",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "iraklia-agios-georgios",
+      "distanceNm": 22.4,
+      "waypoints": [
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        },
+        {
+          "lat": 36.873,
+          "lon": 25.4603
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 22.4 sm ist die GEMESSENE Länge des landfreien Kurses donousa-stavros -> iraklia-agios-georgios, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "donousa--koufonisia",
+      "fromIslandId": "donousa",
+      "toIslandId": "koufonisia",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "koufonisia-pori",
+      "distanceNm": 13.4,
+      "waypoints": [],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 13.4 sm ist die GEMESSENE Länge des landfreien Kurses donousa-stavros -> koufonisia-pori, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "donousa--naxos",
+      "fromIslandId": "donousa",
+      "toIslandId": "naxos",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "naxos-moutsouna",
+      "distanceNm": 12.2,
+      "waypoints": [
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 12.2 sm ist die GEMESSENE Länge des landfreien Kurses donousa-stavros -> naxos-moutsouna, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "donousa--paros",
+      "fromIslandId": "donousa",
+      "toIslandId": "paros",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "paros-naoussa",
+      "distanceNm": 31.4,
+      "waypoints": [
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        },
+        {
+          "lat": 37.209,
+          "lon": 25.5341
+        },
+        {
+          "lat": 37.1567,
+          "lon": 25.2661
+        },
+        {
+          "lat": 37.133,
+          "lon": 25.2408
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 31.4 sm ist die GEMESSENE Länge des landfreien Kurses donousa-stavros -> paros-naoussa, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "donousa--santorin",
+      "fromIslandId": "donousa",
+      "toIslandId": "santorin",
+      "fromPlaceId": "donousa-kedros",
+      "toPlaceId": "santorin-amoudi",
+      "distanceNm": 44.4,
+      "waypoints": [
+        {
+          "lat": 36.8512,
+          "lon": 25.6672
+        },
+        {
+          "lat": 36.842,
+          "lon": 25.6518
+        },
+        {
+          "lat": 36.4727,
+          "lon": 25.3631
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 44.4 sm ist die GEMESSENE Länge des landfreien Kurses donousa-kedros -> santorin-amoudi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "donousa--schinoussa",
+      "fromIslandId": "donousa",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 21.5,
+      "waypoints": [
+        {
+          "lat": 36.847,
+          "lon": 25.5388
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 21.5 sm ist die GEMESSENE Länge des landfreien Kurses donousa-stavros -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "donousa--syros",
+      "fromIslandId": "donousa",
+      "toIslandId": "syros",
+      "fromPlaceId": "donousa-stavros",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 47.2,
+      "waypoints": [
+        {
+          "lat": 37.0861,
+          "lon": 25.798
+        },
+        {
+          "lat": 37.1995,
+          "lon": 25.5504
+        },
+        {
+          "lat": 37.4369,
+          "lon": 24.9709
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 47.2 sm ist die GEMESSENE Länge des landfreien Kurses donousa-stavros -> syros-ermoupoli, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--ios",
+      "fromIslandId": "folegandros",
+      "toIslandId": "ios",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "ios-ormos",
+      "distanceNm": 17.6,
+      "waypoints": [
+        {
+          "lat": 36.629,
+          "lon": 25.0689
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 17.6 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> ios-ormos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--iraklia",
+      "fromIslandId": "folegandros",
+      "toIslandId": "iraklia",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "iraklia-alimia",
+      "distanceNm": 27.5,
+      "waypoints": [
+        {
+          "lat": 36.7184,
+          "lon": 25.1351
+        },
+        {
+          "lat": 36.7949,
+          "lon": 25.2937
+        },
+        {
+          "lat": 36.843,
+          "lon": 25.4276
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 27.5 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> iraklia-alimia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--koufonisia",
+      "fromIslandId": "folegandros",
+      "toIslandId": "koufonisia",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "koufonisia-chora",
+      "distanceNm": 36.6,
+      "waypoints": [
+        {
+          "lat": 36.7184,
+          "lon": 25.1351
+        },
+        {
+          "lat": 36.7949,
+          "lon": 25.2937
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 36.6 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> koufonisia-chora, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "folegandros--milos",
@@ -205,6 +1386,330 @@
       ]
     },
     {
+      "id": "folegandros--naxos",
+      "fromIslandId": "folegandros",
+      "toIslandId": "naxos",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "naxos-kalandos",
+      "distanceNm": 31.5,
+      "waypoints": [
+        {
+          "lat": 36.911,
+          "lon": 25.4487
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 31.5 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> naxos-kalandos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--paros",
+      "fromIslandId": "folegandros",
+      "toIslandId": "paros",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "paros-piso-livadi",
+      "distanceNm": 28.1,
+      "waypoints": [],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 28.1 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> paros-piso-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--polyaigos",
+      "fromIslandId": "folegandros",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "polyaigos-mersini",
+      "distanceNm": 18.7,
+      "waypoints": [
+        {
+          "lat": 36.6157,
+          "lon": 24.9573
+        },
+        {
+          "lat": 36.641,
+          "lon": 24.9274
+        },
+        {
+          "lat": 36.6613,
+          "lon": 24.8796
+        },
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 18.7 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> polyaigos-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--schinoussa",
+      "fromIslandId": "folegandros",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 31.8,
+      "waypoints": [
+        {
+          "lat": 36.7184,
+          "lon": 25.1351
+        },
+        {
+          "lat": 36.7838,
+          "lon": 25.2661
+        },
+        {
+          "lat": 36.7969,
+          "lon": 25.308
+        },
+        {
+          "lat": 36.816,
+          "lon": 25.4393
+        },
+        {
+          "lat": 36.8276,
+          "lon": 25.4845
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 31.8 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--serifos",
+      "fromIslandId": "folegandros",
+      "toIslandId": "serifos",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 38.5,
+      "waypoints": [
+        {
+          "lat": 36.6157,
+          "lon": 24.9573
+        },
+        {
+          "lat": 36.9281,
+          "lon": 24.6768
+        },
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 38.5 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--sifnos",
+      "fromIslandId": "folegandros",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 22.2,
+      "waypoints": [
+        {
+          "lat": 36.6181,
+          "lon": 24.9578
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 22.2 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "folegandros--syros",
+      "fromIslandId": "folegandros",
+      "toIslandId": "syros",
+      "fromPlaceId": "folegandros-karavostasi",
+      "toPlaceId": "syros-finikas",
+      "distanceNm": 46.9,
+      "waypoints": [
+        {
+          "lat": 37.358,
+          "lon": 24.8722
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 46.9 sm ist die GEMESSENE Länge des landfreien Kurses folegandros-karavostasi -> syros-finikas, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--iraklia",
+      "fromIslandId": "ios",
+      "toIslandId": "iraklia",
+      "fromPlaceId": "ios-manganari",
+      "toPlaceId": "iraklia-alimia",
+      "distanceNm": 14.3,
+      "waypoints": [
+        {
+          "lat": 36.6472,
+          "lon": 25.375
+        },
+        {
+          "lat": 36.6611,
+          "lon": 25.3982
+        },
+        {
+          "lat": 36.672,
+          "lon": 25.4002
+        },
+        {
+          "lat": 36.8352,
+          "lon": 25.4104
+        },
+        {
+          "lat": 36.843,
+          "lon": 25.4276
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 14.3 sm ist die GEMESSENE Länge des landfreien Kurses ios-manganari -> iraklia-alimia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--koufonisia",
+      "fromIslandId": "ios",
+      "toIslandId": "koufonisia",
+      "fromPlaceId": "ios-manganari",
+      "toPlaceId": "koufonisia-chora",
+      "distanceNm": 21.5,
+      "waypoints": [
+        {
+          "lat": 36.6472,
+          "lon": 25.375
+        },
+        {
+          "lat": 36.6611,
+          "lon": 25.3982
+        },
+        {
+          "lat": 36.9129,
+          "lon": 25.6009
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 21.5 sm ist die GEMESSENE Länge des landfreien Kurses ios-manganari -> koufonisia-chora, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--milos",
+      "fromIslandId": "ios",
+      "toIslandId": "milos",
+      "fromPlaceId": "ios-ormos",
+      "toPlaceId": "milos-pollonia",
+      "distanceNm": 37,
+      "waypoints": [
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 36.7187,
+          "lon": 25.1862
+        },
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 37 sm ist die GEMESSENE Länge des landfreien Kurses ios-ormos -> milos-pollonia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--mykonos",
+      "fromIslandId": "ios",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "ios-ormos",
+      "toPlaceId": "mykonos-ornos",
+      "distanceNm": 44.2,
+      "waypoints": [
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 36.7279,
+          "lon": 25.2469
+        },
+        {
+          "lat": 37.1483,
+          "lon": 25.2973
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 44.2 sm ist die GEMESSENE Länge des landfreien Kurses ios-ormos -> mykonos-ornos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--naxos",
+      "fromIslandId": "ios",
+      "toIslandId": "naxos",
+      "fromPlaceId": "ios-manganari",
+      "toPlaceId": "naxos-panermos",
+      "distanceNm": 18.8,
+      "waypoints": [
+        {
+          "lat": 36.6472,
+          "lon": 25.375
+        },
+        {
+          "lat": 36.6611,
+          "lon": 25.3982
+        },
+        {
+          "lat": 36.8435,
+          "lon": 25.5343
+        },
+        {
+          "lat": 36.8716,
+          "lon": 25.5514
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 18.8 sm ist die GEMESSENE Länge des landfreien Kurses ios-manganari -> naxos-panermos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--polyaigos",
+      "fromIslandId": "ios",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "ios-ormos",
+      "toPlaceId": "polyaigos-mersini",
+      "distanceNm": 32.6,
+      "waypoints": [
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 36.7187,
+          "lon": 25.1862
+        },
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 32.6 sm ist die GEMESSENE Länge des landfreien Kurses ios-ormos -> polyaigos-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "ios--santorin",
       "fromIslandId": "ios",
       "toIslandId": "santorin",
@@ -228,6 +1733,152 @@
       "windWarnings": []
     },
     {
+      "id": "ios--schinoussa",
+      "fromIslandId": "ios",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "ios-manganari",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 15.6,
+      "waypoints": [
+        {
+          "lat": 36.6472,
+          "lon": 25.375
+        },
+        {
+          "lat": 36.6611,
+          "lon": 25.3982
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 15.6 sm ist die GEMESSENE Länge des landfreien Kurses ios-manganari -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--serifos",
+      "fromIslandId": "ios",
+      "toIslandId": "serifos",
+      "fromPlaceId": "ios-ormos",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 45.8,
+      "waypoints": [
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 45.8 sm ist die GEMESSENE Länge des landfreien Kurses ios-ormos -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--sifnos",
+      "fromIslandId": "ios",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "ios-ormos",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 29.8,
+      "waypoints": [
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 29.8 sm ist die GEMESSENE Länge des landfreien Kurses ios-ormos -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "ios--syros",
+      "fromIslandId": "ios",
+      "toIslandId": "syros",
+      "fromPlaceId": "ios-ormos",
+      "toPlaceId": "syros-finikas",
+      "distanceNm": 46.9,
+      "waypoints": [
+        {
+          "lat": 36.7213,
+          "lon": 25.2609
+        },
+        {
+          "lat": 36.7092,
+          "lon": 25.2608
+        },
+        {
+          "lat": 36.7279,
+          "lon": 25.2469
+        },
+        {
+          "lat": 36.9766,
+          "lon": 25.119
+        },
+        {
+          "lat": 37.0153,
+          "lon": 25.0921
+        },
+        {
+          "lat": 37.0515,
+          "lon": 25.0897
+        },
+        {
+          "lat": 37.358,
+          "lon": 24.8722
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 46.9 sm ist die GEMESSENE Länge des landfreien Kurses ios-ormos -> syros-finikas, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "iraklia--koufonisia",
+      "fromIslandId": "iraklia",
+      "toIslandId": "koufonisia",
+      "fromPlaceId": "iraklia-agios-georgios",
+      "toPlaceId": "koufonisia-chora",
+      "distanceNm": 8.2,
+      "waypoints": [
+        {
+          "lat": 36.873,
+          "lon": 25.4603
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 8.2 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-agios-georgios -> koufonisia-chora, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "iraklia--mykonos",
+      "fromIslandId": "iraklia",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "iraklia-agios-georgios",
+      "toPlaceId": "mykonos-ornos",
+      "distanceNm": 34.6,
+      "waypoints": [
+        {
+          "lat": 36.9719,
+          "lon": 25.3813
+        },
+        {
+          "lat": 37.0877,
+          "lon": 25.3328
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 34.6 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-agios-georgios -> mykonos-ornos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "iraklia--naxos",
       "fromIslandId": "iraklia",
       "toIslandId": "naxos",
@@ -248,6 +1899,126 @@
         "Kurs rundet die Südwestecke von Naxos auf denselben Wegpunkten wie naxos--amorgos",
         "Distanz 17.2 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren; Kalibrierung an naxos--amorgos: Geometrie 34.8 sm gegen 31 sm recherchiert, der Wert liegt also eher zu hoch"
       ]
+    },
+    {
+      "id": "iraklia--paros",
+      "fromIslandId": "iraklia",
+      "toIslandId": "paros",
+      "fromPlaceId": "iraklia-agios-georgios",
+      "toPlaceId": "paros-piso-livadi",
+      "distanceNm": 13,
+      "waypoints": [],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 13 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-agios-georgios -> paros-piso-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "iraklia--polyaigos",
+      "fromIslandId": "iraklia",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "iraklia-alimia",
+      "toPlaceId": "polyaigos-mersini",
+      "distanceNm": 40.3,
+      "waypoints": [
+        {
+          "lat": 36.843,
+          "lon": 25.4276
+        },
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.3 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-alimia -> polyaigos-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "iraklia--santorin",
+      "fromIslandId": "iraklia",
+      "toIslandId": "santorin",
+      "fromPlaceId": "iraklia-alimia",
+      "toPlaceId": "santorin-amoudi",
+      "distanceNm": 24.2,
+      "waypoints": [
+        {
+          "lat": 36.843,
+          "lon": 25.4276
+        },
+        {
+          "lat": 36.8352,
+          "lon": 25.4104
+        },
+        {
+          "lat": 36.7073,
+          "lon": 25.4052
+        },
+        {
+          "lat": 36.6463,
+          "lon": 25.387
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 24.2 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-alimia -> santorin-amoudi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "iraklia--serifos",
+      "fromIslandId": "iraklia",
+      "toIslandId": "serifos",
+      "fromPlaceId": "iraklia-alimia",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 48.5,
+      "waypoints": [
+        {
+          "lat": 36.9531,
+          "lon": 24.9753
+        },
+        {
+          "lat": 36.9627,
+          "lon": 24.9682
+        },
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 48.5 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-alimia -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "iraklia--sifnos",
+      "fromIslandId": "iraklia",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "iraklia-alimia",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 33.9,
+      "waypoints": [],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 33.9 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-alimia -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "iraklia--syros",
+      "fromIslandId": "iraklia",
+      "toIslandId": "syros",
+      "fromPlaceId": "iraklia-agios-georgios",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 43.2,
+      "waypoints": [
+        {
+          "lat": 36.9719,
+          "lon": 25.3813
+        },
+        {
+          "lat": 37.1374,
+          "lon": 25.2994
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 43.2 sm ist die GEMESSENE Länge des landfreien Kurses iraklia-agios-georgios -> syros-ermoupoli, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "kea--athen",
@@ -320,6 +2091,84 @@
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.68 -> 0.62 (Lee-Faktor 0.85 -> 0.79, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     },
     {
+      "id": "kea--mykonos",
+      "fromIslandId": "kea",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "kea-korissia",
+      "toPlaceId": "mykonos-tourlos",
+      "distanceNm": 51.2,
+      "waypoints": [
+        {
+          "lat": 37.6785,
+          "lon": 24.3173
+        },
+        {
+          "lat": 37.6866,
+          "lon": 24.3356
+        },
+        {
+          "lat": 37.6899,
+          "lon": 24.3608
+        },
+        {
+          "lat": 37.5941,
+          "lon": 24.6808
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 51.2 sm ist die GEMESSENE Länge des landfreien Kurses kea-korissia -> mykonos-tourlos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "kea--serifos",
+      "fromIslandId": "kea",
+      "toIslandId": "serifos",
+      "fromPlaceId": "kea-korissia",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 40.1,
+      "waypoints": [
+        {
+          "lat": 37.6634,
+          "lon": 24.3086
+        },
+        {
+          "lat": 37.6628,
+          "lon": 24.2909
+        },
+        {
+          "lat": 37.6013,
+          "lon": 24.2631
+        },
+        {
+          "lat": 37.518,
+          "lon": 24.2723
+        },
+        {
+          "lat": 37.3046,
+          "lon": 24.3565
+        },
+        {
+          "lat": 37.2097,
+          "lon": 24.5182
+        },
+        {
+          "lat": 37.1835,
+          "lon": 24.54
+        },
+        {
+          "lat": 37.1436,
+          "lon": 24.5463
+        },
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.1 sm ist die GEMESSENE Länge des landfreien Kurses kea-korissia -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "kea--syros",
       "fromIslandId": "kea",
       "toIslandId": "syros",
@@ -383,6 +2232,90 @@
       ]
     },
     {
+      "id": "koufonisia--mykonos",
+      "fromIslandId": "koufonisia",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "koufonisia-pori",
+      "toPlaceId": "mykonos-kalafatis",
+      "distanceNm": 31.6,
+      "waypoints": [
+        {
+          "lat": 36.9587,
+          "lon": 25.614
+        },
+        {
+          "lat": 37.1084,
+          "lon": 25.6042
+        },
+        {
+          "lat": 37.163,
+          "lon": 25.5841
+        },
+        {
+          "lat": 37.4316,
+          "lon": 25.4315
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 31.6 sm ist die GEMESSENE Länge des landfreien Kurses koufonisia-pori -> mykonos-kalafatis, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "koufonisia--paros",
+      "fromIslandId": "koufonisia",
+      "toIslandId": "paros",
+      "fromPlaceId": "koufonisia-chora",
+      "toPlaceId": "paros-piso-livadi",
+      "distanceNm": 18.1,
+      "waypoints": [
+        {
+          "lat": 36.9141,
+          "lon": 25.4348
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 18.1 sm ist die GEMESSENE Länge des landfreien Kurses koufonisia-chora -> paros-piso-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "koufonisia--polyaigos",
+      "fromIslandId": "koufonisia",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "koufonisia-chora",
+      "toPlaceId": "polyaigos-mersini",
+      "distanceNm": 48.8,
+      "waypoints": [
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 48.8 sm ist die GEMESSENE Länge des landfreien Kurses koufonisia-chora -> polyaigos-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "koufonisia--santorin",
+      "fromIslandId": "koufonisia",
+      "toIslandId": "santorin",
+      "fromPlaceId": "koufonisia-chora",
+      "toPlaceId": "santorin-amoudi",
+      "distanceNm": 30.8,
+      "waypoints": [
+        {
+          "lat": 36.9129,
+          "lon": 25.6009
+        },
+        {
+          "lat": 36.4727,
+          "lon": 25.3631
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 30.8 sm ist die GEMESSENE Länge des landfreien Kurses koufonisia-chora -> santorin-amoudi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "koufonisia--schinoussa",
       "fromIslandId": "koufonisia",
       "toIslandId": "schinoussa",
@@ -411,6 +2344,52 @@
         "Kurzschlag im Kleine-Kykladen-Archipel — auf dieser Distanz ist die 250-m-Landmaske grob, die Passage ist Pilotage nach Sicht und Seekarte",
         "Distanz 7.9 sm GEOMETRISCH als landfreier Kurs berechnet (keine recherchierte Quelle) — vor dem Törn verifizieren; Kalibrierung an naxos--amorgos: Geometrie 34.8 sm gegen 31 sm recherchiert, der Wert liegt also eher zu hoch"
       ]
+    },
+    {
+      "id": "koufonisia--sifnos",
+      "fromIslandId": "koufonisia",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "koufonisia-chora",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 41.1,
+      "waypoints": [
+        {
+          "lat": 36.9141,
+          "lon": 25.4348
+        },
+        {
+          "lat": 36.9359,
+          "lon": 24.7599
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 41.1 sm ist die GEMESSENE Länge des landfreien Kurses koufonisia-chora -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "koufonisia--syros",
+      "fromIslandId": "koufonisia",
+      "toIslandId": "syros",
+      "fromPlaceId": "koufonisia-chora",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 47.9,
+      "waypoints": [
+        {
+          "lat": 36.9141,
+          "lon": 25.4348
+        },
+        {
+          "lat": 36.9719,
+          "lon": 25.3813
+        },
+        {
+          "lat": 37.1374,
+          "lon": 25.2994
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 47.9 sm ist die GEMESSENE Länge des landfreien Kurses koufonisia-chora -> syros-ermoupoli, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "kythnos--athen",
@@ -482,6 +2461,118 @@
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.68 -> 0.62 (Lee-Faktor 0.85 -> 0.79, gewichtet mit dem Kurs zum Wind). Ohne Umweg: die neue Bahn ist nicht laenger als die bisherige, die recherchierte Distanz bleibt unveraendert."
     },
     {
+      "id": "kythnos--milos",
+      "fromIslandId": "kythnos",
+      "toIslandId": "milos",
+      "fromPlaceId": "kythnos-merichas",
+      "toPlaceId": "milos-pollonia",
+      "distanceNm": 40,
+      "waypoints": [
+        {
+          "lat": 37.396,
+          "lon": 24.3852
+        },
+        {
+          "lat": 37.3382,
+          "lon": 24.3677
+        },
+        {
+          "lat": 37.2969,
+          "lon": 24.3591
+        },
+        {
+          "lat": 37.124,
+          "lon": 24.4058
+        },
+        {
+          "lat": 36.7867,
+          "lon": 24.5211
+        },
+        {
+          "lat": 36.7715,
+          "lon": 24.5335
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40 sm ist die GEMESSENE Länge des landfreien Kurses kythnos-merichas -> milos-pollonia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "kythnos--mykonos",
+      "fromIslandId": "kythnos",
+      "toIslandId": "mykonos",
+      "fromPlaceId": "kythnos-loutra",
+      "toPlaceId": "mykonos-tourlos",
+      "distanceNm": 43.4,
+      "waypoints": [
+        {
+          "lat": 37.52,
+          "lon": 24.8849
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 43.4 sm ist die GEMESSENE Länge des landfreien Kurses kythnos-loutra -> mykonos-tourlos, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "kythnos--paros",
+      "fromIslandId": "kythnos",
+      "toIslandId": "paros",
+      "fromPlaceId": "kythnos-loutra",
+      "toPlaceId": "paros-parikia",
+      "distanceNm": 40.8,
+      "waypoints": [
+        {
+          "lat": 37.4358,
+          "lon": 24.4536
+        },
+        {
+          "lat": 37.0851,
+          "lon": 25.1307
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.8 sm ist die GEMESSENE Länge des landfreien Kurses kythnos-loutra -> paros-parikia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "kythnos--polyaigos",
+      "fromIslandId": "kythnos",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "kythnos-merichas",
+      "toPlaceId": "polyaigos-manolis",
+      "distanceNm": 41.6,
+      "waypoints": [
+        {
+          "lat": 37.396,
+          "lon": 24.3852
+        },
+        {
+          "lat": 37.3382,
+          "lon": 24.3677
+        },
+        {
+          "lat": 37.2969,
+          "lon": 24.3591
+        },
+        {
+          "lat": 37.124,
+          "lon": 24.4058
+        },
+        {
+          "lat": 36.8265,
+          "lon": 24.6123
+        },
+        {
+          "lat": 36.7813,
+          "lon": 24.5979
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 41.6 sm ist die GEMESSENE Länge des landfreien Kurses kythnos-merichas -> polyaigos-manolis, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "kythnos--serifos",
       "fromIslandId": "kythnos",
       "toIslandId": "serifos",
@@ -524,6 +2615,31 @@
       ],
       "windWarnings": [],
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 0.74 -> 0.66 (Lee-Faktor 0.84 -> 0.73, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 17 sm plus 0.1 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
+    },
+    {
+      "id": "milos--paros",
+      "fromIslandId": "milos",
+      "toIslandId": "paros",
+      "fromPlaceId": "milos-pollonia",
+      "toPlaceId": "paros-parikia",
+      "distanceNm": 36,
+      "waypoints": [
+        {
+          "lat": 36.7813,
+          "lon": 24.5979
+        },
+        {
+          "lat": 37.0636,
+          "lon": 25.0844
+        },
+        {
+          "lat": 37.086,
+          "lon": 25.1466
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 36 sm ist die GEMESSENE Länge des landfreien Kurses milos-pollonia -> paros-parikia, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "milos--polyaigos",
@@ -631,6 +2747,39 @@
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.48 -> 1.35 (Lee-Faktor 0.84 -> 0.80, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 24 sm plus 1.5 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
+      "id": "milos--syros",
+      "fromIslandId": "milos",
+      "toIslandId": "syros",
+      "fromPlaceId": "milos-pollonia",
+      "toPlaceId": "syros-finikas",
+      "distanceNm": 42.3,
+      "waypoints": [
+        {
+          "lat": 36.7715,
+          "lon": 24.5335
+        },
+        {
+          "lat": 36.7867,
+          "lon": 24.5211
+        },
+        {
+          "lat": 36.8268,
+          "lon": 24.5159
+        },
+        {
+          "lat": 37.0278,
+          "lon": 24.6288
+        },
+        {
+          "lat": 37.3771,
+          "lon": 24.8719
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 42.3 sm ist die GEMESSENE Länge des landfreien Kurses milos-pollonia -> syros-finikas, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "mykonos--delos-rinia",
       "fromIslandId": "mykonos",
       "toIslandId": "delos-rinia",
@@ -667,6 +2816,18 @@
       "windWarnings": []
     },
     {
+      "id": "mykonos--naxos",
+      "fromIslandId": "mykonos",
+      "toIslandId": "naxos",
+      "fromPlaceId": "mykonos-ornos",
+      "toPlaceId": "naxos-stadt",
+      "distanceNm": 18.7,
+      "waypoints": [],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 18.7 sm ist die GEMESSENE Länge des landfreien Kurses mykonos-ornos -> naxos-stadt, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "mykonos--paros",
       "fromIslandId": "mykonos",
       "toIslandId": "paros",
@@ -677,6 +2838,81 @@
       "windWarnings": [
         "Düse Mykonos–Paros: deutlich mehr Wind als der Modellwert"
       ]
+    },
+    {
+      "id": "mykonos--schinoussa",
+      "fromIslandId": "mykonos",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "mykonos-ornos",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 36.5,
+      "waypoints": [
+        {
+          "lat": 37.0877,
+          "lon": 25.3328
+        },
+        {
+          "lat": 36.9719,
+          "lon": 25.3813
+        },
+        {
+          "lat": 36.9141,
+          "lon": 25.4348
+        },
+        {
+          "lat": 36.8715,
+          "lon": 25.4947
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 36.5 sm ist die GEMESSENE Länge des landfreien Kurses mykonos-ornos -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "mykonos--serifos",
+      "fromIslandId": "mykonos",
+      "toIslandId": "serifos",
+      "fromPlaceId": "mykonos-ornos",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 43.6,
+      "waypoints": [
+        {
+          "lat": 37.4033,
+          "lon": 25.3223
+        },
+        {
+          "lat": 37.363,
+          "lon": 25.2654
+        },
+        {
+          "lat": 37.1282,
+          "lon": 24.5243
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 43.6 sm ist die GEMESSENE Länge des landfreien Kurses mykonos-ornos -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "mykonos--sifnos",
+      "fromIslandId": "mykonos",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "mykonos-ornos",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 40.4,
+      "waypoints": [
+        {
+          "lat": 37.4033,
+          "lon": 25.3223
+        },
+        {
+          "lat": 36.9359,
+          "lon": 24.7599
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.4 sm ist die GEMESSENE Länge des landfreien Kurses mykonos-ornos -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "naxos--amorgos",
@@ -776,6 +3012,27 @@
       ]
     },
     {
+      "id": "naxos--polyaigos",
+      "fromIslandId": "naxos",
+      "toIslandId": "polyaigos",
+      "fromPlaceId": "naxos-kalandos",
+      "toPlaceId": "polyaigos-mersini",
+      "distanceNm": 43.2,
+      "waypoints": [
+        {
+          "lat": 36.911,
+          "lon": 25.4487
+        },
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 43.2 sm ist die GEMESSENE Länge des landfreien Kurses naxos-kalandos -> polyaigos-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "naxos--santorin",
       "fromIslandId": "naxos",
       "toIslandId": "santorin",
@@ -817,6 +3074,31 @@
       ]
     },
     {
+      "id": "naxos--serifos",
+      "fromIslandId": "naxos",
+      "toIslandId": "serifos",
+      "fromPlaceId": "naxos-stadt",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 42.6,
+      "waypoints": [
+        {
+          "lat": 37.1483,
+          "lon": 25.2973
+        },
+        {
+          "lat": 37.1567,
+          "lon": 25.2661
+        },
+        {
+          "lat": 37.1282,
+          "lon": 24.5243
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 42.6 sm ist die GEMESSENE Länge des landfreien Kurses naxos-stadt -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "naxos--sifnos",
       "fromIslandId": "naxos",
       "toIslandId": "sifnos",
@@ -836,6 +3118,18 @@
       "windWarnings": [
         "Distanz aus dem landfreien Kurs (35,5 sm) statt der 30 sm der Törnanalyse — Paros und Antiparos liegen im Weg, ein direkter 30-sm-Kurs existiert nicht"
       ]
+    },
+    {
+      "id": "naxos--syros",
+      "fromIslandId": "naxos",
+      "toIslandId": "syros",
+      "fromPlaceId": "naxos-stadt",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 28.7,
+      "waypoints": [],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 28.7 sm ist die GEMESSENE Länge des landfreien Kurses naxos-stadt -> syros-ermoupoli, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "paros--antiparos",
@@ -953,6 +3247,57 @@
       ]
     },
     {
+      "id": "paros--santorin",
+      "fromIslandId": "paros",
+      "toIslandId": "santorin",
+      "fromPlaceId": "paros-piso-livadi",
+      "toPlaceId": "santorin-amoudi",
+      "distanceNm": 34.1,
+      "waypoints": [
+        {
+          "lat": 36.7279,
+          "lon": 25.2469
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 34.1 sm ist die GEMESSENE Länge des landfreien Kurses paros-piso-livadi -> santorin-amoudi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "paros--schinoussa",
+      "fromIslandId": "paros",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "paros-piso-livadi",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 15.2,
+      "waypoints": [
+        {
+          "lat": 36.8715,
+          "lon": 25.4947
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 15.2 sm ist die GEMESSENE Länge des landfreien Kurses paros-piso-livadi -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "paros--serifos",
+      "fromIslandId": "paros",
+      "toIslandId": "serifos",
+      "fromPlaceId": "paros-parikia",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 31.2,
+      "waypoints": [
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 31.2 sm ist die GEMESSENE Länge des landfreien Kurses paros-parikia -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "paros--sifnos",
       "fromIslandId": "paros",
       "toIslandId": "sifnos",
@@ -1029,6 +3374,123 @@
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.68 -> 1.41 (Lee-Faktor 0.88 -> 0.82, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 33 sm plus 0.4 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
     },
     {
+      "id": "polyaigos--santorin",
+      "fromIslandId": "polyaigos",
+      "toIslandId": "santorin",
+      "fromPlaceId": "polyaigos-mersini",
+      "toPlaceId": "santorin-amoudi",
+      "distanceNm": 40.2,
+      "waypoints": [
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        },
+        {
+          "lat": 36.6613,
+          "lon": 24.8796
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.2 sm ist die GEMESSENE Länge des landfreien Kurses polyaigos-mersini -> santorin-amoudi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "polyaigos--schinoussa",
+      "fromIslandId": "polyaigos",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "polyaigos-mersini",
+      "toPlaceId": "schinoussa-mersini",
+      "distanceNm": 44.4,
+      "waypoints": [
+        {
+          "lat": 36.7381,
+          "lon": 24.6425
+        },
+        {
+          "lat": 36.873,
+          "lon": 25.4603
+        },
+        {
+          "lat": 36.8629,
+          "lon": 25.506
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 44.4 sm ist die GEMESSENE Länge des landfreien Kurses polyaigos-mersini -> schinoussa-mersini, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "polyaigos--serifos",
+      "fromIslandId": "polyaigos",
+      "toIslandId": "serifos",
+      "fromPlaceId": "polyaigos-manolis",
+      "toPlaceId": "serifos-livadi",
+      "distanceNm": 23.5,
+      "waypoints": [
+        {
+          "lat": 36.7813,
+          "lon": 24.5979
+        },
+        {
+          "lat": 36.8265,
+          "lon": 24.6123
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 23.5 sm ist die GEMESSENE Länge des landfreien Kurses polyaigos-manolis -> serifos-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "polyaigos--sifnos",
+      "fromIslandId": "polyaigos",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "polyaigos-manolis",
+      "toPlaceId": "sifnos-vathy",
+      "distanceNm": 11.3,
+      "waypoints": [
+        {
+          "lat": 36.7813,
+          "lon": 24.5979
+        },
+        {
+          "lat": 36.9283,
+          "lon": 24.6784
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 11.3 sm ist die GEMESSENE Länge des landfreien Kurses polyaigos-manolis -> sifnos-vathy, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "polyaigos--syros",
+      "fromIslandId": "polyaigos",
+      "toIslandId": "syros",
+      "fromPlaceId": "polyaigos-manolis",
+      "toPlaceId": "syros-finikas",
+      "distanceNm": 40.9,
+      "waypoints": [
+        {
+          "lat": 36.7813,
+          "lon": 24.5979
+        },
+        {
+          "lat": 36.8177,
+          "lon": 24.6061
+        },
+        {
+          "lat": 37.0278,
+          "lon": 24.6288
+        },
+        {
+          "lat": 37.3771,
+          "lon": 24.8719
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 40.9 sm ist die GEMESSENE Länge des landfreien Kurses polyaigos-manolis -> syros-finikas, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
       "id": "santorin--folegandros",
       "fromIslandId": "santorin",
       "toIslandId": "folegandros",
@@ -1057,6 +3519,40 @@
         "Offener Schlag westwärts, kein Schutz unterwegs"
       ],
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.11 -> 0.99 (Lee-Faktor 0.85 -> 0.83, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 25 sm plus 0.5 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
+    },
+    {
+      "id": "santorin--schinoussa",
+      "fromIslandId": "santorin",
+      "toIslandId": "schinoussa",
+      "fromPlaceId": "santorin-amoudi",
+      "toPlaceId": "schinoussa-livadi",
+      "distanceNm": 25.3,
+      "waypoints": [
+        {
+          "lat": 36.4727,
+          "lon": 25.3631
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 25.3 sm ist die GEMESSENE Länge des landfreien Kurses santorin-amoudi -> schinoussa-livadi, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "santorin--sifnos",
+      "fromIslandId": "santorin",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "santorin-amoudi",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 42,
+      "waypoints": [
+        {
+          "lat": 36.6338,
+          "lon": 25.0533
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 42 sm ist die GEMESSENE Länge des landfreien Kurses santorin-amoudi -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "schinoussa--iraklia",
@@ -1105,6 +3601,56 @@
         "Distanz aus dem landfreien Kurs (5,2 sm) statt der 18 sm der Törnanalyse — Schinoussa liegt keine sechs Meilen vor der Südküste von Naxos"
       ],
       "distanceNote": "Kurs 2026-08-07 mit seeding/tools/leeWaypoints.ts in den Windschatten gelegt (Skipper-Regel: angenehmere lange Fahrt vor kurzer im Wind). Belastung ueber das Meltemi-Band 1.17 -> 1.03 (Lee-Faktor 0.81 -> 0.74, gewichtet mit dem Kurs zum Wind). Recherchierte Distanz 5.2 sm plus 1.5 sm gemessener Umweg; die Recherche bleibt die Grundlage, addiert ist nur der Bogen."
+    },
+    {
+      "id": "schinoussa--sifnos",
+      "fromIslandId": "schinoussa",
+      "toIslandId": "sifnos",
+      "fromPlaceId": "schinoussa-mersini",
+      "toPlaceId": "sifnos-faros",
+      "distanceNm": 37.4,
+      "waypoints": [
+        {
+          "lat": 36.8629,
+          "lon": 25.506
+        },
+        {
+          "lat": 36.873,
+          "lon": 25.4603
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 37.4 sm ist die GEMESSENE Länge des landfreien Kurses schinoussa-mersini -> sifnos-faros, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
+    },
+    {
+      "id": "schinoussa--syros",
+      "fromIslandId": "schinoussa",
+      "toIslandId": "syros",
+      "fromPlaceId": "schinoussa-livadi",
+      "toPlaceId": "syros-ermoupoli",
+      "distanceNm": 45,
+      "waypoints": [
+        {
+          "lat": 36.8715,
+          "lon": 25.4947
+        },
+        {
+          "lat": 36.9141,
+          "lon": 25.4348
+        },
+        {
+          "lat": 36.9719,
+          "lon": 25.3813
+        },
+        {
+          "lat": 37.1374,
+          "lon": 25.2994
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 45 sm ist die GEMESSENE Länge des landfreien Kurses schinoussa-livadi -> syros-ermoupoli, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "serifos--kythnos",
@@ -1172,6 +3718,23 @@
         }
       ],
       "windWarnings": []
+    },
+    {
+      "id": "serifos--syros",
+      "fromIslandId": "serifos",
+      "toIslandId": "syros",
+      "fromPlaceId": "serifos-livadi",
+      "toPlaceId": "syros-finikas",
+      "distanceNm": 24.5,
+      "waypoints": [
+        {
+          "lat": 37.1257,
+          "lon": 24.5277
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 24.5 sm ist die GEMESSENE Länge des landfreien Kurses serifos-livadi -> syros-finikas, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "sifnos--antiparos",
@@ -1323,6 +3886,27 @@
         }
       ],
       "windWarnings": []
+    },
+    {
+      "id": "sifnos--syros",
+      "fromIslandId": "sifnos",
+      "toIslandId": "syros",
+      "fromPlaceId": "sifnos-kamares",
+      "toPlaceId": "syros-finikas",
+      "distanceNm": 27.6,
+      "waypoints": [
+        {
+          "lat": 37.0191,
+          "lon": 24.6416
+        },
+        {
+          "lat": 37.0445,
+          "lon": 24.6315
+        }
+      ],
+      "windWarnings": [],
+      "abgeleitet": true,
+      "distanceNote": "ABGELEITET (seeding/tools/deriveLegs.ts, 2026-08-07): 27.6 sm ist die GEMESSENE Länge des landfreien Kurses sifnos-kamares -> syros-finikas, keine recherchierte Distanz. Diese Etappe verbindet zwei kuratierte Plätze, für die es keine kuratierte Verbindung gab; sie trägt deshalb auch keine Düsen-Warntexte. Wer sie recherchiert, nimmt 'abgeleitet' heraus und schreibt die geprüfte Distanz hin."
     },
     {
       "id": "syros--kythnos",

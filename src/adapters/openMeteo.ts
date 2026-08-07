@@ -271,24 +271,82 @@ export async function fetchForecastBundle(
       forecast: {},
     };
   }
-  const lats = locations.map((l) => l.coordinates.lat.toFixed(4)).join(',');
-  const lons = locations.map((l) => l.coordinates.lon.toFixed(4)).join(',');
+  /**
+   * DIE ORTSLISTE WIRD GETEILT — sonst reisst die URL.
+   *
+   * Open-Meteo nimmt beliebig viele Orte als komma-getrennte Listen entgegen,
+   * und bis 2026-08-07 ging genau EINE Anfrage für alles raus: 295 Orte
+   * (97 Plätze + 198 Etappen-Wegpunkte) ergaben rund 5,3 KB URL — schon damals
+   * nah an dem, was Server und Proxys üblicherweise durchlassen (8 KB).
+   *
+   * Mit den abgeleiteten Etappen (deriveLegs.ts) verdoppelt sich die Zahl der
+   * Wegpunkte. Eine einzige Anfrage würde zweistellige Kilobyte lang und
+   * scheiterte mit HTTP 414 — und zwar für den GANZEN Forecast, nicht nur für
+   * die neuen Punkte.
+   *
+   * Geteilt wird deshalb nach ORTEN, nicht nach Modellen: jeder Block fragt
+   * dieselben Stunden und dasselbe Modell, die Antworten werden IN DERSELBEN
+   * REIHENFOLGE aneinandergehängt. Damit bleibt `windFarList[li]` weiterhin der
+   * Ort `locations[li]` — die Zuordnung unten hängt an dieser Reihenfolge.
+   */
+  const ORTE_JE_ANFRAGE = 150;
+  const bloecke: LocationEntry[][] = [];
+  for (let i = 0; i < locations.length; i += ORTE_JE_ANFRAGE) {
+    bloecke.push(locations.slice(i, i + ORTE_JE_ANFRAGE));
+  }
+  const koordinaten = (block: LocationEntry[]): { lats: string; lons: string } => ({
+    lats: block.map((l) => l.coordinates.lat.toFixed(4)).join(','),
+    lons: block.map((l) => l.coordinates.lon.toFixed(4)).join(','),
+  });
 
   // Böen werden NICHT abgerufen (Produktentscheidung 2026-08-03): Planungsgröße
   // ist der Mittelwind, und ein Datenpunkt, der in keine Bewertung einfließt,
   // ist toter Ballast (NFR0). wave_period bleibt: Wellenhöhe plus Periode
   // beschreiben den Schwell-Charakter einer Bucht und sind für die Platz-Ampel
   // fachlich anschlussfähig.
-  const windUrl = (model: string, days: number): string =>
-    `${FORECAST_URL}?latitude=${lats}&longitude=${lons}` +
-    `&hourly=${WIND_NAMES.join(',')}` +
-    `&wind_speed_unit=kn&timezone=UTC&timeformat=iso8601` +
-    `&forecast_days=${days}&models=${encodeURIComponent(model)}`;
-  const waveUrl = (model: string, days: number): string =>
-    `${MARINE_URL}?latitude=${lats}&longitude=${lons}` +
-    `&hourly=${WAVE_NAMES.join(',')}` +
-    `&timezone=UTC&timeformat=iso8601` +
-    `&forecast_days=${days}&models=${encodeURIComponent(model)}`;
+  const windUrl = (block: LocationEntry[], model: string, days: number): string => {
+    const { lats, lons } = koordinaten(block);
+    return (
+      `${FORECAST_URL}?latitude=${lats}&longitude=${lons}` +
+      `&hourly=${WIND_NAMES.join(',')}` +
+      `&wind_speed_unit=kn&timezone=UTC&timeformat=iso8601` +
+      `&forecast_days=${days}&models=${encodeURIComponent(model)}`
+    );
+  };
+  const waveUrl = (block: LocationEntry[], model: string, days: number): string => {
+    const { lats, lons } = koordinaten(block);
+    return (
+      `${MARINE_URL}?latitude=${lats}&longitude=${lons}` +
+      `&hourly=${WAVE_NAMES.join(',')}` +
+      `&timezone=UTC&timeformat=iso8601` +
+      `&forecast_days=${days}&models=${encodeURIComponent(model)}`
+    );
+  };
+
+  /**
+   * Alle Blöcke einer Anfrage holen und der Reihe nach zusammenhängen.
+   *
+   * Ein einzelner Block, der bei EINEM Ort eine Liste und bei mehreren eine
+   * andere Gestalt liefert, ist schon in `asList` abgefangen. Was hier
+   * dazukommt, ist nur die Reihenfolge — und die ist die Zuordnung.
+   *
+   * KEINE Teil-Toleranz: schlägt ein Block fehl, schlägt die ganze Anfrage
+   * fehl. Ein Forecast, dem die Hälfte der Orte fehlt, wäre schlimmer als
+   * keiner — die Etappen dorthin würden stumm auf 'unbewertet' fallen, und
+   * genau solche stillen Löcher soll diese Codebasis nicht haben. Wer die
+   * Anfrage als optional führt (Nahfeld, Wellen), fängt den Fehler eine Ebene
+   * höher ab, wie bisher.
+   */
+  const fetchAlle = async (
+    urlFor: (block: LocationEntry[]) => string,
+    endpoint: 'forecast' | 'marine',
+    model: string,
+  ): Promise<unknown[]> => {
+    const teile = await Promise.all(
+      bloecke.map((block) => fetchJson(urlFor(block), endpoint, model)),
+    );
+    return teile.flatMap((t) => asList(t));
+  };
 
   /**
    * Eine NAH-Anfrage darf nie ein Fehler werden: sie ist eine Verbesserung, kein
@@ -312,12 +370,12 @@ export async function fetchForecastBundle(
   ] = await Promise.all([
     // Das Fernfeld des WINDES ist das einzige Fundament: sein Fehler bleibt
     // ungefangen und erreicht das Fehlerpanel (unverändert zu vorher).
-    fetchJson(windUrl(windFar, params.forecastDays), 'forecast', windFar),
+    fetchAlle((b) => windUrl(b, windFar, params.forecastDays), 'forecast', windFar),
     windNear === ''
       ? Promise.resolve(null)
       : optional(
-          fetchJson(
-            windUrl(windNear, nearRequestDays(windNear, params.forecastDays)),
+          fetchAlle(
+            (b) => windUrl(b, windNear, nearRequestDays(windNear, params.forecastDays)),
             'forecast',
             windNear,
           ),
@@ -326,14 +384,14 @@ export async function fetchForecastBundle(
     // Marine failure must not kill the wind forecast: waves become null
     // and places show 'unbewertet' contributions instead of a crash.
     optional(
-      fetchJson(waveUrl(waveFar, params.forecastDays), 'marine', waveFar),
+      fetchAlle((b) => waveUrl(b, waveFar, params.forecastDays), 'marine', waveFar),
       `Wellen (${waveFar})`,
     ),
     waveNear === ''
       ? Promise.resolve(null)
       : optional(
-          fetchJson(
-            waveUrl(waveNear, nearRequestDays(waveNear, params.forecastDays)),
+          fetchAlle(
+            (b) => waveUrl(b, waveNear, nearRequestDays(waveNear, params.forecastDays)),
             'marine',
             waveNear,
           ),
@@ -343,10 +401,12 @@ export async function fetchForecastBundle(
     windNear === '' ? Promise.resolve(null) : fetchModelRunIso(windNear),
   ]);
 
-  const windFarList = asList(windFarRaw);
-  const windNearList = windNearRaw ? asList(windNearRaw) : null;
-  const waveFarList = waveFarSettled ? asList(waveFarSettled) : null;
-  const waveNearList = waveNearSettled ? asList(waveNearSettled) : null;
+  // `fetchAlle` liefert die Blöcke bereits flach und in Ortsreihenfolge — die
+  // frühere `asList`-Umhüllung hier wäre jetzt eine Liste von Listen.
+  const windFarList = windFarRaw as HourlyResponse[];
+  const windNearList = (windNearRaw as HourlyResponse[] | null) ?? null;
+  const waveFarList = (waveFarSettled as HourlyResponse[] | null) ?? null;
+  const waveNearList = (waveNearSettled as HourlyResponse[] | null) ?? null;
 
   // Normative axis = the FAR wind forecast's hour axis (first location).
   const rawTimes = (windFarList[0]?.hourly?.['time'] as string[] | undefined) ?? [];
