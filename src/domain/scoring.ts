@@ -320,6 +320,9 @@ export function assessLeg(
     kreuzExtraNm: null,
     wenden: null,
     kreuzTrack: [],
+    // Nicht simuliert heisst: kein Abstand messbar. Eine 0 hier läse sich als
+    // "genau an der Grenze" — das wäre eine Aussage, die niemand gerechnet hat.
+    headroom: { windKn: null, hours: null },
     basis: 'forecast',
     reasons: [reason],
     nightLeg: null,
@@ -424,6 +427,14 @@ export function assessLeg(
   let twdSinSum = 0;
   let twdCosSum = 0;
   let samples = 0;
+  /**
+   * Stärkster Wind, der diese Etappe GEGENAN trifft — über alle Stunden, alle
+   * Etappenpunkte und alle Kurse einer Stunde. Er entsteht hier und nicht
+   * nachträglich aus `breakdown`: die FR16-Regel prüft jeden Punkt, das
+   * Breakdown führt nur den Fortschrittspunkt. Aus ihm gerechnet wiese eine
+   * Etappe Reserve aus, die an ihrem schlechtesten Wegpunkt längst weg ist.
+   */
+  let worstUpwindTwsKn: number | null = null;
   const total = leg.distanceNm;
   // Single source for the simulation bound: time.ts (legWindow uses it too).
   const maxHours = MAX_LEG_HOURS;
@@ -497,6 +508,13 @@ export function assessLeg(
           continue;
         }
         const t = twaDeg(seg.course, w.fromDeg);
+        // Dieselbe Bedingung, die upwindWindVerdict anlegt — die Reserve muss
+        // an genau der Stelle gemessen werden, an der die Regel greift.
+        if (t < params.upwindTwaDeg) {
+          if (worstUpwindTwsKn === null || w.twsKn > worstUpwindTwsKn) {
+            worstUpwindTwsKn = w.twsKn;
+          }
+        }
         const v = upwindWindVerdict(t, w.twsKn, params);
         verdicts.push(v);
         if (v === 'rot') reasons.add(upwindRotReason(params));
@@ -778,6 +796,16 @@ export function assessLeg(
     kreuzExtraNm,
     wenden,
     kreuzTrack,
+    headroom: {
+      windKn:
+        worstUpwindTwsKn === null ? null : params.maxUpwindTwsKn - worstUpwindTwsKn,
+      // An der Komponente gemessen, die zuerst bricht — budgetVerdict formuliert
+      // das harte Maximum je Komponente, nicht als Summe.
+      hours: Math.min(
+        params.maxSailHours - sailHours,
+        params.maxMotorHours - motorHours,
+      ),
+    },
     basis,
     reasons: [...reasons],
     nightLeg,

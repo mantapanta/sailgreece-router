@@ -2,7 +2,7 @@
 title: 'Plan-Begründung: was den Möglichkeitsraum begrenzt'
 type: 'feature'
 created: '2026-08-07'
-status: 'proposed'
+status: 'done'
 review_loop_iteration: 0
 baseline_commit: 'b68d6b484285c485ebfbc9d6aa505e429ee0fdf1'
 context:
@@ -87,20 +87,29 @@ leistet es.
 Abschnitt 3 hängt an `LegAssessment.headroom` (`{ windKn, hours }`), das es in `main`
 nicht gibt. Die **Eingangsdaten sind aber vollständig vorhanden**:
 
-- `hours` = `(params.maxSailHours + params.maxMotorHours) − leg.totalHours`
-  — beide Felder existieren.
-- `windKn` = `params.maxUpwindTwsKn − max(twsKn über die Aufkreuz-Stunden)`
-  — `leg.breakdown[]` führt je Stunde `twsKn`, `twaDeg`, `kreuzen`; `params` hat
-  `maxUpwindTwsKn` und `beatTwaDeg`. `null`, wenn die Etappe nie kreuzt.
+- `hours` = `min(maxSailHours − sailHours, maxMotorHours − motorHours)` — an der
+  Komponente gemessen, die zuerst bricht. Nicht gegen die Summe: `budgetVerdict`
+  formuliert das harte Maximum je Komponente, und gegen die Summe gemessen hätte
+  eine Etappe mit 6 h Segeln und 0 h Motor noch „2 h Reserve", obwohl das
+  Segelbudget am Anschlag steht.
+- `windKn` = `params.maxUpwindTwsKn − max(twsKn an den Gegenan-Stellen)`.
+  **Nicht** aus `leg.breakdown[]` zu rechnen, auch wenn das naheliegt: das
+  Breakdown führt je Stunde nur den FORTSCHRITTSPUNKT, die FR16-Regel prüft
+  aber jeden Etappenpunkt in jeder Stunde und lässt den schlechtesten regieren
+  (`scoring.ts`, „FR16 rule at EVERY point"). Aus dem Breakdown gerechnet wiese
+  eine Etappe Reserve aus, die an ihrem schlechtesten Wegpunkt längst weg ist —
+  Ampel und Reserve könnten sich widersprechen. Der Wert entsteht deshalb in
+  derselben Schleife wie das Verdikt. `null`, wenn die Etappe nie gegenan liegt
+  (`twa < params.upwindTwaDeg`).
 
 Der Reserve-Begriff selbst ist `main` nicht fremd: `params.gelbReserveKn` trägt in
 `ampel.ts` und `scoring.ts` genau diese Logik, nur unveröffentlicht — sie entscheidet
 grün gegen gelb, wird aber nicht ausgewiesen. `headroom` macht sie sichtbar, ohne ein
 neues Urteil einzuführen (AD-2 bleibt gewahrt).
 
-## Vorschlag
+## Umfang
 
-**Bauen:**
+**Gebaut:**
 
 1. `LegHeadroom { windKn: number | null; hours: number | null }` als Feld auf
    `LegAssessment`, gerechnet in `scoring.ts` aus `breakdown` + `params`.
@@ -108,7 +117,13 @@ neues Urteil einzuführen (AD-2 bleibt gewahrt).
    Fessel (Wind / Strecke / Kalender) plus engste Stelle, formuliert gegen das heutige
    Vokabular (Konzept, `costLevel`, `empfehlung`) statt gegen die alte Routen-Bibliothek.
 3. Anzeige im Rest-Trip-Detail der `TripStatusLine` — dort steht der Rest-Trip-Kontext
-   schon, und der Skipper klappt für Begründungen ohnehin dorthin auf.
+   schon, und der Skipper klappt für Begründungen ohnehin dorthin auf. Abschnitt
+   „Was den Raum begrenzt", vor den Entscheidungspunkten: erst warum, dann wann.
+
+Beim Bauen aufgefallen und behoben: der Gleichstand-Vorrang des Windes in
+`tightest()` griff nie. `1,2 h / 6 h` ergibt in Fließkomma `0.19999999999999998`,
+`5 kn / 25 kn` glatte `0.2` — auf `===` geprüft war der Gleichstand nie einer, und
+zwar unsichtbar. Verglichen wird jetzt mit Toleranz (`1e-9`).
 
 **Nicht bauen:** Abschnitte 1, 2, 4, 6, 7 — sie würden vorhandene Anzeigen doppeln.
 

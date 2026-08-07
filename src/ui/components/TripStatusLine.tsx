@@ -1,8 +1,8 @@
 /**
  * FR2/FR19/FR20 — die Trip-Statuszeile: EIN Caption-Satz über allem (Punkt +
  * Verdikt + Fakten), tippen öffnet das Rest-Trip-Detail als Expander
- * (Begründungen, Rückkehr-Frist, Spätester Umkehrtag, Meltemi-fest,
- * Entscheidungspunkte). Ersetzt den früheren Rest-Trip-Banner; die
+ * (Begründungen, Rückkehr-Frist, Spätester Umkehrtag, Meltemi-fest, "Was den
+ * Raum begrenzt", Entscheidungspunkte). Ersetzt den früheren Rest-Trip-Banner; die
  * Badge-Tooltips von Umkehrtag/Meltemi-fest stehen jetzt als sichtbarer
  * Caption-Text im Detail. Bei veraltetem Forecast (> STALE_TIME_MS) führt
  * ein gelbes "Stand vor {h} h"-Segment die Zeile an (Story 1.2, AC 2).
@@ -120,6 +120,14 @@ export function TripStatusLine({
                 zu erkennen ist.
               </p>
             </>
+          )}
+          {/* Eine Ebene über den Einzelurteilen (domain/engpass.ts): welche
+              Fessel den Raum bindet und wo er am dünnsten ist. Steht vor den
+              Entscheidungspunkten — erst warum, dann wann. */}
+          <h3>Was den Raum begrenzt</h3>
+          <p>{assessment.engpass.fesselText}</p>
+          {assessment.engpass.engsteStelleText && (
+            <p className="caption">{assessment.engpass.engsteStelleText}</p>
           )}
           {/* FR20 — die Entscheidungspunkte stehen wieder sichtbar da, genau
               dort, wo EXPERIENCE.md sie hinlegt: im Rest-Trip-Detail. */}

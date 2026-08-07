@@ -347,6 +347,46 @@ export interface KursAbschnitt {
   ampel: Ampel;
 }
 
+/**
+ * WIE VIEL FEHLT BIS ZUM BRUCH — die Reserve dieser Etappe, ausgewiesen statt
+ * nur verrechnet.
+ *
+ * Die Ampel sagt, ob eine Etappe hält. Sie sagt nicht, wie knapp. Zwei grüne
+ * Etappen können 12 kn und 1 kn Luft vor der Aufkreuz-Grenze haben — für die
+ * Frage, welche Stelle des Plans als erste kippt, ist das der ganze
+ * Unterschied. `params.gelbReserveKn` rechnet mit genau diesem Abstand
+ * (scoring.ts, ampel.ts), veröffentlicht ihn aber nicht.
+ *
+ * Kein neues Urteil (AD-2): dieselben Grenzen, dieselbe Simulation, nur die
+ * Differenz mit ausgegeben.
+ */
+export interface LegHeadroom {
+  /**
+   * Knoten Wind bis zur FR16-Aufkreuz-Grenze, gemessen an der SCHLECHTESTEN
+   * Stelle — die Regel prüft jeden Etappenpunkt in jeder Stunde, und der
+   * schlechteste Punkt regiert. Negativ = bereits überschritten (die Etappe
+   * ist dann rot).
+   *
+   * Null, wenn die Etappe zu keiner Stunde an keinem Punkt gegenan liegt
+   * (`twa < params.upwindTwaDeg`) — dann ist die Aufkreuz-Regel für diese
+   * Etappe keine Fessel, und eine Zahl dafür wäre erfunden.
+   */
+  windKn: number | null;
+  /**
+   * Stunden bis zum harten Tagesmaximum, an der Komponente gemessen, die
+   * zuerst bricht: `min(maxSailHours − sailHours, maxMotorHours − motorHours)`.
+   * Das harte Maximum ist in `budgetVerdict` je Komponente formuliert, nicht
+   * als Summe — wer gegen die Summe misst, weist einer Etappe mit 6 h Segeln
+   * und 0 h Motor 2 h Reserve aus, obwohl das Segelbudget bereits am Anschlag
+   * steht.
+   *
+   * Negativ = überschritten. Null, wenn die Etappe nicht simuliert werden
+   * konnte. Die Leichtwind-Ausnahme (`lightWindMaxHours`) bleibt hier außen
+   * vor: sie mildert das Urteil, nicht den Abstand zur Grenze.
+   */
+  hours: number | null;
+}
+
 export interface LegAssessment {
   legId: string;
   /**
@@ -423,6 +463,11 @@ export interface LegAssessment {
    * aus der stündlichen Simulation.
    */
   kreuzTrack: Coordinates[];
+  /**
+   * Abstand dieser Etappe zu ihren Grenzen — siehe `LegHeadroom`. Trägt die
+   * Engpass-Ableitung (domain/engpass.ts).
+   */
+  headroom: LegHeadroom;
   /**
    * Whether this verdict rests on real model hours or partly on the
    * persistence assumption beyond the forecast horizon.
@@ -580,6 +625,36 @@ export interface DecisionPoint {
  * Ankunft das Ankerziel (params.zielAnkunftHourAthens, 15:00) noch hält.
  * Gerechnet mit derselben Stundensimulation wie die Bewertung (AD-3).
  */
+/**
+ * Welche Fessel den Möglichkeitsraum bindet (domain/engpass.ts).
+ *
+ * 'keine' heisst nicht "alles gut", sondern "nichts ist zu": jede Option hat
+ * bis zum Stichtag noch einen zulässigen Restplan.
+ */
+export type Fessel = 'wind' | 'strecke' | 'kalender' | 'keine';
+
+export interface EngsteStelle {
+  legId: string;
+  day: number;
+  /** Woran diese Stelle eng ist. */
+  kind: 'wind' | 'stunden';
+  /** Reserve in kn bzw. h. Negativ = die Grenze ist bereits überschritten. */
+  reserve: number;
+}
+
+/**
+ * Die Begründung eine Ebene über den Einzelurteilen — siehe domain/engpass.ts
+ * für die Herleitung und den Grund, warum es sie gibt.
+ */
+export interface Engpass {
+  fessel: Fessel;
+  /** Ein Satz: welche Fessel bindet, mit dem Befund, der es zeigt. */
+  fesselText: string;
+  engsteStelle: EngsteStelle | null;
+  /** Ein Satz zur engsten Stelle. Null, wenn keine messbar ist. */
+  engsteStelleText: string | null;
+}
+
 export interface AbfahrtsEmpfehlung {
   /** Empfohlene Abfahrt, Athen, volle Stunde. */
   abfahrtHourAthens: number;
@@ -779,6 +854,11 @@ export interface Assessment {
   restTripAmpel: Ampel;
   restTripReasons: string[];
   ppr: PprResult;
+  /**
+   * Was den Möglichkeitsraum begrenzt und wo er am dünnsten ist
+   * (domain/engpass.ts) — die Begründung eine Ebene über den Einzelurteilen.
+   */
+  engpass: Engpass;
   /**
    * ALLE kuratierten Kite-Spots, bewertet für HEUTE (domain/kite.ts) — die
    * Ebene der Karte. Die Etappen tragen ihre eigenen Hinweise
