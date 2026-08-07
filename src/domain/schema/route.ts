@@ -47,6 +47,29 @@ export const LegSchema = z.object({
    * Fehlt das Feld, ist `distanceNm` die recherchierte Zahl.
    */
   distanceNote: z.string().optional(),
+  /**
+   * KEIN LANDFREIER KURS — der Kurs dieser Etappe führt über Land.
+   *
+   * NIE kuratiert, wie `waypointKeys`: gesetzt allein von `legGeometry.sailedLeg`,
+   * wenn `seaRoute` für die VERANKERTE Etappe keinen Weg um die Inseln findet
+   * (`SeaRoute.unresolved`).
+   *
+   * WARUM ES DAS FELD BRAUCHT (Befund 2026-08-07). Vorher stand an dieser
+   * Stelle nur ein `console.warn`. Die Bewertung lief weiter, als wäre nichts:
+   * die Luftlinie QUER DURCH DIE INSEL wurde zur Kurslänge, `distanceNm` im
+   * Verhältnis dazu skaliert, und darauf rechneten Fahrtzeit, Kreuzschläge und
+   * Ampel. Der Skipper bekam eine rote Etappe mit 34 sm und 32 sm Kreuzen
+   * angezeigt — Zahlen zu einem Kurs, den kein Boot fahren kann.
+   *
+   * Der Auslöser ist nicht die Bibliothek, sondern die Platzwahl: der Anker
+   * verschiebt das Etappenende auf den Liegeplatz der Nacht (Ios-Manganari an
+   * der Südküste), und von dort gibt es um die Insel herum keinen Weg mehr.
+   *
+   * Eine so verankerte Etappe ist deshalb nicht ROT, sondern UNBEWERTBAR:
+   * `scoring.assessLeg` gibt für sie keine Zahlen aus, sondern sagt, dass der
+   * Kurs nicht auflösbar ist. Eine erfundene Zahl ist schlechter als keine.
+   */
+  kursUnaufloesbar: z.boolean().optional(),
 });
 export type Leg = z.infer<typeof LegSchema>;
 

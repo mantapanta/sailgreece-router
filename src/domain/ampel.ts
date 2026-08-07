@@ -280,13 +280,44 @@ const AMPEL_RANK: Record<Ampel, number> = {
 /**
  * AD-2: ranking over domain values is domain logic — the best place of an
  * island comes from the assessment, not from the view.
- * Order: ampel (green best), then beauty, then restaurant + beach, then name.
+ * Order: SACKGASSE (a berth the next leg cannot leave), then ampel (green
+ * best), then beauty, then restaurant + beach, then name.
+ *
+ * WARUM DIE SACKGASSE GANZ OBEN STEHT (Befund 2026-08-07). Diese Rangfolge
+ * kannte bis dahin nur die NACHT. Sie wählte auf Ios folgerichtig
+ * `ios-manganari` — die geschützte, schöne Bucht an der Südküste — und
+ * `legGeometry` verankerte die Etappe des nächsten Morgens dort. Zwischen
+ * Manganari und Santorin-Akrotiri findet `seaRoute` aber keinen Weg ums Land:
+ * der Kurs wurde zur Luftlinie quer über die Insel, und darauf rechneten
+ * Distanz, Fahrtzeit, Kreuzschläge und Ampel weiter.
+ *
+ * Der Skipper sah das Ergebnis als rote Etappe mit erfundenen Zahlen und
+ * nannte es „rote Legs, die überhaupt nicht notwendig werden". Er hatte recht:
+ * notwendig war daran nichts — nur der Liegeplatz war falsch gewählt.
+ *
+ * Die Sackgasse ist deshalb das ERSTE Kriterium, noch vor der Ampel: ein
+ * geschützter Platz, von dem aus es morgen nicht weitergeht, ist kein guter
+ * Platz. Er wird aber NICHT ausgeschlossen — sind alle Plätze einer Insel
+ * Sackgassen, muss immer noch einer gewählt werden, und dann trägt die Etappe
+ * ihren Befund (`Leg.kursUnaufloesbar`) offen, statt dass hier gar nichts mehr
+ * herauskäme.
  */
 export function rankPlacesForNight(
   places: Place[],
   ampelByPlaceId: Record<string, Ampel>,
+  /**
+   * Kommt man von diesem Platz am nächsten Morgen weg? Fehlt die Auskunft
+   * (kein Folgetag, kein Plan, Hafentag), zählt das Kriterium nicht mit —
+   * dann ist die Rangfolge wie zuvor.
+   */
+  wegkommen?: (placeId: string) => boolean,
 ): Place[] {
+  const sackgasse = (p: Place): number =>
+    wegkommen && !wegkommen(p.id) ? 1 : 0;
   return [...places].sort((a, b) => {
+    const sa = sackgasse(a);
+    const sb = sackgasse(b);
+    if (sa !== sb) return sa - sb;
     const ra = AMPEL_RANK[ampelByPlaceId[a.id] ?? 'unbewertet'];
     const rb = AMPEL_RANK[ampelByPlaceId[b.id] ?? 'unbewertet'];
     if (ra !== rb) return ra - rb;

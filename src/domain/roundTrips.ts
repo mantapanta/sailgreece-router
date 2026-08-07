@@ -9,12 +9,12 @@
  *
  * DIE EINSICHT: der RICHTIGE Raum ist klein und exakt aufzählbar. Gesucht ist
  * nicht "irgendein Pfad", sondern "eine geschlossene Runde, die jeden Törntag
- * mit einer Etappe füllt". An der ausgelieferten Bibliothek (39 Etappen, 60
- * gerichtete Kanten, 20 Inseln) sind das über elf Etappen:
+ * mit einer Etappe füllt". An der ausgelieferten Bibliothek (46 Etappen, 74
+ * gerichtete Kanten, 22 Inseln) sind das über elf Etappen:
  *
- *     6 Runden ohne jede Wiederholung
- *    88 mit einem Zweitanlauf
- *   534 mit zweien
+ *     68 Runden ohne jede Wiederholung
+ *   1466 mit bis zu zwei Zweitanläufen
+ *   2825 kürzer als der Rahmen
  *
  * Es braucht also keine Notbremse, sondern einen engeren Filter.
  *
@@ -23,12 +23,17 @@
  *   A — genau `legCount` Etappen, keine Insel zweimal. Der Normalfall.
  *   B — genau `legCount` Etappen, bis zu `MAX_ZWEITANLAEUFE` Zweitanläufe an
  *       jeweils ANDEREN Häfen derselben Insel. Kalibriert an zwei
- *       professionellen Törnvorschlägen, die genau das tun (siehe dort) — und
- *       erst damit sind Amorgos und die Kleinen Kykladen überhaupt erreichbar:
- *       in den 6 wiederholungsfreien Runden kommen sie NICHT vor.
+ *       professionellen Törnvorschlägen, die genau das tun (siehe dort).
  *   C — WENIGER als `legCount` Etappen. Der Rückfall für zwei Lagen: der Törn
  *       läuft schon (Restplan von unterwegs), oder das Wetter färbt jede volle
  *       Runde rot und die App muss trotzdem antworten (FR18).
+ *
+ * KEIN PENDELN, quer durch alle drei Schichten: keine Runde kehrt SOFORT
+ * dorthin zurück, wo sie herkam (`A → B → A`). Die Regel steht in `dfs`, ihre
+ * einzige Ausnahme ist die Sackgasse mit Grad 1 — im echten Revier genau
+ * Delos/Rinia. Sie hat den Suchraum am 2026-08-07 von 4796 auf 1466 (Schicht B)
+ * und von 8721 auf 2825 (Schicht C) verkleinert: die Pendelrouten waren der
+ * grössere Teil davon.
  *
  * Die SCHICHTUNG ist die Umsetzung von "lieber ohne Wiederholung". Sie steht
  * bewusst hier und nicht als Rangkriterium in `preferred`: eine Runde aus B
@@ -70,12 +75,15 @@ const HARD_CEILING = 50_000;
  * andere Kythnos UND Paros — jeweils an verschiedenen Häfen (Loutra/Mericha,
  * Paroikia/Naoussa). Zwei ist also genau das, was die Praxis tut.
  *
- * Die Zahl ist zugleich die Zusicherung gegen das Pendeln: dieselbe Kette über
- * elf Etappen hin und zurück bräuchte fünf Wiederholungen.
+ * Die Zahl wehrt das Pendeln über die GANZE Runde ab — dieselbe Kette über elf
+ * Etappen hin und zurück bräuchte fünf Wiederholungen. Gegen ein LOKALES
+ * `A → B → A`, das nur einen Zweitanlauf kostet, hilft sie nicht; dafür gibt es
+ * seit 2026-08-07 eine eigene Regel in `search`.
  *
- * Wirkung an der ausgelieferten Bibliothek: 6 wiederholungsfreie Runden über
- * den vollen Rahmen, 88 mit einem Zweitanlauf, 534 mit zweien — und erst bei
- * zweien werden Amorgos und die Kleinen Kykladen überhaupt erreichbar.
+ * Wirkung an der ausgelieferten Bibliothek: 68 wiederholungsfreie Runden über
+ * den vollen Rahmen, 1466 mit bis zu zwei Zweitanläufen. Sie sind das, was
+ * Delos/Rinia überhaupt erreichbar macht — die Insel hängt an einer einzigen
+ * Etappe und ist ohne Zweitanlauf über Mykonos nicht anzulaufen.
  */
 const MAX_ZWEITANLAEUFE = 2;
 
@@ -95,6 +103,14 @@ interface Adjacency {
   index: Map<string, Leg>;
   /** Kuratierte Liegeplätze je Insel — die Obergrenze für Zweitanläufe. */
   plaetze: (islandId: string) => number;
+  /**
+   * Wie viele VERSCHIEDENE Nachbarinseln eine Insel hat — der Grad im Graphen.
+   *
+   * Er entscheidet, ob eine Insel eine SACKGASSE ist: bei Grad 1 führt der
+   * einzige Weg hinaus derselbe zurück, den man gekommen ist. Die Regel gegen
+   * das Pendeln (siehe `dfs`) macht davon ihre einzige Ausnahme.
+   */
+  grad: (islandId: string) => number;
 }
 
 function adjacencyOf(snapshot: PlanningSnapshot): Adjacency {
@@ -113,11 +129,18 @@ function adjacencyOf(snapshot: PlanningSnapshot): Adjacency {
   for (const list of edges.values()) {
     list.sort((a, b) => a.toIslandId.localeCompare(b.toIslandId) || a.id.localeCompare(b.id));
   }
+  const nachbarn = new Map<string, Set<string>>();
+  for (const leg of index.values()) {
+    const set = nachbarn.get(leg.fromIslandId) ?? new Set<string>();
+    set.add(leg.toIslandId);
+    nachbarn.set(leg.fromIslandId, set);
+  }
   return {
     base: snapshot.params.baseIslandId,
     edges,
     index,
     plaetze: (islandId) => plaetzeJeInsel.get(islandId) ?? 0,
+    grad: (islandId) => nachbarn.get(islandId)?.size ?? 0,
   };
 }
 
@@ -133,10 +156,14 @@ interface SearchOpts {
    * (1e) an den fertigen Plan stellt. Eine Regel, zwei Orte: der Suchraum
    * erzeugt nichts, was die Gültigkeit hinterher verwerfen müsste.
    *
-   * Der Deckel ist auch die Zusicherung gegen das PENDELN: eine Runde über elf
-   * Etappen, die dieselbe Kette hin und zurück fährt, bräuchte fünf
-   * Wiederholungen. Bei zwei ist das strukturell ausgeschlossen — stärker als
-   * jedes Rangkriterium, das von genug anderen überstimmt werden kann.
+   * Der Deckel wehrt das Pendeln über die GANZE Runde ab: dieselbe Kette über
+   * elf Etappen hin und zurück bräuchte fünf Wiederholungen.
+   *
+   * ER TUT ABER NICHT MEHR ALS DAS — bis 2026-08-07 stand hier das Gegenteil.
+   * Ein LOKALES `A → B → A` kostet genau EINEN Zweitanlauf und war damit voll
+   * erlaubt; der Skipper bekam `Paros → Ios → Paros` angeboten. Dagegen steht
+   * jetzt eine eigene Regel in `dfs`, und der Satz hier sagt nur noch, was er
+   * belegen kann.
    */
   maxRepeats: number;
 }
@@ -176,6 +203,34 @@ function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundT
       }
       // Noch mindestens die Schluss-Etappe zur Basis muss danach passen.
       if (path.length + 2 > bound) continue;
+
+      /**
+       * KEIN PENDELN: nicht sofort dorthin zurück, wo man gerade herkam.
+       *
+       * Der Befund des Skippers vom 2026-08-07 an der ausgelieferten App:
+       * `Paros (Naoussa) → Ios → Paros (Parikia)`. Zwei Törntage für EINE
+       * Insel, und der Rückweg ist der Hinweg gegenan — im Screenshot eine rote
+       * Etappe mit 32 sm Kreuzen. Genau die Form, gegen die er sich von Anfang
+       * an gewehrt hat ("Paros–Naxos ist eine direkte Linie hin und zurück").
+       *
+       * WARUM DER DECKEL DAS NICHT SCHON TAT. `MAX_ZWEITANLAEUFE` verhindert
+       * das Pendeln über die GANZE Runde — dieselbe Kette elf Etappen hin und
+       * zurück bräuchte fünf Wiederholungen. Ein LOKALES A → B → A kostet
+       * genau EINEN Zweitanlauf und war voll erlaubt. Der Kommentar am Deckel
+       * hat mehr zugesagt, als die Regel hielt; das ist hier korrigiert.
+       *
+       * DIE EINZIGE AUSNAHME IST AUS DEN DATEN HERGELEITET, NICHT ERFUNDEN.
+       * Route 2 der Törnanalyse fährt `Mykonos → Delos/Rinia → Mykonos`, und
+       * das MUSS weiter gehen: Delos/Rinia hat genau eine Etappe (Grad 1), der
+       * einzige Weg hinaus ist der zurück. Es ist die einzige solche Insel im
+       * Revier — Ios, Donousa, Folegandros, Iraklia und Polyaigos haben alle
+       * zwei Nachbarn, für sie gibt es also immer eine Weiterfahrt.
+       *
+       * Die Basis braucht keine Ausnahme: sie wird oben abgefangen, wer sie
+       * erreicht, ist zu Hause.
+       */
+      const herkunft = path[path.length - 1]?.fromIslandId;
+      if (herkunft !== undefined && to === herkunft && adj.grad(node) > 1) continue;
 
       const bisher = anlaeufe.get(to) ?? 0;
       if (bisher > 0) {

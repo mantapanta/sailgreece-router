@@ -4,7 +4,10 @@
   "island": {
     "id": "santorin",
     "name": "Santorin",
-    "coordinates": { "lat": 36.4, "lon": 25.43 },
+    "coordinates": {
+      "lat": 36.4,
+      "lon": 25.43
+    },
     "description": "Das Sehnsuchtsziel am Südende des Möglichkeitsraums — nur mit bestätigtem Liegeplatz.",
     "guestPickup": {
       "ferryReachable": true,
@@ -17,11 +20,30 @@
       "islandId": "santorin",
       "name": "Vlychada",
       "type": "marina",
-      "coordinates": { "lat": 36.3353, "lon": 25.4353 },
-      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "coordinates": {
+        "lat": 36.3353,
+        "lon": 25.4353
+      },
+      "qualities": {
+        "schoenheit": 4,
+        "restaurant": 3,
+        "badestrand": 4
+      },
       "shelter": {
-        "windSectors": [{ "fromDeg": 300, "toDeg": 90, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 300, "toDeg": 90, "maxM": 0.6 }],
+        "windSectors": [
+          {
+            "fromDeg": 300,
+            "toDeg": 90,
+            "maxKn": 30
+          }
+        ],
+        "waveSectors": [
+          {
+            "fromDeg": 300,
+            "toDeg": 90,
+            "maxM": 0.6
+          }
+        ],
         "sourceNote": "Quelle 1: einzige gut geschützte Liegestelle Thiras; Südküste, geschützt gegen N-Sektoren. Lauf 3 (Heikell 14. Aufl. S. 280, CruisersWiki Santorini, Navily 2025) gibt Öffnung nach S bis SE und den weiteren Sektor 250–120 bei gleicher Windgrenze. Eingetragen ist die SCHNITTMENGE 300–90, Wellengrenze auf 0.6 m gesenkt."
       },
       "warnings": [
@@ -41,7 +63,10 @@
       ],
       "berthingDetails": {
         "mooringType": "murings",
-        "depthAtBerthM": { "min": 1.5, "max": 2.5 },
+        "depthAtBerthM": {
+          "min": 1.5,
+          "max": 2.5
+        },
         "anchorHoldingGround": "sand-schlamm",
         "holdingQuality": "gut",
         "holdingNote": "Schlammgrund im inneren Becken hält gut — das Problem ist die Zufahrtstiefe, nicht der Halt.",
@@ -89,11 +114,30 @@
       "islandId": "santorin",
       "name": "Akrotiri",
       "type": "bucht",
-      "coordinates": { "lat": 36.3533, "lon": 25.3983 },
-      "qualities": { "schoenheit": 4, "restaurant": 3, "badestrand": 4 },
+      "coordinates": {
+        "lat": 36.3483,
+        "lon": 25.3983
+      },
+      "qualities": {
+        "schoenheit": 4,
+        "restaurant": 3,
+        "badestrand": 4
+      },
       "shelter": {
-        "windSectors": [{ "fromDeg": 270, "toDeg": 150, "maxKn": 30 }],
-        "waveSectors": [{ "fromDeg": 270, "toDeg": 150, "maxM": 0.5 }],
+        "windSectors": [
+          {
+            "fromDeg": 270,
+            "toDeg": 150,
+            "maxKn": 30
+          }
+        ],
+        "waveSectors": [
+          {
+            "fromDeg": 270,
+            "toDeg": 150,
+            "maxM": 0.5
+          }
+        ],
         "sourceNote": "Deep-Research Lauf 3 (Heikell 14. Aufl.): Öffnung nach S bis SW, Sektor 270–150, maxKn 30 — Sektor und Öffnungsrichtung konsistent, unverändert übernommen."
       },
       "description": "Ankerplatz an der Südseite der Caldera — die Alternative, wenn Vlychada nicht anfahrbar ist.",
@@ -102,10 +146,16 @@
         "Meltemi-sicher: ja"
       ],
       "confidence": "hoch",
-      "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)"],
+      "sources": [
+        "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl. (ohne Seitenangabe)",
+        "Koordinaten-Korrektur 2026-08-07: die kuratierte Position 36.3533/25.3983 lag AN LAND (searoute.isOnLand). Von dort fand seaRoute zu KEINEM Ziel einen Weg — alle 14 unaufloesbaren Anker-Kombinationen der ganzen Bibliothek hingen an diesem einen Platz (Santorin nach Ios, Naxos und Folegandros, in beiden Richtungen). Verschoben um 0,30 sm nach SUEDEN auf den naechsten Wasserpunkt, von dem aus alle drei Nachbarinseln landfrei erreichbar sind. Die Richtung folgt der Quelle: Heikell beschreibt den Ankerplatz an der Suedseite mit Oeffnung S bis SW, und der Schutzsektor 270-150 sagt dasselbe. Die Bucht, die Ausrichtung und alle Schutzwerte bleiben damit unveraendert; korrigiert ist nur, dass der Punkt jetzt im Wasser liegt. NACHZUPRUEFEN vom Skipper an der Seekarte."
+      ],
       "berthingDetails": {
         "mooringType": "anker-frei",
-        "depthAtBerthM": { "min": 4.0, "max": 10.0 },
+        "depthAtBerthM": {
+          "min": 4.0,
+          "max": 10.0
+        },
         "anchorHoldingGround": "sand-fels",
         "holdingQuality": "mittel",
         "holdingNote": "Bimsstein und Sand — Anker gründlich einfahren.",
@@ -128,7 +178,9 @@
         "restrictions": null,
         "vhfChannel": null,
         "confidence": "hoch",
-        "sources": ["Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."]
+        "sources": [
+          "Deep-Research Lauf 3: Heikell, Greek Waters Pilot 14. Aufl."
+        ]
       }
     },
     {
@@ -136,11 +188,30 @@
       "islandId": "santorin",
       "name": "Amoudi",
       "type": "bucht",
-      "coordinates": { "lat": 36.4608, "lon": 25.3683 },
-      "qualities": { "schoenheit": 5, "restaurant": 4, "badestrand": 1 },
+      "coordinates": {
+        "lat": 36.4608,
+        "lon": 25.3683
+      },
+      "qualities": {
+        "schoenheit": 5,
+        "restaurant": 4,
+        "badestrand": 1
+      },
       "shelter": {
-        "windSectors": [{ "fromDeg": 60, "toDeg": 290, "maxKn": 20 }],
-        "waveSectors": [{ "fromDeg": 60, "toDeg": 290, "maxM": 0.5 }],
+        "windSectors": [
+          {
+            "fromDeg": 60,
+            "toDeg": 290,
+            "maxKn": 20
+          }
+        ],
+        "waveSectors": [
+          {
+            "fromDeg": 60,
+            "toDeg": 290,
+            "maxM": 0.5
+          }
+        ],
         "sourceNote": "Deep-Research Lauf 3 (CruisersWiki Santorini): Öffnung nach NW bis N, Sektor 60–290, maxKn 20 — Sektor und Öffnungsrichtung konsistent. Einzige Quelle ist eine Crowd-Quelle."
       },
       "description": "Der Bootsanleger unter Oia — nur an Bojen, das Caldera-Wasser ist über 30 m tief.",
@@ -151,10 +222,15 @@
         "Verfügbarkeit und Haltekraft der Bojen laut Quelle ungeklärt"
       ],
       "confidence": "mittel",
-      "sources": ["Deep-Research Lauf 3: CruisersWiki Santorini"],
+      "sources": [
+        "Deep-Research Lauf 3: CruisersWiki Santorini"
+      ],
       "berthingDetails": {
         "mooringType": "boje",
-        "depthAtBerthM": { "min": 10.0, "max": 35.0 },
+        "depthAtBerthM": {
+          "min": 10.0,
+          "max": 35.0
+        },
         "anchorHoldingGround": "fels",
         "holdingQuality": "schlecht",
         "holdingNote": "Steil abfallender Felsgrund — vom Ankern wird abgeraten, nur Bojen nutzen.",
@@ -177,7 +253,9 @@
         "restrictions": null,
         "vhfChannel": null,
         "confidence": "mittel",
-        "sources": ["Deep-Research Lauf 3: CruisersWiki Santorini"]
+        "sources": [
+          "Deep-Research Lauf 3: CruisersWiki Santorini"
+        ]
       }
     }
   ]

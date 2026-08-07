@@ -131,7 +131,25 @@ function borrowedKey(
 export function sailedLeg(
   leg: Leg,
   places: Place[],
-  anchor: { fromPlaceId?: string | null; toPlaceId?: string | null } = {},
+  anchor: {
+    fromPlaceId?: string | null;
+    toPlaceId?: string | null;
+    /**
+     * PROBE: dieser Aufruf fragt nur, OB ein Kurs zustande käme — er wird nicht
+     * gefahren und nicht bewertet. Dann bleibt die Konsole still.
+     *
+     * Gebraucht von der Platzwahl (`assess.planPlaceIds`), die für jeden
+     * Kandidaten durchprobiert, ob das Boot am nächsten Morgen von dort
+     * wegkommt. Ohne diesen Schalter meldete ausgerechnet die Prüfung, die den
+     * schlechten Platz VERWIRFT, den Defekt, den sie gerade verhindert — und
+     * eine Warnung, die auch dann kommt, wenn alles richtig läuft, ist nach
+     * drei Tagen keine Warnung mehr.
+     *
+     * Das Ergebnis trägt `kursUnaufloesbar` unverändert; still ist nur die
+     * Konsole.
+     */
+    probe?: boolean;
+  } = {},
 ): Leg {
   const placeById = (id: string): Place | undefined => places.find((p) => p.id === id);
   const pick = (
@@ -181,9 +199,17 @@ export function sailedLeg(
     // Platz-Dokumenten (adapters/firestore.ts) — die Bewertung läuft weiter,
     // aber der Defekt ist sichtbar. Der Wächter dagegen ist
     // __tests__/libraryGeometry.test.ts.
-    console.warn(
-      `Etappe ${leg.id} (${from.id} -> ${to.id}): kein landfreier Kurs gefunden — Kurs bleibt Luftlinie`,
-    );
+    //
+    // SEIT 2026-08-07 reicht die Konsolenzeile nicht mehr: sie war das einzige
+    // Lebenszeichen, während die Bewertung auf der Luftlinie durch die Insel
+    // weiterrechnete und dem Skipper eine rote Etappe mit erfundenen Zahlen
+    // hinlegte. Der Befund geht jetzt AM LEG mit (`kursUnaufloesbar`) und macht
+    // die Etappe unbewertbar (scoring.assessLeg).
+    if (!anchor.probe) {
+      console.warn(
+        `Etappe ${leg.id} (${from.id} -> ${to.id}): kein landfreier Kurs gefunden — Kurs bleibt Luftlinie`,
+      );
+    }
   }
 
   // Distanz: kuratierter Wert, solange die Endpunkte stehen. Verschiebt ein
@@ -232,6 +258,9 @@ export function sailedLeg(
     waypoints: inner,
     waypointKeys,
     distanceNm: distanceNmOut,
+    // Nur setzen, wenn er wirklich unauflösbar ist: ein `false` an jeder Etappe
+    // wäre Rauschen in jedem Plan-Vergleich und jedem Snapshot-Diff.
+    ...(routed.unresolved ? { kursUnaufloesbar: true } : {}),
   };
 }
 

@@ -230,12 +230,32 @@ describe('solver — die Runde schlägt das Pendeln (Zielmodell v2)', () => {
     expect(solved.turnIslandId).toBe('sued');
   });
 
-  it('der Kandidatenraum enthält beide Formen — entschieden wird über preferred', () => {
+  it('der Kandidatenraum enthält das Pendeln GAR NICHT MEHR — es wird nicht mehr abgewogen', () => {
+    /**
+     * UMGEDREHT AM 2026-08-07, mit Begründung statt stiller Löschung.
+     *
+     * Vorher hiess dieser Test „der Kandidatenraum enthält beide Formen —
+     * entschieden wird über preferred", und er verlangte ausdrücklich, dass
+     * `athen>west>sued>west>athen` im Raum steht. Die Idee war, das Pendeln als
+     * Rückfallebene zu behalten und die Rangfolge entscheiden zu lassen.
+     *
+     * Der Skipper hat am selben Tag gezeigt, wohin das führt: die
+     * ausgelieferte App bot ihm `Paros (Naoussa) → Ios → Paros (Parikia)` an —
+     * zwei Törntage für eine Insel, der Rückweg der Hinweg gegenan, 32 sm
+     * Kreuzen, rot. Eine Rangfolge kann von genug anderen Kriterien überstimmt
+     * werden; eine Struktur nicht. Deshalb ist die sofortige Rückkehr jetzt aus
+     * dem Suchraum heraus (roundTrips.ts, `dfs`) statt bloss schlecht bewertet.
+     *
+     * Was BLEIBT, steht im Test darüber und in der Sackgassen-Gruppe: die Runde
+     * über vier Inseln gewinnt weiterhin, und eine Insel mit nur einer Etappe
+     * (Delos/Rinia im echten Revier, `fern` hier) darf weiter angependelt
+     * werden — dort ist der Rückweg der einzige Weg.
+     */
     const snapshot = diamondSnapshot();
     const candidates = buildCandidates(snapshot, 'athen');
     const seqs = candidates.map((c) => routeIslandSequence(c.legs).join('>'));
-    expect(seqs).toContain('athen>west>sued>ost>athen'); // Runde
-    expect(seqs).toContain('athen>west>sued>west>athen'); // Pendeln (Rückfallebene)
+    expect(seqs).toContain('athen>west>sued>ost>athen'); // die Runde
+    expect(seqs).not.toContain('athen>west>sued>west>athen'); // das Pendeln
   });
 });
 

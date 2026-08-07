@@ -239,6 +239,41 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     }
   });
 
+  it('KEIN PENDELN: keine Runde kehrt sofort dorthin zurück, wo sie herkam', () => {
+    /**
+     * REGRESSION zum Screenshot-Review des Skippers (2026-08-07). Die App bot
+     * ihm `Paros (Naoussa) → Ios → Paros (Parikia)` an: zwei Törntage für EINE
+     * Insel, der Rückweg der Hinweg gegenan, im Screenshot 34 sm mit 32 sm
+     * Kreuzen und rot. Genau die Form, gegen die er sich von Anfang an gewehrt
+     * hat — "Paros–Naxos ist eine direkte Linie hin und zurück".
+     *
+     * `MAX_ZWEITANLAEUFE` hat das nicht verhindert und konnte es nicht: der
+     * Deckel wehrt das Pendeln über die GANZE Runde ab, ein lokales A → B → A
+     * kostet genau EINEN Zweitanlauf.
+     *
+     * Geprüft über ALLE Schichten, nicht nur die wiederholungsfreie — in
+     * Schicht A kann es ohnehin nicht vorkommen, und genau deshalb wäre ein
+     * Test nur darauf wertlos.
+     */
+    const snapshot = realSnapshot();
+    const sackgassen = new Set(['delos-rinia']);
+    for (const layer of roundTripLayers(snapshot, 'athen', RAHMEN)) {
+      for (const trip of layer.trips) {
+        const seq = islandSequence(trip);
+        for (let i = 2; i < seq.length; i++) {
+          if (seq[i] !== seq[i - 2]) continue;
+          // Erlaubt bleibt genau eins: die Sackgasse, deren einziger Weg
+          // hinaus der zurück ist — und die Basis, die Anfang UND Ende ist.
+          const mitte = seq[i - 1]!;
+          expect(
+            sackgassen.has(mitte) || seq[i] === 'athen',
+            `${layer.layer}: ${seq.join(' > ')} pendelt über ${mitte}`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
   it('Delos/Rinia bleibt eine Sackgasse — erreichbar NUR über den Zweitanlauf Mykonos', () => {
     /**
      * Die Gegenprobe zum Test darüber, und der Grund, dass die Schicht B
@@ -338,6 +373,42 @@ describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
       if (!opt.plan) continue;
       const ziele = stagesOf(opt.plan).map((s) => s.toIslandId);
       expect(ziele, `Option ${opt.routeId} (${opt.name})`).toContain(opt.turnIslandId);
+    }
+  }, VOLLE_BEWERTUNG_MS);
+
+  it('KEINE OPTION IST "empfohlen", WENN IHR EIGENER PLAN ROTE ETAPPEN TRÄGT', () => {
+    /**
+     * REGRESSION zum Screenshot-Review des Skippers (2026-08-07): "die
+     * alternativen Routen sind teilweise sinnbefreit, da rote Legs enthalten
+     * sind".
+     *
+     * Der Optionsraum rechnete die Ampel jeder Option aus (`worstAmpel` über
+     * die Etappen ihres Plans) und liess sie dann auf NICHTS wirken: die
+     * Empfehlung kam allein aus der Wetter-Eignung des Konzepts, und nur
+     * Sicherheits-Befunde nahmen eine Option aus dem Angebot. Eine rote Etappe
+     * ohne solchen Befund — "Wind nahe der Aufkreuz-Schwelle", "hartes
+     * Tagesbudget überschritten" — tat gar nichts. Die App bewertete die
+     * Etappe rot und empfahl im selben Atemzug die Route, die sie enthält.
+     *
+     * Geprüft über ein BAND von Windlagen, nicht an einem Wert: eine
+     * Eigenschaft, die nur bei einer Windstärke stimmt, hat nichts bewiesen.
+     * Und geprüft wird die Eigenschaft, nicht das Vorkommen — ob bei diesen
+     * Lagen überhaupt rote Etappen auftreten, ist eine Frage ans Wetter.
+     */
+    for (const [kn, dir] of [[16, 340], [22, 340], [26, 20]] as [number, number][]) {
+      const assessment = assessPlanning(realSnapshot({ windKn: kn, windDirDeg: dir }));
+      for (const opt of assessment.routeOptions) {
+        const rot = (opt.legAssessments ?? []).filter((l) => l.ampel === 'rot');
+        if (rot.length === 0) continue;
+        expect(
+          opt.empfehlung,
+          `${kn} kn aus ${dir}° — Option ${opt.name} hat ${rot.length} rote Etappe(n)`,
+        ).not.toBe('empfohlen');
+        expect(
+          opt.abratenGruende.join(' '),
+          `${kn} kn aus ${dir}° — Option ${opt.name} nennt den Grund nicht`,
+        ).toContain('rot');
+      }
     }
   }, VOLLE_BEWERTUNG_MS);
 
