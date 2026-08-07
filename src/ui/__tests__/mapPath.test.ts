@@ -88,6 +88,8 @@ function roundTrip(): { stages: StageAssessment[]; snapshot: PlanningSnapshot; l
     ],
     kursAbschnitte: [],
     reachableIslandIds: [],
+    zwischenstopps: [],
+    stopoverIslandIds: [],
     pinned: false,
     stopHoursPerStop: 3,
     abfahrtHourAthens: 9,

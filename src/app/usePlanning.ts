@@ -18,6 +18,7 @@ import { isLateDeparture } from '../domain/scoring.ts';
 import {
   completePlan,
   planKey,
+  planWithStopover,
   planWithoutStopover,
   type Pin,
 } from '../domain/solver.ts';
@@ -249,22 +250,35 @@ export function usePlanningEngine() {
   );
 
   /**
-   * FR28 — den Zwischenstopp eines Doppelschlag-Tages löschen: der Tag wird
-   * zur EINEN direkten Etappe auf dasselbe Tagesziel (solver.planWithoutStopover).
-   * Kennt die Bibliothek keine direkte Verbindung, wird sie dort landfrei
-   * ERZEUGT und hier zusammen mit dem Plan als EIN Payload persistiert
-   * (DELETE_STOPOVER) — nie ein Plan ohne seine Etappe. False nur, wenn kein
-   * landfreier Kurs berechenbar ist oder der Tag keinen Zwischenstopp trägt.
+   * FR28 — den ZWISCHENSTOPP eines Tages setzen, verlegen oder löschen: EINE
+   * Funktion für EINE Entscheidung ("wo halten wir unterwegs an?"). Das
+   * Tagesziel bleibt in jedem Fall dasselbe, die Kette bleibt geschlossen, und
+   * alle anderen Tage bleiben unberührt.
+   *
+   *  - `islandId` gesetzt: der Tag fährt über diese Insel, optional über deren
+   *    Hafen `placeId` (solver.planWithStopover). Beide Hälften kommen aus der
+   *    Bibliothek — für einen Stopp wird nichts erfunden.
+   *  - `islandId === null`: der Tag wird zur EINEN direkten Etappe
+   *    (solver.planWithoutStopover). Kennt die Bibliothek keine direkte
+   *    Verbindung, wird sie dort landfrei ERZEUGT.
+   *
+   * Erzeugte Etappen werden zusammen mit dem Plan als EIN Payload persistiert
+   * (SET_STOPOVER) — nie ein Plan ohne seine Etappe. False heisst: diese
+   * Änderung ist nicht darstellbar (kein landfreier Kurs, keine Verbindung der
+   * Bibliothek, oder der Tag trägt gar keinen Zwischenstopp zu löschen).
    */
-  const removeStopover = useCallback(
-    (day: number): boolean => {
+  const setStopover = useCallback(
+    (day: number, islandId: string | null, placeId?: string): boolean => {
       if (!snapshot || !trip.plan) return false;
-      const removal = planWithoutStopover(trip.plan, day, snapshot);
-      if (!removal) return false;
+      const change =
+        islandId === null
+          ? planWithoutStopover(trip.plan, day, snapshot)
+          : planWithStopover(trip.plan, day, { islandId, placeId }, snapshot);
+      if (!change) return false;
       dispatch({
-        type: 'DELETE_STOPOVER',
-        plan: removal.plan,
-        customLeg: removal.customLeg,
+        type: 'SET_STOPOVER',
+        plan: change.plan,
+        customLegs: change.customLegs,
       });
       return true;
     },
@@ -337,7 +351,7 @@ export function usePlanningEngine() {
     currentDay,
     pins,
     editStage,
-    removeStopover,
+    setStopover,
     checkIn,
     releasePin,
     setStopHours,

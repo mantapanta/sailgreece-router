@@ -10,6 +10,7 @@ import {
   planKey,
   planMetricsFor,
   planTurnDay,
+  planWithStopover,
   planWithoutStopover,
   preferred,
   relaxParams,
@@ -1111,7 +1112,7 @@ describe('solver — planWithoutStopover (Zwischenstopp löschen)', () => {
     const removal = planWithoutStopover(doppelschlagPlan(), 1, snapshot);
     expect(removal).not.toBeNull();
     // Bibliothek kannte die Verbindung — nichts wurde erzeugt.
-    expect(removal!.customLeg).toBeNull();
+    expect(removal!.customLegs).toEqual([]);
     const day1 = removal!.plan.days.find((d) => d.day === 1)!;
     expect(day1.kind).toBe('stage');
     if (day1.kind === 'stage') {
@@ -1140,7 +1141,7 @@ describe('solver — planWithoutStopover (Zwischenstopp löschen)', () => {
 
     const removal = planWithoutStopover(doppelschlagPlan(), 1, snapshot);
     expect(removal).not.toBeNull();
-    expect(removal!.customLeg).toBeNull();
+    expect(removal!.customLegs).toEqual([]);
     const day1 = removal!.plan.days.find((d) => d.day === 1)!;
     if (day1.kind === 'stage') expect(day1.legIds).toEqual(['athen--sued']);
   });
@@ -1149,8 +1150,8 @@ describe('solver — planWithoutStopover (Zwischenstopp löschen)', () => {
     // Die Grundwelt kennt athen↔sued nur über mitte — in keiner Richtung direkt.
     const removal = planWithoutStopover(doppelschlagPlan(), 1, roundTripSnapshot());
     expect(removal).not.toBeNull();
-    const leg = removal!.customLeg!;
-    expect(leg).not.toBeNull();
+    expect(removal!.customLegs).toHaveLength(1);
+    const leg = removal!.customLegs[0]!;
     expect(leg.id).toBe('athen--sued');
     expect(leg.fromPlaceId).toBe('athen-alimos');
     expect(leg.toPlaceId).toBe('sued-hafen');
@@ -1172,5 +1173,231 @@ describe('solver — planWithoutStopover (Zwischenstopp löschen)', () => {
     const snapshot = roundTripSnapshot();
     expect(planWithoutStopover(doppelschlagPlan(), 2, snapshot)).toBeNull();
     expect(planWithoutStopover(doppelschlagPlan(), 4, snapshot)).toBeNull();
+  });
+});
+
+/**
+ * FR28 — Zwischenstopp SETZEN: derselbe Tag, dasselbe Tagesziel, aber unterwegs
+ * über eine andere Insel. Die Gegenrichtung zum Löschen, und dieselbe Doktrin
+ * von der anderen Seite: BEIDE Hälften des Umwegs kommen aus der Bibliothek
+ * (Gegenrichtungen eingeschlossen). Für einen Stopp wird nichts erfunden —
+ * fehlt die Verbindung, ist die Antwort "dieser Stopp nicht".
+ *
+ * DER HAFEN DES STOPPS ist dabei ein Ankerpunkt, kein Liegeplatz: er landet in
+ * `Stage.viaPlaceIds`, verankert die Geometrie und geht in keine Ampel ein — am
+ * Zwischenstopp muss das Boot nicht sicher liegen (Skipper 2026-08-07).
+ */
+describe('solver — planWithStopover (Zwischenstopp setzen)', () => {
+  /** Direkter Tag athen → sued (die Verbindung kennt die Welt nicht von selbst). */
+  const direktPlan = () =>
+    makePlan([
+      makeStage(1, ['athen--sued'], 'sued'),
+      makeStage(2, ['sued--mitte'], 'mitte'),
+      makeStage(3, ['mitte--athen'], 'athen'),
+      makeHarbourDay(4, 'athen'),
+      makeHarbourDay(5, 'athen'),
+    ]);
+
+  /** Doppelschlag-Tag athen → mitte → sued. */
+  const doppelschlagPlan = () =>
+    makePlan([
+      makeStage(1, ['athen--mitte', 'mitte--sued'], 'sued'),
+      makeStage(2, ['sued--mitte'], 'mitte'),
+      makeStage(3, ['mitte--athen'], 'athen'),
+      makeHarbourDay(4, 'athen'),
+      makeHarbourDay(5, 'athen'),
+    ]);
+
+  /** Die Welt plus der Direktroute athen--sued, damit Tag 1 sie fahren kann. */
+  const mitDirektroute = (): PlanningSnapshot => {
+    const snapshot = roundTripSnapshot();
+    snapshot.library.legs = [
+      ...snapshot.library.legs,
+      makeLeg({
+        id: 'athen--sued',
+        fromIslandId: 'athen',
+        toIslandId: 'sued',
+        fromPlaceId: 'athen-alimos',
+        toPlaceId: 'sued-hafen',
+        distanceNm: 38,
+      }),
+    ];
+    return snapshot;
+  };
+
+  it('macht aus einer direkten Etappe zwei Schläge über die Stopp-Insel', () => {
+    const change = planWithStopover(
+      direktPlan(),
+      1,
+      { islandId: 'mitte' },
+      mitDirektroute(),
+    );
+    expect(change).not.toBeNull();
+    // Kuratiert vorhanden — es wird nichts erzeugt.
+    expect(change!.customLegs).toEqual([]);
+    const day1 = change!.plan.days.find((d) => d.day === 1)!;
+    expect(day1.kind).toBe('stage');
+    if (day1.kind === 'stage') {
+      expect(day1.legIds).toEqual(['athen--mitte', 'mitte--sued']);
+      // Das Tagesziel bleibt das Tagesziel.
+      expect(day1.toIslandId).toBe('sued');
+      // Ohne Hafenwahl gilt der kuratierte Hafen der Etappe.
+      expect(day1.viaPlaceIds).toEqual([null]);
+    }
+    // Skipper-Entscheidung (Pin), damit die Neuberechnung sie nicht verwirft.
+    expect(day1.source).toBe('skipper');
+    // Alle anderen Tage bleiben unberührt — die Kette bleibt geschlossen.
+    expect(change!.plan.days.filter((d) => d.day !== 1)).toEqual(
+      direktPlan().days.filter((d) => d.day !== 1),
+    );
+  });
+
+  it('schreibt den gewählten Hafen des Stopps in viaPlaceIds', () => {
+    const change = planWithStopover(
+      direktPlan(),
+      1,
+      { islandId: 'mitte', placeId: 'mitte-bucht-ost' },
+      mitDirektroute(),
+    );
+    const day1 = change!.plan.days.find((d) => d.day === 1)!;
+    if (day1.kind === 'stage') {
+      expect(day1.viaPlaceIds).toEqual(['mitte-bucht-ost']);
+      // Der NACHTPLATZ des Tages bleibt davon unberührt: ein Zwischenstopp ist
+      // keiner.
+      expect(day1.toPlaceId).toBeUndefined();
+    }
+  });
+
+  it('wechselt an einem bestehenden Doppelschlag nur den Hafen des Stopps', () => {
+    const change = planWithStopover(
+      doppelschlagPlan(),
+      1,
+      { islandId: 'mitte', placeId: 'mitte-bucht-ost' },
+      roundTripSnapshot(),
+    );
+    const day1 = change!.plan.days.find((d) => d.day === 1)!;
+    if (day1.kind === 'stage') {
+      expect(day1.legIds).toEqual(['athen--mitte', 'mitte--sued']);
+      expect(day1.viaPlaceIds).toEqual(['mitte-bucht-ost']);
+    }
+  });
+
+  /**
+   * KEINE AMPEL-KRITERIEN am Zwischenstopp: ein Platz ohne jeden Schutzsektor
+   * wäre als Übernachtungsplatz nie grün und würde von der Nacht-Rangfolge nach
+   * hinten sortiert. Als Mittagsstopp ist er zulässig — dort wird gebadet,
+   * gegessen und weitergefahren.
+   */
+  it('nimmt auch einen ungeschützten Hafen als Zwischenstopp', () => {
+    const snapshot = mitDirektroute();
+    snapshot.library.places = [
+      ...snapshot.library.places,
+      makePlace({
+        id: 'mitte-offene-bucht',
+        islandId: 'mitte',
+        coordinates: { lat: 37.58, lon: 24.18 },
+        shelter: { windSectors: [], waveSectors: [], sourceNote: 'fixture' },
+        confidence: 'niedrig',
+      }),
+    ];
+    const change = planWithStopover(
+      direktPlan(),
+      1,
+      { islandId: 'mitte', placeId: 'mitte-offene-bucht' },
+      snapshot,
+    );
+    expect(change).not.toBeNull();
+    const day1 = change!.plan.days.find((d) => d.day === 1)!;
+    if (day1.kind === 'stage') {
+      expect(day1.viaPlaceIds).toEqual(['mitte-offene-bucht']);
+    }
+  });
+
+  it('null, wenn die Bibliothek nicht BEIDE Hälften kennt', () => {
+    // Tag 3 fährt mitte → athen; über 'sued' gibt es keinen Weg nach athen
+    // zurück, der in der Bibliothek stünde. Erfunden wird dafür nichts.
+    expect(
+      planWithStopover(direktPlan(), 3, { islandId: 'sued' }, roundTripSnapshot()),
+    ).toBeNull();
+  });
+
+  it('null für die Ausgangs- oder die Zielinsel des Tages selbst', () => {
+    const snapshot = mitDirektroute();
+    expect(planWithStopover(direktPlan(), 1, { islandId: 'athen' }, snapshot)).toBeNull();
+    expect(planWithStopover(direktPlan(), 1, { islandId: 'sued' }, snapshot)).toBeNull();
+  });
+
+  it('null für einen Hafen, der nicht auf der Stopp-Insel liegt', () => {
+    expect(
+      planWithStopover(
+        direktPlan(),
+        1,
+        { islandId: 'mitte', placeId: 'sued-hafen' },
+        mitDirektroute(),
+      ),
+    ).toBeNull();
+  });
+
+  it('null am Hafentag — dort gibt es keinen Weg, auf dem man anhalten könnte', () => {
+    expect(
+      planWithStopover(direktPlan(), 4, { islandId: 'mitte' }, mitDirektroute()),
+    ).toBeNull();
+  });
+
+  /**
+   * Löschen und Setzen sind Umkehrungen: erst wird der Doppelschlag zur
+   * Direktroute, dann wieder zum Doppelschlag — mit demselben Tagesziel und
+   * ohne Spur im Hafen des Stopps.
+   */
+  /**
+   * Und was die BEWERTUNG daraus macht (AD-2: die Ansicht rechnet nichts): der
+   * Tag meldet seinen Zwischenstopp mit dem Hafen, an dem wirklich angehalten
+   * wird, und die Inseln, die als Stopp in Frage kommen.
+   */
+  it('landet als Zwischenstopp samt gewähltem Hafen in der Bewertung', () => {
+    const snapshot = mitDirektroute();
+    snapshot.trip = {
+      ...snapshot.trip,
+      plan: planWithStopover(
+        direktPlan(),
+        1,
+        { islandId: 'mitte', placeId: 'mitte-bucht-ost' },
+        snapshot,
+      )!.plan,
+    };
+    const day1 = assessPlanning(snapshot).mainRoute!.stages.find((s) => s.day === 1)!;
+    expect(day1.zwischenstopps).toEqual([
+      { islandId: 'mitte', placeId: 'mitte-bucht-ost', placeIsCurated: false },
+    ]);
+    // Die Auswahl des Editors: 'mitte' liegt zwischen athen und sued.
+    expect(day1.stopoverIslandIds).toEqual(['mitte']);
+    // Der Nachtplatz des Tages ist davon unberührt — er liegt auf 'sued'.
+    expect(day1.placeId).not.toBe('mitte-bucht-ost');
+  });
+
+  it('meldet ohne Hafenwahl den kuratierten Hafen der Etappe', () => {
+    const snapshot = roundTripSnapshot();
+    snapshot.trip = { ...snapshot.trip, plan: doppelschlagPlan() };
+    const day1 = assessPlanning(snapshot).mainRoute!.stages.find((s) => s.day === 1)!;
+    expect(day1.zwischenstopps).toEqual([
+      { islandId: 'mitte', placeId: 'mitte-bucht', placeIsCurated: true },
+    ]);
+  });
+
+  it('hebt das Löschen wieder auf, ohne den alten Stopp-Hafen zu erben', () => {
+    const snapshot = mitDirektroute();
+    const gesetzt = planWithStopover(
+      doppelschlagPlan(),
+      1,
+      { islandId: 'mitte', placeId: 'mitte-bucht-ost' },
+      snapshot,
+    )!;
+    const geloescht = planWithoutStopover(gesetzt.plan, 1, snapshot)!;
+    const tag1 = geloescht.plan.days.find((d) => d.day === 1)!;
+    if (tag1.kind === 'stage') {
+      expect(tag1.legIds).toEqual(['athen--sued']);
+      expect(tag1.viaPlaceIds).toEqual([]);
+      expect(tag1.toIslandId).toBe('sued');
+    }
   });
 });

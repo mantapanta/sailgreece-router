@@ -1800,6 +1800,10 @@ export function completePlan(
           // kuratierten Häfen, aber VERKETTET: jeder Tag startet, wo der
           // vorige endete. Genau die Verkettung ist, was Stunden kostet.
           placeId: null,
+          // Der Hafen eines Zwischenstopps ist dagegen eine SKIPPER-Wahl und
+          // steht im Plan: sie verschiebt die Geometrie und damit die Stunden,
+          // gegen die hier nachvalidiert wird.
+          viaPlaceIds: d.kind === 'stage' ? (d.viaPlaceIds ?? null) : null,
         })),
         legsById,
         snapshot.library.places,
@@ -1854,16 +1858,19 @@ export function planKey(plan: Plan): string {
     .join('|');
 }
 
-/** Ergebnis von `planWithoutStopover` — Plan plus ggf. erzeugte Direktroute. */
-export interface StopoverRemoval {
+/**
+ * Ergebnis einer Zwischenstopp-Änderung (FR28) — der fertige Plan plus die
+ * dabei ERZEUGTEN Etappen.
+ *
+ * `customLegs` ist leer, solange die Bibliothek alles hergab, was der neue Tag
+ * braucht (Gegenrichtungen eingeschlossen). Sonst persistiert der Aufrufer sie
+ * als Custom-Etappen des Geräts (tripContext SET_STOPOVER), damit der Plan
+ * seine Referenzen über jeden Neustart hinweg auflösen kann — nie ein Plan
+ * ohne seine Etappe.
+ */
+export interface StopoverChange {
   plan: Plan;
-  /**
-   * Die dabei ERZEUGTE Direktroute — null, wenn die Bibliothek die direkte
-   * Verbindung schon kannte (auch als Gegenrichtung). Der Aufrufer persistiert
-   * sie als Custom-Etappe des Geräts (tripContext DELETE_STOPOVER), damit der
-   * Plan sie über jeden Neustart hinweg auflösen kann.
-   */
-  customLeg: Leg | null;
+  customLegs: Leg[];
 }
 
 /**
@@ -1893,7 +1900,7 @@ export function planWithoutStopover(
   plan: Plan,
   day: number,
   snapshot: PlanningSnapshot,
-): StopoverRemoval | null {
+): StopoverChange | null {
   const entry = planDay(plan, day);
   if (!entry || entry.kind !== 'stage' || entry.legIds.length < 2) return null;
   const legs = legLibrary(snapshot);
@@ -1901,19 +1908,13 @@ export function planWithoutStopover(
   const last = legs.get(entry.legIds[entry.legIds.length - 1]!);
   if (!first || !last) return null;
 
-  const replaceDay = (legId: string): Plan => ({
-    ...plan,
-    days: plan.days.map((d) =>
-      d.day === day && d.kind === 'stage'
-        ? { ...d, legIds: [legId], source: 'skipper' as const }
-        : d,
-    ),
-  });
+  const replaceDay = (legId: string): Plan =>
+    withDayLegs(plan, day, [legId], []);
 
   const direct = [...legs.values()].find(
     (l) => l.fromIslandId === first.fromIslandId && l.toIslandId === entry.toIslandId,
   );
-  if (direct) return { plan: replaceDay(direct.id), customLeg: null };
+  if (direct) return { plan: replaceDay(direct.id), customLegs: [] };
 
   // Erzeugen: landfreier Kurs vom Startplatz des Tages zum Zielplatz.
   const from = snapshot.library.places.find((p) => p.id === first.fromPlaceId);
@@ -1933,7 +1934,100 @@ export function planWithoutStopover(
       'Direktroute, vom Skipper erzeugt (Zwischenstopp gelöscht): Kurs landfrei gerechnet, Distanz aus der Geometrie — nicht kuratiert',
     ],
   };
-  return { plan: replaceDay(customLeg.id), customLeg };
+  return { plan: replaceDay(customLeg.id), customLegs: [customLeg] };
+}
+
+/**
+ * Die Etappen EINES Plantags austauschen — der eine Schreibzugriff, den alle
+ * Zwischenstopp-Änderungen teilen.
+ *
+ * Der Tag wird als Skipper-Entscheidung gestempelt (Pin, AD-12), damit eine
+ * spätere Neuberechnung ihn nicht wieder verwirft. `viaPlaceIds` wird immer
+ * mitgeschrieben — auch leer, denn ein Tag, der seinen Zwischenstopp verliert,
+ * darf dessen Hafen nicht behalten.
+ */
+function withDayLegs(
+  plan: Plan,
+  day: number,
+  legIds: string[],
+  viaPlaceIds: (string | null)[],
+): Plan {
+  return {
+    ...plan,
+    days: plan.days.map((d) =>
+      d.day === day && d.kind === 'stage'
+        ? { ...d, legIds, viaPlaceIds, source: 'skipper' as const }
+        : d,
+    ),
+  };
+}
+
+/**
+ * FR28 — einen Zwischenstopp SETZEN: derselbe Tag, dasselbe Tagesziel, aber
+ * unterwegs über `stop.islandId` und optional dessen Hafen `stop.placeId`.
+ *
+ * Das ist die Gegenrichtung zu `planWithoutStopover` und deckt alle drei Fälle
+ * ab, die der Skipper am Tag hat: einen Stopp NEU einfügen, den Stopp auf eine
+ * andere Insel VERLEGEN und nur seinen HAFEN wechseln. Der Tag trägt danach
+ * genau zwei Etappen — mehr als einen Zwischenstopp plant diese App nicht
+ * (`params.maxLegsPerDay`), und mehr als einen kann der Editor auch nicht
+ * ausdrücken.
+ *
+ * BEIDE HÄLFTEN KOMMEN AUS DER BIBLIOTHEK (Gegenrichtungen eingeschlossen).
+ * Anders als beim Löschen wird hier NICHTS landfrei erzeugt: beim Löschen muss
+ * der Tag sein Ziel behalten, also braucht er die Direktroute auch dann, wenn
+ * sie niemand recherchiert hat. Ein Stopp dagegen ist ein Zugewinn — gibt es
+ * für ihn keine recherchierte Verbindung, ist die richtige Antwort "diesen
+ * Stopp nicht", nicht "einen erfundenen Kurs". Die Auswahl (`reach.stopoverIslands`)
+ * zeigt darum von vornherein nur Inseln, für die beide Hälften existieren;
+ * `null` bleibt der Fall für eine Wahl, die daneben liegt.
+ *
+ * DER HAFEN DES STOPPS ist ein Ankerpunkt, kein Liegeplatz: er wandert in
+ * `Stage.viaPlaceIds`, verankert die Geometrie (legGeometry) und geht in keine
+ * Ampel ein — am Zwischenstopp muss das Boot nicht sicher liegen (Skipper
+ * 2026-08-07). Geprüft wird nur, dass er auf der Stopp-Insel liegt; ein Platz
+ * von einer anderen Insel wäre ein Datenfehler, kein Zwischenstopp.
+ */
+export function planWithStopover(
+  plan: Plan,
+  day: number,
+  stop: { islandId: string; placeId?: string | null },
+  snapshot: PlanningSnapshot,
+): StopoverChange | null {
+  const entry = planDay(plan, day);
+  if (!entry || entry.kind !== 'stage' || entry.legIds.length === 0) return null;
+  const legs = legLibrary(snapshot);
+  const first = legs.get(entry.legIds[0]!);
+  if (!first) return null;
+  const fromIslandId = first.fromIslandId;
+  const toIslandId = entry.toIslandId;
+  // Ein Stopp an der Ausgangs- oder Zielinsel des Tages ist kein Stopp: der
+  // Tag würde dieselbe Insel zweimal anlaufen, statt unterwegs anzuhalten.
+  if (stop.islandId === fromIslandId || stop.islandId === toIslandId) return null;
+
+  if (stop.placeId) {
+    const place = snapshot.library.places.find((p) => p.id === stop.placeId);
+    if (!place || place.islandId !== stop.islandId) return null;
+  }
+
+  // Die kürzeste bekannte Verbindung je Hälfte — dieselbe Wahl, die
+  // `reach.stopoverIslands` beim Sortieren trifft.
+  const connection = (a: string, b: string): Leg | null => {
+    let best: Leg | null = null;
+    for (const leg of legs.values()) {
+      if (leg.fromIslandId !== a || leg.toIslandId !== b) continue;
+      if (!best || leg.distanceNm < best.distanceNm) best = leg;
+    }
+    return best;
+  };
+  const hin = connection(fromIslandId, stop.islandId);
+  const weiter = connection(stop.islandId, toIslandId);
+  if (!hin || !weiter) return null;
+
+  return {
+    plan: withDayLegs(plan, day, [hin.id, weiter.id], [stop.placeId ?? null]),
+    customLegs: [],
+  };
 }
 
 /** Stages of a plan that could not be assessed — for display (AD-12). */

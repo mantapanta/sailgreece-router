@@ -275,6 +275,14 @@ export interface DayAnchor {
    * der kuratierte Zielhafen der Etappe der Ankerpunkt.
    */
   placeId: string | null;
+  /**
+   * Die HÄFEN DER ZWISCHENSTOPPS dieses Tages (Plan: `Stage.viaPlaceIds`) —
+   * ein Eintrag je Etappe, Index i = Ziel der i-ten Etappe. Fehlt der Eintrag
+   * oder ist er null, bleibt der kuratierte Hafen der Etappe der Ankerpunkt.
+   * Der letzte Eintrag wird nie gelesen: dort endet der Tag, und dafür gilt
+   * `placeId`.
+   */
+  viaPlaceIds?: (string | null)[] | null;
 }
 
 /**
@@ -311,12 +319,13 @@ export function sailedLegsByDay(
         resolved.push(undefined);
         continue;
       }
-      // Der Zielplatz des Tages gilt nur für die LETZTE Etappe des Tages;
-      // ein Zwischenstopp behält seinen kuratierten Hafen.
+      // Der Zielplatz des Tages gilt nur für die LETZTE Etappe des Tages; ein
+      // Zwischenstopp wird an seinem eigenen Hafen verankert (`viaPlaceIds`,
+      // vom Skipper gewählt) und behält ohne Wahl den kuratierten.
       const isLast = i === day.legIds.length - 1;
       const anchored = sailedLeg(leg, places, {
         fromPlaceId: position,
-        toPlaceId: isLast ? day.placeId : null,
+        toPlaceId: isLast ? day.placeId : (day.viaPlaceIds?.[i] ?? null),
       });
       resolved.push(anchored);
       position = anchored.toPlaceId;

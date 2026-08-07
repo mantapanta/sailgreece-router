@@ -70,6 +70,25 @@ export const StageSchema = z.object({
    * with the forecast while the plan itself stays put.
    */
   toPlaceId: z.string().optional(),
+  /**
+   * DIE HÄFEN DER ZWISCHENSTOPPS dieses Tages — ein Eintrag je Zwischenstopp,
+   * in Etappen-Reihenfolge (Index i = Ziel der i-ten Etappe, also
+   * `legIds.length - 1` Einträge). `null` heisst "der kuratierte Hafen der
+   * Etappe gilt".
+   *
+   * Warum ein eigenes Feld und nicht `toPlaceId` sinngemäss weiterverwenden:
+   * `toPlaceId` ist der NACHTPLATZ des Tages, und an ihm hängt die ganze
+   * Liegeplatz-Logik — Nacht-Ampel, Rangfolge, "nie derselbe Platz zweimal".
+   * Ein Zwischenstopp ist nichts davon. Dort wird gebadet, gegessen und
+   * weitergefahren; sicher liegen muss das Boot dort nicht (Skipper
+   * 2026-08-07). Der Hafen eines Zwischenstopps ist deshalb NUR ein Ankerpunkt
+   * der Geometrie (legGeometry.sailedLegsByDay verankert die Zwischen-Etappen
+   * daran) und geht in keine Ampel und in keine Wiederholungsregel ein.
+   *
+   * Optional, damit Pläne aus älterem Storage unverändert parsen: fehlt das
+   * Feld, gelten die kuratierten Häfen — genau das Verhalten von vorher.
+   */
+  viaPlaceIds: z.array(z.string().nullable()).optional(),
   source: PlanSourceSchema,
 });
 export type Stage = z.infer<typeof StageSchema>;

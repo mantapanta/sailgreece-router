@@ -29,6 +29,11 @@ const places: Place[] = [
     coordinates: { lat: 36.9903, lon: 24.6708 },
   }),
   makePlace({
+    id: 'sifnos-vathy',
+    islandId: 'sifnos',
+    coordinates: { lat: 36.9333, lon: 24.7014 },
+  }),
+  makePlace({
     id: 'kea-vourkari',
     islandId: 'kea',
     coordinates: { lat: 37.6642, lon: 24.3181 },
@@ -368,5 +373,48 @@ describe('sailedLegsByDay — kein Tag beginnt, wo der vorige nicht endete', () 
     expect(day[0]!.toPlaceId).toBe('paros-naoussa');
     expect(day[1]!.fromPlaceId).toBe('paros-naoussa');
     expect(day[1]!.toPlaceId).toBe('sifnos-kamares');
+  });
+
+  /**
+   * DER HAFEN DES ZWISCHENSTOPPS ist eine Skipper-Wahl (Plan: Stage.viaPlaceIds,
+   * FR28) — kuratiert ist er nur, solange niemand etwas anderes gesagt hat. Er
+   * verankert die Zwischen-Etappe und ist damit auch der Startpunkt der
+   * Folge-Etappe: die Kette darf innerhalb eines Tages so wenig springen wie
+   * über Nacht.
+   */
+  it('verankert den Zwischenstopp am gewählten Hafen, nicht am kuratierten', () => {
+    const chain = sailedLegsByDay(
+      [
+        {
+          day: 4,
+          legIds: [MYKONOS_PAROS.id, PAROS_SIFNOS.id],
+          placeId: 'sifnos-kamares',
+          viaPlaceIds: ['paros-parikia'],
+        },
+      ],
+      legsById,
+      places,
+    );
+    const day = chain.get(4)!;
+    expect(day[0]!.toPlaceId).toBe('paros-parikia');
+    expect(day[1]!.fromPlaceId).toBe('paros-parikia');
+    // Das Tagesziel bleibt das Tagesziel — der Stopp verschiebt nur den Weg.
+    expect(day[1]!.toPlaceId).toBe('sifnos-kamares');
+  });
+
+  it('ignoriert einen Eintrag für die LETZTE Etappe — dort gilt das Tagesziel', () => {
+    const chain = sailedLegsByDay(
+      [
+        {
+          day: 4,
+          legIds: [MYKONOS_PAROS.id, PAROS_SIFNOS.id],
+          placeId: 'sifnos-kamares',
+          viaPlaceIds: ['paros-parikia', 'sifnos-vathy'],
+        },
+      ],
+      legsById,
+      places,
+    );
+    expect(chain.get(4)![1]!.toPlaceId).toBe('sifnos-kamares');
   });
 });

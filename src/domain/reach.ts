@@ -29,6 +29,11 @@
  * Rein (AD-2): Zeit/Position injiziert, keine I/O. Die Views konsumieren die
  * Menge aus dem Assessment (StageAssessment.reachableIslandIds) und rechnen
  * selbst keine Distanzen.
+ *
+ * Daneben wohnt hier die zweite Kontextmenge desselben Editors:
+ * `stopoverIslands` — welche Inseln liegen ZWISCHEN Ausgangs- und Zielinsel
+ * eines Tages. Andere Frage, andere Regeln (siehe dort), gleiche Doktrin: ein
+ * Vorfilter über den Etappen-Graphen, der nur bestimmt, was zur Auswahl steht.
  */
 
 import type { PlanningSnapshot } from './schema/snapshot.ts';
@@ -154,4 +159,64 @@ export function reachableIslands(
     if (nm <= limit) out.push(island.id);
   }
   return out;
+}
+
+/**
+ * ZWISCHENSTOPPS eines Tages: welche Inseln liegen zwischen der Ausgangs- und
+ * der Zielinsel dieses Tages?
+ *
+ * Gefragt ist eine ganz andere Menge als bei `reachableIslands`: nicht "wo
+ * kann der Tag ENDEN", sondern "wo kann er unterwegs anhalten, ohne sein Ziel
+ * aufzugeben". Beide Hälften müssen die Etappen-Bibliothek liefern — von der
+ * Ausgangsinsel zum Stopp und vom Stopp zum Tagesziel, Gegenrichtungen
+ * eingeschlossen (`legIndexWithReverses`). Damit bleibt der Suchraum kuratiert:
+ * ein Zwischenstopp entsteht aus zwei recherchierten Verbindungen, nicht aus
+ * freier Geometrie.
+ *
+ * KEINE AMPEL-KRITERIEN (Skipper 2026-08-07): am Zwischenstopp muss das Boot
+ * nicht sicher liegen — es wird gebadet, gegessen und weitergefahren. Weder die
+ * Schutzsektoren des Stopp-Hafens noch der Kuratierungs-Vorbehalt filtern hier
+ * etwas weg, und die Nacht-Rangfolge sortiert hier nichts. Was der Umweg an
+ * Stunden kostet, sagt die Ampel des TAGES, nachdem er eingefügt ist.
+ *
+ * Die EINE Grenze ist strukturell und keine Bewertung: die Summe beider Etappen
+ * muss in der Best-Case-Tagesreichweite liegen (`maxDayRangeNm`). Was ein Tag
+ * selbst im günstigsten Fall nicht schafft, ist kein Zwischenstopp, sondern ein
+ * anderes Tagesziel — und das gehört in die Etappenwahl darüber.
+ *
+ * Sortiert nach dem Umweg (Summe beider Etappendistanzen, aufsteigend), bei
+ * Gleichstand nach Id — der kürzeste Umweg steht oben, und die Reihenfolge ist
+ * deterministisch (AD-2: die Rangfolge ist Domänenlogik, keine Ansicht).
+ */
+export function stopoverIslands(
+  snapshot: PlanningSnapshot,
+  fromIslandId: string,
+  toIslandId: string,
+): string[] {
+  const legs = [...legIndexWithReverses(snapshot.library).values()];
+  const shortest = (a: string, b: string): number | null => {
+    let best: number | null = null;
+    for (const leg of legs) {
+      if (leg.fromIslandId !== a || leg.toIslandId !== b) continue;
+      if (best === null || leg.distanceNm < best) best = leg.distanceNm;
+    }
+    return best;
+  };
+
+  const found: { islandId: string; detourNm: number }[] = [];
+  for (const island of snapshot.library.islands) {
+    if (island.id === fromIslandId || island.id === toIslandId) continue;
+    const hin = shortest(fromIslandId, island.id);
+    const weiter = shortest(island.id, toIslandId);
+    if (hin === null || weiter === null) continue;
+    if (hin + weiter > snapshot.params.maxDayRangeNm) continue;
+    found.push({ islandId: island.id, detourNm: hin + weiter });
+  }
+  return found
+    .sort((a, b) =>
+      a.detourNm !== b.detourNm
+        ? a.detourNm - b.detourNm
+        : a.islandId.localeCompare(b.islandId),
+    )
+    .map((x) => x.islandId);
 }

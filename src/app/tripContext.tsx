@@ -96,12 +96,16 @@ export type TripAction =
   /** FR28: the skipper edited a day; payload is the fully recomputed plan. */
   | { type: 'EDIT_STAGE'; plan: Plan }
   /**
-   * FR28: Zwischenstopp gelöscht — der Tag wird zur EINEN direkten Etappe.
-   * `customLeg` trägt die dabei erzeugte Direktroute (null, wenn die
-   * Bibliothek sie schon kannte); Plan und Etappe kommen als EIN Payload,
-   * damit nie ein Plan gespeichert wird, dessen Etappe fehlt.
+   * FR28: der Zwischenstopp EINES Tages wurde gesetzt, verlegt oder gelöscht —
+   * derselbe Tag, dasselbe Tagesziel, ein anderer Weg dorthin. EIN Action für
+   * alle drei Fälle, weil es EINE Entscheidung ist ("wo halten wir unterwegs
+   * an?") und der Reducer sie nicht auseinanderhalten muss.
+   *
+   * `customLegs` trägt die dabei erzeugten Etappen (leer, wenn die Bibliothek
+   * alles hergab): Plan und Etappen kommen als EIN Payload, damit nie ein Plan
+   * gespeichert wird, dessen Etappe fehlt.
    */
-  | { type: 'DELETE_STOPOVER'; plan: Plan; customLeg: Leg | null }
+  | { type: 'SET_STOPOVER'; plan: Plan; customLegs: Leg[] }
   /**
    * Ein gespeicherter Plan stammt von einem älteren Solver-Stand
    * (planOutdated) und wird durch den aktuellen Vorschlag ersetzt — nur
@@ -178,13 +182,13 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
       return { ...state, plan: releaseAllPins(action.plan), planUnreadable: false };
     case 'EDIT_STAGE':
       return { ...state, plan: action.plan, planUnreadable: false };
-    case 'DELETE_STOPOVER': {
+    case 'SET_STOPOVER': {
       // Dedupe per Id: dieselbe Direktroute zweimal zu erzeugen (Stopp löschen,
       // zurückbauen, wieder löschen) darf die Bibliothek nicht doppelt füllen.
-      const customLegs =
-        action.customLeg && !state.customLegs.some((l) => l.id === action.customLeg!.id)
-          ? [...state.customLegs, action.customLeg]
-          : state.customLegs;
+      const customLegs = [...state.customLegs];
+      for (const leg of action.customLegs) {
+        if (!customLegs.some((l) => l.id === leg.id)) customLegs.push(leg);
+      }
       return { ...state, plan: action.plan, customLegs, planUnreadable: false };
     }
     case 'REFRESH_OUTDATED':

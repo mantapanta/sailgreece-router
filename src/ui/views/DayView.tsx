@@ -376,7 +376,15 @@ function KursChips({
   );
 }
 
-/** FR28 — change this day's target: another island, another berth, or stay. */
+/**
+ * FR28 — change this day's target: another island, another berth, or stay.
+ *
+ * Und den WEG dorthin: der Zwischenstopp ist hier ein Ziel wie jedes andere —
+ * setzen, verlegen, Hafen wechseln, wieder löschen (Skipper 2026-08-07: "man
+ * kann den Hafen eines Zwischenstopps nur löschen, nicht ändern, und auch
+ * keinen neuen hinzufügen"). Alle vier Fälle laufen über EIN select, weil sie
+ * EINE Frage beantworten: wo halten wir unterwegs an?
+ */
 function StageEditor({
   stage,
   snapshot,
@@ -388,7 +396,7 @@ function StageEditor({
   nightAmpeln: Assessment['nightAmpeln'];
   onClose: () => void;
 }) {
-  const { editStage, releasePin, setStopHours, removeStopover } = usePlanning();
+  const { editStage, releasePin, setStopHours, setStopover } = usePlanning();
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
   const placesOnIsland = snapshot.library.places.filter(
@@ -405,19 +413,67 @@ function StageEditor({
       (stage.kind === 'stage' && i.id === stage.toIslandId),
   );
 
+  /**
+   * DER ZWISCHENSTOPP DES TAGES — einer, denn ein Tag trägt höchstens zwei
+   * Etappen (params.maxLegsPerDay). Auch seine Auswahl kommt aus der Bewertung
+   * (AD-2): welche Inseln unterwegs liegen, rechnet domain/reach.ts.
+   *
+   * Die aktuell gestoppte Insel wird ergänzt, damit das select nie einen Wert
+   * anzeigt, der nicht in seinen Optionen steht — dieselbe Regel wie beim
+   * Tagesziel.
+   */
+  const stopover = stage.zwischenstopps[0] ?? null;
+  const stopoverIslandOptions = snapshot.library.islands.filter(
+    (i) => stage.stopoverIslandIds.includes(i.id) || i.id === stopover?.islandId,
+  );
+  /**
+   * Die Häfen der Stopp-Insel — ALLE, ohne Ampel und ohne Rangfolge. Am
+   * Zwischenstopp muss das Boot nicht sicher liegen (Skipper 2026-08-07): die
+   * Nacht-Kriterien (Schutzsektoren, Kuratierungs-Vorbehalt) beantworten eine
+   * Frage, die hier niemand stellt, und ein Ampel-Wort in dieser Liste würde
+   * genau die Verwechslung anzeigen. Was der Umweg kostet, sagt die Ampel des
+   * TAGES, nachdem er gesetzt ist.
+   */
+  const placesOnStopoverIsland = stopover
+    ? snapshot.library.places.filter((p) => p.islandId === stopover.islandId)
+    : [];
+
+  /** Fehler zeigen und den Fokus dorthin führen (EXPERIENCE StageEditor). */
+  const fail = (text: string) => {
+    setError(text);
+    requestAnimationFrame(() => errorRef.current?.focus());
+  };
+
   const apply = (islandId: string | null, placeId?: string) => {
     setError(null);
     const ok = editStage(stage.day, islandId, placeId);
     if (!ok) {
-      setError(
+      fail(
         'Mit diesem Ziel lässt sich kein Round-Trip bauen — es führt keine Etappe der Bibliothek dorthin.',
       );
-      // Fokus auf die Fehlermeldung, sobald sie gerendert ist (EXPERIENCE
-      // StageEditor: aria-describedby + Fokus zum Fehler).
-      requestAnimationFrame(() => errorRef.current?.focus());
       return;
     }
     onClose();
+  };
+
+  /**
+   * Zwischenstopp setzen, verlegen oder löschen — EIN Weg für alle drei, weil
+   * es EINE Entscheidung ist. Ein zweiter Knopf "Zwischenstopp löschen" neben
+   * diesem select wäre eine zweite Stelle, an der dieselbe Frage beantwortet
+   * wird; "— kein Zwischenstopp —" ist dieselbe Antwort an der Stelle, an der
+   * sie hingehört.
+   */
+  const applyStopover = (islandId: string | null, placeId?: string) => {
+    setError(null);
+    if (setStopover(stage.day, islandId, placeId)) {
+      onClose();
+      return;
+    }
+    fail(
+      islandId === null
+        ? `Der Zwischenstopp lässt sich nicht löschen — es gibt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}, und ein landfreier Direktkurs ließ sich nicht berechnen.`
+        : `Über ${islandName(snapshot, islandId)} führt kein Weg zum Tagesziel ${islandName(snapshot, stage.toIslandId)} — die Etappen-Bibliothek kennt nicht beide Hälften des Umwegs.`,
+    );
   };
 
   return (
@@ -462,6 +518,62 @@ function StageEditor({
           </select>
         </label>
       )}
+      {stage.kind === 'stage' && stopoverIslandOptions.length > 0 && (
+        <>
+          <label>
+            Zwischenstopp (Insel)
+            <select
+              value={stopover?.islandId ?? ''}
+              onChange={(e) => applyStopover(e.target.value || null)}
+              aria-describedby={error ? 'stage-editor-error' : undefined}
+            >
+              <option value="">— kein Zwischenstopp —</option>
+              {stopoverIslandOptions.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="beschreibung">
+            Inseln, die unterwegs liegen: die Bibliothek muss beide Hälften des
+            Umwegs kennen — hin zum Stopp und von dort weiter zum Tagesziel. Das
+            Tagesziel bleibt dasselbe, und der Tag gilt danach als festgelegt.
+            Ohne Stopp wird der Tag EINE direkte Etappe; kennt die Bibliothek
+            dafür keine Verbindung, berechnet die App den kürzesten landfreien
+            Kurs selbst (Distanz aus der Geometrie, nicht kuratiert).
+          </p>
+        </>
+      )}
+      {stopover && placesOnStopoverIsland.length > 1 && (
+        <>
+          <label>
+            Hafen des Zwischenstopps
+            <select
+              value={stopover.placeIsCurated ? '' : (stopover.placeId ?? '')}
+              onChange={(e) =>
+                applyStopover(stopover.islandId, e.target.value || undefined)
+              }
+              aria-describedby={error ? 'stage-editor-error' : undefined}
+            >
+              <option value="">— Hafen der Etappe (kuratiert) —</option>
+              {placesOnStopoverIsland.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="beschreibung">
+            Ohne Ampel, und das ist der Unterschied zum Liegeplatz oben: die
+            Ampel-Kriterien beurteilen eine NACHT am Platz (Schutzsektoren,
+            Kuratierungs-Vorbehalt) — am Zwischenstopp wird gebadet, gegessen und
+            weitergefahren, sicher liegen muss das Boot dort nicht. Deshalb steht
+            jeder Hafen der Insel zur Wahl. Was der Umweg wirklich kostet, sagt
+            die Ampel dieses Tages: sie rechnet beide Schläge samt Pause.
+          </p>
+        </>
+      )}
       {stage.legs.length > 1 && (
         <label>
           Liegezeit je Zwischenstopp (h)
@@ -491,33 +603,6 @@ function StageEditor({
           Mittag fällt der zweite Schlag in den aufgebauten Nachmittags-Meltemi.
           Sie zählt nicht ins Fahrt-Budget.
         </p>
-      )}
-      {stage.legs.length > 1 && (
-        <>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              setError(null);
-              if (removeStopover(stage.day)) {
-                onClose();
-              } else {
-                setError(
-                  `Der Zwischenstopp lässt sich nicht löschen — es gibt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}, und ein landfreier Direktkurs ließ sich nicht berechnen.`,
-                );
-              }
-            }}
-          >
-            Zwischenstopp löschen ({stageVia(snapshot, stage).join(' · ')})
-          </button>
-          <p className="beschreibung">
-            Der Tag wird zu EINER direkten Etappe auf dasselbe Tagesziel — ohne
-            den Anlauf von {stageVia(snapshot, stage).join(' und ')}. Kennt die
-            Bibliothek keine direkte Verbindung, berechnet die App den
-            kürzesten landfreien Kurs selbst (Distanz aus der Geometrie, nicht
-            kuratiert). Der Tag gilt danach als festgelegt.
-          </p>
-        </>
       )}
       <div className="editor-actions">
         {stage.pinned && (

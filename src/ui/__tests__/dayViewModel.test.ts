@@ -40,6 +40,8 @@ function makeStage(
     abfahrtVomSkipper: false,
     stopHoursTotal: 0,
     reachableIslandIds: [],
+    zwischenstopps: [],
+    stopoverIslandIds: [],
     abfahrtsEmpfehlung: null,
     torCheck: null,
     kiteHinweise: [],

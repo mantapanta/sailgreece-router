@@ -60,12 +60,12 @@ describe('tripReducer — REFRESH_OUTDATED', () => {
 });
 
 /**
- * DELETE_STOPOVER — Plan und erzeugte Direktroute kommen als EIN Payload:
- * nie ein gespeicherter Plan, dessen Etappe fehlt (FR28 Zwischenstopp
- * löschen). Dedupe per Id, damit wiederholtes Löschen die Bibliothek des
+ * SET_STOPOVER — Plan und erzeugte Etappen kommen als EIN Payload: nie ein
+ * gespeicherter Plan, dessen Etappe fehlt (FR28 Zwischenstopp setzen, verlegen
+ * oder löschen). Dedupe per Id, damit wiederholtes Löschen die Bibliothek des
  * Geräts nicht doppelt füllt.
  */
-describe('tripReducer — DELETE_STOPOVER', () => {
+describe('tripReducer — SET_STOPOVER', () => {
   const directLeg = (): Leg => ({
     id: 'athen--sued',
     fromIslandId: 'athen',
@@ -80,9 +80,9 @@ describe('tripReducer — DELETE_STOPOVER', () => {
   it('übernimmt den Plan und persistiert die erzeugte Direktroute', () => {
     const next = freshPlan([stage(1, 'skipper'), stage(2)]);
     const result = tripReducer(state(freshPlan([stage(1), stage(2)])), {
-      type: 'DELETE_STOPOVER',
+      type: 'SET_STOPOVER',
       plan: next,
-      customLeg: directLeg(),
+      customLegs: [directLeg()],
     });
     expect(result.plan).toBe(next);
     expect(result.customLegs.map((l) => l.id)).toEqual(['athen--sued']);
@@ -91,18 +91,18 @@ describe('tripReducer — DELETE_STOPOVER', () => {
   it('dedupliziert per Id — dieselbe Direktroute entsteht nie zweimal', () => {
     const withLeg: TripState = { ...state(freshPlan([stage(1)])), customLegs: [directLeg()] };
     const result = tripReducer(withLeg, {
-      type: 'DELETE_STOPOVER',
+      type: 'SET_STOPOVER',
       plan: freshPlan([stage(1, 'skipper')]),
-      customLeg: directLeg(),
+      customLegs: [directLeg()],
     });
     expect(result.customLegs).toHaveLength(1);
   });
 
-  it('customLeg null (Bibliothek kannte die Verbindung) lässt die Liste stehen', () => {
+  it('ohne erzeugte Etappe (Bibliothek kannte die Verbindung) bleibt die Liste stehen', () => {
     const result = tripReducer(state(freshPlan([stage(1)])), {
-      type: 'DELETE_STOPOVER',
+      type: 'SET_STOPOVER',
       plan: freshPlan([stage(1, 'skipper')]),
-      customLeg: null,
+      customLegs: [],
     });
     expect(result.customLegs).toEqual([]);
   });
