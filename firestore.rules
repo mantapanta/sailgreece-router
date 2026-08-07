@@ -43,6 +43,14 @@ service cloud.firestore {
       allow read: if istAngemeldet();
       allow write: if false;
     }
+    // Topografische Windzonen (aus windtopo.json): Windschatten und Kanaldüsen,
+    // die das 7-km-Gitter von ICON-EU nicht aufloest
+    // (src/domain/schema/windTopo.ts). Wie bei den Kite-Spots faengt der Adapter
+    // eine Ablehnung ab — ohne diesen Block gibt es schlicht keine Korrektur.
+    match /windTopoZones/{zoneId} {
+      allow read: if istAngemeldet();
+      allow write: if false;
+    }
     match /config/{docId} {
       allow read: if istAngemeldet();
       allow write: if false;

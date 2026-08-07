@@ -16,6 +16,7 @@ import {
   LegSchema,
   VariantSchema,
   KiteSpotSchema,
+  WindTopoZoneSchema,
   ParamsSchema,
   PolarSchema,
   DEFAULT_PARAMS,
@@ -23,6 +24,7 @@ import {
   LegsStagingFileSchema,
   VariantsStagingFileSchema,
   KiteSpotsStagingFileSchema,
+  WindTopoStagingFileSchema,
   ConfigStagingFileSchema,
   PolarStagingFileSchema,
   polarFromFirestore,
@@ -35,6 +37,7 @@ import type {
   Leg,
   Variant,
   KiteSpot,
+  WindTopoZone,
   Params,
   Polar,
   Library,
@@ -179,6 +182,30 @@ async function loadFromLocal(): Promise<LibraryBundle> {
     console.warn('kitespots.json fehlt oder nicht ladbar — Kite-Ebene leer:', e);
   }
 
+  /**
+   * Topografische Windzonen (schema/windTopo.ts). Fehlt die Datei, fehlt die
+   * Korrektur — und die App verhält sich exakt wie vor ihrer Einführung
+   * (domain/windTopo.ts). Deshalb tolerant und ohne Fehlerpanel wie die
+   * Kite-Ebene: eine Kuration, die nichts bewertet als den Düsen-Zuschlag, darf
+   * die Törnplanung nicht scheitern lassen.
+   */
+  let windTopoZones: WindTopoZone[] = [];
+  try {
+    const mod = (await import('../../seeding/data/windtopo.json')) as { default: unknown };
+    const file = WindTopoStagingFileSchema.safeParse(mod.default);
+    if (file.success) {
+      windTopoZones = file.data.zones;
+    } else {
+      console.error('windtopo.json ungültig:', file.error.issues);
+      const loose = mod.default as { zones?: unknown[] };
+      windTopoZones = (loose?.zones ?? [])
+        .map((z) => parseTolerant(WindTopoZoneSchema, z, 'Windzone'))
+        .filter((z): z is WindTopoZone => z !== null);
+    }
+  } catch (e) {
+    console.warn('windtopo.json fehlt oder nicht ladbar — keine Topo-Korrektur:', e);
+  }
+
   let params: Params = DEFAULT_PARAMS;
   try {
     const mod = (await import('../../seeding/data/config.json')) as { default: unknown };
@@ -200,7 +227,7 @@ async function loadFromLocal(): Promise<LibraryBundle> {
   }
 
   return {
-    library: { islands, places, invalidPlaces, legs, variants, kiteSpots },
+    library: { islands, places, invalidPlaces, legs, variants, kiteSpots, windTopoZones },
     params,
     polar,
   };
@@ -227,6 +254,7 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     legsSnap,
     variantsSnap,
     kiteSpotsSnap,
+    windTopoSnap,
     paramsSnap,
     polarSnap,
   ] = await Promise.all([
@@ -256,6 +284,20 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
       );
       return null;
     }),
+    /**
+     * Topografische Windzonen: eigene Sammlung, aus demselben Grund abgefangen
+     * wie die Kite-Spots — ohne deployte Rule antwortet Firestore mit
+     * `permission-denied`, und in einem `Promise.all` risse das die ganze
+     * Bibliothek mit. Der Preis ist genannt: ohne Regel keine Topo-Korrektur,
+     * also exakt das Verhalten von vor ihrer Einfuehrung.
+     */
+    getDocs(collection(db, 'windTopoZones')).catch((e) => {
+      console.warn(
+        'Windzonen nicht lesbar — keine Topo-Korrektur. Sind die Firestore-Rules deployt (Collection windTopoZones)?',
+        e,
+      );
+      return null;
+    }),
     getDoc(doc(db, 'config', 'parameters')),
     getDoc(doc(db, 'config', 'polar')),
   ]);
@@ -280,6 +322,10 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     .map((d) => parseTolerant(KiteSpotSchema, { id: d.id, ...d.data() }, 'Kite-Spot'))
     .filter((s): s is KiteSpot => s !== null);
 
+  const windTopoZones = (windTopoSnap?.docs ?? [])
+    .map((d) => parseTolerant(WindTopoZoneSchema, { id: d.id, ...d.data() }, 'Windzone'))
+    .filter((z): z is WindTopoZone => z !== null);
+
   let params: Params = DEFAULT_PARAMS;
   if (paramsSnap.exists()) {
     const parsed = parseTolerant(ParamsSchema, paramsSnap.data(), 'Parameter');
@@ -293,7 +339,7 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
   }
 
   return {
-    library: { islands, places, invalidPlaces, legs, variants, kiteSpots },
+    library: { islands, places, invalidPlaces, legs, variants, kiteSpots, windTopoZones },
     params,
     polar,
   };

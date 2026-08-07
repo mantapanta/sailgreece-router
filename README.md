@@ -61,6 +61,13 @@ ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
   Spot (`domain/kite.ts`). Bewertet wird davon nichts: kein Feld geht in Ampel,
   Solver oder Plan ein. Ausführlich unten: „Kite-Spots".
 
+- **Topografische Windkorrektur:** Windschatten und Kanaldüsen, die ICON-EU auf
+  7 km nicht auflöst (`domain/windTopo.ts`). Sie sind kuratiert, nicht
+  gerechnet, weil sie Topografie sind und kein Wetter — bei gleicher
+  Windrichtung liegen sie immer an derselben Stelle. Angewandt wird
+  **asymmetrisch**: Düsen bewerten, Schatten beraten nur. Ausführlich unten:
+  „Topografische Windkorrektur".
+
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
 @vis.gl/react-google-maps 1.x · Firebase (Authentication + Firestore +
 Hosting) · Vitest 4.
@@ -207,7 +214,7 @@ Parameter) leben als Staging-JSON in `seeding/data/`. Die App liest nur;
 
 3. **Freigeben:** Nach der Prüfung in jeder Staging-Datei
    (`seeding/data/islands/*.json`, `legs.json`, `variants.json`,
-   `kitespots.json`, `config.json`, `polar.json`) das Feld `approved` auf
+   `kitespots.json`, `windtopo.json`, `config.json`, `polar.json`) das Feld `approved` auf
    `true` setzen. Die Polare erst
    freigeben, nachdem das Transkript gegen die Original-Exportdatei
    („Fountaine Pajot 45.txt") verifiziert wurde.
@@ -268,9 +275,9 @@ diese vier Schritte der Reihe nach durch:
    `places`-Dokumenten und wandern nur mit einem erneuten Insel-Import mit.
 3. **Rules:** `firebase deploy --only firestore:rules`. Eine Collection ohne
    eigenen Block fällt in den Catch-All und ist gesperrt; der Adapter fängt
-   die Ablehnung für `kiteSpots` bewusst ab, damit eine fehlende Regel nicht
-   die ganze Bibliothek mitnimmt — die Ebene bleibt dann still leer, mit einer
-   Meldung in der Browser-Konsole.
+   die Ablehnung für `kiteSpots` und `windTopoZones` bewusst ab, damit eine
+   fehlende Regel nicht die ganze Bibliothek mitnimmt — die Ebene bleibt dann
+   still leer, mit einer Meldung in der Browser-Konsole.
 4. **Bundle:** `npm run build && firebase deploy` — die neuen Karten
    (Gastro, Kite) stecken im Bundle, nicht in den Daten.
 
@@ -406,7 +413,8 @@ src/
                    # manual > gps), View-Switch ohne Router
 seeding/           # Staging-JSON je Insel (approved-Flag), Review-Generator,
   data/            # islands/*.json, legs.json, variants.json, kitespots.json,
-                   # config.json, polar.json — je Datei ein Freigabe-Gate
+                   # windtopo.json, config.json, polar.json — je Datei ein
+                   # Freigabe-Gate
   review/          # generierte FR24-Review-Sichten
   tools/           # extractLandmass (Küstenlinien zuschneiden),
                    # seaRouteLegs (Etappenkurse landfrei legen)
@@ -604,6 +612,239 @@ nicht recherchiert**. Jeder Eintrag trägt darum `confidence: 'mittel'` oder
 nichts, und ein Hinweis, den man vor Ort prüft, ist mehr wert als eine leere
 Karte. Der Vorbehalt liegt damit in der Anzeige, nicht im Import. Sektor,
 Koordinate und Zulässigkeit eines Spots gehören vor Ort geprüft.
+
+## Topografische Windkorrektur
+
+Geroutet wird mit ICON-EU (7 km). Der Vergleich mit **Poseidon** (HCMR, 1/30° ≈
+3,7 km über echter Ägäis-Topografie, Skipper 2026-08-07) zeigt zwei Dinge, die
+im 7-km-Gitter schlicht nicht enthalten sind:
+
+1. **Windschatten** südlich jeder hohen Insel. Serifos ist 10 km breit und
+   585 m hoch — bei 7 km Gitter anderthalb Zellen, und die Höhe wird beim
+   Gitter-Mitteln zu einem flachen Buckel. Ein flacher Buckel wirft keinen
+   Schatten. Ein Lee reicht 5–15 Hindernishöhen weit, hier also 3–8 km: genau
+   die Grössenordnung, die unter das Gitter fällt.
+2. **Düsen** in den Kanälen (Kea-Kanal, Steno Kythnou, Paros–Naxos,
+   Paros–Antiparos): lokal +20–30 %, weggeglättet. Für sie trug die Etappe
+   bereits einen Warntext (`Leg.windWarnings`) — was fehlte, war die Zahl.
+
+**Warum das kuratiert wird statt abgerufen:** Lee und Düse sind kein Wetter,
+sondern Topografie. Sie liegen bei gleicher Windrichtung immer an derselben
+Stelle — also sind sie Ortskenntnis, und Ortskenntnis ist in dieser App
+kuratiert (AD-4), wie die Schutzsektoren eines Liegeplatzes. Die Daten liegen in
+`seeding/data/windtopo.json` (Firestore-Sammlung `windTopoZones`, Schema
+`src/domain/schema/windTopo.ts`).
+
+**Zwei Gestalten, weil es zwei Phänomene sind** — als diskriminierte Union, die
+Felder sind nicht mischbar:
+
+- Eine **Düse** ist ein fester Kreis plus Richtungssektoren. Ein Kanal liegt, wo
+  er liegt, und er düst nur bei Wind längs seiner Achse.
+- Ein **Windschatten** ist eine leewärtige **Keule** hinter der Insel: Hindernis
+  (Mittelpunkt + Radius), Keulenlänge, und ein Faktor, der von der Leeküste bis
+  zum Keulenende auf 1,0 ausläuft. Wo die Keule im Wasser liegt, rechnet
+  `domain/windTopo.ts` je Stunde aus — **sie dreht mit dem Wind.**
+
+Die Keule ersetzt seit 2026-08-07 einen festen Kreis mit Sektoren, und zwar
+wegen einer Falsifikation: die Poseidon-Bilder vom 10.08. zeigen den Schatten
+von Sikinos bei NNW-Wind SSE der Insel und den von Naxos bei NE-Wind SW davon.
+Ein fest im Süden platzierter Kreis traf die zweite Lage gar nicht — er hätte
+die Absenkung dort angesetzt, wo kein Schatten steht. Bei einer Zone, die
+bewertet, ist das kein Schönheitsfehler.
+
+### Die zentrale Regel: Düsen ungebremst, Schatten nur gebremst
+
+Eine Korrektur nach **oben** (`kind: 'duese'`, Faktor > 1) geht ungebremst in
+die Bewertung ein — liegt sie daneben, war die App zu vorsichtig, und das ist
+der Fehler, den ein Törnplaner machen darf. Jede so angefasste Stunde trägt
+`windAdjusted`, dieselbe Rolle wie `windAssumed` für die Persistenz-Annahme:
+kein Wert, den kein Modell so vorhergesagt hat, bleibt unmarkiert (AD-10).
+
+Eine Korrektur nach **unten** (`kind: 'lee'`, Faktor < 1) geht seit 2026-08-07
+ebenfalls in Ampel und Routing ein — Grundlage ist die Skipper-Beobachtung, dass
+die Abdeckungszonen im Poseidon-Modell über mehrere Tage und über schwachen wie
+starken Wind an derselben Stelle stehen. Genau das sagt „Topografie, kein
+Wetter" voraus. Aber sie geht **gebremst** ein, durch vier Sicherungen:
+
+| Sicherung | Wirkung |
+|---|---|
+| **Kappung** (`leeBewertungMaxAbzugKn`, Default 8 kn) | Begrenzt den Abzug. Aus 30 kn werden mit Faktor 0,5 nicht 15, sondern 22. Physikalisch ist ein Lee multiplikativ — die Kappung ist keine Physik, sondern die Schadensgrenze: steht der Schatten nicht, findet die Crew höchstens diese Differenz mehr vor. `0` schaltet die Bewertung ab, dann berät das Lee wieder nur. |
+| **Confidence-Tor** | Nur Zonen mit `confidence` `'mittel'`/`'hoch'` bewerten; `'niedrig'` berät weiter. Damit hat das Feld eine mechanische Folge — eine Zone, deren Faktor nur aus einer anderen abgeleitet ist, kann keine Ampel drehen. Bewusst **kein** Parameter: ein Regler wäre die Einladung, das Tor aufzudrehen statt nachzukalibrieren. Für Düsen gibt es das Tor nicht. |
+| **Kein Grün aus dem Lee** | Eine Etappe, deren Bewertung auf einer Lee-Korrektur ruht, wird höchstens **gelb**. Das Lee darf ein Rot aufheben, es darf keinen Tag freisprechen. Die Etappe bleibt gültig, planbar und in der Rangfolge vor jeder roten — der Solver liest nur rote Sätze als Sicherheitsverletzung. |
+| **Zwei blinde Flecken** | Der Meltemi-Worst-Case des Rückkehr-Checks (AD-13) sieht **nie** ein Lee — er fragt „kommen wir auch bei voller Lage heim?", und diese Frage mit kuratierter Abdeckung zu beantworten hiesse, das Sicherheitsnetz aus dem zu knüpfen, wogegen es sichert. Und die **Nacht-Ampel** eines Liegeplatzes: der hat seinen Schutzsektor bereits kuratiert, beides zusammen wäre dieselbe Abdeckung zweimal gezählt. |
+
+Die Grundasymmetrie ist nicht bloss Konvention, sondern **Schema**: `kind: 'lee'`
+verlangt Faktor < 1, `kind: 'duese'` verlangt Faktor > 1. Eine Lee-Zone, die den
+Wind erhöht, ist kein Konfigurationsfehler, sondern unmöglich. Und strukturell
+bleibt: `applyWindTopo` — der Pfad, der den **Snapshot** ändert — liest weiterhin
+ausschliesslich Düsen. Der Schatten fasst `windKn` nirgends an, er wirkt nur dort,
+wo eine Etappe gerechnet wird (`scoring.ts`), gekappt und an Ort und Stelle.
+
+### Was ein Lee nicht ist
+
+Gleichmässig ruhig. Unter der Abfallkante einer Steilküste stehen katabatische
+**Fallböen**; sie drehen und schlagen deutlich über dem Gradientwind ein, und
+Poseidon zeigt dort trotzdem Blau, weil es den *Mittelwind* zeigt. Die Taktik
+„so dicht wie möglich unter Land aufkreuzen" fährt genau dort hinein.
+`fallboeenNm` sagt, ab welchem Abstand das Lee nutzbar wird; der Hinweistext
+sagt es mit.
+
+### Stand der Kalibrierung
+
+**Anker ist ein gemessener Wert**, kein abgelesener Farbton: der Punktabruf im
+Poseidon-Modell vom 10.08.2026, 15:00 LT, südlich von Ios — `wind: 12 km/h`
+(6,5 kn) bei rund 32 km/h (17 kn) freier Anströmung in derselben Kachel, also
+Faktor **0,37** direkt hinter der Insel. Alle anderen Faktoren sind daraus nach
+Gipfelhöhe abgestuft. Die Keulenlängen folgen der Faustregel `lobeNm ≈
+Gipfelhöhe / 60`, ebenfalls empirisch aus denselben Bildern (Naxos, 1004 m:
+Lee-Zunge ~15–20 sm; Ios, 713 m: ~10–12 sm).
+
+`confidence` ist dabei ein **Tor**, keine Verzierung:
+
+- **`'mittel'`** = Lage und Ausdehnung sind im Modell abgelesen, der Faktor ist
+  vom Ios-Messwert nach Höhe abgestuft. Diese Zonen bewerten mit.
+- **`'niedrig'`** = die Zone ist nur aus Nachbarn hochgerechnet (Kythnos, die
+  drei Düsen ausser Kea-Kanal). Sie beraten weiter, drehen aber keine Ampel.
+- **`'hoch'`** ist nirgends vergeben: dafür müsste der Faktor je Zone an
+  mehreren Windstärken abgerufen sein, nicht einmal an einer Nachbarinsel.
+
+Screenshots sind damit die **Kalibrier**quelle und nicht die Datenquelle —
+nachkalibriert wird pro Saison, nicht täglich.
+
+Zwei Tests halten die Kuration ehrlich: keine Zone darf wirkungslos sein (bei
+der Erstkalibrierung traf die Serifos-Zone zunächst keinen einzigen
+Forecast-Ort), und keine Düsen-Zone darf über einem Liegeplatz liegen — wie
+exponiert ein Hafen ist, sagt sein Schutzsektor, nicht eine Fläche für die
+offene Passage.
+
+### Der Lee-Korridor rettet den Rückweg nicht — und das ist die richtige Antwort
+
+Gemessen auf der echten Bibliothek bei 26–30 kn aus N bis NE hebt die
+Lee-Bewertung **keine** rote Etappe des westlichen Korridors. Das ist kein
+Fehler der Mechanik, sondern der Befund. Eine Etappe wird gegen ihren
+*schlechtesten* Punkt bewertet, und der Faktor je Punkt sieht so aus (Wind aus
+Nord, `—` = kein Schatten):
+
+```
+sifnos--serifos    kamares —  wp0 —  wp1 0,45  wp2 0,45  livadi 0,45
+serifos--kythnos   livadi 0,45  wp0 0,45  wp1 0,45  wp2..wp6 —  merichas —
+kythnos--athen     loutra 0,91  wp0 —  wp1 0,64  wp2 —  wp3 —  alimos —
+```
+
+Das Muster ist bei jeder Etappe dasselbe: **Abdeckung an den Enden, freier Wind
+in der Mitte.** Die Korridor-Etappen queren genau die Lücken zwischen den
+Inseln, und die Lücken sind der Ort, an dem der Meltemi steht. `serifos--kythnos`
+hat 20 sm offenes Wasser zwischen den beiden Schatten — kein Windschatten macht
+die segelbar, und die App hat recht, wenn sie das rot nennt.
+
+Damit ist auch klar, was der Lee-Korridor wirklich ist: ein **taktischer**
+Vorteil (wo man die Schläge unter Land legt, wo man ausruht, wo man loskommt),
+kein **strategischer** (er macht den Rückweg im Starkwind nicht sicher). Genau
+das sollte eine Planungshilfe sagen, statt eine Sicherheit zu versprechen, die
+in den Zahlen nicht steckt.
+
+### Die Kurse liegen jetzt im Schatten (`leeWaypoints.ts`)
+
+**Skipper-Regel 2026-08-07:** „Ein Katamaran segelt bei Wind und Welle einfach
+nicht besonders gut. Insgesamt ist eine angenehmere, längere Fahrt grundsätzlich
+einer kürzeren im Wind vorzuziehen." Damit ist die Zielgrösse der Etappen-
+Bibliothek nicht mehr die kürzeste Linie, sondern die geschützteste, die man in
+vertretbarer Zeit fährt.
+
+`seeding/tools/leeWaypoints.ts` setzt das um: je Insel-Paar sucht es zwei
+Kontrollpunkte auf einem Raster seitlicher Versätze, legt den Kurs landfrei und
+bewertet ihn. Die Zielfunktion ist **nicht** blosse Abdeckung — das war der
+erste Versuch, und er hat `paros--sifnos` von grün auf rot gedreht, weil der
+Bogen in Sifnos' Schatten führte, Kamares aber im Nordwesten liegt: die
+Ansteuerung aus dem Lee heraus wurde ein Schlag mit 9° TWA. Gelernt daraus:
+
+- **Belastung statt Abdeckung.** Der Lee-Faktor wird mit dem Kurs zum Wind
+  gewichtet (gegenan × 2,0, halbwind × 1,0, raum × 0,7). Die Gewichte stehen
+  schon in den Parametern: `kreuzGelbAbKn` 10 gegen `halbwindGelbAbKn` 20 —
+  derselbe Wind ist gegenan doppelt so unangenehm.
+- **Eine harte Schranke obendrauf.** Ein Umweg darf keinen Kreuz-Abschnitt
+  schaffen, den die alte Bahn nicht hatte. Die App bewertet ein *Maximum*
+  (FR16), nicht ein Mittel — eine Stunde Aufkreuzen über 25 kn macht die Etappe
+  rot, egal wie angenehm die übrigen zehn waren.
+- **Der Wechselkurs in einem Satz:** jede zusätzliche Seemeile muss **zehn
+  Prozent** weniger Wind bringen (Skipper-Preis 2026-08-07, nachdem ein Prozent
+  je Meile Umwege von fünf Meilen für zwölf Prozent durchliess). Ein strenger
+  Kurs: er lässt praktisch nur Bahnen zu, die den Schutz fast geschenkt
+  bekommen — eine bessere Linie durch dieselbe Distanz, nicht ein Bogen darum
+  herum. Dazu harte Deckel von +35 % und +6 sm.
+- **Dieselbe Latte wie der Wächter.** Der erste Lauf erzeugte Wegpunkte auf
+  Kimolos und im Antiparos-Kanal, die `pathCrossesLand` durchgelassen und
+  `libraryGeometry.test.ts` gefunden hat. Das Werkzeug tastet die Landmaske
+  jetzt mit derselben Auflösung und denselben Toleranzen ab wie der Test.
+
+Ergebnis bei diesem Preis: **13 Etappen umgelegt, zusammen +4,8 sm** über die
+ganze Bibliothek. Grösster Umweg `milos--sifnos` +1,5 sm; **sechs Etappen werden
+ganz ohne Umweg besser**, nur durch einen günstigeren Kurs zum Wind. Die
+Belastung sinkt dort, wo es zählt: `paros--polyaigos` −16 %, `milos--sifnos`
+−13 %, `kythnos--serifos` −12 %.
+
+**Was der strenge Preis kostet, ehrlich beziffert.** Bei einem Prozent je Meile
+hätte das Werkzeug 17 Etappen umgelegt (+24,2 sm) und dabei `syros--kythnos` von
+**rot auf gelb** gehoben sowie `serifos--sifnos` von gelb auf grün — beide
+brauchten dafür rund 3 sm Umweg und fallen bei zehn Prozent je Meile heraus. Der
+strenge Kurs erntet also die kostenlosen Verbesserungen und verzichtet auf die
+bezahlten. Bei 26–30 kn aus N/NNE ändert sich damit **keine** Ampel; zwei
+Etappen gehen grün → gelb bei unveränderter Zeit und Distanz, was die
+Grün-Sperre ist und keine schlechtere Passage. Die übrigen 37 bleiben gleich.
+
+Wer den Preis anders setzen will, ändert `UMWEG_STRAFE_PRO_NM` im Werkzeug und
+lässt es neu laufen — es ist idempotent.
+
+Weil der Kurs absichtlich länger wird, ändert dieses Werkzeug als einziges auch
+`distanceNm` — der **gemessene** Umweg wird auf die recherchierte Distanz
+addiert, und `distanceNote` sagt in jeder betroffenen Etappe, wer das getan hat
+und um wie viel. Ohne das würde die Simulation den neuen Weg mit der alten Länge
+rechnen: Abdeckung geschenkt, ohne den Umweg zu bezahlen.
+
+**Eine Bahn je Paar, nicht je Richtung:** der Schatten ist eine Eigenschaft des
+Wassers, nicht der Fahrtrichtung, und 21 der 30 Paare sind ohnehin nur in einer
+Richtung gespeichert (die Gegenrichtung wird gespiegelt abgeleitet). Der Preis
+ist genannt: auf dem Hinweg raumschots kostet die Abdeckung Fahrt, ohne viel
+Bequemlichkeit zu bringen.
+
+### Wie der Korridor gefunden wurde
+
+Die zweite Bildserie (Zoom auf Kea–Kythnos–Serifos, Meltemi aus NNE ~025°) zeigt
+die Abdeckung als **zusammenhängende türkise Bahn** von Kea über Kythnos bis
+Serifos. Sie liegt aber nicht auf der Verbindungslinie der Inseln: ein Schatten
+läuft nach **SSW** (Windrichtung + 180°), die kuratierten Etappen laufen
+SSE/NNW. Die Kurse streifen die Abdeckung deshalb nur am Rand.
+
+Gemessen als Anteil der Strecke im Lee, wenn man den ganzen Kurs rechtwinklig
+nach Westen versetzt (Wind aus 025°, Abtastung 0,5 sm; in Klammern der mittlere
+Faktor über die Strecke):
+
+| Etappe | unverändert | +3 sm West | +5 sm West | +7 sm West |
+|---|---|---|---|---|
+| `serifos--kythnos` | 45 % (Ø0,84) | **73 % (Ø0,79)** | 42 % | 21 % |
+| `kythnos--kea` | 34 % (Ø0,83) | **83 % (Ø0,72)** | 60 % | 43 % |
+| `sifnos--serifos` | 17 % (Ø0,91) | 42 % | 58 % | **75 % (Ø0,79)** |
+| `kythnos--athen` | 18 % | 26 % | 29 % | 11 % |
+
+Ein Versatz von rund **3 sm nach Westen** verdoppelt die Abdeckung auf den
+beiden Kernetappen des Korridors; `sifnos--serifos` braucht eher 5–7 sm. Der
+lange Schlag nach Attika profitiert kaum — er quert offenes Wasser.
+
+Das ist eine Frage an die **kuratierten Wegpunkte**, nicht an die Kuration der
+Zonen: der Umweg kostet Distanz und bringt Abdeckung. Solange die Wegpunkte
+liegen, wo sie liegen, bleibt der Befund oben bestehen.
+
+Sichtbar wird die Abdeckung trotzdem an jedem Etappentag — als Hinweiszeile mit
+Modellwind, Lee-Wind und Fallböen-Warnung, und in der Rückweg-Empfehlung.
+
+### Und Poseidon direkt?
+
+Ginge — kostet aber ein Backend, das dieses Projekt nicht hat. HCMR verteilt
+über THREDDS (OPeNDAP, typischerweise auch NCSS für Punkt-Zeitreihen); der
+Blocker ist CORS plus reines Hosting. Eine geplante Cloud Function könnte die
+Ortsmenge abrufen und nach Firestore legen; Poseidon hinge dann als drittes,
+noch feineres **Nahfeld** in `mergeNearFar` — derselbe Mechanismus, kein neuer.
+Die Korrektur hier ersetzt das nicht, sie holt den Teil, der planbar ist.
 
 ## Attribution
 
