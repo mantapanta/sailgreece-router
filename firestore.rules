@@ -1,11 +1,13 @@
 rules_version = '2';
 
-// AD-5: Die App ist strikt lesend. Einziger programmatischer Schreiber sind
-// die Seeding-Skripte (firebase-admin umgeht die Rules per Design).
+// AD-5: Einziger programmatischer Schreiber sind die Seeding-Skripte
+// (firebase-admin umgeht die Rules per Design).
 //
-// Lesen setzt eine Anmeldung voraus (Firebase Authentication, Google Sign-in):
-// Toernbibliothek und sichere Liegeplaetze sind kuratierte, nicht-oeffentliche
-// Daten.
+// DIE APP LIEST FIRESTORE NICHT MEHR: sie bezieht die Bibliothek aus den
+// Staging-JSONs im Bundle (src/adapters/library.ts). Damit ist auch der
+// Google-Login entfallen, der nur wegen dieser Rules noetig war. Was hier
+// steht, deckt nur noch das Import-Ziel ab — die Datenbank bleibt fuer
+// unangemeldete Clients dicht und fuer alle schreibgeschuetzt.
 service cloud.firestore {
   match /databases/{database}/documents {
 

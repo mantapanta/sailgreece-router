@@ -1,12 +1,19 @@
 /**
  * AD-4 / AD-5 — read-only library reader with tolerant Zod parsing.
- * Two backends behind the SAME contract and the SAME schemas:
- *   - VITE_DATA_SOURCE=local     -> staging JSONs from seeding/data/ (dev,
- *     runs without a Firebase project)
- *   - VITE_DATA_SOURCE=firestore -> Firestore top-level collections
- *     `islands`, `places`, `routes`, `config` (documents polar, parameters)
- * The app never writes (AD-5). An invalid place document is logged and kept
- * as 'unbewertet' — never silently hidden, never green.
+ *
+ * EINE Quelle: die Staging-JSONs unter `seeding/data/`. Sie liegen im Repo und
+ * wandern über `import.meta.glob` ins Bundle — die App braucht damit weder ein
+ * Backend noch eine Sitzung, und ein Deploy ist ein Push. Der frühere
+ * Firestore-Pfad (`VITE_DATA_SOURCE=firestore`) ist entfallen: er war der
+ * einzige Grund für den Google-Login, und der kostete bei jedem
+ * Vercel-Preview eine neue autorisierte Domain.
+ *
+ * Firestore bleibt das Ziel der Seeding-Skripte (`npm run seed:import`) — die
+ * App liest es nicht mehr. Das `approved`-Flag der Staging-Dateien gilt nur
+ * für diesen Import; hier wird jede Datei gelesen.
+ *
+ * Die App schreibt nie (AD-5). Ein ungültiges Platz-Dokument wird geloggt und
+ * als 'unbewertet' geführt — nie still versteckt, nie grün.
  */
 
 import { z } from 'zod';
@@ -17,8 +24,6 @@ import {
   VariantSchema,
   KiteSpotSchema,
   WindTopoZoneSchema,
-  ParamsSchema,
-  PolarSchema,
   DEFAULT_PARAMS,
   IslandStagingFileSchema,
   LegsStagingFileSchema,
@@ -27,9 +32,7 @@ import {
   WindTopoStagingFileSchema,
   ConfigStagingFileSchema,
   PolarStagingFileSchema,
-  polarFromFirestore,
 } from '../domain/schema/index.ts';
-import { getFirestoreDb, isFirebaseConfigured } from './firebase.ts';
 import type {
   Island,
   Place,
@@ -43,29 +46,18 @@ import type {
   Library,
 } from '../domain/schema/index.ts';
 
-export class DataSourceError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'DataSourceError';
-  }
-}
-
 export interface LibraryBundle {
   library: Library;
   params: Params;
   polar: Polar | null;
 }
 
-export function dataSource(): 'local' | 'firestore' {
-  return import.meta.env.VITE_DATA_SOURCE === 'firestore' ? 'firestore' : 'local';
-}
-
 export async function loadLibraryBundle(): Promise<LibraryBundle> {
-  return dataSource() === 'firestore' ? loadFromFirestore() : loadFromLocal();
+  return loadFromStaging();
 }
 
 // ---------------------------------------------------------------------------
-// Tolerant parsing (shared by both backends)
+// Tolerant parsing
 // ---------------------------------------------------------------------------
 
 function parsePlaces(raw: unknown[]): { places: Place[]; invalidPlaces: InvalidPlace[] } {
@@ -101,10 +93,10 @@ function parseTolerant<T>(schema: z.ZodType<T>, raw: unknown, what: string): T |
 }
 
 // ---------------------------------------------------------------------------
-// Local backend: staging JSONs (same schemas, same contract)
+// Staging-JSONs aus seeding/data/ — die einzige Quelle der App
 // ---------------------------------------------------------------------------
 
-async function loadFromLocal(): Promise<LibraryBundle> {
+async function loadFromStaging(): Promise<LibraryBundle> {
   const islandModules = import.meta.glob('../../seeding/data/islands/*.json');
 
   const islands: Island[] = [];
@@ -224,118 +216,6 @@ async function loadFromLocal(): Promise<LibraryBundle> {
     else console.error('polar.json ungültig — Fallback-Pauschalen aktiv:', file.error.issues);
   } catch {
     console.warn('polar.json fehlt — Fallback-Pauschalen aktiv');
-  }
-
-  return {
-    library: { islands, places, invalidPlaces, legs, variants, kiteSpots, windTopoZones },
-    params,
-    polar,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Firestore backend (strictly read-only, AD-5)
-// ---------------------------------------------------------------------------
-
-async function loadFromFirestore(): Promise<LibraryBundle> {
-  if (!isFirebaseConfigured()) {
-    throw new DataSourceError(
-      'Firebase-Konfiguration unvollständig — Firestore-Datenquelle nicht nutzbar (siehe .env.example).',
-    );
-  }
-  // One shared FirebaseApp for auth and data: the reads below carry the signed-in
-  // user's ID token, which the rules require (AD-5: read for signed-in, never write).
-  const db = await getFirestoreDb();
-  const { collection, getDocs, doc, getDoc } = await import('firebase/firestore');
-
-  const [
-    islandsSnap,
-    placesSnap,
-    legsSnap,
-    variantsSnap,
-    kiteSpotsSnap,
-    windTopoSnap,
-    paramsSnap,
-    polarSnap,
-  ] = await Promise.all([
-    getDocs(collection(db, 'islands')),
-    getDocs(collection(db, 'places')),
-    // Legs are their own top-level collection since the leg/variant split
-    // (AD-4/AD-5); variants reference them by id.
-    getDocs(collection(db, 'legs')),
-    getDocs(collection(db, 'routes')),
-    /**
-     * Kite-Spots: eigene Sammlung, weil ein Spot nicht zum Hafen gehört
-     * (schema/kite.ts). Eine noch nicht importierte Sammlung ist leer, kein
-     * Fehler — die Ebene fehlt dann einfach.
-     *
-     * ABGEFANGEN, und das ist Absicht: solange die neuen Security Rules nicht
-     * deployt sind, lehnt Firestore diesen Lesezugriff ab
-     * (`permission-denied`). In einem `Promise.all` würde das die GANZE
-     * Bibliothek scheitern lassen — die App zeigte statt der Törnplanung ein
-     * Fehlerpanel, wegen einer Ebene, die nichts bewertet. Der Preis ist
-     * genannt: ohne Regel bleibt die Kite-Ebene leer, mit einer Meldung in der
-     * Konsole.
-     */
-    getDocs(collection(db, 'kiteSpots')).catch((e) => {
-      console.warn(
-        'Kite-Spots nicht lesbar — Ebene bleibt leer. Sind die Firestore-Rules deployt (Collection kiteSpots)?',
-        e,
-      );
-      return null;
-    }),
-    /**
-     * Topografische Windzonen: eigene Sammlung, aus demselben Grund abgefangen
-     * wie die Kite-Spots — ohne deployte Rule antwortet Firestore mit
-     * `permission-denied`, und in einem `Promise.all` risse das die ganze
-     * Bibliothek mit. Der Preis ist genannt: ohne Regel keine Topo-Korrektur,
-     * also exakt das Verhalten von vor ihrer Einfuehrung.
-     */
-    getDocs(collection(db, 'windTopoZones')).catch((e) => {
-      console.warn(
-        'Windzonen nicht lesbar — keine Topo-Korrektur. Sind die Firestore-Rules deployt (Collection windTopoZones)?',
-        e,
-      );
-      return null;
-    }),
-    getDoc(doc(db, 'config', 'parameters')),
-    getDoc(doc(db, 'config', 'polar')),
-  ]);
-
-  const islands = islandsSnap.docs
-    .map((d) => parseTolerant(IslandSchema, { id: d.id, ...d.data() }, 'Insel'))
-    .filter((i): i is Island => i !== null);
-
-  const { places, invalidPlaces } = parsePlaces(
-    placesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
-  );
-
-  const legs = legsSnap.docs
-    .map((d) => parseTolerant(LegSchema, { id: d.id, ...d.data() }, 'Etappe'))
-    .filter((l): l is Leg => l !== null);
-
-  const variants = variantsSnap.docs
-    .map((d) => parseTolerant(VariantSchema, { id: d.id, ...d.data() }, 'Variante'))
-    .filter((v): v is Variant => v !== null);
-
-  const kiteSpots = (kiteSpotsSnap?.docs ?? [])
-    .map((d) => parseTolerant(KiteSpotSchema, { id: d.id, ...d.data() }, 'Kite-Spot'))
-    .filter((s): s is KiteSpot => s !== null);
-
-  const windTopoZones = (windTopoSnap?.docs ?? [])
-    .map((d) => parseTolerant(WindTopoZoneSchema, { id: d.id, ...d.data() }, 'Windzone'))
-    .filter((z): z is WindTopoZone => z !== null);
-
-  let params: Params = DEFAULT_PARAMS;
-  if (paramsSnap.exists()) {
-    const parsed = parseTolerant(ParamsSchema, paramsSnap.data(), 'Parameter');
-    if (parsed) params = parsed;
-  }
-
-  let polar: Polar | null = null;
-  if (polarSnap.exists()) {
-    // The matrix is stored row-wise because Firestore forbids nested arrays.
-    polar = parseTolerant(PolarSchema, polarFromFirestore(polarSnap.data()), 'Polar');
   }
 
   return {

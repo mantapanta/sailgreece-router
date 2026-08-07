@@ -337,34 +337,10 @@ summary,
   font: 400 15px/1.5 var(--font-sans);
 }
 
-/* ---- avatar + menu ----------------------------------------------------------- */
-
-.avatar-wrap {
-  position: relative;
-}
-
-.avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-full);
-  border: 0;
-  cursor: pointer;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-gradient-end) 100%);
-  color: var(--on-accent);
-  font: 700 14px/1 var(--font-sans);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-/* 44px hit area around the 34px visual (invisible, still clickable). */
-.avatar::after {
-  content: '';
-  position: absolute;
-  inset: -5px;
-  border-radius: var(--radius-full);
-}
+/* ---- Menü-Grundlagen ------------------------------------------------------
+   Der Backdrop ist geteilt (AbfahrtMenu, AltRouteMenu, PositionPopover): er
+   fängt den Klick daneben. Das frühere .avatar-menu ist mit dem Login
+   entfallen; sein Rezept lebt in .alt-menu weiter. */
 
 .menu-backdrop {
   position: fixed;
@@ -373,54 +349,6 @@ summary,
   background: transparent;
   border: 0;
   padding: 0;
-}
-
-.avatar-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + var(--space-2));
-  z-index: 120;
-  min-width: 220px;
-  background: var(--surface-card);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-3);
-  padding: var(--space-2) 0;
-}
-
-.avatar-menu-identity {
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-hairline);
-}
-
-.avatar-menu-name {
-  display: block;
-  font: 600 14px/1.3 var(--font-sans);
-  color: var(--ink-primary);
-}
-
-.avatar-menu-email {
-  display: block;
-  font: 400 12.5px/1.35 var(--font-sans);
-  color: var(--ink-secondary);
-  margin-top: 2px;
-}
-
-.avatar-menu button {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 44px;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  padding: 0 var(--space-4);
-  font: 400 15px/1.5 var(--font-sans);
-  color: var(--ink-primary);
-  text-align: left;
-}
-
-.avatar-menu button:hover {
-  background: var(--surface-inset);
 }
 
 /* ---- generic ------------------------------------------------------------- */
@@ -585,68 +513,6 @@ hr.hairline,
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   font: 400 14px/1.45 var(--font-sans);
-}
-
-/* ---- auth (redesign, Story 1.4 — replaces the navy/serif gate; the AuthGate
-        "Anmeldung wird geprüft …" card in App.tsx shares these classes) ---- */
-
-.auth-gate {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-7) var(--space-page-margin);
-  background: var(--surface-page);
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--surface-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-2);
-  padding: var(--space-7) var(--space-6);
-  text-align: center; /* gate screen — sanctioned centering exception */
-}
-
-.auth-brand {
-  font: 800 19px/1.2 var(--font-sans);
-  letter-spacing: -0.02em;
-  color: var(--ink-primary);
-}
-
-.auth-brand small {
-  display: block;
-  margin-top: var(--space-2);
-  font: 600 11px/1.3 var(--font-sans);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--ink-secondary);
-}
-
-.auth-lead {
-  margin: var(--space-5) 0;
-  font: 400 14px/1.45 var(--font-sans);
-  color: var(--ink-secondary);
-}
-
-/* Width/gap supplement to the .btn-secondary recipe (the button carries both classes). */
-.google-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  width: 100%;
-}
-
-.auth-card .error-panel {
-  margin: var(--space-4) 0 0;
-  text-align: left;
-}
-
-.auth-card code {
-  font-size: 12.5px;
-  word-break: break-all;
 }
 
 /* ===================================================================== */
@@ -827,7 +693,7 @@ hr.hairline,
   inset: -8px 0; /* 28px + 2×8px = 44px */
 }
 
-/* Routenwahl-Menü am Chip (AltRouteMenu) — Rezept des .avatar-menu, links am
+/* Routenwahl-Menü am Chip (AltRouteMenu) — Karte auf Ebene 3, links am
    Auslöser verankert und schmal genug fürs Telefon. */
 .alt-menu {
   position: absolute;

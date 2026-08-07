@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TripProvider, useTrip } from './tripContext.tsx';
-import { AuthProvider, useAuth } from './authContext.tsx';
 import { STALE_TIME_MS } from './usePlanning.ts';
 import { PlanningProvider, usePlanning } from './planningContext.tsx';
 import { RouteViewProvider } from './routeViewContext.tsx';
@@ -9,8 +8,6 @@ import { getCurrentGpsPosition } from '../adapters/geolocation.ts';
 import { DayView } from '../ui/views/DayView.tsx';
 import { MapView } from '../ui/views/MapView.tsx';
 import { PlaceDetailView } from '../ui/views/PlaceDetailView.tsx';
-import { SignInView } from '../ui/views/SignInView.tsx';
-import { AvatarMenu } from '../ui/components/AvatarMenu.tsx';
 import { DayViewSkeleton } from '../ui/components/DayViewSkeleton.tsx';
 import { MapViewSkeleton } from '../ui/components/MapViewSkeleton.tsx';
 import { staleForecastLabel } from '../ui/dayViewModel.ts';
@@ -149,7 +146,6 @@ function Shell() {
           <div className="wordmark">
             Sail<span className="wordmark-accent">Greece</span>
           </div>
-          <AvatarMenu />
         </div>
         <div className="header-line2">
           <nav className="segmented-tabs" aria-label="Ansicht">
@@ -302,48 +298,23 @@ function Shell() {
 }
 
 /**
- * The gate. Planning providers mount only for a signed-in session — otherwise
- * the library query would fire against Firestore without an ID token and be
- * rejected by the rules.
+ * Kein Login mehr davor: die Bibliothek liegt als Staging-JSON im Bundle
+ * (adapters/library.ts), es gibt also keinen Backend-Zugriff mehr, der eine
+ * Sitzung bräuchte. Wer die App nicht sehen soll, wird vor der Auslieferung
+ * gesperrt (Vercel Deployment Protection), nicht in der App.
  */
-function AuthGate() {
-  const { user, checking } = useAuth();
-
-  if (checking) {
-    return (
-      <div className="auth-gate">
-        <div className="auth-card">
-          <div className="auth-brand">
-            Sail<span className="wordmark-accent">Greece</span>
-            <small>Kykladen · Törnplanung</small>
-          </div>
-          <p className="auth-lead">Anmeldung wird geprüft …</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) return <SignInView />;
-
-  return (
-    <TripProvider>
-      <PlanningProvider>
-        {/* Die angesehene Route (Hauptroute oder eine Alternative) gilt für
-            BEIDE Ansichten — deshalb über dem Shell, nicht in einer View. */}
-        <RouteViewProvider>
-          <Shell />
-        </RouteViewProvider>
-      </PlanningProvider>
-    </TripProvider>
-  );
-}
-
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AuthGate />
-      </AuthProvider>
+      <TripProvider>
+        <PlanningProvider>
+          {/* Die angesehene Route (Hauptroute oder eine Alternative) gilt für
+              BEIDE Ansichten — deshalb über dem Shell, nicht in einer View. */}
+          <RouteViewProvider>
+            <Shell />
+          </RouteViewProvider>
+        </PlanningProvider>
+      </TripProvider>
     </QueryClientProvider>
   );
 }

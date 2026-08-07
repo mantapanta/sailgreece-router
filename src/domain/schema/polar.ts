@@ -59,20 +59,8 @@ export function polarToFirestore(polar: Polar): FirestorePolar {
   return { ...rest, speedRows: speeds.map((row) => ({ v: row })) };
 }
 
-/**
- * Accepts both shapes: the `speedRows` form written by the importer and a plain
- * `speeds` matrix (a document created by hand). The result is only shaped, never
- * validated — the caller still parses it with PolarSchema.
+/*
+ * Die Gegenrichtung (`polarFromFirestore`) ist mit dem Firestore-Lesepfad der
+ * App entfallen — die Polare kommt aus `seeding/data/polar.json`. Der Weg
+ * hinein bleibt: der Importer schreibt weiter nach Firestore.
  */
-export function polarFromFirestore(data: unknown): unknown {
-  if (data === null || typeof data !== 'object') return data;
-  const rec = data as Record<string, unknown>;
-  if (!Array.isArray(rec.speedRows)) return data;
-  const { speedRows, ...rest } = rec;
-  return {
-    ...rest,
-    speeds: speedRows.map((row) =>
-      row !== null && typeof row === 'object' ? (row as { v: unknown }).v : row,
-    ),
-  };
-}

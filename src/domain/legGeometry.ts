@@ -178,7 +178,7 @@ export function sailedLeg(
   if (routed.unresolved) {
     // Kein landfreier Kurs gefunden: dann steht dort die Luftlinie, und das
     // darf nicht stillschweigend passieren. Dieselbe Praxis wie bei ungültigen
-    // Platz-Dokumenten (adapters/firestore.ts) — die Bewertung läuft weiter,
+    // Platz-Dokumenten (adapters/library.ts) — die Bewertung läuft weiter,
     // aber der Defekt ist sichtbar. Der Wächter dagegen ist
     // __tests__/libraryGeometry.test.ts.
     console.warn(
