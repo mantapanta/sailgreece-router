@@ -7,17 +7,20 @@
  * mit sechs und acht, "Paros–Naxos" als gerade Linie hin und zurück, und eine
  * "Verlängerung nach Santorin", die nicht nach Santorin führt.
  *
- * DER SUCHRAUM IST KLEIN UND EXAKT AUFZÄHLBAR. Über die 46 kuratierten Etappen
- * (74 gerichtete Kanten, 22 Inseln) gibt es von der Basis aus GENAU 68 Runden,
- * die den vollen Rahmen füllen: elf Etappen, elf verschiedene Inseln, keine
- * Wiederholung.
+ * DER SUCHRAUM WÄCHST MIT DER BIBLIOTHEK, und dreimal war die Bibliothek das
+ * Problem — nie die Kriterien:
  *
- * Beim Umbau am 2026-08-07 waren es SECHS — über 39 Etappen und 60 Kanten. Die
- * sieben Etappen, die am selben Tag aus dem Abgleich mit der Törnanalyse
- * dazukamen (Naxos–Sifnos, Milos–Serifos, Sifnos–Kythnos, Mykonos–Donousa,
- * Donousa–Amorgos, Schinoussa–Naxos, Mykonos–Delos/Rinia), haben den Raum
- * verelffacht. Das ist der ganze Punkt: die Kriterien mussten dafür nicht
- * angefasst werden, der Bibliothek fehlten Verbindungen.
+ *      6 volle Runden — 39 Etappen, der Stand beim Umbau am 2026-08-07
+ *     68 — nach den sieben Etappen aus der Törnanalyse (Naxos–Sifnos,
+ *          Milos–Serifos, Sifnos–Kythnos, Mykonos–Donousa, Donousa–Amorgos,
+ *          Schinoussa–Naxos, Mykonos–Delos/Rinia)
+ *   2947 — nach den 110 ABGELEITETEN Etappen (deriveLegs.ts), über den
+ *          ausgedünnten Aufzählungs-Graphen
+ *
+ * Der letzte Schritt kam aus dem Einwand des Skippers: „am Ende kann ich ja als
+ * Segler überall hinfahren." Die Bibliothek kannte 37 Insel-Paare, während 41
+ * weitere unter 30 sm lagen und gar nicht existierten — der Graph war eine
+ * Stichprobe des Reviers, kein Modell davon.
  *
  * Die App hat von den sechs keinen einzigen angeboten. Nicht, weil die Suche zu
  * klein gerechnet hätte — sechs Kandidaten kann man vollständig durchrechnen —,
@@ -148,12 +151,28 @@ function realSnapshot(
 
 const RAHMEN = deadlineFrame({ ...DEFAULT_PARAMS, tripStartDate: TRIP_START }).deadlineDay;
 
+/**
+ * DIE FRIST STEHT HIER, WEIL DIESE TESTS DIE GANZE MASCHINE ANWERFEN.
+ *
+ * `assessPlanning` auf den echten Staging-Daten braucht am 2026-08-07 rund
+ * 3,5–4,5 s: 46 Etappen, 68 volle Runden je Schicht, elf Suchen (Hauptroute
+ * plus zehn Ziele) und 31 Lee-Zonen, die für jeden Forecast-Punkt jeder Stunde
+ * geprüft werden. Vitests Vorgabe von 5 s trifft das im kalten Prozess knapp
+ * nicht — mit einer Fehlermeldung ("Test timed out"), die wie ein Sachfehler
+ * aussieht und keiner ist.
+ *
+ * Die Frist ist bewusst grosszügig und bewusst SICHTBAR: sie ist kein
+ * Freibrief, sondern der Ort, an dem eine Laufzeit-Regression auffällt. Wer
+ * sie erhöhen muss, hat etwas verlangsamt.
+ */
+const VOLLE_BEWERTUNG_MS = 20_000;
+
 describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
   it('Der Törnrahmen ist elf Tage — elf Tage, elf Etappen', () => {
     expect(RAHMEN).toBe(11);
   });
 
-  it('Schicht A liefert GENAU die 68 wiederholungsfreien 11-Etappen-Runden', () => {
+  it('Schicht A liefert GENAU die 2947 wiederholungsfreien 11-Etappen-Runden', () => {
     /**
      * Die Zahl ist der eigentliche Befund: 68 Runden füllen den Rahmen sauber,
      * und die App hat lange keine einzige davon angeboten. Der Suchraum ist
@@ -163,11 +182,17 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      * hier einzutragen und die Zunahme erwünscht).
      *
      * 2026-08-07: 6 → 68, durch die sieben Etappen aus der Törnanalyse.
+     * 2026-08-07 (später): 68 → 2947, durch die 110 ABGELEITETEN Etappen
+     * (deriveLegs.ts). Der Aufzählungs-Graph nimmt davon je Insel die zwei
+     * kürzesten bis 30 sm — gemessen der Punkt, an dem der Raum VOLLSTÄNDIG
+     * aufzählbar bleibt. Mit allen 110 wären es über 300 000, die Tiefensuche
+     * liefe in den Deckel, und eine abgeschnittene Tiefensuche ist verzerrt:
+     * sie lieferte gemessen einen Plan mit zehn statt elf Etappentagen.
      */
     const snapshot = realSnapshot();
     const [schichtA] = [...roundTripLayers(snapshot, 'athen', 11)];
     expect(schichtA?.gekappt).toBe(false);
-    expect(schichtA?.trips).toHaveLength(68);
+    expect(schichtA?.trips).toHaveLength(2947);
   });
 
   it('Keine Runde der Schicht A läuft eine Insel zweimal an', () => {
@@ -182,7 +207,7 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     }
   });
 
-  it('Santorin braucht neun Etappen — ab Törntag 4 gibt es keine Santorin-Runde mehr', () => {
+  it('Santorin braucht neun Etappen — ab Törntag 5 gibt es keine Santorin-Runde mehr', () => {
     /**
      * Der wahre Sachverhalt hinter der Beanstandung "die Verlängerung nach
      * Santorin führt nicht nach Santorin": Santorin hängt im Graphen nur an
@@ -194,8 +219,9 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      *   ZEHN (Törntag 2), als Zweitanläufe an anderen Häfen zugelassen wurden.
      *   NEUN (Törntag 3), seit `naxos--sifnos` aus der Törnanalyse existiert:
      *   der Heimweg von Naxos muss nicht mehr über Paros laufen.
+     *   ACHT (Törntag 4), seit die abgeleiteten Etappen den Graphen füllen.
      *
-     * "Santorin geht ab Törntag 4 nicht mehr" ist die richtige Antwort. Falsch
+     * "Santorin geht ab Törntag 5 nicht mehr" ist die richtige Antwort. Falsch
      * war, dass die App das Ziel trotzdem angeboten und einen Plan dazugelegt
      * hat, der nicht dorthin führt.
      */
@@ -205,14 +231,14 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     // Neun Etappen ist das Minimum — keine kürzere Santorin-Runde existiert.
     expect(Math.min(...anTag1.map((t) => t.length))).toBe(9);
 
-    // Tag 3 lässt die neun noch zu, Tag 4 nicht mehr.
-    const anTag3 = enumerateRoundTrips(realSnapshot({ currentDay: 3 }), 'athen', RAHMEN - 2)
-      .filter((t) => islandSequence(t).includes('santorin'));
-    expect(anTag3.length).toBeGreaterThan(0);
-
+    // Tag 4 lässt es noch zu, Tag 5 nicht mehr.
     const anTag4 = enumerateRoundTrips(realSnapshot({ currentDay: 4 }), 'athen', RAHMEN - 3)
       .filter((t) => islandSequence(t).includes('santorin'));
-    expect(anTag4).toHaveLength(0);
+    expect(anTag4.length).toBeGreaterThan(0);
+
+    const anTag5 = enumerateRoundTrips(realSnapshot({ currentDay: 5 }), 'athen', RAHMEN - 4)
+      .filter((t) => islandSequence(t).includes('santorin'));
+    expect(anTag5).toHaveLength(0);
   });
 
   it('Die Ost-Kykladen sind WIEDERHOLUNGSFREI erreichbar — Amorgos, Donousa, die Kleinen Kykladen', () => {
@@ -274,28 +300,77 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     }
   });
 
-  it('Delos/Rinia bleibt eine Sackgasse — erreichbar NUR über den Zweitanlauf Mykonos', () => {
+  it('KEIN UMWEG NACH LUV: von Polyaigos geht es nicht 40 sm nach Paros, wenn Sifnos 11 sm entfernt liegt', () => {
     /**
-     * Die Gegenprobe zum Test darüber, und der Grund, dass die Schicht B
-     * überhaupt existiert.
+     * DER FALL DES SKIPPERS vom 2026-08-07, an den echten Daten festgehalten.
      *
-     * Rinia hat genau EINEN kuratierten Liegeplatz und genau EINE Etappe
-     * (`mykonos--delos-rinia`, Törnanalyse Route 2 Tag 3). Wer hin will, muss
-     * über Mykonos — und wieder zurück nach Mykonos. Das IST ein Zweitanlauf,
-     * und keine Aufzählung ohne Wiederholung kann ihn hergeben.
+     * Die ausgelieferte App bot ihm diese Alternative an:
      *
-     * Bewusst so gelassen (Skipper-Entscheid 2026-08-07): ein zweiter Platz auf
-     * Rinia wäre erfunden. Die Insel ist eine Ankerbucht, kein Revier.
+     *   Tag 7  Polyaigos (Manolis-Bucht)
+     *   Tag 8  Polyaigos -> Paros (Naoussa)  40 sm, davon "ca. 38 sm Kreuz
+     *          (24 kn)" bei Wind N 23 kn
+     *   Tag 9  Sifnos (Vathy)
+     *
+     * Also 38 Seemeilen hart am Wind nach Nordosten, um am nächsten Tag wieder
+     * nach Westen zurückzufahren. Sein Urteil: „so wird ein Segler nicht
+     * denken."
+     *
+     * Der Router hatte nichts falsch gemacht — er hatte keine Wahl. Polyaigos
+     * hing an genau zwei kuratierten Etappen: Milos (8,1 sm) und Paros
+     * (33,4 sm). Die Verbindung, die jeder Segler nehmen würde, stand nicht in
+     * der Bibliothek: `polyaigos--sifnos`, 11,3 sm.
+     *
+     * Geprüft wird die EIGENSCHAFT, nicht der Einzelfall: keine angebotene
+     * Route darf Polyaigos direkt mit Paros verbinden, solange sie danach in
+     * den Westen zurückkehrt. Das ist die Form, die er beanstandet hat — hin
+     * nach Luv und gleich wieder zurück.
+     */
+    const assessment = assessPlanning(realSnapshot({ windKn: 23, windDirDeg: 0 }));
+    const plaene = [
+      assessment.proposal,
+      ...assessment.alternatives,
+      ...assessment.routeOptions.map((o) => o.plan).filter((p) => p !== null),
+    ].filter((p) => p !== null && p !== undefined);
+
+    const WESTEN = new Set(['sifnos', 'serifos', 'kythnos', 'milos', 'kea']);
+    for (const plan of plaene) {
+      const ziele = stagesOf('plan' in plan ? plan.plan : plan).map((s) => s.toIslandId);
+      for (let i = 1; i < ziele.length; i++) {
+        if (ziele[i - 1] !== 'polyaigos' || ziele[i] !== 'paros') continue;
+        const danachWesten = ziele.slice(i + 1).some((id) => WESTEN.has(id));
+        expect(
+          danachWesten,
+          `Umweg nach Luv: ${ziele.join(' > ')}`,
+        ).toBe(false);
+      }
+    }
+  }, VOLLE_BEWERTUNG_MS);
+
+  it('Delos/Rinia ist KEINE Sackgasse mehr — und das ist der Beleg für den Umbau', () => {
+    /**
+     * UMGEDREHT AM 2026-08-07, weil die Wirklichkeit sich geändert hat.
+     *
+     * Vorher hiess dieser Test "Delos/Rinia bleibt eine Sackgasse — erreichbar
+     * NUR über den Zweitanlauf Mykonos", und er hatte recht: die Insel hing an
+     * genau EINER kuratierten Etappe. Wer hin wollte, musste über Mykonos und
+     * wieder zurück.
+     *
+     * Das war nie eine Eigenschaft des Reviers, sondern eine der Bibliothek.
+     * Rinia liegt 15,2 sm von Syros, 19,6 von Paros und 22,3 von Naxos — alles
+     * gewöhnliche Tagesschläge, die bloss niemand kuratiert hatte. Seit
+     * `deriveLegs.ts` stehen sie im Graphen, und die Insel ist ohne jede
+     * Wiederholung erreichbar.
+     *
+     * Genau das ist der Einwand des Skippers vom 2026-08-07, als Test: „am Ende
+     * kann ich ja als Segler überall hinfahren." Der Graph war eine Stichprobe
+     * des Reviers, kein Modell davon — und was wie eine Sackgasse aussah, war
+     * ein Loch in den Daten.
      */
     const snapshot = realSnapshot();
-    const [ohne, mit] = [...roundTripLayers(snapshot, 'athen', RAHMEN)];
+    const [ohne] = [...roundTripLayers(snapshot, 'athen', RAHMEN)];
     expect(
-      (ohne?.trips ?? []).filter((t) => islandSequence(t).includes('delos-rinia')),
+      (ohne?.trips ?? []).filter((t) => islandSequence(t).includes('delos-rinia')).length,
       'Delos/Rinia ohne Zweitanlauf',
-    ).toHaveLength(0);
-    expect(
-      (mit?.trips ?? []).filter((t) => islandSequence(t).includes('delos-rinia')).length,
-      'Delos/Rinia mit Zweitanlauf',
     ).toBeGreaterThan(0);
   });
 });
@@ -343,21 +418,6 @@ describe('Zielmodell v3 — die Hauptroute erfüllt den Vertrag', () => {
   });
 });
 
-/**
- * DIE FRIST STEHT HIER, WEIL DIESE TESTS DIE GANZE MASCHINE ANWERFEN.
- *
- * `assessPlanning` auf den echten Staging-Daten braucht am 2026-08-07 rund
- * 3,5–4,5 s: 46 Etappen, 68 volle Runden je Schicht, elf Suchen (Hauptroute
- * plus zehn Ziele) und 31 Lee-Zonen, die für jeden Forecast-Punkt jeder Stunde
- * geprüft werden. Vitests Vorgabe von 5 s trifft das im kalten Prozess knapp
- * nicht — mit einer Fehlermeldung ("Test timed out"), die wie ein Sachfehler
- * aussieht und keiner ist.
- *
- * Die Frist ist bewusst grosszügig und bewusst SICHTBAR: sie ist kein
- * Freibrief, sondern der Ort, an dem eine Laufzeit-Regression auffällt. Wer
- * sie erhöhen muss, hat etwas verlangsamt.
- */
-const VOLLE_BEWERTUNG_MS = 20_000;
 
 describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
   it('Jede Option mit Plan läuft ihre Ziel-Insel wirklich an', () => {
@@ -479,43 +539,39 @@ describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
     }
   });
 
-  it('bei NNW gibt es GAR KEINE Runde im Uhrzeigersinn — und die App behauptet auch keine', () => {
+  it('bei NNW findet die App JETZT eine Runde im Uhrzeigersinn — vorher gab es keine', () => {
     /**
-     * DIE GRENZE DER REGEL, als Test festgehalten statt wegoptimiert.
+     * UMGEDREHT AM 2026-08-07, und zwar in die gute Richtung.
      *
-     * Bei 16 kn aus 340° (NNW) liefert der Solver eine Runde GEGEN den
-     * Uhrzeigersinn. Das sieht aus wie der Fehler, den der Skipper am
-     * 2026-08-07 beanstandet hat — ist aber die richtige Antwort, und der
-     * Unterschied ist nachgerechnet: von den 27 packbaren vollen Runden ist
-     * KEINE EINZIGE im Uhrzeigersinn. Es gibt nichts Besseres zu wählen.
+     * Vorher stand hier "bei NNW gibt es GAR KEINE Runde im Uhrzeigersinn — und
+     * die App behauptet auch keine", mit dieser Begründung: Athen liegt
+     * nordwestlich der Kykladen, bei 16 kn aus 340° läuft die westliche
+     * Heimkette (Milos → Sifnos → Serifos → Kythnos) dead upwind, während der
+     * östliche Heimweg 30–40° besser anliegt. Von den 27 packbaren vollen
+     * Runden war keine einzige rechtsherum. Der Test hielt die GRENZE der Regel
+     * fest, statt sie wegzuoptimieren — richtig so.
      *
-     * Der Grund ist Geometrie, nicht Rangfolge: Athen liegt nordwestlich der
-     * Kykladen. Bei NNW-Wind läuft die westliche Heimkette (Milos → Sifnos →
-     * Serifos → Kythnos → Athen, Kurse N bis NNO) dead upwind, während der
-     * östliche Heimweg (Kurse um 310°) 30–40° besser anliegt.
+     * Die Grenze lag aber nicht in der Physik, sondern im Graphen. Mit den
+     * abgeleiteten Etappen (deriveLegs.ts) gibt es jetzt Verbindungen, die es
+     * vorher nicht gab — und damit eine Runde im Uhrzeigersinn, die den vollen
+     * Rahmen füllt UND den Lee-Korridor auf dem ganzen Rückweg hält.
      *
-     * Und die Wind-Topographie kann daran nichts ändern: die Lee-Keulen auf
-     * Kea/Kythnos/Serifos/Sifnos senken die Wind-STÄRKE, aber Kreuzen ist ein
-     * WINKEL-Problem. Abdeckung hilft gegen zu viel Wind, nicht gegen zu spitz.
-     *
-     * Was der Test wirklich absichert: die App gibt bei so einer Lage nicht
-     * vor, die Regel einzuhalten. `umlaufsinnPasst` steht auf false, die
-     * Lee-Abweichung ist sichtbar — und der Rahmen-Vertrag hält trotzdem.
+     * Das ist genau, was der Skipper gemeint hat: „warum sollte man nicht
+     * hinfahren, wenn der Wind es erlaubt und es diese roten Strecken
+     * vermeidet?" Es war nie der Wind, der es verboten hat.
      */
     const snapshot = realSnapshot({ windKn: 16, windDirDeg: 340 });
-    // Die grobe Regel sagt weiterhin "im Uhrzeigersinn" — sie kennt nur die
-    // Nord-Komponente, nicht die Kurse der Heimkette.
     expect(umlaufsinnGebot(snapshot)).toBe('im-uhrzeigersinn');
 
     const solved = completePlan(snapshot, 'athen')!;
     const metrics = planMetricsFor(snapshot)(solved);
 
-    // Der Rahmen-Vertrag hält auch hier — die Lage kostet die Richtung, nicht den Törn.
+    // Der Rahmen-Vertrag hält — und die Richtung jetzt auch.
     expect(metrics.legDays).toBe(11);
     expect(metrics.distinctIslands).toBe(11);
-    // Und die Abweichung wird zugegeben, nicht kaschiert.
-    expect(metrics.clockwise).toBe(false);
-    expect(metrics.rueckwegAbweichung).toBeGreaterThan(0);
+    expect(metrics.clockwise).toBe(true);
+    // Und der Rückweg bleibt vollständig im Lee-Korridor.
+    expect(metrics.rueckwegAbweichung).toBe(0);
   });
 
   it('der Lee-Korridor rankt ÜBER den gemessenen Kreuzstunden des Rückwegs', () => {

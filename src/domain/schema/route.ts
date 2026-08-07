@@ -32,6 +32,32 @@ export const LegSchema = z.object({
   /** Distance originally referenced to another base (e.g. 'lavrion'). */
   rebasedFrom: z.string().optional(),
   /**
+   * ABGELEITET STATT RECHERCHIERT — der Unterschied zwischen Best Practice und
+   * blosser Geometrie.
+   *
+   * Gesetzt von `seeding/tools/deriveLegs.ts` für Verbindungen, die im Revier
+   * existieren, aber in der Bibliothek fehlten. Ihre `distanceNm` ist die
+   * GEMESSENE Länge des landfreien Kurses, nicht die geprüfte Zahl aus einem
+   * Revierführer; `windWarnings` ist bei ihnen zwangsläufig leer, weil niemand
+   * die Düsen dieser Strecke abgelesen hat.
+   *
+   * WARUM ES DAS FELD BRAUCHT (Skipper 2026-08-07): „am Ende kann ich ja als
+   * Segler überall hinfahren. Diese Routen sollten eher empfohlene Best
+   * Practices sein und daher bevorzugt werden — aber warum sollte man nicht
+   * hinfahren, wenn der Wind es erlaubt und es diese roten Strecken vermeidet?"
+   *
+   * Der Graph war bis dahin eine STICHPROBE des Reviers: 37 kuratierte
+   * Insel-Paare, während 41 weitere unter 30 sm lagen und gar nicht existierten.
+   * Der Router musste um die Löcher herumfahren — 38 sm hart am Wind nach Paros,
+   * weil Polyaigos → Sifnos (12,6 sm) nicht in der Bibliothek stand.
+   *
+   * Das Feld ist der einzige Ort, an dem die Rangfolge (`solver.preferred`) die
+   * beiden Sorten auseinanderhalten kann: eine Runde aus recherchierten Etappen
+   * gewinnt gegen eine gleich bequeme mit abgeleiteten — aber sie gewinnt nicht
+   * gegen eine deutlich bessere. Fehlt das Feld, ist die Etappe kuratiert.
+   */
+  abgeleitet: z.boolean().optional(),
+  /**
    * WARUM `distanceNm` NICHT MEHR DIE RECHERCHIERTE ZAHL IST.
    *
    * Die Distanzen der Bibliothek sind recherchiert und geprüft; seaRouteLegs.ts
