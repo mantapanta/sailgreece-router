@@ -340,6 +340,13 @@ function Breakdown({
  * `stage.kursAbschnitte`. Die Ampel steht als Farbe UND als Wort — Farbe allein
  * trägt in dieser App keine Bedeutung —, und der Titel nennt die Schwellen,
  * gegen die gemessen wurde.
+ *
+ * GEZEIGT WIRD NUR, WAS DRÜCKT: grüne Abschnitte bleiben weg (Skipper
+ * 2026-08-07). Diese Liste meldet die problematischen Meilen; zehn grüne
+ * Halbwind-Meilen sind keine Meldung, sondern ein normaler Segeltag — sie
+ * standen nur da und mussten überlesen werden. Gerechnet werden sie weiter
+ * (die Fahrtzeit steckt in den Kacheln darüber), sie melden sich bloss nicht
+ * mehr. Bleibt nichts übrig, verschwindet der ganze Block.
  */
 function KursAbschnitte({
   abschnitte,
@@ -348,10 +355,11 @@ function KursAbschnitte({
   abschnitte: KursAbschnitt[];
   params: PlanningSnapshot['params'];
 }) {
-  if (abschnitte.length === 0) return null;
+  const gemeldet = abschnitte.filter((a) => a.ampel !== 'gruen');
+  if (gemeldet.length === 0) return null;
   return (
     <div className="kurs-liste">
-      {abschnitte.map((a) => (
+      {gemeldet.map((a) => (
         <span
           key={a.kategorie}
           className={`ampel ampel-${a.ampel} kurs-zeile`}
