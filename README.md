@@ -714,11 +714,39 @@ die Zahl der Lee-Hinweise steigt von 35 auf 56. Genau so soll es sein — 18 der
 30 Zonen stehen auf `niedrig` und beraten nur. Die Südhälfte des Korridors
 spricht jetzt: `milos--polyaigos` nennt vier Zonen statt einer.
 
-**Die lohnendste offene Messung** ist Milos: die Insel ist mit 751 m die höchste
-des westlichen Korridors und der Wendepunkt der aktuellen Route, aber ihre Zunge
-liess sich im Bild nicht vom grossflächigen Gefälle trennen — sie steht deshalb
-auf `niedrig` und fasst keine Ampel an. Ein einziger Punktabruf im Lee von Milos
-würde das auflösen.
+### Mittelpunkt und Radius kommen aus der Landmaske (`leeZones.ts`)
+
+Die Zonen wurden zunächst von Hand geschrieben, mit `island.coordinates` als
+Hindernis-Mittelpunkt. Das sind **kuratierte Bezugspunkte, keine
+Landschwerpunkte** — bei Milos liegt er im Hafen mitten in der Bucht, also im
+Wasser und 2 sm daneben; bei Tinos 3,3 sm, bei Naxos 3,0, bei Aegina 3,0. Für
+eine Keule, die genau dort ansetzt, ist das kein Detail: sie beginnt an der
+falschen Stelle und zeigt an der Insel vorbei.
+
+Behoben ohne jede neue Messung — die Landmaske liegt im Repo. Zwei der drei
+Geometriezahlen kommen jetzt aus ihr: `center` ist der Schwerpunkt der
+zusammenhängenden Landfläche (Flutfüllung, damit Antiparos nicht in Paros'
+Zone rutscht), `obstacleRadiusNm` die mittlere halbe **Querschnittsbreite** im
+Meltemi-Band — nicht der Flächenradius, denn was einen Schatten wirft, ist die
+Breite quer zum Wind.
+
+Das **Festland-Tor** fiel dabei als Nebenprodukt an: reicht die zusammenhängende
+Landfläche über ihr eigenes Suchfenster hinaus, ist sie keine Insel mehr. Bei
+Methana, Salamina und Poros lief die Füllung über die schmale Straße aufs
+Festland und lieferte Hindernisradien von 16, 11 und 7 sm. Die drei haben jetzt
+keine Zone — derselbe Grund, aus dem Attika keine hat.
+
+### Was mit Milos ist
+
+Richtig platziert deckt die Milos-Zone **genau einen** Forecast-Ort:
+`milos-kleftiko`, den klassischen Meltemi-Ankerplatz an der SW-Küste. Alles
+andere um Milos liegt in Luv — die Etappen verlassen Adamas nach Norden, also
+gegen den Wind. Vorher waren es 16 Etappenpunkte, und das war der Artefakt des
+Mittelpunkts in der Bucht.
+
+Damit ist auch die frühere Einschätzung hinfällig, ein Punktabruf im Lee von
+Milos sei die lohnendste offene Messung: sie würde an dieser Bibliothek nichts
+ändern. Die Zone ist richtig und wirkungslos zugleich.
 
 ### Stand der Kalibrierung
 

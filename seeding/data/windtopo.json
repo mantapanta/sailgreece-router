@@ -7,15 +7,15 @@
       "name": "Lee Kea",
       "kind": "lee",
       "center": {
-        "lat": 37.62,
-        "lon": 24.33
+        "lat": 37.613,
+        "lon": 24.3311
       },
-      "obstacleRadiusNm": 3,
+      "obstacleRadiusNm": 2.9,
       "lobeNm": 9,
       "factor": 0.45,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 561 m. Im Zoom-Bild Kea/Kythnos/Serifos (10.08., 15:00 LT, NNE ~025 Grad) als eigene tuerkise Zunge SSW der Insel abgelesen. Erste Abdeckung auf dem Heimweg in den Kea-Kanal.",
-      "kalibriertAus": "Im Zoom-Bild Kea/Kythnos/Serifos (10.08., 15:00 LT, NNE ~025 Grad) als eigene tuerkise Zunge SSW der Insel abgelesen. Erste Abdeckung auf dem Heimweg in den Kea-Kanal. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 561 m. Mittelpunkt und Hindernisradius aus der Landmaske (611 Landzellen, Schwerpunkt 0.4 sm von der Bibliotheks-Koordinate entfernt). Im Zoom-Bild Kea/Kythnos/Serifos (10.08., 15:00 LT, NNE ~025 Grad) als eigene tuerkise Zunge SSW der Insel abgelesen. Erste Abdeckung auf dem Heimweg in den Kea-Kanal.",
+      "kalibriertAus": "Im Zoom-Bild Kea/Kythnos/Serifos (10.08., 15:00 LT, NNE ~025 Grad) als eigene tuerkise Zunge SSW der Insel abgelesen. Erste Abdeckung auf dem Heimweg in den Kea-Kanal. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -23,15 +23,15 @@
       "name": "Lee Kythnos",
       "kind": "lee",
       "center": {
-        "lat": 37.4,
-        "lon": 24.42
+        "lat": 37.3914,
+        "lon": 24.4167
       },
-      "obstacleRadiusNm": 3,
+      "obstacleRadiusNm": 2.9,
       "lobeNm": 6,
       "factor": 0.55,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 336 m. Im selben Zoom-Bild als eigene Zunge SSW der Insel abgelesen — bis dahin war Kythnos die einzige Korridor-Zone, deren Faktor nur aus Serifos hochgerechnet war. Niedrigste der Korridor-Inseln, entsprechend kuerzeste Keule und schwaechster Faktor.",
-      "kalibriertAus": "Im selben Zoom-Bild als eigene Zunge SSW der Insel abgelesen — bis dahin war Kythnos die einzige Korridor-Zone, deren Faktor nur aus Serifos hochgerechnet war. Niedrigste der Korridor-Inseln, entsprechend kuerzeste Keule und schwaechster Faktor. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 336 m. Mittelpunkt und Hindernisradius aus der Landmaske (460 Landzellen, Schwerpunkt 0.5 sm von der Bibliotheks-Koordinate entfernt). Im selben Zoom-Bild als eigene Zunge SSW der Insel abgelesen — bis dahin war Kythnos die einzige Korridor-Zone, deren Faktor nur aus Serifos hochgerechnet war. Niedrigste der Korridor-Inseln, entsprechend kuerzeste Keule und schwaechster Faktor.",
+      "kalibriertAus": "Im selben Zoom-Bild als eigene Zunge SSW der Insel abgelesen — bis dahin war Kythnos die einzige Korridor-Zone, deren Faktor nur aus Serifos hochgerechnet war. Niedrigste der Korridor-Inseln, entsprechend kuerzeste Keule und schwaechster Faktor. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -39,15 +39,15 @@
       "name": "Lee Serifos",
       "kind": "lee",
       "center": {
-        "lat": 37.15,
-        "lon": 24.5
+        "lat": 37.161,
+        "lon": 24.4829
       },
-      "obstacleRadiusNm": 3,
+      "obstacleRadiusNm": 2.7,
       "lobeNm": 10,
       "factor": 0.45,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 585 m. Der Lehrbuchfall der Ausgangsfrage: 585 m auf ~10 km Breite, von ICON-EU auf einen flachen Buckel gemittelt, der gar keinen Schatten wirft. Zunge im Zoom-Bild abgelesen.",
-      "kalibriertAus": "Der Lehrbuchfall der Ausgangsfrage: 585 m auf ~10 km Breite, von ICON-EU auf einen flachen Buckel gemittelt, der gar keinen Schatten wirft. Zunge im Zoom-Bild abgelesen. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 585 m. Mittelpunkt und Hindernisradius aus der Landmaske (339 Landzellen, Schwerpunkt 1.1 sm von der Bibliotheks-Koordinate entfernt). Der Lehrbuchfall der Ausgangsfrage: 585 m auf ~10 km Breite, von ICON-EU auf einen flachen Buckel gemittelt, der gar keinen Schatten wirft. Zunge im Zoom-Bild abgelesen.",
+      "kalibriertAus": "Der Lehrbuchfall der Ausgangsfrage: 585 m auf ~10 km Breite, von ICON-EU auf einen flachen Buckel gemittelt, der gar keinen Schatten wirft. Zunge im Zoom-Bild abgelesen. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -55,15 +55,15 @@
       "name": "Lee Sifnos",
       "kind": "lee",
       "center": {
-        "lat": 36.97,
-        "lon": 24.7
+        "lat": 36.9705,
+        "lon": 24.7025
       },
-      "obstacleRadiusNm": 3,
+      "obstacleRadiusNm": 3.6,
       "lobeNm": 11,
       "factor": 0.42,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 680 m. Hoechste der vier noerdlichen Korridor-Inseln. Im Bild Milos/Kimolos/Sifnos als blaue Flaeche SSW der Insel bis hinunter nach Polyaigos sichtbar. Steilkueste im Sueden — die Fallboeen stehen hier besonders scharf.",
-      "kalibriertAus": "Hoechste der vier noerdlichen Korridor-Inseln. Im Bild Milos/Kimolos/Sifnos als blaue Flaeche SSW der Insel bis hinunter nach Polyaigos sichtbar. Steilkueste im Sueden — die Fallboeen stehen hier besonders scharf. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 680 m. Mittelpunkt und Hindernisradius aus der Landmaske (368 Landzellen, Schwerpunkt 0.1 sm von der Bibliotheks-Koordinate entfernt). Hoechste der vier noerdlichen Korridor-Inseln. Im Bild Milos/Kimolos/Sifnos als blaue Flaeche SSW der Insel bis hinunter nach Polyaigos sichtbar. Steilkueste im Sueden — die Fallboeen stehen hier besonders scharf.",
+      "kalibriertAus": "Hoechste der vier noerdlichen Korridor-Inseln. Im Bild Milos/Kimolos/Sifnos als blaue Flaeche SSW der Insel bis hinunter nach Polyaigos sichtbar. Steilkueste im Sueden — die Fallboeen stehen hier besonders scharf. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -72,14 +72,14 @@
       "kind": "lee",
       "center": {
         "lat": 36.7667,
-        "lon": 24.6333
+        "lon": 24.636
       },
-      "obstacleRadiusNm": 2,
+      "obstacleRadiusNm": 1.5,
       "lobeNm": 6,
       "factor": 0.55,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 358 m. NACHGETRAGEN 2026-08-07. Im Bild Milos/Kimolos/Sifnos als eigener, deutlich abgegrenzter blauer Fleck ueber und suedwestlich der Insel sichtbar — die kleinste Zone dieser Datei, die sich sauber isolieren liess.",
-      "kalibriertAus": "NACHGETRAGEN 2026-08-07. Im Bild Milos/Kimolos/Sifnos als eigener, deutlich abgegrenzter blauer Fleck ueber und suedwestlich der Insel sichtbar — die kleinste Zone dieser Datei, die sich sauber isolieren liess. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 358 m. Mittelpunkt und Hindernisradius aus der Landmaske (86 Landzellen, Schwerpunkt 0.1 sm von der Bibliotheks-Koordinate entfernt). Im Bild Milos/Kimolos/Sifnos als eigener, deutlich abgegrenzter blauer Fleck ueber und suedwestlich der Insel sichtbar — die kleinste Zone dieser Datei, die sich sauber isolieren liess.",
+      "kalibriertAus": "Im Bild Milos/Kimolos/Sifnos als eigener, deutlich abgegrenzter blauer Fleck ueber und suedwestlich der Insel sichtbar — die kleinste Zone dieser Datei, die sich sauber isolieren liess. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -87,15 +87,15 @@
       "name": "Lee Kimolos",
       "kind": "lee",
       "center": {
-        "lat": 36.7833,
-        "lon": 24.5667
+        "lat": 36.8079,
+        "lon": 24.5588
       },
-      "obstacleRadiusNm": 2,
+      "obstacleRadiusNm": 1.8,
       "lobeNm": 6,
       "factor": 0.55,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 364 m. NACHGETRAGEN 2026-08-07. Die Insel liegt im Bild, ihre Zunge aber NICHT isoliert: sie faellt mit den Schatten von Sifnos und Polyaigos zusammen. Faktor und Laenge deshalb nach Gipfelhoehe abgeleitet — beraet, bewertet nicht.",
-      "kalibriertAus": "NACHGETRAGEN 2026-08-07. Die Insel liegt im Bild, ihre Zunge aber NICHT isoliert: sie faellt mit den Schatten von Sifnos und Polyaigos zusammen. Faktor und Laenge deshalb nach Gipfelhoehe abgeleitet — beraet, bewertet nicht. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 364 m. Mittelpunkt und Hindernisradius aus der Landmaske (173 Landzellen, Schwerpunkt 1.5 sm von der Bibliotheks-Koordinate entfernt). Die Insel liegt im Bild, ihre Zunge aber NICHT isoliert: sie faellt mit den Schatten von Sifnos und Polyaigos zusammen. Faktor deshalb nach Gipfelhoehe abgeleitet — beraet, bewertet nicht.",
+      "kalibriertAus": "Die Insel liegt im Bild, ihre Zunge aber NICHT isoliert: sie faellt mit den Schatten von Sifnos und Polyaigos zusammen. Faktor deshalb nach Gipfelhoehe abgeleitet — beraet, bewertet nicht. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -103,15 +103,15 @@
       "name": "Lee Milos",
       "kind": "lee",
       "center": {
-        "lat": 36.7333,
-        "lon": 24.4167
+        "lat": 36.7037,
+        "lon": 24.4358
       },
-      "obstacleRadiusNm": 5,
+      "obstacleRadiusNm": 5.1,
       "lobeNm": 13,
       "factor": 0.42,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 751 m. NACHGETRAGEN 2026-08-07 — und ausgerechnet fuer den Wendepunkt, den der Solver aktuell waehlt. Milos liegt im Bild, aber am suedwestlichen Rand, wo die freie Anstroemung selbst schon schwaecher ist; die Zunge liess sich vom grossflaechigen Gefaelle nicht trennen. Dazu ist Milos mit seiner Riesenbucht die am schlechtesten durch einen Kreis genaeherte Insel des Reviers. Faktor und Laenge nach Gipfelhoehe abgeleitet — beraet, bewertet nicht. EIN Punktabruf im Lee von Milos wuerde das aufloesen und ist die lohnendste offene Messung dieser Datei.",
-      "kalibriertAus": "NACHGETRAGEN 2026-08-07 — und ausgerechnet fuer den Wendepunkt, den der Solver aktuell waehlt. Milos liegt im Bild, aber am suedwestlichen Rand, wo die freie Anstroemung selbst schon schwaecher ist; die Zunge liess sich vom grossflaechigen Gefaelle nicht trennen. Dazu ist Milos mit seiner Riesenbucht die am schlechtesten durch einen Kreis genaeherte Insel des Reviers. Faktor und Laenge nach Gipfelhoehe abgeleitet — beraet, bewertet nicht. EIN Punktabruf im Lee von Milos wuerde das aufloesen und ist die lohnendste offene Messung dieser Datei. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 751 m. Mittelpunkt und Hindernisradius aus der Landmaske (738 Landzellen, Schwerpunkt 2.0 sm von der Bibliotheks-Koordinate entfernt). Der Faktor ist ungemessen: Milos liegt im Bild, aber am suedwestlichen Rand, wo die freie Anstroemung selbst schon schwaecher ist; die Zunge liess sich vom grossflaechigen Gefaelle nicht trennen. WAS DIESE ZONE BESONDERS MACHT: ihr Mittelpunkt lag bis 2026-08-07 im Hafen in der BUCHT, also im Wasser und 2 sm neben dem Landschwerpunkt — die Keule setzte an der falschen Stelle an und deckte 16 Etappenpunkte, die gar nicht im Lee liegen. Richtig platziert deckt sie GENAU EINEN Forecast-Ort: milos-kleftiko, den klassischen Meltemi-Ankerplatz an der SW-Kueste. Alles andere um Milos liegt in Luv — die Etappen verlassen Adamas nach Norden, also gegen den Wind. Eine Messung des Faktors wuerde an dieser Bibliothek deshalb NICHTS aendern; die Zone ist richtig und wirkungslos zugleich.",
+      "kalibriertAus": "Der Faktor ist ungemessen: Milos liegt im Bild, aber am suedwestlichen Rand, wo die freie Anstroemung selbst schon schwaecher ist; die Zunge liess sich vom grossflaechigen Gefaelle nicht trennen. WAS DIESE ZONE BESONDERS MACHT: ihr Mittelpunkt lag bis 2026-08-07 im Hafen in der BUCHT, also im Wasser und 2 sm neben dem Landschwerpunkt — die Keule setzte an der falschen Stelle an und deckte 16 Etappenpunkte, die gar nicht im Lee liegen. Richtig platziert deckt sie GENAU EINEN Forecast-Ort: milos-kleftiko, den klassischen Meltemi-Ankerplatz an der SW-Kueste. Alles andere um Milos liegt in Luv — die Etappen verlassen Adamas nach Norden, also gegen den Wind. Eine Messung des Faktors wuerde an dieser Bibliothek deshalb NICHTS aendern; die Zone ist richtig und wirkungslos zugleich. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -119,15 +119,15 @@
       "name": "Lee Sikinos",
       "kind": "lee",
       "center": {
-        "lat": 36.6833,
-        "lon": 25.1167
+        "lat": 36.6792,
+        "lon": 25.1198
       },
       "obstacleRadiusNm": 2,
       "lobeNm": 9,
       "factor": 0.45,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 553 m. NACHGETRAGEN 2026-08-07. Im Bild Folegandros/Sikinos (10.08., 15:00 LT, Wind aus NNW) als klar abgegrenzte blaue Zunge SSE der Insel abgelesen — dasselbe Bild, an dem sich zeigte, dass ein Schatten mit dem Wind dreht.",
-      "kalibriertAus": "NACHGETRAGEN 2026-08-07. Im Bild Folegandros/Sikinos (10.08., 15:00 LT, Wind aus NNW) als klar abgegrenzte blaue Zunge SSE der Insel abgelesen — dasselbe Bild, an dem sich zeigte, dass ein Schatten mit dem Wind dreht. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 553 m. Mittelpunkt und Hindernisradius aus der Landmaske (190 Landzellen, Schwerpunkt 0.3 sm von der Bibliotheks-Koordinate entfernt). Im Bild Folegandros/Sikinos (10.08., Wind aus NNW) als klar abgegrenzte blaue Zunge SSE der Insel abgelesen — dasselbe Bild, an dem sich zeigte, dass ein Schatten mit dem Wind dreht.",
+      "kalibriertAus": "Im Bild Folegandros/Sikinos (10.08., Wind aus NNW) als klar abgegrenzte blaue Zunge SSE der Insel abgelesen — dasselbe Bild, an dem sich zeigte, dass ein Schatten mit dem Wind dreht. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -135,15 +135,15 @@
       "name": "Lee Folegandros",
       "kind": "lee",
       "center": {
-        "lat": 36.6167,
-        "lon": 24.9167
+        "lat": 36.6271,
+        "lon": 24.9027
       },
-      "obstacleRadiusNm": 2.5,
+      "obstacleRadiusNm": 3.2,
       "lobeNm": 7,
       "factor": 0.5,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 414 m. NACHGETRAGEN 2026-08-07. Im selben Bild wie Sikinos, eigene Zunge SSE der Insel.",
-      "kalibriertAus": "NACHGETRAGEN 2026-08-07. Im selben Bild wie Sikinos, eigene Zunge SSE der Insel. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 414 m. Mittelpunkt und Hindernisradius aus der Landmaske (150 Landzellen, Schwerpunkt 0.9 sm von der Bibliotheks-Koordinate entfernt). Im selben Bild wie Sikinos, eigene Zunge SSE der Insel.",
+      "kalibriertAus": "Im selben Bild wie Sikinos, eigene Zunge SSE der Insel. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -151,15 +151,15 @@
       "name": "Lee Naxos",
       "kind": "lee",
       "center": {
-        "lat": 37.06,
-        "lon": 25.42
+        "lat": 37.0613,
+        "lon": 25.4831
       },
-      "obstacleRadiusNm": 5,
+      "obstacleRadiusNm": 6.2,
       "lobeNm": 17,
       "factor": 0.35,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 1004 m. Zas ist der hoechste Berg der Kykladen und wirft die laengste Keule des Reviers: in der Weitwinkel-Aufnahme (10.08.) reicht die blaue Zunge rund 15-20 sm nach SW und deckt bei NE-Meltemi die halbe Strecke nach Ios/Sikinos ab.",
-      "kalibriertAus": "Zas ist der hoechste Berg der Kykladen und wirft die laengste Keule des Reviers: in der Weitwinkel-Aufnahme (10.08.) reicht die blaue Zunge rund 15-20 sm nach SW und deckt bei NE-Meltemi die halbe Strecke nach Ios/Sikinos ab. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 1004 m. Mittelpunkt und Hindernisradius aus der Landmaske (1992 Landzellen, Schwerpunkt 3.0 sm von der Bibliotheks-Koordinate entfernt). Zas ist der hoechste Berg der Kykladen und wirft die laengste Keule des Reviers: in der Weitwinkel-Aufnahme (10.08.) reicht die blaue Zunge rund 15-20 sm nach SW und deckt bei NE-Meltemi die halbe Strecke nach Ios/Sikinos ab.",
+      "kalibriertAus": "Zas ist der hoechste Berg der Kykladen und wirft die laengste Keule des Reviers: in der Weitwinkel-Aufnahme (10.08.) reicht die blaue Zunge rund 15-20 sm nach SW und deckt bei NE-Meltemi die halbe Strecke nach Ios/Sikinos ab. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -167,15 +167,15 @@
       "name": "Lee Paros",
       "kind": "lee",
       "center": {
-        "lat": 37.08,
-        "lon": 25.15
+        "lat": 37.0595,
+        "lon": 25.1927
       },
       "obstacleRadiusNm": 4,
       "lobeNm": 13,
       "factor": 0.4,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 771 m. In der Weitwinkel-Aufnahme abgelesen. Bei N-Lagen deckt die Keule den Weg nach Sifnos, bei NE die Bucht von Antiparos.",
-      "kalibriertAus": "In der Weitwinkel-Aufnahme abgelesen. Bei N-Lagen deckt die Keule den Weg nach Sifnos, bei NE die Bucht von Antiparos. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 771 m. Mittelpunkt und Hindernisradius aus der Landmaske (920 Landzellen, Schwerpunkt 2.4 sm von der Bibliotheks-Koordinate entfernt). In der Weitwinkel-Aufnahme abgelesen. Bei N-Lagen deckt die Keule den Weg nach Sifnos, bei NE die Bucht von Antiparos.",
+      "kalibriertAus": "In der Weitwinkel-Aufnahme abgelesen. Bei N-Lagen deckt die Keule den Weg nach Sifnos, bei NE die Bucht von Antiparos. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -183,15 +183,15 @@
       "name": "Lee Ios",
       "kind": "lee",
       "center": {
-        "lat": 36.7167,
-        "lon": 25.3
+        "lat": 36.722,
+        "lon": 25.3262
       },
-      "obstacleRadiusNm": 3,
+      "obstacleRadiusNm": 4,
       "lobeNm": 12,
       "factor": 0.37,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 713 m. DIE GEMESSENE ZONE: der Punktabruf liegt in ihrer Keule. Die einzige Zone, deren Faktor auf einem abgelesenen Zahlenwert beruht statt auf einer Farbe.",
-      "kalibriertAus": "DIE GEMESSENE ZONE: der Punktabruf liegt in ihrer Keule. Die einzige Zone, deren Faktor auf einem abgelesenen Zahlenwert beruht statt auf einer Farbe. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 713 m. Mittelpunkt und Hindernisradius aus der Landmaske (509 Landzellen, Schwerpunkt 1.3 sm von der Bibliotheks-Koordinate entfernt). DIE GEMESSENE ZONE: der Punktabruf liegt in ihrer Keule. Die einzige Zone, deren Faktor auf einem abgelesenen Zahlenwert beruht statt auf einer Farbe.",
+      "kalibriertAus": "DIE GEMESSENE ZONE: der Punktabruf liegt in ihrer Keule. Die einzige Zone, deren Faktor auf einem abgelesenen Zahlenwert beruht statt auf einer Farbe. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -199,15 +199,15 @@
       "name": "Lee Amorgos",
       "kind": "lee",
       "center": {
-        "lat": 36.83,
-        "lon": 25.89
+        "lat": 36.8463,
+        "lon": 25.9014
       },
-      "obstacleRadiusNm": 2.5,
+      "obstacleRadiusNm": 6.3,
       "lobeNm": 14,
       "factor": 0.38,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 821 m. Lang und schmal (~30x6 km) — schmale, aber weit reichende Keule nach SW, an der der Rueckweg aus der Ost-Aegaeis entlanglaeuft. In der Weitwinkel-Aufnahme abgelesen.",
-      "kalibriertAus": "Lang und schmal (~30x6 km) — schmale, aber weit reichende Keule nach SW, an der der Rueckweg aus der Ost-Aegaeis entlanglaeuft. In der Weitwinkel-Aufnahme abgelesen. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 821 m. Mittelpunkt und Hindernisradius aus der Landmaske (559 Landzellen, Schwerpunkt 1.1 sm von der Bibliotheks-Koordinate entfernt). Lang und schmal — schmale, aber weit reichende Keule nach SW, an der der Rueckweg aus der Ost-Aegaeis entlanglaeuft. In der Weitwinkel-Aufnahme abgelesen.",
+      "kalibriertAus": "Lang und schmal — schmale, aber weit reichende Keule nach SW, an der der Rueckweg aus der Ost-Aegaeis entlanglaeuft. In der Weitwinkel-Aufnahme abgelesen. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -215,15 +215,15 @@
       "name": "Lee Syros",
       "kind": "lee",
       "center": {
-        "lat": 37.4333,
-        "lon": 24.9167
+        "lat": 37.432,
+        "lon": 24.9139
       },
-      "obstacleRadiusNm": 2.5,
+      "obstacleRadiusNm": 3.2,
       "lobeNm": 7,
       "factor": 0.5,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 442 m. Lag im Bildausschnitt der ersten Poseidon-Aufnahme (Ermoupolis mittig); Abdeckung sued/suedwest der Insel dort unmittelbar sichtbar.",
-      "kalibriertAus": "Lag im Bildausschnitt der ersten Poseidon-Aufnahme (Ermoupolis mittig); Abdeckung sued/suedwest der Insel dort unmittelbar sichtbar. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 442 m. Mittelpunkt und Hindernisradius aus der Landmaske (393 Landzellen, Schwerpunkt 0.2 sm von der Bibliotheks-Koordinate entfernt). Lag im Bildausschnitt der ersten Poseidon-Aufnahme (Ermoupolis mittig); Abdeckung sued/suedwest der Insel dort unmittelbar sichtbar.",
+      "kalibriertAus": "Lag im Bildausschnitt der ersten Poseidon-Aufnahme (Ermoupolis mittig); Abdeckung sued/suedwest der Insel dort unmittelbar sichtbar. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "mittel"
     },
     {
@@ -231,15 +231,15 @@
       "name": "Lee Andros",
       "kind": "lee",
       "center": {
-        "lat": 37.85,
-        "lon": 24.85
+        "lat": 37.8574,
+        "lon": 24.8486
       },
-      "obstacleRadiusNm": 5,
+      "obstacleRadiusNm": 8.9,
       "lobeNm": 17,
       "factor": 0.35,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 997 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 997 m. Mittelpunkt und Hindernisradius aus der Landmaske (1770 Landzellen, Schwerpunkt 0.4 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -247,15 +247,15 @@
       "name": "Lee Tinos",
       "kind": "lee",
       "center": {
-        "lat": 37.55,
-        "lon": 25.15
+        "lat": 37.6039,
+        "lon": 25.1323
       },
-      "obstacleRadiusNm": 4,
+      "obstacleRadiusNm": 6.9,
       "lobeNm": 12,
       "factor": 0.4,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 713 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 713 m. Mittelpunkt und Hindernisradius aus der Landmaske (907 Landzellen, Schwerpunkt 3.3 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -263,15 +263,15 @@
       "name": "Lee Mykonos",
       "kind": "lee",
       "center": {
-        "lat": 37.45,
-        "lon": 25.35
+        "lat": 37.4543,
+        "lon": 25.3739
       },
-      "obstacleRadiusNm": 3,
+      "obstacleRadiusNm": 3.6,
       "lobeNm": 6,
       "factor": 0.55,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 341 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 341 m. Mittelpunkt und Hindernisradius aus der Landmaske (401 Landzellen, Schwerpunkt 1.2 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -279,15 +279,15 @@
       "name": "Lee Antiparos",
       "kind": "lee",
       "center": {
-        "lat": 37.0,
-        "lon": 25.05
+        "lat": 36.9995,
+        "lon": 25.0535
       },
-      "obstacleRadiusNm": 2,
+      "obstacleRadiusNm": 1.9,
       "lobeNm": 5,
       "factor": 0.58,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 301 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 301 m. Mittelpunkt und Hindernisradius aus der Landmaske (162 Landzellen, Schwerpunkt 0.2 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -295,15 +295,15 @@
       "name": "Lee Iraklia",
       "kind": "lee",
       "center": {
-        "lat": 36.85,
-        "lon": 25.45
+        "lat": 36.8398,
+        "lon": 25.4531
       },
-      "obstacleRadiusNm": 2,
+      "obstacleRadiusNm": 1.3,
       "lobeNm": 7,
       "factor": 0.5,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 419 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 419 m. Mittelpunkt und Hindernisradius aus der Landmaske (83 Landzellen, Schwerpunkt 0.6 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -311,15 +311,15 @@
       "name": "Lee Keros",
       "kind": "lee",
       "center": {
-        "lat": 36.88,
-        "lon": 25.65
+        "lat": 36.889,
+        "lon": 25.6487
       },
-      "obstacleRadiusNm": 1.5,
+      "obstacleRadiusNm": 1.7,
       "lobeNm": 7,
       "factor": 0.5,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 432 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 432 m. Mittelpunkt und Hindernisradius aus der Landmaske (67 Landzellen, Schwerpunkt 0.5 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -327,15 +327,15 @@
       "name": "Lee Donousa",
       "kind": "lee",
       "center": {
-        "lat": 37.1,
-        "lon": 25.8
+        "lat": 37.1087,
+        "lon": 25.8136
       },
-      "obstacleRadiusNm": 1.5,
+      "obstacleRadiusNm": 1.3,
       "lobeNm": 6,
       "factor": 0.53,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 385 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 385 m. Mittelpunkt und Hindernisradius aus der Landmaske (61 Landzellen, Schwerpunkt 0.8 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -343,15 +343,15 @@
       "name": "Lee Santorin",
       "kind": "lee",
       "center": {
-        "lat": 36.4,
-        "lon": 25.43
+        "lat": 36.3984,
+        "lon": 25.4367
       },
-      "obstacleRadiusNm": 4,
+      "obstacleRadiusNm": 3.6,
       "lobeNm": 9,
       "factor": 0.45,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 567 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 567 m. Mittelpunkt und Hindernisradius aus der Landmaske (359 Landzellen, Schwerpunkt 0.3 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -359,15 +359,15 @@
       "name": "Lee Thirasia",
       "kind": "lee",
       "center": {
-        "lat": 36.43,
-        "lon": 25.34
+        "lat": 36.4334,
+        "lon": 25.3414
       },
-      "obstacleRadiusNm": 1,
+      "obstacleRadiusNm": 0.9,
       "lobeNm": 5,
       "factor": 0.58,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 295 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 295 m. Mittelpunkt und Hindernisradius aus der Landmaske (46 Landzellen, Schwerpunkt 0.2 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -375,31 +375,15 @@
       "name": "Lee Anafi",
       "kind": "lee",
       "center": {
-        "lat": 36.35,
-        "lon": 25.77
+        "lat": 36.367,
+        "lon": 25.7818
       },
-      "obstacleRadiusNm": 2,
+      "obstacleRadiusNm": 2.9,
       "lobeNm": 10,
       "factor": 0.45,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 584 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
-      "confidence": "niedrig"
-    },
-    {
-      "id": "topo-lee-methana",
-      "name": "Lee Methana",
-      "kind": "lee",
-      "center": {
-        "lat": 37.58,
-        "lon": 23.38
-      },
-      "obstacleRadiusNm": 2.5,
-      "lobeNm": 12,
-      "factor": 0.42,
-      "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 740 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 584 m. Mittelpunkt und Hindernisradius aus der Landmaske (180 Landzellen, Schwerpunkt 1.2 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -407,15 +391,15 @@
       "name": "Lee Hydra",
       "kind": "lee",
       "center": {
-        "lat": 37.35,
-        "lon": 23.47
+        "lat": 37.3338,
+        "lon": 23.4689
       },
-      "obstacleRadiusNm": 2.5,
+      "obstacleRadiusNm": 3.8,
       "lobeNm": 10,
       "factor": 0.45,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 590 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 590 m. Mittelpunkt und Hindernisradius aus der Landmaske (228 Landzellen, Schwerpunkt 1.0 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -423,47 +407,15 @@
       "name": "Lee Aegina",
       "kind": "lee",
       "center": {
-        "lat": 37.75,
-        "lon": 23.43
+        "lat": 37.7349,
+        "lon": 23.4895
       },
-      "obstacleRadiusNm": 4,
+      "obstacleRadiusNm": 3.2,
       "lobeNm": 9,
       "factor": 0.47,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 532 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
-      "confidence": "niedrig"
-    },
-    {
-      "id": "topo-lee-salamina",
-      "name": "Lee Salamina",
-      "kind": "lee",
-      "center": {
-        "lat": 37.92,
-        "lon": 23.5
-      },
-      "obstacleRadiusNm": 4,
-      "lobeNm": 7,
-      "factor": 0.5,
-      "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 404 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
-      "confidence": "niedrig"
-    },
-    {
-      "id": "topo-lee-poros",
-      "name": "Lee Poros",
-      "kind": "lee",
-      "center": {
-        "lat": 37.5,
-        "lon": 23.45
-      },
-      "obstacleRadiusNm": 2,
-      "lobeNm": 6,
-      "factor": 0.55,
-      "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 358 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 532 m. Mittelpunkt und Hindernisradius aus der Landmaske (384 Landzellen, Schwerpunkt 3.0 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
@@ -471,15 +423,15 @@
       "name": "Lee Angistri",
       "kind": "lee",
       "center": {
-        "lat": 37.7,
-        "lon": 23.35
+        "lat": 37.695,
+        "lon": 23.3471
       },
-      "obstacleRadiusNm": 1.5,
+      "obstacleRadiusNm": 0.9,
       "lobeNm": 5,
       "factor": 0.58,
       "fallboeenNm": 0.5,
-      "sourceNote": "Gipfelhoehe 285 m.",
-      "kalibriertAus": "NIE IM BILD GESEHEN. Lage, Laenge und Faktor sind allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft, die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm).",
+      "sourceNote": "Gipfelhoehe 285 m. Mittelpunkt und Hindernisradius aus der Landmaske (53 Landzellen, Schwerpunkt 0.3 sm von der Bibliotheks-Koordinate entfernt).",
+      "kalibriertAus": "NIE IM BILD GESEHEN. Der Faktor ist allein aus der Gipfelhoehe abgeleitet — die Zone behauptet nur, was Stroemungsmechanik ohnehin sagt: hinter einem hohen Hindernis liegt Abdeckung. WIE VIEL, weiss sie nicht. Deshalb 'niedrig': sie erscheint als Hinweis an der Etappe und geht in die Kursoptimierung ein, aber sie fasst keine Ampel an. Anker aller Faktoren ist der einzige GEMESSENE Wert dieser Datei: Punktabruf im Poseidon-Modell vom 10.08.2026, 15:00 LT, sued von Ios — 'wind: 12 km/h' (6,5 kn) bei rund 32 km/h freier Anstroemung in derselben Kachel, also Faktor 0,37 dicht hinter der Insel. Alle uebrigen Faktoren sind daraus nach Gipfelhoehe abgestuft; die Keulenlaenge folgt lobeNm ~ Gipfelhoehe/60 (empirisch: Naxos 1004 m -> 15-20 sm, Ios 713 m -> 10-12 sm). Mittelpunkt und Hindernisradius kommen NICHT aus der Hand, sondern aus der Landmaske (seeding/tools/leeZones.ts).",
       "confidence": "niedrig"
     },
     {
