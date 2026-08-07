@@ -191,14 +191,15 @@ describe('preferred — das Konzept überschreibt die Reichweite', () => {
     distinctIslands: 3,
     clockwise: true,
     turnDay: 2,
-    harbourDays: 1,
+    legDays: 4,
+    repeatStays: 0,
     stages: 4,
     bandDevTenths: 0,
-    harbourDev: 0,
+    kreuzTenthsRueckweg: 0,
     kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
-    maxHarbourRun: 1,
+    umlaufsinnPasst: null,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),

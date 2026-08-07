@@ -1579,25 +1579,17 @@ button.stage-capsule:only-child::after {
   border-color: #e3b6af;
 }
 
-/* "Früh los, 15:00 vor Anker" — die Abfahrtsempfehlung des Etappentags. */
-.abfahrt-zeile {
-  font: 400 14px/1.45 var(--font-sans);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
-  margin: var(--space-2) 0;
-  border: 1px solid var(--border-hairline);
-  background: var(--ampel-gruen-tint);
-  color: var(--ampel-gruen-text);
+/* "Früh los, 15:00 vor Anker" — die Abfahrtsempfehlung als KLEINER HINWEIS in
+   der Abfahrt-Kachel (Skipper 2026-08-07). Als getönter Kasten unter den
+   Kacheln war sie drei Zeilen Text für eine Zahl, die einen Meter weiter oben
+   schon steht. Sie ist eine Fussnote zur Abfahrt und sieht jetzt auch so aus;
+   ihre Herleitung trägt der Titel. */
+.abfahrt-hinweis {
+  font: 400 11.5px/1.3 var(--font-sans);
+  color: var(--ink-secondary);
+  margin-top: 2px;
 }
-.abfahrt-zeile.verfehlt {
-  background: var(--ampel-gelb-tint);
-  color: var(--ampel-gelb-text);
-  border-color: var(--ampel-gelb-tint);
-}
-.abfahrt-zeile button {
-  margin-left: var(--space-2);
-  margin-top: var(--space-1);
-}
+.abfahrt-hinweis.verfehlt { color: var(--ampel-gelb-text); }
 
 /* Entscheidungstor: Festlegung dahinter — gedeckt oder nicht. */
 .tor-zeile {
@@ -2977,32 +2969,42 @@ button.stage-thumb {
   max-height: min(60vh, 340px);
   font-variant-numeric: tabular-nums;
 }
-/* Problematische Abschnitte (Kreuz/Halbwind) unter den Kacheln der
-   Etappenkarte. Sie tragen den Ampel-Tint der Badge-Pille, aber Fliesstext-Typo:
-   das hier ist eine ZEILE, die gelesen wird ("ca. 4 sm Kreuz (16 kn)"), kein
-   Zustandswort in Versalien. Das Urteil steht am Ende als eigenes Wort — Farbe
-   allein trägt in dieser App keine Bedeutung. */
-.kurs-liste {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-.kurs-zeile {
-  font: 600 13px/1.35 var(--font-sans);
-  letter-spacing: 0;
+/* Problematische Abschnitte (Kreuz/Halbwind) als CHIP bei Länge und Dauer
+   (Skipper 2026-08-07). Zuvor war es ein eigener getönter Block unter den
+   Kacheln — er las sich wie ein zweites Urteil über den Tag und passte
+   optisch in keine der Reihen. Als Chip steht die Angabe neben "36 sm" und
+   "4,9 h Fahrt", also bei den Zahlen, die sie aufschlüsselt; der Ampel-Tint
+   sagt, wie schwer sie wiegt.
+
+   Dieser Chip MUSS umbrechen dürfen: das `white-space: nowrap` der Chip-Reihe
+   hielt eine Angabe wie "ca. 18 sm Kreuz (17 kn) · davon 4 sm Kreuzschläge" in
+   einer Zeile — auf dem Telefon schob sie die ganze Seite quer aus dem Screen
+   (Skipper 2026-08-07). Der Punkt sitzt dann per Rand auf Höhe der ERSTEN
+   Zeile statt mittig zum Block. */
+.kurs-chip {
+  align-items: flex-start;
+  white-space: normal;
+  max-width: 100%;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.kurs-zeile .urteil {
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 11px;
-  opacity: 0.75;
+/* Der Tint muss die neutrale Chip-Fläche ÜBERSCHREIBEN: `.chip` steht später
+   im Blatt als `.ampel-gelb` und gewänne sonst mit gleicher Spezifität. */
+.kurs-chip.ampel-gelb {
+  background: var(--ampel-gelb-tint);
+  color: var(--ampel-gelb-text);
 }
-.kurs-zeile .urteil::before {
-  content: '·';
-  margin-right: var(--space-1);
+.kurs-chip.ampel-rot {
+  background: var(--ampel-rot-tint);
+  color: var(--ampel-rot-text);
+}
+.kurs-chip .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+  flex: none;
+  margin-top: 4px;
 }
 .berth-line {
   display: flex;
@@ -3039,15 +3041,6 @@ button.stage-thumb {
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
-/* Zielmodell v2 — Heimweg-Status als Caption-Zeile (ohne Emoji). */
-.return-note {
-  font: 400 12.5px/1.4 var(--font-sans);
-  color: var(--ink-secondary);
-  margin-top: var(--space-2);
-}
-.return-note.status-wetterfenster { color: var(--ampel-gelb-text); }
-.return-note.status-kritisch { color: var(--ampel-rot-text); }
-
 /* ---- chips ---- */
 .chip {
   display: inline-flex;

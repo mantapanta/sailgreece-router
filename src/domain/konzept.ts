@@ -408,6 +408,113 @@ function staerksterLauf(
 }
 
 /**
+ * DER UMLAUFSINN — welche Drehrichtung die Wetterlage vorgibt.
+ *
+ * Skipper 2026-08-07: "der Trip sollte im Uhrzeigersinn geplant werden, um auf
+ * dem Rückweg so wenig wie möglich am Wind zu erzeugen — es sei denn es ist
+ * wenig Wind, dann geht das, oder auch im Windschatten."
+ *
+ * Bis dahin war `clockwise` (geo.ts) ein UNBEDINGTES Rangkriterium auf Platz 12
+ * von 14 und damit reine Kosmetik: es entschied fast nie etwas, und wenn doch,
+ * dann auch bei Flaute, wo die Drehrichtung nichts kostet.
+ *
+ * Der eigentliche Befund dahinter: `konzeptLageFor` beurteilt die Wetterlage
+ * ausschliesslich über die WINDSTÄRKE. Die Windrichtung liegt im Forecast
+ * (`windDirDeg`), wurde aber von der gesamten Lage-Beurteilung nie gelesen —
+ * eine Revier-Logik, die den Meltemi kennt, ohne je zu prüfen, woher er weht.
+ */
+export type Umlaufsinn = 'im-uhrzeigersinn' | 'gegen-uhrzeigersinn' | 'egal';
+
+/**
+ * Windgewichtetes Vektormittel der Windrichtung über das Törnfenster.
+ *
+ * GEWICHTET mit der Windstärke, weil ein ungewichtetes Richtungsmittel von
+ * Flautenstunden verwässert wird — und genau die Stunden sind für die Frage
+ * "wo droht mir Am-Wind?" ohne Belang.
+ *
+ * Zurückgegeben werden die mittlere Herkunftsrichtung, die mittlere wirksame
+ * Stärke und die KOHÄRENZ: die Länge des normierten Mittelvektors in [0,1].
+ * 1 heisst "alle Stunden aus derselben Richtung", nahe 0 "der Wind dreht" —
+ * und aus einem drehenden Fenster darf keine Drehrichtung folgen, sonst ist
+ * das Gebot ein Rechenartefakt.
+ */
+export function windMittelFor(snapshot: PlanningSnapshot): {
+  fromDeg: number | null;
+  kn: number;
+  kohaerenz: number;
+} {
+  const { params, times, forecast } = snapshot;
+  const frame = deadlineFrame(params);
+  const startMs = athensToUtcMs(dateForTripDay(params.tripStartDate, snapshot.trip.currentDay), 0);
+  const endMs =
+    athensToUtcMs(dateForTripDay(params.tripStartDate, frame.deadlineDay), 0) + 24 * 3600_000;
+  const idx = hourIndices({ startMs, endMs }, times);
+
+  let x = 0;
+  let y = 0;
+  let sumKn = 0;
+  let n = 0;
+  for (const fc of Object.values(forecast)) {
+    for (const i of idx) {
+      const kn = fc.windKn[i];
+      const dir = fc.windDirDeg[i];
+      if (kn === null || kn === undefined || dir === null || dir === undefined) continue;
+      const rad = (dir * Math.PI) / 180;
+      x += kn * Math.sin(rad);
+      y += kn * Math.cos(rad);
+      sumKn += kn;
+      n++;
+    }
+  }
+  if (n === 0 || sumKn === 0) return { fromDeg: null, kn: 0, kohaerenz: 0 };
+
+  const laenge = Math.sqrt(x * x + y * y);
+  const fromDeg = ((Math.atan2(x, y) * 180) / Math.PI + 360) % 360;
+  return {
+    fromDeg,
+    // Die WIRKSAME Stärke: der Betrag des Mittelvektors je Stunde. Ein Fenster
+    // mit 20 kn aus wechselnden Richtungen ist für diese Frage schwächer als
+    // eines mit 14 kn stetig aus Nord — und genau so soll es gewichtet sein.
+    kn: laenge / n,
+    kohaerenz: laenge / sumKn,
+  };
+}
+
+const umlaufsinnCache = new WeakMap<PlanningSnapshot, Umlaufsinn>();
+
+/**
+ * Die EINE Antwort auf "in welche Richtung soll die Runde laufen?".
+ *
+ * Nördliche Komponente (der Meltemi-Normalfall) → im Uhrzeigersinn: mit dem
+ * Wind nach Süden raus, im westlichen Lee zurück. Südliche Komponente →
+ * spiegelbildlich gegen den Uhrzeigersinn; ohne diesen Fall wäre die Regel ein
+ * Dogma statt einer Windregel. Zu wenig oder zu unstet → 'egal', und dann
+ * entscheidet die Drehrichtung in `preferred` nichts mehr.
+ */
+export function umlaufsinnGebot(snapshot: PlanningSnapshot): Umlaufsinn {
+  const cached = umlaufsinnCache.get(snapshot);
+  if (cached) return cached;
+  const { params } = snapshot;
+  const mittel = windMittelFor(snapshot);
+
+  let gebot: Umlaufsinn = 'egal';
+  if (
+    mittel.fromDeg !== null &&
+    mittel.kn >= params.umlaufsinnMinKn &&
+    mittel.kohaerenz >= params.umlaufsinnMinKohaerenz
+  ) {
+    // Nord-Komponente der HERKUNFT: cos(fromDeg) > 0 heisst "aus Norden".
+    const nord = Math.cos((mittel.fromDeg * Math.PI) / 180);
+    // Ein rein querab stehendes Mittel (Ost/West) gibt keine Drehrichtung vor —
+    // dann bleibt es bei 'egal' statt eine Richtung zu erfinden.
+    if (nord > 0.2) gebot = 'im-uhrzeigersinn';
+    else if (nord < -0.2) gebot = 'gegen-uhrzeigersinn';
+  }
+  umlaufsinnCache.set(snapshot, gebot);
+  return gebot;
+}
+
+/**
  * Memo je Snapshot-Objekt: die Lage wird vom Solver (jede preferred-Metrik),
  * vom Optionsraum und vom Assessment gebraucht — einmal rechnen reicht.
  */
@@ -582,6 +689,25 @@ export function rueckwegEmpfehlungFor(
       'Am-Wind-Etappen des Rückwegs früh auslaufen (≈ 06:00): die ersten ' +
         '15–20 sm fallen ins morgendliche Windminimum — der Meltemi erreicht ' +
         'sein Maximum zwischen 13 und 17 Uhr.',
+    );
+  }
+
+  /**
+   * Der UMLAUFSINN, aus derselben Rechnung, mit der der Solver gerankt hat
+   * (AD-3: eine Rechnung, eine Aussage). Er steht am Schluss, weil er die
+   * gröbste der drei Rückweg-Kennzahlen ist — die gemessenen Kreuzstunden und
+   * die Lee-Korridor-Treue sagen konkreter, was den Heimweg kostet.
+   */
+  const gebot = umlaufsinnGebot(snapshot);
+  if (gebot !== 'egal') {
+    const mittel = windMittelFor(snapshot);
+    const richtung = gebot === 'im-uhrzeigersinn' ? 'im Uhrzeigersinn' : 'gegen den Uhrzeigersinn';
+    const woher = gebot === 'im-uhrzeigersinn' ? 'nördlich' : 'südlich';
+    out.push(
+      `Umlaufsinn ${richtung}: der Wind steht im Törnfenster stetig ${woher} ` +
+        `(${Math.round(mittel.fromDeg ?? 0)}°, wirksam ${Math.round(mittel.kn)} kn) — ` +
+        `mit ihm hinaus, im Lee zurück. Bei weniger als ${params.umlaufsinnMinKn} kn ` +
+        `wirksamem Wind spielt die Drehrichtung keine Rolle mehr.`,
     );
   }
   return out;

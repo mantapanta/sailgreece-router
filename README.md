@@ -369,15 +369,27 @@ wird nicht erfunden, er bleibt `unbewertet`.
 | Feld | Bedeutung | Default |
 |---|---|---|
 | `tripStartDate` | Kalenderdatum von Törntag 1 (`YYYY-MM-DD`) | `2026-08-08` |
-| `tripLengthDays` | Törnlänge in Tagen (Tag 1 … Tag N) | `12` |
-| `disembarkDay` | **Ausschiffungstag** (1-basiert). Die Rückkehr nach Alimos am **Vorabend** wird intern gerechnet: effektiver Stichtag = `disembarkDay − 1 − bufferDays`. Hier den Ausschiffungstag eintragen, **nicht** den Vorabend! | `12` |
-| `bufferDays` | Zusätzlicher Puffertag vor dem Vorabend (FR19) | `1` |
+| `tripLengthDays` | Törnlänge in Tagen (Tag 1 … Tag N) | `11` |
+| `returnDeadlineDate` | **DIE EINE Deadline** (AD-8/AD-9): Kalenderdatum der Rückgabe an der Basis. Alles andere — Stichtag in Törntagen, PoR-Reserve — wird daraus abgeleitet (`domain/time.ts` `deadlineFrame`). Nie eine zweite Deadline daneben pflegen. | `2026-08-18` |
+| `returnDeadlineHourAthens` | Uhrzeit der Rückgabe (Athen) — die Deadline ist ein Zeitpunkt, kein Tag | `18` |
+| `bufferDays` | PoR-Reserve in Tagen (FR19) — nur für den *Spätesten Umkehrtag*, nicht für die Plan-Gültigkeit | `1` |
 | `baseIslandId` / `basePlaceId` | Heimatbasis (Start/Ziel der Rückfallkette) | `athen` / `athen-alimos` |
 | `maxSnapNm` | Max. Distanz (sm), bis zu der ein GPS-Fix auf den nächsten Bibliotheksplatz gesnappt wird; weiter entfernte Fixes gelten als „außerhalb des Reviers" (sichtbare Meldung statt stummer Zuordnung) | `30` |
 | `nightLookaheadDays` | Wie viele Nächte ab heute für die Anzeige bewertet werden | `10` |
 
-Beispiel: `disembarkDay: 12`, `bufferDays: 1` ⇒ Basis muss bis **Tag 10**
-erreicht sein (Vorabend Tag 11, minus 1 Puffertag).
+Beispiel: `tripStartDate: 2026-08-08`, `returnDeadlineDate: 2026-08-18`
+⇒ Stichtag ist **Törntag 11**, und der Törn hat 11 Etappen — einen Törntag,
+eine Verbindung.
+
+> **Hafentage sind kein Parameter mehr** (Zielmodell v3, Skipper 2026-08-07).
+> `harbourDays`, `harbourDaysTargetMax` und `harbourDaysMax` sind entfallen.
+> Der Vertrag steht direkt in der Rangfolge des Solvers: jeder Törntag trägt
+> eine Etappe (`preferred`, Kriterium 2). Ein Tag ohne Etappe ist damit eine
+> schlechtere Runde und braucht kein eigenes Zielband. Ein Config-Dokument,
+> das die alten Schlüssel noch trägt, bleibt gültig — das Schema streift sie ab.
+>
+> `disembarkDay` ist ebenfalls entfallen. Es wurde vom Schema schon länger
+> stumm verworfen; maßgeblich ist `returnDeadlineDate`.
 
 ## Projektstruktur
 
@@ -517,12 +529,15 @@ Tag. Die Karte zeigt daraus je eine Zeile:
 
 ```
 ● ca. 4 sm Kreuz (16 kn) · GELB
-● ca. 10 sm Halbwind (9 kn) · GRÜN
 ```
 
 Gemeldet werden nur Kreuz (bis 60° TWA, plus alles, was gekreuzt werden muss)
 und Halbwind (bis 100°) — raumschots trägt der Wind, und ein Abschnitt, über den
-nichts zu sagen ist, gehört nicht in eine Warnliste. Die Meilen werden je
+nichts zu sagen ist, gehört nicht in eine Warnliste. **Grüne Abschnitte zeigt
+die Karte gar nicht** (Skipper 2026-08-07): eine Warnliste, in der die Hälfte
+der Zeilen „alles in Ordnung" sagt, wird überlesen. Gerechnet werden sie
+weiterhin mit, und `kursAbschnitte` trägt sie unverändert — weggelassen wird nur
+in der Anzeige. Die Meilen werden je
 Kategorie addiert, gemeldet wird der **stärkste** Wind über ihnen (dieselbe
 Doktrin wie bei der Platz-Ampel: die schlechteste Stunde trägt das Urteil). Die
 Schwellen stehen in der Konfiguration (AD-8), Grenzwerte zählen zum milderen

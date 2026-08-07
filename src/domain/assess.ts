@@ -21,7 +21,12 @@ import { placeNightAmpel, rankPlacesForNight } from './ampel.ts';
 import { reachableIslands } from './reach.ts';
 import { applyPersistenceAssumption } from './persistence.ts';
 import { applyWindTopo, leeHinweiseForStage, leeRueckwegSatz } from './windTopo.ts';
-import { assessRouteOption, deriveDayOptions, deriveDecisionPoints } from './options.ts';
+import {
+  assessTargetOption,
+  deriveDayOptions,
+  deriveDecisionPoints,
+  zielInseln,
+} from './options.ts';
 import {
   deriveKonzeptEntscheid,
   deriveTorChecks,
@@ -553,22 +558,28 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   const snapshot = withAbfahrtsempfehlungen(rohSnapshot, bestPlaceByIsland, nightAmpeln);
   const trip = snapshot.trip;
 
-  // --- option space, PPR, decision points, day options ---------------------
-  // Ordering by escalation rank is a domain criterion (AD-2): the assessment
-  // delivers routeOptions ORDERED (conservative first); views only consume.
-  // Die Rückfallkette ist der Heimweg, kein Ziel — sie als Option zu listen
-  // hiesse, dem Skipper "nach Hause fahren" als Alternative anzubieten.
-  const routesByRank = [...library.variants]
-    .filter((v) => !v.isReturnChain)
-    .sort((a, b) => a.escalationRank - b.escalationRank);
-  const routeOptions = routesByRank.map((route) =>
-    assessRouteOption(route, currentIslandId, snapshot),
-  );
+  /**
+   * --- OPTIONSRAUM ---------------------------------------------------------
+   *
+   * ZIELMODELL V3: Ziele sind INSELN, aus dem Suchraum abgeleitet (zielInseln)
+   * — nicht mehr die kuratierten Varianten. Die trugen einen Namen und eine
+   * feste Kette, und weil der Optionsraum bei Bedarf auf eine freie Suche
+   * zurückfiel, hing der Name am Ende an einem fremden Plan: "Verlängerung
+   * nach Santorin" führte nicht nach Santorin.
+   *
+   * Die Reihenfolge ist ein Domänen-Kriterium (AD-2): das fernste Ziel zuerst,
+   * denn das ist die Frage, die der Optionsraum stellt ("wie weit kommen wir
+   * noch?"). Views konsumieren nur.
+   */
+  const routeOptions = currentIslandId
+    ? zielInseln(snapshot, currentIslandId).map((islandId) =>
+        assessTargetOption(islandId, currentIslandId, snapshot),
+      )
+    : [];
   const ppr = predictedPointOfReturn(snapshot, currentIslandId);
   const decisionPoints = deriveDecisionPoints(
     routeOptions,
     ppr,
-    library.variants,
     trip.currentDay,
     params.decisionLookaheadDays,
   );

@@ -18,7 +18,7 @@ import {
   validatePlan,
   type SolveResult,
 } from '../solver.ts';
-import { assessRouteOption } from '../options.ts';
+import { assessTargetOption } from '../options.ts';
 import { assessPlanning } from '../assess.ts';
 import { stagesOf } from '../schema/plan.ts';
 import { routeIslandSequence } from '../ppr.ts';
@@ -272,20 +272,30 @@ describe('validatePlan — die Liegeplatz-Regel (1e)', () => {
   });
 });
 
-describe('preferred — die Rangfolge des Zielmodells v2', () => {
+describe('preferred — die Rangfolge des Zielmodells v3', () => {
+  /**
+   * Die Rangfolge IST die Entscheidung, deshalb wird sie hier Kriterium für
+   * Kriterium festgehalten — mit synthetischen Kennzahlen, damit jeder Fall
+   * genau EINEN Unterschied prüft.
+   *
+   * Der Umbau vom 2026-08-07: die Reichweite ist von Rang 3 auf Rang 13
+   * gerutscht, der Rahmen-Vertrag (Etappentage, Wiederholungsfreiheit,
+   * Inselvielfalt) steht jetzt oben, und der Rückweg entscheidet darunter.
+   */
   const basis: PlanMetrics = {
     reachNm: 40,
     distinctIslands: 3,
     clockwise: true,
     turnDay: 2,
-    harbourDays: 1,
+    legDays: 4,
+    repeatStays: 0,
     stages: 4,
     bandDevTenths: 0,
-    harbourDev: 0,
+    kreuzTenthsRueckweg: 0,
     kreuzTenths: 0,
     konzeptTraegt: true,
     rueckwegAbweichung: 0,
-    maxHarbourRun: 1,
+    umlaufsinnPasst: null,
   };
   const mkResult = (id: string): SolveResult => ({
     plan: makePlan([makeStage(1, ['athen--west'], 'west')]),
@@ -299,76 +309,126 @@ describe('preferred — die Rangfolge des Zielmodells v2', () => {
     ...byId[r.variantId],
   });
 
-  it('mehr verschiedene Inseln schlagen ein besseres Stunden-Band', () => {
+  it('Kriterium 1: ein Sicherheits-Befund schlägt jede Ambition', () => {
+    const sicher = mkResult('sicher');
+    const unsicher: SolveResult = {
+      ...mkResult('unsicher'),
+      validity: {
+        valid: false,
+        horizonDependent: false,
+        violations: [{ kind: 'return', day: 8, text: 'Rückkehr nicht darstellbar' }],
+        safetyViolations: [{ kind: 'return', day: 8, text: 'Rückkehr nicht darstellbar' }],
+      },
+    };
+    const metrics = withMetrics({
+      sicher: { legDays: 5, distinctIslands: 2 },
+      unsicher: { legDays: 11, distinctIslands: 11 }, // selbst der volle Törn verliert
+    });
+    expect(preferred(unsicher, sicher, metrics)).toBe(sicher);
+  });
+
+  it('Kriterium 2: mehr Etappentage — nicht zu segeln ist keine Leistung', () => {
+    /**
+     * DER KERNFEHLER des alten Modells, hier festgenagelt: ein Budget-Befund
+     * heisst "dieser Tag ist lang", und wer Tage weglässt, hat keine langen
+     * Tage. Solange die absolute Befundzahl über der Etappenzahl stand, gewann
+     * "fünf Etappen, sechs Tage an der Basis, keine Befunde" gegen jede volle
+     * Runde mit einem einzigen langen Tag.
+     */
+    const voll: SolveResult = {
+      ...mkResult('voll'),
+      validity: {
+        valid: false,
+        horizonDependent: false,
+        violations: [{ kind: 'budget', day: 11, text: 'Hartes Tagesbudget überschritten' }],
+        safetyViolations: [],
+      },
+    };
+    const kurz = mkResult('kurz');
+    const metrics = withMetrics({
+      voll: { legDays: 11, distinctIslands: 11 },
+      kurz: { legDays: 5, distinctIslands: 4 },
+    });
+    expect(preferred(kurz, voll, metrics)).toBe(voll);
+  });
+
+  it('Kriterium 3: keine Insel zweimal — die Runde schlägt das Pendeln', () => {
     const runde = mkResult('runde');
     const pendel = mkResult('pendel');
     const metrics = withMetrics({
-      runde: { distinctIslands: 4, bandDevTenths: 40 },
-      pendel: { distinctIslands: 3, bandDevTenths: 0 },
+      runde: { repeatStays: 0, distinctIslands: 6 },
+      // Mehr Reichweite hilft dem Pendeln nicht: die steht auf Rang 13.
+      pendel: { repeatStays: 3, distinctIslands: 6, reachNm: 90 },
     });
     expect(preferred(pendel, runde, metrics)).toBe(runde);
-    expect(preferred(runde, pendel, metrics)).toBe(runde);
   });
 
-  it('das Band entscheidet erst NACH der Eskalationsstufe — Doppelschlag nie gratis', () => {
-    const ohne = mkResult('ohne');
-    const doppel: SolveResult = { ...mkResult('doppel'), relaxedTo: 'doppelschlag' };
+  it('Kriterium 4: mehr verschiedene Inseln', () => {
+    const viele = mkResult('viele');
+    const wenige = mkResult('wenige');
     const metrics = withMetrics({
-      ohne: { bandDevTenths: 40 },
-      doppel: { bandDevTenths: 0 },
+      viele: { distinctIslands: 9 },
+      wenige: { distinctIslands: 5, reachNm: 90 },
     });
-    expect(preferred(ohne, doppel, metrics)).toBe(ohne);
+    expect(preferred(wenige, viele, metrics)).toBe(viele);
   });
 
-  it('bei gleicher Stufe gewinnt das bessere Stunden-Band', () => {
-    const voll = mkResult('voll');
-    const leer = mkResult('leer');
+  it('Kriterium 6: weniger Kreuzen auf dem RÜCKWEG entscheidet den Rest', () => {
+    // Skipper 2026-08-07: "ein angenehmer Rückweg, ohne Kreuzen oder mit
+    // möglichst wenig Kreuzen, ist ein entscheidendes Kriterium".
+    const angenehm = mkResult('angenehm');
+    const gegenan = mkResult('gegenan');
     const metrics = withMetrics({
-      voll: { bandDevTenths: 5 },
-      leer: { bandDevTenths: 60 },
+      angenehm: { kreuzTenthsRueckweg: 10, kreuzTenths: 90 },
+      // Insgesamt weniger gekreuzt, aber alles davon auf dem Heimweg.
+      gegenan: { kreuzTenthsRueckweg: 60, kreuzTenths: 60 },
     });
-    expect(preferred(leer, voll, metrics)).toBe(voll);
+    expect(preferred(gegenan, angenehm, metrics)).toBe(angenehm);
   });
 
-  it('ein bis zwei Hafentage sind das Ziel — null ist so daneben wie vier', () => {
-    const imBand = mkResult('imband');
-    const keiner = mkResult('keiner');
-    const metrics = withMetrics({
-      imband: { harbourDays: 2, harbourDev: 0 },
-      keiner: { harbourDays: 0, harbourDev: 1 },
-    });
-    expect(preferred(keiner, imBand, metrics)).toBe(imBand);
+  it('Kriterium 8: der Umlaufsinn entscheidet NUR, wenn die Lage einen vorgibt', () => {
+    const mit = mkResult('mit');
+    const gegen = mkResult('gegen');
+    // Gebot vorhanden: die passende Richtung gewinnt.
+    expect(
+      preferred(gegen, mit, withMetrics({
+        mit: { umlaufsinnPasst: true },
+        gegen: { umlaufsinnPasst: false },
+      })),
+    ).toBe(mit);
+    // Gebot 'egal' (null): beide gleich — der alphabetische Tiebreak greift,
+    // NICHT heimlich eine Richtung.
+    const egal = withMetrics({ mit: { umlaufsinnPasst: null }, gegen: { umlaufsinnPasst: null } });
+    expect(preferred(gegen, mit, egal)).toBe(gegen);
+    expect(preferred(mit, gegen, egal)).toBe(gegen);
   });
 
-  it('Reichweite bleibt die Törnfrage — vor Vielfalt und Band', () => {
-    const weit = mkResult('weit');
-    const nah = mkResult('nah');
+  it('die Messung schlägt die Faustregel: weniger Kreuzen gewinnt gegen den Umlaufsinn', () => {
+    const gegenlaeufig = mkResult('a-gegenlaeufig');
+    const rechtsherum = mkResult('b-rechtsherum');
     const metrics = withMetrics({
-      weit: { reachNm: 60, distinctIslands: 2, bandDevTenths: 80 },
-      nah: { reachNm: 40, distinctIslands: 5, bandDevTenths: 0 },
+      'a-gegenlaeufig': { umlaufsinnPasst: false, kreuzTenthsRueckweg: 5 },
+      'b-rechtsherum': { umlaufsinnPasst: true, kreuzTenthsRueckweg: 40 },
     });
-    expect(preferred(nah, weit, metrics)).toBe(weit);
+    expect(preferred(rechtsherum, gegenlaeufig, metrics)).toBe(gegenlaeufig);
   });
 
-  it('Inselvielfalt kauft keinen Doppelschlag — die Stufe rangiert davor', () => {
-    // Genau der Fehler des alten Rankings: sechs Doppelschlag-Tage erreichten
-    // mehr Inseln und gewannen. Bei gleicher Reichweite muss jetzt die
-    // mildere Stufe gewinnen, egal wie viele Inseln der Doppelschlag stopft.
-    const ohne = mkResult('ohne');
-    const doppel: SolveResult = { ...mkResult('doppel'), relaxedTo: 'doppelschlag' };
-    const metrics = withMetrics({
-      ohne: { distinctIslands: 3 },
-      doppel: { distinctIslands: 6 },
-    });
-    expect(preferred(doppel, ohne, metrics)).toBe(ohne);
-    expect(preferred(ohne, doppel, metrics)).toBe(ohne);
+  it('Kriterium 9: lange Tage zählen — aber erst unter dem Rahmen-Vertrag', () => {
+    const sauber = mkResult('sauber');
+    const langerTag: SolveResult = {
+      ...mkResult('langertag'),
+      validity: {
+        valid: false,
+        horizonDependent: false,
+        violations: [{ kind: 'budget', day: 3, text: '9-h-Tag über dem Hartmaximum' }],
+        safetyViolations: [],
+      },
+    };
+    // Gleiche Etappentage, gleiche Vielfalt: jetzt entscheidet der Befund.
+    expect(preferred(langerTag, sauber, withMetrics({}))).toBe(sauber);
   });
 
   it('Annahme-Befunde verurteilen nicht — der weite Plan schlägt den Daheim-Plan', () => {
-    // "An Tag 7 heim und fünf Tage liegen" hatte null Verletzungen, jeder
-    // Segeltag jenseits des Horizonts trug Annahme-Befunde — und gewann
-    // deshalb. Jetzt zählen nur FESTE Verletzungen ins Gültigkeits-Tor; die
-    // Annahme rangiert nachrangig, und die Reichweite entscheidet.
     const daheim = mkResult('daheim');
     const weit: SolveResult = {
       ...mkResult('weit'),
@@ -383,39 +443,28 @@ describe('preferred — die Rangfolge des Zielmodells v2', () => {
       },
     };
     const metrics = withMetrics({
-      daheim: { reachNm: 0, distinctIslands: 1, stages: 2, harbourDays: 5, maxHarbourRun: 5 },
-      weit: { reachNm: 60, distinctIslands: 5, stages: 10 },
+      daheim: { reachNm: 0, distinctIslands: 1, legDays: 2, stages: 2 },
+      weit: { reachNm: 60, distinctIslands: 5, legDays: 10, stages: 10 },
     });
     expect(preferred(daheim, weit, metrics)).toBe(weit);
     expect(preferred(weit, daheim, metrics)).toBe(weit);
   });
 
-  it('eine FESTE Verletzung bleibt ein Ausschluss — sie ist keine Annahme', () => {
-    const sauber = mkResult('sauber');
-    const rot: SolveResult = {
-      ...mkResult('rot'),
-      validity: {
-        valid: false,
-        horizonDependent: false,
-        violations: [{ kind: 'budget', day: 3, text: '9-h-Tag über dem Hartmaximum' }],
-        safetyViolations: [],
-      },
-    };
-    const metrics = withMetrics({
-      sauber: { reachNm: 40 },
-      rot: { reachNm: 60 }, // selbst mit mehr Reichweite: Kriterium 1 sperrt
-    });
-    expect(preferred(rot, sauber, metrics)).toBe(sauber);
-  });
-
-  it('bei sonst gleicher Lage gewinnt der kürzere Hafentage-Lauf', () => {
-    const verteilt = mkResult('verteilt');
-    const halde = mkResult('halde');
-    const metrics = withMetrics({
-      verteilt: { harbourDays: 2, harbourDev: 0, maxHarbourRun: 1 },
-      halde: { harbourDays: 2, harbourDev: 0, maxHarbourRun: 2 },
-    });
-    expect(preferred(halde, verteilt, metrics)).toBe(verteilt);
+  it('Reichweite entscheidet zuletzt — sie ist die Frage des Optionsraums, nicht der Hauptroute', () => {
+    const weit = mkResult('weit');
+    const nah = mkResult('nah');
+    // Gleiche Runde in jeder Hinsicht: dann gewinnt die südlichere.
+    expect(preferred(nah, weit, withMetrics({ weit: { reachNm: 90 }, nah: { reachNm: 30 } }))).toBe(
+      weit,
+    );
+    // Aber eine Insel weniger kann sie nicht mehr aufwiegen.
+    expect(
+      preferred(
+        weit,
+        nah,
+        withMetrics({ weit: { reachNm: 90, distinctIslands: 2 }, nah: { reachNm: 30 } }),
+      ),
+    ).toBe(nah);
   });
 });
 
@@ -485,8 +534,7 @@ describe('Optionsraum — ein Machbarkeitsbegriff (der Santorin-Fall)', () => {
     // rechnete ihn gegen den Meltemi-Worst-Case (30 kn N) und meldete "zu";
     // die Plan-Gültigkeit hielt denselben Törn für tragfähig.
     const snapshot = diamondSnapshot({ reliableHorizonDays: 2 });
-    const route = snapshot.library.variants.find((v) => v.id === 'sued-route')!;
-    const opt = assessRouteOption(route, 'athen', snapshot);
+    const opt = assessTargetOption('sued', 'athen', snapshot);
     expect(opt.state).not.toBe('zu');
     expect(opt.costLevel).not.toBeNull();
     expect(opt.plan).not.toBeNull();
@@ -495,8 +543,7 @@ describe('Optionsraum — ein Machbarkeitsbegriff (der Santorin-Fall)', () => {
   it('ein "zu" nennt die Verletzungen des besten Versuchs', () => {
     // 28 kn dauerhaft aus Nord IM FORECAST: der Heimweg ist wirklich dicht.
     const snapshot = diamondSnapshot({ windKn: 28, windFromDeg: 0 });
-    const route = snapshot.library.variants.find((v) => v.id === 'sued-route')!;
-    const opt = assessRouteOption(route, 'athen', snapshot);
+    const opt = assessTargetOption('sued', 'athen', snapshot);
     expect(opt.state).toBe('zu');
     expect(opt.reasons.length).toBeGreaterThan(0);
   });

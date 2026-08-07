@@ -1,22 +1,35 @@
 /**
- * FR18 / FR20 — mid-term option space.
+ * FR18 / FR20 — der Optionsraum: "wie weit kommen wir noch?".
  *
- * ZIELMODELL V2: "Geht dieses Ziel noch?" beantwortet dieselbe Maschine wie
- * die Hauptroute — `completePlan` mit Wendepunkt-Filter. offen = es existiert
- * ein GÜLTIGER Plan (alle harten Bedingungen, inklusive Zustiegstag und
- * Liegeplatz-Regel); offen-horizont = gültig, hängt aber an der
- * Persistenz-Annahme; zu = kein gültiger Plan, begründet mit den Verletzungen
- * des besten Versuchs. Der Meltemi-Worst-Case ist hier KEIN K.-o. mehr: er
- * gehört zur täglichen Abbruch-Notation (solver.deriveReturnChecks), nicht in
- * die Planung. 'schliesst am Tag X' = ab Tag X+1 existiert kein forecast-
- * tragfähiger Restplan mehr (Scan über restPlanFeasible, forecast-basiert,
- * gegen den echten Stichtag).
+ * ZIELMODELL V3 (Skipper 2026-08-07, "zwei getrennte Fragen"). Die Hauptroute
+ * beantwortet "welche Runde ist die beste?" (solver.ts). HIER steht die andere
+ * Frage: welche Ziele sind noch erreichbar, bis wann, und zu welchem Preis.
+ *
+ * EIN ZIEL IST EINE INSEL, keine kuratierte Variante mehr. Der Unterschied ist
+ * der Kern des beanstandeten Fehlers: eine Variante ist ein NAME mit einer
+ * festen Kette, und wenn diese Kette nicht trug, fiel der Optionsraum auf eine
+ * freie Suche zurück — und lieferte deren Plan unter dem Namen der Variante
+ * aus. So kam eine "Verlängerung nach Santorin" zustande, die auf Naxos endet.
+ *
+ * Deshalb gilt hier eine harte, am ERGEBNIS geprüfte Invariante: ein Ziel
+ * bekommt nur einen Plan, der es wirklich als Etappenziel enthält — sonst
+ * keinen. Ein Etikett auf einer fremden Kette ist keine dritte Möglichkeit.
+ *
+ * Die Zustände: offen = es existiert ein tragfähiger Plan dorthin;
+ * offen-horizont = tragfähig, hängt aber an der Persistenz-Annahme;
+ * schliesst am Tag X = ab Tag X+1 reicht der Rahmen nicht mehr (der Vertrag
+ * "ein Törntag, eine Verbindung" bindet auch die Frist); zu = kein tragfähiger
+ * Plan, begründet. Der Meltemi-Worst-Case ist hier KEIN K.-o.: er gehört zur
+ * täglichen Abbruch-Notation (solver.deriveReturnChecks), nicht in die Planung.
+ *
+ * Abgeraten heisst nie gesperrt — aber auch nie "hier ist ein Ersatzplan".
  */
 
-import type { Leg, Variant } from './schema/route.ts';
+import type { Leg } from './schema/route.ts';
 import type {
   PlanningSnapshot,
   RouteOptionAssessment,
+  RoutenEmpfehlung,
   LegAssessment,
   DecisionPoint,
   PprResult,
@@ -32,10 +45,14 @@ import {
 } from './ppr.ts';
 import { deadlineFrame } from './time.ts';
 import { legsOfVariant } from './legs.ts';
-import { KONZEPT_NAME, konzeptLageFor, konzeptOfIslands } from './konzept.ts';
-import { completePlan, reachNmFor, type SolveResult } from './solver.ts';
-import { stagesOf, type RelaxationLevel } from './schema/plan.ts';
-import type { Plan } from './schema/plan.ts';
+import {
+  KONZEPT_NAME,
+  konzeptLageFor,
+  konzeptOfIslands,
+  konzeptOfPlan,
+} from './konzept.ts';
+import { buildCandidates, completePlan, legLibrary, reachNmFor } from './solver.ts';
+import { stagesOf } from './schema/plan.ts';
 import { distanceNm } from './geo.ts';
 
 /** Legs of a variant still ahead of the given island (null = not on it). */
@@ -108,192 +125,93 @@ function packLegsFeasibleByDeadline(
 }
 
 /**
- * DIE EINE ANTWORT auf "geht dieses Ziel, und was kostet es?" — derselbe
- * Solver wie für die Hauptroute (`completePlan` mit Filter auf den
- * Wendepunkt), damit Karte und Plan nie zweierlei behaupten können (AD-3).
+ * DIE ZIEL-INSELN des Optionsraums — abgeleitet, nicht kuratiert.
  *
- * Liefert auch den UNGÜLTIGEN besten Versuch zurück: seine Verletzungen sind
- * die ehrliche Begründung eines "zu" — statt eines pauschalen Satzes, dem der
- * Skipper nicht ansehen kann, ob Stichtag, Zustieg oder Wetter das Problem ist.
+ * ZIELMODELL V3 (Skipper 2026-08-07: "zwei getrennte Fragen"). Die Hauptroute
+ * beantwortet "welche Runde ist die beste?", der Optionsraum "wie weit kommen
+ * wir noch?". Bis dahin fragte er stattdessen "trägt Variante X?" — und weil
+ * eine Variante ein NAME mit einer festen Kette ist, hing an jeder Antwort ein
+ * Name, der mit dem gelieferten Plan nichts zu tun haben musste.
+ *
+ * Ein Ziel ist hier deshalb eine INSEL, und angeboten wird nur, was im
+ * Suchraum überhaupt als Wendepunkt vorkommt: jede Option ist damit per
+ * Konstruktion eine Frage, auf die es eine echte Runde geben KANN. Sortiert
+ * nach Süd-Reichweite (die Törnfrage), das fernste Ziel zuerst.
  */
-function optionPlan(
-  turnIslandId: string,
-  currentIslandId: string,
+export function zielInseln(
   snapshot: PlanningSnapshot,
+  currentIslandId: string,
+): string[] {
+  const reach = reachNmFor(snapshot);
+  const frame = deadlineFrame(snapshot.params);
+  const daysAvailable = frame.deadlineDay - snapshot.trip.currentDay + 1;
+  const kandidaten = buildCandidates(snapshot, currentIslandId).filter(
+    (c) => c.legs.length > 0 && c.turnIslandId !== snapshot.params.baseIslandId,
+  );
+
   /**
-   * Id der kuratierten Variante, deren eigene Etappenkette zuerst versucht
-   * wird. Trägt sie (der Solver findet zu ihr überhaupt eine Packung), IST
-   * sie der Plan der Option — "Westkykladen-Runde" heisst dann die
-   * Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
-   * Andernfalls fällt die Option auf die Wendepunkt-Suche zurück: das Ziel
-   * bleibt erreichbar, auch wenn die kuratierte Kette es gerade nicht trägt.
-   */
-  variantId?: string,
-): {
-  /**
-   * Tragfähig = keine Sicherheits-, Termin- oder Zustiegs-Verletzung — die
-   * Messlatte des FR2-Zeugen, NICHT die volle Plan-Gültigkeit: strukturelle
-   * Defizite (Hafentage über der Notgrenze, ein wiederholter Liegeplatz)
-   * schliessen ein ZIEL nicht. Sie machen den konkreten Plan unschöner, und
-   * genau dafür stehen sie an ihm dran — aber "Santorin geht nicht" darf
-   * nicht heissen "der beste Plan dorthin hätte drei Hafentage zu viel".
-   */
-  tragfaehig: boolean;
-  horizonDependent: boolean;
-  violations: string[];
-  level: RelaxationLevel;
-  note: string;
-  plan: Plan;
-  turnDay: number | null;
-} | null {
-  /**
-   * Erst die EIGENE Kette der kuratierten Route, dann — und nur dann — die
-   * freie Suche zum selben Wendepunkt.
+   * NUR ZIELE, DIE DEN RAHMEN FÜLLEN.
    *
-   * Die Reihenfolge ist die ganze Aussage: trägt die Best-Practice-Kette, IST
-   * sie die Antwort (sonst hiesse "Westkykladen-Runde" irgendeine Kette nach
-   * Milos). Trägt sie nicht, darf ihr Scheitern aber nicht das ZIEL schliessen
-   * — "Santorin geht nicht" darf nicht heissen "die eine kuratierte Kette
-   * dorthin ist gerade nicht packbar". Also übernimmt die freie Suche, wenn
-   * sie einen tragfähigen Plan findet. Findet auch sie keinen, bleibt der
-   * kuratierte Versuch stehen: abraten braucht einen Plan zum Ansehen.
+   * Ohne diese Beschränkung bietet der Optionsraum jede Insel des Graphen als
+   * Ziel an — auch die Attische Küste, eine Stunde vor der Basis. Der Solver
+   * antwortet darauf mit einer Runde, die dort wendet, und die ist zwangsläufig
+   * kurz: eine Runde mit der Attischen Küste als SÜDLICHSTEM Punkt hat zwei
+   * Etappen. Genau solche Vorschläge hat der Skipper beanstandet ("Routen mit
+   * sechs und acht Tagen, deren Logik sich nicht erschliesst").
+   *
+   * Ein Ziel ist deshalb nur dann eine Frage wert, wenn es überhaupt eine
+   * Runde über den vollen Törnrahmen gibt, die dort wendet. Damit hat JEDE
+   * Alternative dieselbe Länge wie die Hauptroute und ist mit ihr vergleichbar
+   * — sie unterscheidet sich darin, WOHIN sie führt, nicht darin, wie viel
+   * Törn sie verschenkt.
+   *
+   * Nur wenn es gar keine volle Runde mehr gibt (spät im Törn, oder das Wetter
+   * hat den Rahmen zusammenschrumpfen lassen), fällt die Auswahl auf alle
+   * Wendepunkte zurück — dann ist eine kurze Runde keine Verschwendung mehr,
+   * sondern alles, was noch geht.
    */
-  const solveTo = (opts: { variantId?: string }) =>
-    completePlan(snapshot, currentIslandId, [], {
-      turnIslandId,
-      stopAtFirstValid: true,
-      ...opts,
-    });
-  const sicher = (r: SolveResult | null): boolean =>
-    r !== null && r.validity.safetyViolations.length === 0;
+  const voll = kandidaten.filter((c) => c.legs.length === daysAvailable);
+  const quelle = voll.length > 0 ? voll : kandidaten;
 
-  const eigen = variantId !== undefined ? solveTo({ variantId }) : null;
-  const frei = sicher(eigen) ? null : solveTo({});
-  const solved = sicher(eigen) ? eigen : sicher(frei) ? frei : (eigen ?? frei);
-  if (!solved) return null;
-
-  const stages = stagesOf(solved.plan);
-  const doubleDays = stages.filter((s) => s.legIds.length > 1).length;
-  const turnStage = stages.find((s) => s.toIslandId === turnIslandId) ?? null;
-
-  const teile: string[] = [];
-  if (doubleDays > 0) {
-    teile.push(
-      doubleDays === 1
-        ? 'einen Tag mit zwei Verbindungen'
-        : `${doubleDays} Tage mit zwei Verbindungen`,
-    );
-  }
-  if (solved.relaxedTo === 'hardMax') teile.push('Tage am harten Stundenmaximum');
-  if (solved.relaxedTo === 'nightLeg') teile.push('mindestens eine Nachtetappe');
-
-  return {
-    tragfaehig: solved.validity.safetyViolations.length === 0,
-    horizonDependent: solved.validity.horizonDependent,
-    violations: [
-      ...new Set(
-        (solved.validity.safetyViolations.length > 0
-          ? solved.validity.safetyViolations
-          : solved.validity.violations
-        ).map((v) => v.text),
-      ),
-    ],
-    level: solved.relaxedTo,
-    note:
-      teile.length === 0
-        ? 'ohne Zugeständnis — eine Verbindung pro Tag im Zielbudget'
-        : `nur mit ${teile.join(' und ')}`,
-    plan: solved.plan,
-    turnDay: turnStage?.day ?? null,
-  };
+  const ziele = new Set(quelle.map((c) => c.turnIslandId));
+  return [...ziele].sort((a, b) => reach(b) - reach(a) || a.localeCompare(b));
 }
 
-/** FR18: offen / offen-horizont / schliesst am Tag X / zu — per route option. */
-export function assessRouteOption(
-  variant: Variant,
+/**
+ * FR18 — "geht dieses Ziel noch, und was kostet es?" für EINE Ziel-Insel.
+ *
+ * Beantwortet von derselben Maschine wie die Hauptroute (`completePlan` mit
+ * Wendepunkt-Filter), damit Karte und Plan nie zweierlei behaupten (AD-3).
+ */
+export function assessTargetOption(
+  targetIslandId: string,
   currentIslandId: string | null,
   snapshot: PlanningSnapshot,
 ): RouteOptionAssessment {
-  const vLegs = legsOfVariant(variant, snapshot.library);
   const today = snapshot.trip.currentDay;
   const deadline = deadlineFrame(snapshot.params).deadlineDay;
   const reasons: string[] = [];
-  /**
-   * Der Wendepunkt ist die SÜDLICHSTE Insel der Route (reachNmFor — dieselbe
-   * Kennzahl wie im Solver), nicht die letzte: eine Rundkurs-Variante endet
-   * wieder an der Basis, und ihre letzte Insel als Wendepunkt zu lesen ergäbe
-   * Reichweite 0. Bei Gleichstand entscheidet die Distanz. ANGEZEIGT wird
-   * als reachNm weiterhin die Distanz Basis→Wendepunkt — die Zahl, die der
-   * Skipper mit der Karte abgleichen kann.
-   */
   const base = snapshot.library.islands.find(
     (i) => i.id === snapshot.params.baseIslandId,
   );
-  const suedOf = reachNmFor(snapshot);
-  const distOf = (islandId: string): number => {
-    const island = snapshot.library.islands.find((i) => i.id === islandId);
-    return base && island ? distanceNm(base.coordinates, island.coordinates) : 0;
-  };
-  const seq = routeIslandSequence(vLegs);
-  const turnIslandId =
-    seq.length > 0
-      ? seq.reduce(
-          (far, id) =>
-            suedOf(id) > suedOf(far) ||
-            (suedOf(id) === suedOf(far) && distOf(id) > distOf(far))
-              ? id
-              : far,
-          seq[0]!,
-        )
-      : snapshot.params.baseIslandId;
-  const reachNm = base ? distOf(turnIslandId) : null;
+  const target = snapshot.library.islands.find((i) => i.id === targetIslandId);
+  const name = target?.name ?? targetIslandId;
+  const reachNm =
+    base && target ? distanceNm(base.coordinates, target.coordinates) : null;
 
-  /**
-   * ROUTEN-KONZEPT der Option (konzept.ts) — die zentrale Logik, sichtbar am
-   * einzelnen Ziel: trägt die Lage das Konzept dieser Route nicht, steht die
-   * Revier-Warnung an der Option, ohne die Machbarkeits-Antwort des Solvers
-   * zu verfälschen (Empfehlung über der Maschine, kein zweites Urteil).
-   */
-  const konzeptId = konzeptOfIslands(seq);
-  const lage = konzeptLageFor(snapshot);
-  const konzeptWarnung =
-    lage.eignung[konzeptId] === 'ungeeignet'
-      ? `${KONZEPT_NAME[konzeptId]} trägt die aktuelle Wetterlage nicht: ` +
-        `${lage.gruende[konzeptId].join(' ')} Die Route bleibt wählbar — die App rät ab, sie verbietet nicht.`
-      : null;
-
-  /**
-   * EMPFEHLUNG statt AUSSCHLUSS (Skipper 2026-08-06). Die Wind-Lage bestimmt
-   * hier NUR, ob abgeraten wird; ob die Route noch geht, beantwortet weiterhin
-   * der Solver (`state`). Die Gründe werden unten um die Sicherheits-Befunde
-   * des besten Versuchs ergänzt — auch die sind ein Abraten, kein Verbot.
-   */
-  const abratenGruende: string[] = [];
-  if (konzeptWarnung) abratenGruende.push(konzeptWarnung);
-  const empfehlungBasis: RouteOptionAssessment['empfehlung'] =
-    lage.eignung[konzeptId] === 'ungeeignet'
-      ? 'abgeraten'
-      : lage.eignung[konzeptId] === 'grenzwertig'
-        ? 'moeglich'
-        : 'empfohlen';
-
-  const leer = (
-    over: Partial<RouteOptionAssessment>,
-  ): RouteOptionAssessment => ({
-    routeId: variant.id,
-    name: variant.name,
-    konzeptId,
-    konzeptWarnung,
-    empfehlung: empfehlungBasis,
-    // Kopie: die Gründe wachsen unten noch (Sicherheits-Befunde), und eine
-    // geteilte Referenz liesse die zurückgegebene Option nachträglich mutieren.
-    abratenGruende: [...abratenGruende],
+  const leer = (over: Partial<RouteOptionAssessment>): RouteOptionAssessment => ({
+    routeId: `ziel-${targetIslandId}`,
+    name,
+    konzeptId: konzeptOfIslands([targetIslandId]),
+    konzeptWarnung: null,
+    empfehlung: 'empfohlen',
+    abratenGruende: [],
     state: 'zu',
     closesOnDay: null,
     ampel: 'unbewertet',
     legAssessments: [],
     reasons,
-    turnIslandId,
+    turnIslandId: targetIslandId,
     reachNm,
     costLevel: null,
     costNote: null,
@@ -304,98 +222,195 @@ export function assessRouteOption(
     ...over,
   });
 
-  if (!currentIslandId) {
-    return leer({ reasons: ['Keine Position gesetzt'] });
+  if (!currentIslandId) return leer({ reasons: ['Keine Position gesetzt'] });
+
+  /**
+   * EINE Suche, kein Fallback. Bis 2026-08-07 löste der Optionsraum zweimal:
+   * erst die kuratierte Kette der Variante, dann — wenn die nicht trug — eine
+   * freie Suche zum selben Wendepunkt. Der zweite Versuch lieferte einen
+   * völlig anderen Plan, der trotzdem unter dem Namen der Variante ausgeliefert
+   * wurde. Mit abgeschafften Routen-Namen ist der Zweig gegenstandslos.
+   */
+  const solved = completePlan(snapshot, currentIslandId, [], {
+    turnIslandId: targetIslandId,
+    stopAtFirstValid: true,
+  });
+  if (!solved) {
+    reasons.push('Zu diesem Ziel lässt sich mit aktuellem Forecast kein Restplan bauen');
+    // 'zu' UND 'abgeraten': das Ziel bleibt sichtbar und benannt, aber es hängt
+    // kein Plan daran. Ein geschlossenes Ziel als "empfohlen" zu führen wäre
+    // die Art stiller Widerspruch, die der Skipper zu Recht beanstandet hat.
+    return leer({ state: 'zu', empfehlung: 'abgeraten' });
   }
 
-  // Display assessment: remaining legs on the earliest plan (one per day).
-  const legs = remainingRouteLegs(vLegs, currentIslandId) ?? [];
-  const legAssessments: LegAssessment[] = legs.map((leg, i) =>
-    assessLeg(leg, today + i, snapshot),
-  );
+  const stages = stagesOf(solved.plan);
+
+  /**
+   * DIE INVARIANTE, an der Beispiel 3 dauerhaft scheitert: ein Ziel darf nur
+   * einen Plan zurückbekommen, der es WIRKLICH anläuft.
+   *
+   * Geprüft am fertigen Plan, nicht im Aufrufpfad — Sorgfalt beim Aufrufen ist
+   * genau das, was jahrelang gereicht hätte und nie gereicht hat. Vorher trug
+   * der Plan das Wendepunkt-Etikett des Kandidaten, und eine abgebrochene
+   * Packung wurde als "Verlängerung nach Santorin" ausgeliefert, die auf Naxos
+   * endet.
+   */
+  if (!stages.some((s) => s.toIslandId === targetIslandId)) {
+    reasons.push(
+      `Der beste Plan zu diesem Ziel läuft ${name} nicht an — die Option gilt als zu`,
+    );
+    return leer({
+      state: 'zu',
+      empfehlung: 'abgeraten',
+      abratenGruende: [
+        `Es gibt im aktuellen Wetterfenster keinen Törn, der ${name} anläuft und rechtzeitig ` +
+          `zurück ist. Die App legt bewusst KEINEN Ersatzplan darunter — ein Plan, der woanders ` +
+          `hinführt, wäre unter diesem Namen eine falsche Zusage.`,
+      ],
+    });
+  }
+
+  /**
+   * ROUTEN-KONZEPT und Ampel kommen ab jetzt aus dem PLAN, nicht aus einer
+   * kuratierten Kette daneben: angesehen und beurteilt wird, was übernommen
+   * würde (AD-3).
+   */
+  const konzeptId = konzeptOfPlan(solved.plan);
+  const lage = konzeptLageFor(snapshot);
+  const konzeptWarnung =
+    lage.eignung[konzeptId] === 'ungeeignet'
+      ? `${KONZEPT_NAME[konzeptId]} trägt die aktuelle Wetterlage nicht: ` +
+        `${lage.gruende[konzeptId].join(' ')} Das Ziel bleibt wählbar — die App rät ab, sie verbietet nicht.`
+      : null;
+
+  const legs = legLibrary(snapshot);
+  const legAssessments: LegAssessment[] = [];
+  for (const stage of stages) {
+    if (stage.day < today) continue;
+    for (const legId of stage.legIds) {
+      const leg = legs.get(legId);
+      if (leg) legAssessments.push(assessLeg(leg, stage.day, snapshot));
+    }
+  }
   const ampel: Ampel =
     legAssessments.length > 0
       ? worstAmpel(legAssessments.map((l) => l.ampel))
       : 'unbewertet';
 
-  /**
-   * ZIELMODELL V2 — der Zustand kommt aus dem Solver, nicht aus einer zweiten
-   * Rechnung: offen heisst "es existiert ein gültiger Plan zu diesem
-   * Wendepunkt", mit denselben harten Bedingungen wie die Hauptroute. Ein "zu"
-   * nennt die Verletzungen des besten Versuchs — ehrlich statt pauschal.
-   */
-  const solved = optionPlan(turnIslandId, currentIslandId, snapshot, variant.id);
-  if (!solved) {
-    // Der EINZIGE echte Ausschluss: es gibt zu diesem Ziel gar keine
-    // Etappenkette. Das ist Bibliotheks-Geometrie, kein Wetterurteil.
-    reasons.push('Zu diesem Ziel lässt sich mit aktuellem Forecast kein Restplan bauen');
-    return leer({ state: 'zu', ampel, legAssessments });
+  const abratenGruende: string[] = [];
+  if (konzeptWarnung) abratenGruende.push(konzeptWarnung);
+  const empfehlungBasis: RoutenEmpfehlung =
+    lage.eignung[konzeptId] === 'ungeeignet'
+      ? 'abgeraten'
+      : lage.eignung[konzeptId] === 'grenzwertig'
+        ? 'moeglich'
+        : 'empfohlen';
+
+  const doubleDays = stages.filter((s) => s.legIds.length > 1).length;
+  const teile: string[] = [];
+  if (doubleDays > 0) {
+    teile.push(
+      doubleDays === 1
+        ? 'einen Tag mit zwei Verbindungen'
+        : `${doubleDays} Tage mit zwei Verbindungen`,
+    );
   }
-  if (!solved.tragfaehig) {
-    /**
-     * Der beste Versuch trägt Sicherheits-Befunde — typischerweise: der Wind
-     * ist zu stark. Die Route wird deshalb NICHT aus dem Angebot genommen
-     * (Skipper 2026-08-06): ihr Plan bleibt hängen, damit sie ansehbar und
-     * gegen die Empfehlung übernehmbar ist. `state: 'zu'` sagt weiterhin
-     * ehrlich, dass kein TRAGFÄHIGER Plan existiert; `empfehlung:
-     * 'abgeraten'` sagt, dass die App abrät — zwei Aussagen, nicht ein Verbot.
-     */
+  if (solved.relaxedTo === 'hardMax') teile.push('Tage am harten Stundenmaximum');
+  if (solved.relaxedTo === 'nightLeg') teile.push('mindestens eine Nachtetappe');
+  const costNote =
+    teile.length === 0
+      ? 'ohne Zugeständnis — eine Verbindung pro Tag im Zielbudget'
+      : `nur mit ${teile.join(' und ')}`;
+
+  const turnDay = stages.find((s) => s.toIslandId === targetIslandId)?.day ?? null;
+  const gemeinsam = {
+    konzeptId,
+    konzeptWarnung,
+    ampel,
+    legAssessments,
+    plan: solved.plan,
+    turnDay,
+    abratenGruende,
+  };
+
+  /**
+   * Sicherheits-Befunde nehmen das Ziel NICHT aus dem Angebot (Skipper
+   * 2026-08-06): der Plan bleibt hängen, damit er ansehbar und gegen die
+   * Empfehlung übernehmbar ist. `state: 'zu'` sagt weiterhin ehrlich, dass
+   * kein tragfähiger Plan existiert; `empfehlung: 'abgeraten'` sagt, dass die
+   * App abrät — zwei Aussagen, nicht ein Verbot.
+   */
+  if (solved.validity.safetyViolations.length > 0) {
+    const texte = [...new Set(solved.validity.safetyViolations.map((v) => v.text))];
     reasons.push('Kein tragfähiger Restplan zu diesem Ziel:');
-    for (const text of solved.violations.slice(0, 3)) reasons.push(text);
+    for (const text of texte.slice(0, 3)) reasons.push(text);
     abratenGruende.push(
-      `Der beste Plan zu diesem Ziel trägt Sicherheits-Befunde: ${solved.violations
+      `Der beste Plan zu diesem Ziel trägt Sicherheits-Befunde: ${texte
         .slice(0, 3)
         .join(' ')} Wer trotzdem will, kann die Route ansehen und übernehmen — auf eigenes seemännisches Urteil.`,
     );
-    return leer({
-      state: 'zu',
-      ampel,
-      legAssessments,
-      empfehlung: 'abgeraten',
-      // Der Preis bleibt bewusst null: einen gültigen Preis hat dieser Plan
-      // nicht. Der Plan selbst hängt trotzdem dran — das ist der Unterschied.
-      plan: solved.plan,
-      turnDay: solved.turnDay,
-    });
+    // Der Preis bleibt bewusst null: einen gültigen Preis hat dieser Plan nicht.
+    return leer({ ...gemeinsam, state: 'zu', empfehlung: 'abgeraten' });
   }
 
-  const preis = {
-    costLevel: solved.level,
-    costNote: solved.note,
-    plan: solved.plan,
-    turnDay: solved.turnDay,
-  };
+  const preis = { costLevel: solved.relaxedTo, costNote };
 
-  if (solved.horizonDependent) {
+  if (solved.validity.horizonDependent) {
     reasons.push('Machbarkeit reicht über den Forecast-Horizont hinaus — offen mit Vorbehalt');
-    return leer({ state: 'offen-horizont', ampel, legAssessments, ...preis });
+    return leer({ ...gemeinsam, ...preis, state: 'offen-horizont', empfehlung: empfehlungBasis });
   }
 
-  // Open today: does it close? Latest start day D with a feasible rest plan.
+  /**
+   * Schliesst die Option? Gefragt wird an der KETTE DIESES PLANS: "wenn ich
+   * mich erst an Tag d entscheide — trägt sie dann noch?". Damit misst der
+   * Schliesstag genau den Plan, den der Skipper vor sich hat (AD-3), statt
+   * eine zweite, leicht abweichende Kette.
+   */
+  const planLegs = stages.flatMap((s) => s.legIds).map((id) => legs.get(id));
   let closesOnDay: number | null = null;
   let closingScanHitHorizon = false;
-  for (let d = today + 1; d <= deadline; d++) {
-    const f = restPlanFeasible(vLegs, currentIslandId, d, snapshot);
-    if (f === 'infeasible') {
-      closesOnDay = d - 1;
-      break;
-    }
-    if (f === 'horizon') {
-      // Beyond the horizon we cannot claim a closing day — that is a VISIBLE
-      // caveat (I/O-Matrix), not an unqualified 'offen'.
-      closingScanHitHorizon = true;
-      break;
+  if (planLegs.every((l): l is Leg => l !== undefined)) {
+    for (let d = today + 1; d <= deadline; d++) {
+      /**
+       * DER VERTRAG BINDET AUCH DIE FRIST: ein Törntag, eine Verbindung. Wer
+       * an Tag d losfährt, braucht für `planLegs.length` Etappen ebenso viele
+       * Tage. `restPlanFeasible` allein antwortet auf die KAPAZITÄTS-Frage
+       * (zwei kurze Schläge an einem Tag sind seemännisch möglich, ppr.ts) und
+       * fände die Option deshalb bis zum letzten Tag "offen" — eine Frist, die
+       * nie abläuft, ist als Entscheidungspunkt (FR20) wertlos.
+       */
+      if (d + planLegs.length - 1 > deadline) {
+        closesOnDay = d - 1;
+        break;
+      }
+      const f = restPlanFeasible(planLegs, currentIslandId, d, snapshot);
+      if (f === 'infeasible') {
+        closesOnDay = d - 1;
+        break;
+      }
+      if (f === 'horizon') {
+        // Beyond the horizon we cannot claim a closing day — that is a VISIBLE
+        // caveat (I/O-Matrix), not an unqualified 'offen'.
+        closingScanHitHorizon = true;
+        break;
+      }
     }
   }
   if (closesOnDay !== null && closesOnDay <= deadline) {
     reasons.push(`Ab Tag ${closesOnDay + 1} existiert kein zulässiger Restplan mehr`);
-    return leer({ state: 'schliesst', closesOnDay, ampel, legAssessments, ...preis });
+    return leer({
+      ...gemeinsam,
+      ...preis,
+      state: 'schliesst',
+      closesOnDay,
+      empfehlung: empfehlungBasis,
+    });
   }
   if (closingScanHitHorizon) {
     reasons.push('Schließtag jenseits des Forecast-Horizonts nicht bestimmbar (Vorbehalt)');
-    return leer({ state: 'offen-horizont', ampel, legAssessments, ...preis });
+    return leer({ ...gemeinsam, ...preis, state: 'offen-horizont', empfehlung: empfehlungBasis });
   }
-  return leer({ state: 'offen', ampel, legAssessments, ...preis });
+  return leer({ ...gemeinsam, ...preis, state: 'offen', empfehlung: empfehlungBasis });
 }
 
 /**
@@ -469,7 +484,6 @@ export function deriveDayOptions(
 export function deriveDecisionPoints(
   routeOptions: RouteOptionAssessment[],
   ppr: PprResult,
-  routes: { id: string; name: string }[],
   /**
    * Heutiger Törntag und Vorwarnzeit. Ohne beides bleibt es beim reinen
    * Terminkalender — die Vorwarnung ist der Unterschied zwischen "du hättest
@@ -481,8 +495,9 @@ export function deriveDecisionPoints(
   const points: DecisionPoint[] = [];
   for (const opt of routeOptions) {
     if (opt.state === 'schliesst' && opt.closesOnDay !== null) {
-      const route = routes.find((r) => r.id === opt.routeId);
-      const name = route?.name ?? opt.routeId;
+      // Der Name der Option IST der Insel-Name (options.assessTargetOption) —
+      // es gibt keine Routen-Tabelle mehr, in der er nachzuschlagen wäre.
+      const name = opt.name;
       const rest =
         today !== undefined ? opt.closesOnDay - today : null;
       /**

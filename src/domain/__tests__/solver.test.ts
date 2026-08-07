@@ -600,8 +600,22 @@ describe('solver — ein Tag, eine Verbindung (params.maxLegsPerDay)', () => {
  * (nicht über der Notgrenze 5), und die Rangfolge belohnte sie noch, weil
  * Basistage keine Annahme-Befunde tragen.
  */
-describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
-  it('mehr als harbourDaysTargetMax Trailing-Hafentage an der Basis sind ein Befund', () => {
+/**
+ * HAFENTAGE SIND KEIN KRITERIUM MEHR (Zielmodell v3, Skipper 2026-08-07).
+ *
+ * Hier standen bis dahin fünf Fälle: eine Notgrenze (`harbourDaysMax`), ein
+ * Zielband (`harbourDaysTargetMax`), ein Trailing-Befund ("liegt die letzten N
+ * Tage an der Basis") und die Verteilungs-Kennzahl `maxHarbourRun`. Alle vier
+ * waren Ersatzkonstruktionen dafür, dass die Rangfolge die Etappenzahl nicht
+ * kannte — sie stand auf Rang 14 von 14.
+ *
+ * Der Vertrag steht jetzt direkt in `preferred` (Kriterium 2, `legDays`) und
+ * wird dort geprüft; als GÜLTIGKEITS-Frage war er ohnehin falsch, denn im
+ * Liegen wird niemand unsicher. Diese Fälle sind deshalb ersatzlos entfallen
+ * und nicht stumm gelöscht: sie stehen als Zielmodell-Entscheidung hier.
+ */
+describe('solver — Hafentage sind eine Datenform, kein Befund', () => {
+  it('ein Plan, der Tage an der Basis verliegt, ist gültig — nur eben die schlechtere Runde', () => {
     const snapshot = roundTripSnapshot({ days: 14 });
     snapshot.params = {
       ...snapshot.params,
@@ -619,65 +633,13 @@ describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
       makeHarbourDay(8, 'athen'),
     ]);
     const validity = validatePlan(plan, snapshot);
-    expect(
-      validity.violations.some(
-        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
-      ),
-    ).toBe(true);
-    // Strukturell, nie Safety: liegen bleiben ist sicher (FR18).
+    // Keine Hafentage-Befunde mehr — weder strukturell noch als Safety.
+    expect(validity.violations.filter((v) => v.text.includes('Hafentage'))).toHaveLength(0);
+    expect(validity.violations.filter((v) => v.text.includes('an der Basis'))).toHaveLength(0);
     expect(validity.safetyViolations).toHaveLength(0);
   });
 
-  it('bis zu harbourDaysTargetMax Tage am Ende bleiben legitim (Puffer + Ruhetag)', () => {
-    const snapshot = roundTripSnapshot({ days: 14 });
-    snapshot.params = {
-      ...snapshot.params,
-      tripLengthDays: 6,
-      returnDeadlineDate: '2026-08-13', // Törntag 6
-    };
-    const plan = makePlan([
-      makeStage(1, ['athen--mitte'], 'mitte'),
-      makeStage(2, ['mitte--sued'], 'sued'),
-      makeStage(3, ['sued--mitte'], 'mitte'),
-      makeStage(4, ['mitte--athen'], 'athen'),
-      makeHarbourDay(5, 'athen'),
-      makeHarbourDay(6, 'athen'),
-    ]);
-    const validity = validatePlan(plan, snapshot);
-    expect(
-      validity.violations.some(
-        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
-      ),
-    ).toBe(false);
-  });
-
-  it('Hafentage unterwegs zählen nicht als Trailing-Halde', () => {
-    const snapshot = roundTripSnapshot({ days: 14 });
-    snapshot.params = {
-      ...snapshot.params,
-      tripLengthDays: 7,
-      returnDeadlineDate: '2026-08-14', // Törntag 7
-    };
-    // Drei Hafentage MITTEN im Törn (Wetter abwarten ist legitim), nur einer
-    // am Ende: kein Trailing-Befund.
-    const plan = makePlan([
-      makeStage(1, ['athen--mitte'], 'mitte'),
-      makeStage(2, ['mitte--sued'], 'sued'),
-      makeHarbourDay(3, 'sued'),
-      makeHarbourDay(4, 'sued'),
-      makeStage(5, ['sued--mitte'], 'mitte'),
-      makeStage(6, ['mitte--athen'], 'athen'),
-      makeHarbourDay(7, 'athen'),
-    ]);
-    const validity = validatePlan(plan, snapshot);
-    expect(
-      validity.violations.some(
-        (v) => v.kind === 'incomplete' && v.text.includes('an der Basis'),
-      ),
-    ).toBe(false);
-  });
-
-  it('planMetricsFor misst den längsten Hafentage-Lauf ab dem aktuellen Tag', () => {
+  it('die Rangfolge erledigt, was der Befund erledigen sollte: vier Etappentage schlagen zwei', () => {
     const snapshot = roundTripSnapshot();
     const metrics = planMetricsFor(snapshot);
     const mk = (days: ReturnType<typeof makeStage>[]): SolveResult => ({
@@ -694,24 +656,19 @@ describe('solver — die Lage der Hafentage (validatePlan 1b\')', () => {
       makeHarbourDay(4, 'athen'),
       makeHarbourDay(5, 'athen'),
     ]);
-    expect(metrics(halde).maxHarbourRun).toBe(3);
-    const verteilt = mk([
+    const gesegelt = mk([
       makeStage(1, ['athen--mitte'], 'mitte'),
-      makeHarbourDay(2, 'mitte'),
-      makeStage(3, ['mitte--sued'], 'sued'),
-      makeStage(4, ['sued--mitte'], 'mitte'),
-      makeStage(5, ['mitte--athen'], 'athen'),
+      makeStage(2, ['mitte--sued'], 'sued'),
+      makeStage(3, ['sued--mitte'], 'mitte'),
+      makeStage(4, ['mitte--athen'], 'athen'),
+      makeHarbourDay(5, 'athen'),
     ]);
-    expect(metrics(verteilt).maxHarbourRun).toBe(1);
+    expect(metrics(halde).legDays).toBe(2);
+    expect(metrics(gesegelt).legDays).toBe(4);
+    expect(preferred(halde, gesegelt, metrics)).toBe(gesegelt);
   });
 });
 
-/**
- * Die Vorgabe gilt dem PLAN, nicht der Frage "kommen wir überhaupt noch heim?".
- * Sonst würde aus einer Stilentscheidung eine Sicherheitsaussage: der
- * Rückkehr-Check meldete eine Falle, wo das Schiff in Wahrheit zwei kurze
- * Schläge an einem Tag segeln könnte.
- */
 describe('solver — Kapazitätsfragen rechnen weiter mit dem Doppelschlag', () => {
   it('packLegsFeasible nutzt zwei Etappen am Tag, packLegs (Plan) nur eine', () => {
     const snapshot = roundTripSnapshot({ legNm: 8 });
@@ -855,36 +812,51 @@ describe('solver — die Reichweite ist das Ziel, nicht die Etappenzahl', () => 
       ...over,
     });
 
-    it('gültig schlägt ungültig, auch wenn der ungültige weiter käme', () => {
-      const nah = result({ turnIslandId: 'mitte' });
-      const weit = result({
+    it('ein Sicherheits-Befund schlägt jede Ambition', () => {
+      const sicher = result({ turnIslandId: 'mitte' });
+      const unsicher = result({
         turnIslandId: 'sued',
-        validity: { valid: false, horizonDependent: false, violations: [{ kind: 'deadline', day: 5, text: 'zu spät' }], safetyViolations: [] },
+        plan: makePlan([
+          makeStage(1, ['athen--mitte'], 'mitte'),
+          makeStage(2, ['mitte--sued'], 'sued'),
+        ]),
+        validity: {
+          valid: false,
+          horizonDependent: false,
+          violations: [{ kind: 'deadline', day: 5, text: 'zu spät' }],
+          safetyViolations: [{ kind: 'deadline', day: 5, text: 'zu spät' }],
+        },
       });
-      expect(preferred(nah, weit, metrics)).toBe(nah);
-      expect(preferred(weit, nah, metrics)).toBe(nah);
+      expect(preferred(sicher, unsicher, metrics)).toBe(sicher);
+      expect(preferred(unsicher, sicher, metrics)).toBe(sicher);
     });
 
-    it('weiter schlägt näher', () => {
-      const nah = result({ turnIslandId: 'mitte' });
-      const weit = result({ turnIslandId: 'sued' });
-      expect(preferred(nah, weit, metrics)).toBe(weit);
-      expect(preferred(weit, nah, metrics)).toBe(weit);
+    it('MEHR ETAPPENTAGE schlagen weniger — der Rahmen-Vertrag steht oben', () => {
+      /**
+       * ZIELMODELL V3: bis 2026-08-07 stand hier "weiter schlägt näher", und
+       * die Etappenzahl war das LETZTE Kriterium. Genau deshalb bekam der
+       * Skipper neun Etappen in elf Tagen. Jetzt zählt zuerst, ob der Törn
+       * überhaupt gesegelt wird.
+       */
+      const kurz = result({ turnIslandId: 'mitte' });
+      const voll = result({
+        turnIslandId: 'mitte',
+        plan: makePlan([
+          makeStage(1, ['athen--mitte'], 'mitte'),
+          makeStage(2, ['mitte--sued'], 'sued'),
+        ]),
+      });
+      expect(preferred(kurz, voll, metrics)).toBe(voll);
+      expect(preferred(voll, kurz, metrics)).toBe(voll);
     });
 
-    it('eine Eskalationsstufe ist hinnehmbar, wenn sie WEITER trägt', () => {
-      const nahOhne = result({ turnIslandId: 'mitte', relaxedTo: 'none' });
-      const weitMit = result({ turnIslandId: 'sued', relaxedTo: 'doppelschlag' });
-      expect(preferred(nahOhne, weitMit, metrics)).toBe(weitMit);
-    });
-
-    it('bei gleicher Reichweite gewinnt die Stufe, die weniger nachgibt', () => {
+    it('bei gleichem Rahmen gewinnt die Stufe, die weniger nachgibt', () => {
       const ohne = result({ turnIslandId: 'sued', relaxedTo: 'none' });
       const mit = result({ turnIslandId: 'sued', relaxedTo: 'doppelschlag' });
       expect(preferred(mit, ohne, metrics)).toBe(ohne);
     });
 
-    it('bei gleicher Reichweite und Stufe gewinnt der Plan mit weniger Hafentagen', () => {
+    it('ein Plan, der Tage an der Basis verliegt, verliert gegen den, der sie segelt', () => {
       const viel = result({
         turnIslandId: 'sued',
         plan: makePlan([makeHarbourDay(1, 'athen'), makeHarbourDay(2, 'athen'), makeStage(3, ['athen--mitte'], 'mitte')]),

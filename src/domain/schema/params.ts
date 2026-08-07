@@ -223,7 +223,7 @@ const ParamsObjectSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .default('2026-08-08'),
-  tripLengthDays: z.number().int().positive().default(12),
+  tripLengthDays: z.number().int().positive().default(11),
   /**
    * THE ONE deadline (AD-8/AD-9): contractual return to the base.
    * Everything else — effective deadline day, PoR reserve — is DERIVED from
@@ -232,30 +232,27 @@ const ParamsObjectSchema = z.object({
   returnDeadlineDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .default('2026-08-19'),
+    .default('2026-08-18'),
   returnDeadlineHourAthens: z.number().int().min(0).max(23).default(18),
   /** PoR reserve in days — the buffer/harbour day IS this reserve (AD-9, FR19). */
   bufferDays: z.number().int().min(0).default(1),
-  /**
-   * Planning TARGET for harbour days (days without a leg): normally one, the
-   * buffer day. Not a limit — waiting out weather is legitimate.
-   */
-  harbourDays: z.number().int().min(0).default(1),
-  /**
-   * Zielmodell v2 — oberes Ende des HAFENTAGE-ZIELBANDS [harbourDays,
-   * harbourDaysTargetMax]: "ein oder zwei Tage, an denen nicht gesegelt wird"
-   * (Skipper 2026-08-05). Ein Optimierungsziel, keine Grenze: der Solver zieht
-   * Pläne im Band vor (preferred), gültig sind auch andere — die Notgrenze
-   * bleibt harbourDaysMax.
-   */
-  harbourDaysTargetMax: z.number().int().min(0).default(2),
-  /**
-   * Emergency ceiling for harbour days (skipper's call, 2026-08-03: "at a
-   * pinch up to 5"). Beyond this the plan is no longer the trip that was
-   * intended and says so — but it stays a structural finding, never a red
-   * alarm, since lying in port is safe.
-   */
-  harbourDaysMax: z.number().int().min(0).default(5),
+
+  // ZIELMODELL V3 — die HAFENTAGE sind als Begriff entfallen (Skipper
+  // 2026-08-07: "harbourDaysMax kann raus, das brauchen wir nicht als
+  // Kriterium"). Es gab drei Zahlen — Zielwert, Zielband-Obergrenze und
+  // Notgrenze —, und alle drei waren Ersatzkonstruktionen dafür, dass die
+  // Rangfolge die Etappenzahl nicht kannte: sie stand auf Platz 14 von 14.
+  //
+  // Der Vertrag heisst jetzt direkt "jeder Törntag trägt eine Etappe"
+  // (solver.preferred, Kriterium 2 `legDays`). Ein Tag ohne Etappe ist damit
+  // schlicht eine schlechtere Runde und braucht keine eigene Rechnung, kein
+  // Zielband und keine Notgrenze. `PlanDay.kind === 'harbour'` bleibt als
+  // DATENFORM: das Wetter kann einen Tag erzwingen, und der Skipper kann einen
+  // setzen (AD-12) — bewertet wird er nicht mehr eigens.
+  //
+  // Ein Config-Dokument, das harbourDays/harbourDaysTargetMax/harbourDaysMax
+  // noch trägt, bleibt gültig: das Schema ist nicht strikt und streift sie ab.
+
   /** Home base island / place. */
   baseIslandId: z.string().default('athen'),
   basePlaceId: z.string().default('athen-alimos'),
@@ -294,6 +291,26 @@ const ParamsObjectSchema = z.object({
    * Rückweg einschließt. Die Tore selbst stehen in domain/konzept.ts.
    */
   torFensterStunden: z.number().int().min(24).default(48),
+  /**
+   * UMLAUFSINN — ab welcher Windstärke die Drehrichtung der Runde überhaupt
+   * etwas entscheidet (Skipper 2026-08-07: "im Uhrzeigersinn, um auf dem
+   * Rückweg so wenig wie möglich am Wind zu erzeugen — es sei denn es ist
+   * wenig Wind, dann geht das auch").
+   *
+   * Unterhalb dieser Schwelle liefert `konzept.umlaufsinnGebot` 'egal' und die
+   * Rangfolge (solver.preferred, Kriterium 8) entscheidet nichts mehr daran.
+   * Bewusst NICHT `lightWindMaxTwsKn` (6 kn): das ist die Motor-Schwelle, nicht
+   * die Grenze, ab der ein Am-Wind-Rückweg wehtut.
+   */
+  umlaufsinnMinKn: z.number().positive().default(12),
+  /**
+   * Wie einheitlich die Windrichtung im Törnfenster sein muss, damit sie eine
+   * Drehrichtung vorgeben darf: Länge des windgewichteten Mittelvektors,
+   * normiert auf [0,1]. 1 = alle Stunden aus derselben Richtung, 0 = beliebig.
+   * Ohne dieses Mass würde aus einem Fenster mit drehendem Wind ein Gebot,
+   * dessen Richtung reines Rechenartefakt ist.
+   */
+  umlaufsinnMinKohaerenz: z.number().min(0).max(1).default(0.35),
 
   // --- Kite-Spots (Skipper-Wunsch 2026-08-06) --------------------------------
   /**
@@ -554,14 +571,6 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
     ctx.issues.push({
       code: 'custom',
       message: 'stageHoursBandMinH darf stageHoursBandMaxH nicht überschreiten',
-      input: p,
-    });
-  }
-  if (p.harbourDays > p.harbourDaysTargetMax || p.harbourDaysTargetMax > p.harbourDaysMax) {
-    ctx.issues.push({
-      code: 'custom',
-      message:
-        'Hafentage-Zielband: harbourDays ≤ harbourDaysTargetMax ≤ harbourDaysMax muss gelten',
       input: p,
     });
   }
