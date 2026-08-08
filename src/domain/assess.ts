@@ -3,6 +3,17 @@
  * Every forecast refresh triggers a COMPLETE recomputation; the assessment
  * carries the model-run and retrieval timestamps of its snapshot (FR13).
  * There is NO recommendation field for route options (FR22).
+ *
+ * DIE ROUTEN-EBENE IST ABSCHALTBAR (Skipper 2026-08-08, `domain/features.ts`).
+ * Optionsraum, Solver-Vorschlag, Alternativen, Tagesoptionen und
+ * Entscheidungspunkte werden nur noch gerechnet, wenn `routenberatung` gesetzt
+ * ist — sonst plant der Skipper von Hand (`domain/manualPlan.ts`) und die
+ * Bewertung beschränkt sich auf das, was er sehen will: seine Etappen, deren
+ * Wind- und Stundenrechnung und die Nacht-Ampeln der Plätze.
+ *
+ * Der Parameter ist absichtlich per Default `true`: alles, was assessPlanning
+ * direkt aufruft (Tests, Werkzeuge), sieht unverändert die volle Bewertung.
+ * Abgeschaltet wird an EINER Stelle — in der App (`app/usePlanning.ts`).
  */
 
 import type {
@@ -590,7 +601,11 @@ const witnessOf = (r: SolveResult | null): SolveResult | null => {
   return sails && r.validity.safetyViolations.length === 0 ? r : null;
 };
 
-export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
+export function assessPlanning(
+  rawSnapshot: PlanningSnapshot,
+  optionen: { routenberatung?: boolean } = {},
+): Assessment {
+  const routenberatung = optionen.routenberatung ?? true;
   /**
    * ERSTER Schritt: der kuratierte DÜSEN-ZUSCHLAG (domain/windTopo.ts). Er
    * steht VOR der Fortschreibung, weil die ihren typischen Tagesgang aus den
@@ -682,24 +697,24 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
    * denn das ist die Frage, die der Optionsraum stellt ("wie weit kommen wir
    * noch?"). Views konsumieren nur.
    */
-  const routeOptions = currentIslandId
-    ? zielInseln(snapshot, currentIslandId).map((islandId) =>
-        assessTargetOption(islandId, currentIslandId, snapshot),
+  const routeOptions =
+    routenberatung && currentIslandId
+      ? zielInseln(snapshot, currentIslandId).map((islandId) =>
+          assessTargetOption(islandId, currentIslandId, snapshot),
+        )
+      : [];
+  const ppr = predictedPointOfReturn(snapshot, currentIslandId);
+  const decisionPoints = routenberatung
+    ? deriveDecisionPoints(
+        routeOptions,
+        ppr,
+        trip.currentDay,
+        params.decisionLookaheadDays,
       )
     : [];
-  const ppr = predictedPointOfReturn(snapshot, currentIslandId);
-  const decisionPoints = deriveDecisionPoints(
-    routeOptions,
-    ppr,
-    trip.currentDay,
-    params.decisionLookaheadDays,
-  );
-  const dayOptions = deriveDayOptions(
-    snapshot,
-    currentIslandId,
-    bestPlaceByIsland,
-    nightAmpeln,
-  );
+  const dayOptions = routenberatung
+    ? deriveDayOptions(snapshot, currentIslandId, bestPlaceByIsland, nightAmpeln)
+    : [];
 
   // --- round trip: main route, proposal, alternatives, FR2 light -----------
   // The persisted main route is only RE-ASSESSED here; the proposal is a
@@ -728,9 +743,13 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
     expectedIsland !== null &&
     currentIslandId !== expectedIsland;
 
-  const solved = currentIslandId
-    ? completePlan(snapshot, currentIslandId, pins)
-    : null;
+  // Der Solver ist der teuerste Schritt der ganzen Bewertung. Ohne
+  // Routenberatung gibt es keinen Vorschlag, keinen FR2-Zeugen und keine
+  // Alternativen — also läuft er auch nicht.
+  const solved =
+    routenberatung && currentIslandId
+      ? completePlan(snapshot, currentIslandId, pins)
+      : null;
   const proposal = solved
     ? toPlanAssessment(solved, snapshot, bestPlaceByIsland, nightAmpeln)
     : null;
@@ -751,11 +770,12 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
    * Bewertung. Ihn zweimal zu rechnen kostete die Hälfte der Ladezeit für ein
    * Ergebnis, das schon dasteht.
    */
-  const witness = !currentIslandId
-    ? null
-    : futurePinsEmpty(pins)
-      ? witnessOf(solved)
-      : existsValidPlan(snapshot, currentIslandId);
+  const witness =
+    !routenberatung || !currentIslandId
+      ? null
+      : futurePinsEmpty(pins)
+        ? witnessOf(solved)
+        : existsValidPlan(snapshot, currentIslandId);
 
   /**
    * ROUTEN-KONZEPTE — die zentrale, alles überschreibende Logik (konzept.ts):
@@ -774,7 +794,7 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   );
   // Kippt das aktive Konzept, ist der Wechsel eine Entscheidung von HEUTE —
   // die Luv-Falle schnappt in den ersten Tagen zu, nicht am Törnende.
-  if (konzeptEntscheid.wechselHinweis) {
+  if (routenberatung && konzeptEntscheid.wechselHinweis) {
     decisionPoints.push({
       day: trip.currentDay,
       text: `Heute entscheiden — ${konzeptEntscheid.wechselHinweis}`,
@@ -783,11 +803,13 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
   // Entscheidungstore der gefahrenen Route: die Festlegung hinter ein Tor
   // ist ein Entscheidungspunkt AN ihrem Tag — gedeckt oder nicht, er steht
   // im Kalender, nicht nur an der Etappen-Karte.
-  for (const tor of (mainRoute ?? proposal)?.torChecks ?? []) {
-    decisionPoints.push({ day: tor.day, text: tor.note });
+  if (routenberatung) {
+    for (const tor of (mainRoute ?? proposal)?.torChecks ?? []) {
+      decisionPoints.push({ day: tor.day, text: tor.note });
+    }
   }
   decisionPoints.sort((a, b) => a.day - b.day);
-  const gefahren = mainRoute ?? proposal;
+  const gefahren = routenberatung ? (mainRoute ?? proposal) : null;
   const rueckwegEmpfehlung = gefahren
     ? (() => {
         const saetze = rueckwegEmpfehlungFor(gefahren, snapshot);
@@ -848,7 +870,17 @@ export function assessPlanning(rawSnapshot: PlanningSnapshot): Assessment {
 
   const restTripReasons: string[] = [];
   let restTripAmpel: Ampel;
-  if (!currentIslandId) {
+  if (!routenberatung) {
+    /**
+     * OHNE ROUTENBERATUNG GIBT ES KEIN URTEIL ÜBER DEN GANZEN TÖRN. Die
+     * Rest-Trip-Ampel misst den Plan an Rundkurs, Stichtag und Reichweite —
+     * genau die Prüfungen, die die freie Handplanung nicht mehr anstellt. Sie
+     * hier trotzdem zu füllen hiesse, ein Verbot als Farbe zurückzubringen,
+     * das die Ansicht gerade abgelegt hat. 'unbewertet' ist die ehrliche
+     * Antwort: niemand hat geprüft, weil niemand prüfen sollte.
+     */
+    restTripAmpel = 'unbewertet';
+  } else if (!currentIslandId) {
     // No position, no verdict: a missing fix is a data gap, and painting the
     // rest trip red would cry wolf (NFR6: never green, never silently hidden).
     restTripAmpel = 'unbewertet';

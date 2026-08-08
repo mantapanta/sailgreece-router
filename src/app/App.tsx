@@ -328,8 +328,11 @@ function AuthGate() {
   return (
     <TripProvider>
       <PlanningProvider>
-        {/* Die angesehene Route (Hauptroute oder eine Alternative) gilt für
-            BEIDE Ansichten — deshalb über dem Shell, nicht in einer View. */}
+        {/* Die geteilte Routenwahl trug die Alternativ-Ansicht über beide
+            Views. Seit der Handplanung gibt es genau EINEN Törn, und keine
+            Ansicht liest sie mehr — der Provider bleibt montiert, damit der
+            Schalter in domain/features.ts allein genügt, um die Routenberatung
+            wieder einzuschalten. */}
         <RouteViewProvider>
           <Shell />
         </RouteViewProvider>
