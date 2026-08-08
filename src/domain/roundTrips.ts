@@ -17,9 +17,9 @@
  * und die Tiefensuche läuft in den Deckel. Der AUFZÄHLUNGS-Graph ist deshalb
  * ausgedünnt (siehe `adjacencyOf`), und über ihn sind es bei elf Etappen:
  *
- *     2 947 Runden ohne jede Wiederholung   (vollständig)
- *    45 470 mit bis zu zwei Zweitanläufen   (vollständig)
- *    50 000 kürzer als der Rahmen           (gekappt — die Notantwort-Schicht)
+ *     5 192 Runden ohne jede Wiederholung   (vollständig)
+ *    71 088 mit bis zu zwei Zweitanläufen   (vollständig)
+ *    95 814 kürzer als der Rahmen           (vollständig — die Notantwort-Schicht)
  *
  * Bewertet werden davon nicht alle: `solver.vorauswahl` nimmt je Schicht die
  * besten Kandidaten nach dem WETTERUNABHÄNGIGEN Teil der Rangfolge. Der Grund
@@ -67,11 +67,9 @@ import { legIndexWithReverses } from './legs.ts';
 const MAX_LEGS_CEILING = 20;
 
 /**
- * Notbremse gegen einen Raum, der nicht mehr aufzählbar ist. Sie greift heute
- * bei EINER Schicht: der verkürzten (50 000 von mehr). Das ist die
- * FR18-Notantwort-Schicht — sie wird nur befragt, wenn keine volle Runde trägt,
- * und dort ist die Vollständigkeit weniger wert als die Antwort überhaupt.
- * Die beiden vollen Schichten bleiben unter der Bremse und damit VOLLSTÄNDIG.
+ * Notbremse gegen einen Raum, der nicht mehr aufzählbar ist. An der
+ * ausgelieferten Bibliothek greift sie bei KEINER Schicht — alle drei sind
+ * vollständig (5192 / 71 088 / 95 814 Runden über elf Etappen).
  *
  * Dass sie greift, wird über `RoundTripEnumeration.gekappt` nach oben gemeldet
  * — die alte Bremse schwieg, und eine Suche, die still die halbe Ägäis
@@ -80,11 +78,18 @@ const MAX_LEGS_CEILING = 20;
  * VON 50 000 AUF 80 000, als `SKIPPER_BESTAETIGT` dazukam. Schicht B stand mit
  * 45 470 Runden schon bei 91 % des alten Deckels; eine einzige zusätzliche
  * Kante kippte sie darüber (50 752). Die Zahl ist deshalb nicht "mehr Luft
- * nach oben", sondern der Preis dafür, dass die Schicht VOLLSTÄNDIG bleibt —
- * gemessen 0,6 s, und Schicht B wird ohnehin nur befragt, wenn Schicht A
- * nichts trägt.
+ * nach oben", sondern der Preis dafür, dass die Schicht VOLLSTÄNDIG bleibt.
+ *
+ * VON 80 000 AUF 120 000, als `kea--serifos` dazukam (2026-08-08). Diesmal
+ * kippte die VERKÜRZTE Schicht darüber: 68 527 → 95 814. Sie ist die
+ * FR18-Notantwort-Schicht, und gerade dort ist eine abgeschnittene Tiefensuche
+ * teuer — gemessen fiel die kürzeste Santorin-Runde (acht Etappen) aus dem
+ * Ergebnis, weil der Deckel griff, bevor der DFS bei ihr ankam. Genau die Sorte
+ * stiller Verzerrung, gegen die der ausgedünnte Graph oben gebaut ist.
+ * Gemessen kosten alle drei Schichten zusammen 0,9 s — einmal je Snapshot,
+ * danach aus dem Memo (`layerCache`).
  */
-const HARD_CEILING = 80_000;
+const HARD_CEILING = 120_000;
 
 /**
  * Wie viele ZWEITANLÄUFE eine Runde höchstens haben darf.
@@ -149,11 +154,26 @@ const ABLEITUNG_AUFZAEHLUNG_NM = 30;
  * ihre seemännische Sinnhaftigkeit, nicht ihre Recherche. Zwei verschiedene
  * Aussagen, zwei verschiedene Orte.
  *
+ * DERSELBE FALL EIN ZWEITES MAL, ANDERSHERUM (Skipper 2026-08-08): ab Kea liess
+ * sich SERIFOS nicht als Tagesziel einstellen. Kea hat vier kuratierte Nachbarn
+ * (Attika 15 sm, Kythnos 18, Syros 34, Athen 36) und KEINE EINZIGE abgeleitete
+ * Etappe unter 30 sm — Serifos ist mit 40,1 sm die kürzeste, Delos/Rinia (50)
+ * und Mykonos (51,2) folgen. Der Deckel von zwei je Insel war also gar nicht
+ * das Problem, die 30-sm-Grenze war es allein: die Kante fiel aus der
+ * Aufzählung, keine Runde konnte sie fahren, und das Menü zeigte deshalb nur
+ * die vier kuratierten Nachbarn.
+ *
+ * Nicht die sm-Regel des Menüs hat gesperrt: 40,1 sm raumschots liegen weit
+ * innerhalb der Tagesreichweite (100 sm). Es war ausschliesslich die
+ * Rechen-Heuristik — genau das, wogegen diese Liste steht.
+ *
  * Schlüssel ist das Insel-PAAR, alphabetisch sortiert und mit `--` verbunden.
  */
 const SKIPPER_BESTAETIGT = new Set<string>([
   // Skipper 2026-08-07, siehe oben.
   'paros--serifos',
+  // Skipper 2026-08-08, siehe oben.
+  'kea--serifos',
 ]);
 
 const inselPaar = (a: string, b: string): string => [a, b].sort().join('--');
@@ -462,8 +482,9 @@ export function* roundTripLayers(
    *
    * Gemessen an der echten Bibliothek war das der Grund, warum eine manuelle
    * Änderung nicht mehr durchging. „Tag 3 nach Kythnos" braucht bei gehaltenen
-   * Vortagen eine Runde mit Zweitanlauf (Schicht B): 1125 der 50 752 Runden
-   * dort tragen den Pin. Auf einem frischen Snapshot liefert der Solver den
+   * Vortagen eine Runde mit Zweitanlauf (Schicht B): KEINE der 5192 Runden der
+   * Schicht A trägt diesen Pin, 1316 der 71 088 Runden der Schicht B tragen
+   * ihn. Auf einem frischen Snapshot liefert der Solver den
    * Plan; nach dem Lauf der Hauptroute auf DEMSELBEN Snapshot — also immer, in
    * der laufenden App — lieferte er `null`, und die Ansicht meldete „kein
    * Round-Trip führt dorthin". Der Fehler war nicht die Suche, sondern ein

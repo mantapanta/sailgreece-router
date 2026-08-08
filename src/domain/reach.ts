@@ -146,11 +146,11 @@ export interface Planlage {
  *
  * Der Filter brach bis dahin bei der ersten Schicht ab, die überhaupt Runden
  * trug — und das ist immer Schicht A, denn die Aufzählung hängt am Graphen, nicht
- * am Wetter. GEMESSEN an der echten Bibliothek: nach „Tag 1 nach Kea" blieb für
- * Tag 2 genau EIN Ziel übrig (Syros), während der Solver bei gehaltenem Tag 1
- * ausser Syros auch Kythnos, Sifnos, Serifos, Paros, Mykonos, Antiparos und
- * Delos/Rinia anstandslos lieferte. Neun von zehn tragfähigen Zielen waren
- * unsichtbar, und der Tag sah aus, als zöge die App die Route nicht mehr nach.
+ * am Wetter. GEMESSEN an der echten Bibliothek: nach „Tag 1 nach Kea" stand für
+ * Tag 2 genau EIN Ziel zur Wahl (Syros; seit `kea--serifos` in der Aufzählung
+ * ist, wären es zwei), während der Solver bei gehaltenem Tag 1 zehn Ziele
+ * lieferte — vier davon über den vollen Rahmen. Ein Tag mit einer einzigen
+ * Option sieht aus, als zöge die App die Route nicht mehr nach.
  *
  * Der Fehler war die Abbruch-Bedingung, nicht die Schicht: `completePlan` bricht
  * ab, sobald eine Schicht einen TRAGENDEN PLAN geliefert hat — mit einem Pin,
