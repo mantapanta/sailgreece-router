@@ -29,7 +29,7 @@ import {
 } from '../domain/konzept.ts';
 import type { Assessment, PlanningSnapshot } from '../domain/schema/snapshot.ts';
 import { DEFAULT_PARAMS, type Params } from '../domain/schema/params.ts';
-import { planOutdated, type Plan } from '../domain/schema/plan.ts';
+import { islandAtEndOfDay, planOutdated, type Plan } from '../domain/schema/plan.ts';
 import { useTrip, deriveCurrentDay } from './tripContext.tsx';
 
 export const STALE_TIME_MS = 3600_000; // ~1 h (FR13)
@@ -231,22 +231,43 @@ export function usePlanningEngine() {
    * FR28 — the skipper sets a day's target; the rest of the trip is recomputed
    * SYNCHRONOUSLY here and dispatched as one finished plan, so pin and
    * completion always come from the same snapshot (AD-12, one mutation path).
-   * Returns false when no round trip can honour the pin at all (a data limit,
-   * not a rating: no leg leads there).
+   * Returns false when no round trip can honour the pin at all.
+   *
+   * DIE TAGE DAVOR BLEIBEN STEHEN. Bis 2026-08-07 band nur der geänderte Tag,
+   * und der Solver legte den ganzen Törn ab der aktuellen Position neu — wer
+   * Tag 5 änderte, bekam womöglich auch einen anderen Tag 2. Der Skipper dazu:
+   * „es gibt ja eine Route, die bis dahin festgelegt ist und das neue Leg
+   * funktioniert auch, es gibt keinen Sinn nach hinten zu verändern."
+   *
+   * Sie werden GEHALTEN, nicht festgelegt (`Pin.gehalten`): die Suche darf sie
+   * nicht verschieben, aber sie erscheinen hinterher nicht als Entscheidungen
+   * des Skippers, die er einzeln wieder lösen müsste. Echte Pins gewinnen —
+   * für einen Tag, den er selbst gesetzt hat, wird kein Halte-Pin ergänzt.
    */
   const editStage = useCallback(
     (day: number, toIslandId: string | null, toPlaceId?: string): boolean => {
       if (!snapshot || !assessment?.currentIslandId) return false;
+      const gehalten: Pin[] = [];
+      if (trip.plan) {
+        for (let d = snapshot.trip.currentDay; d < day; d++) {
+          if (pins.some((p) => p.day === d)) continue;
+          const island = islandAtEndOfDay(trip.plan, d);
+          // Ein Hafentag wird als "endet auf dieser Insel" gehalten — das
+          // lässt ihn Hafentag bleiben, ohne ihn dazu zu zwingen.
+          if (island) gehalten.push({ day: d, toIslandId: island, gehalten: true });
+        }
+      }
       const nextPins: Pin[] = [
         ...pins.filter((p) => p.day !== day),
         { day, toIslandId, toPlaceId },
+        ...gehalten,
       ];
       const solved = completePlan(snapshot, assessment.currentIslandId, nextPins);
       if (!solved) return false;
       dispatch({ type: 'EDIT_STAGE', plan: solved.plan });
       return true;
     },
-    [snapshot, assessment?.currentIslandId, pins, dispatch],
+    [snapshot, assessment?.currentIslandId, pins, trip.plan, dispatch],
   );
 
   /**

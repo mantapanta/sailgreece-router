@@ -53,6 +53,7 @@ import {
   type SolveResult,
 } from './solver.ts';
 import { distanceNm } from './geo.ts';
+import { deadlineFrame } from './time.ts';
 
 /**
  * Island the boat is currently at, derived from the injected position, plus
@@ -340,6 +341,34 @@ function assessPlan(
   /** Der Bibliotheks-Index — Notnagel für Tage, deren Kette nicht auflöst. */
   const legsById = legLibrary(snapshot);
 
+  /**
+   * Die Insel, ab der der Solver plant — dort steht das Schiff am Morgen des
+   * aktuellen Törntags. Der Kontextfilter der Etappenwahl (reach.ts) braucht
+   * sie, weil er denselben Kandidatenraum liest wie `completePlan`, und der
+   * hängt an DIESER Insel, nicht am Vortagsziel des einzelnen Tages.
+   */
+  const planStartIslandId =
+    islandAtEndOfDay(plan, snapshot.trip.currentDay - 1) ?? snapshot.params.baseIslandId;
+
+  /**
+   * Der Weg, den dieser Plan ab der Startinsel schon nimmt — als KETTE, also
+   * ohne Hafentage (die verbrauchen keine Etappe). `vorgeschichteBis(d)` ist
+   * der Teil davor Tag `d`; genau daran bindet der Filter die Auswahl, weil
+   * die Tage davor beim Ändern gehalten werden (solver.Pin.gehalten).
+   */
+  const planKette: { day: number; islandId: string }[] = [];
+  {
+    let letzte = planStartIslandId;
+    for (let d = snapshot.trip.currentDay; d <= deadlineFrame(snapshot.params).deadlineDay; d++) {
+      const islandId = islandAtEndOfDay(plan, d);
+      if (!islandId || islandId === letzte) continue;
+      planKette.push({ day: d, islandId });
+      letzte = islandId;
+    }
+  }
+  const vorgeschichteBis = (day: number): string[] =>
+    planKette.filter((e) => e.day < day).map((e) => e.islandId);
+
   // Entscheidungstore dieses Plans — einmal je Plan, dann je Tag zugeordnet.
   const torChecks = deriveTorChecks(plan, snapshot);
 
@@ -447,7 +476,10 @@ function assessPlan(
       stopHoursPerStop,
       stopHoursTotal:
         Math.max(0, legAssessments.length - 1) * stopHoursPerStop,
-      reachableIslandIds: reachableIslands(snapshot, fromIslandId, entry.day),
+      reachableIslandIds: reachableIslands(snapshot, fromIslandId, entry.day, {
+        startIslandId: planStartIslandId,
+        vorgeschichte: vorgeschichteBis(entry.day),
+      }),
       /**
        * DIE ZWISCHENSTOPPS des Tages, aus der GESEGELTEN Kette gelesen — dort
        * steht der Hafen, an dem wirklich angehalten wird (Skipper-Wahl aus

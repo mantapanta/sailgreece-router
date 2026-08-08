@@ -433,9 +433,61 @@ function vorauswahl(
  */
 const candidateCache = new WeakMap<PlanningSnapshot, Map<string, Candidate[][]>>();
 
+/**
+ * KANN diese Kette den Pin überhaupt tragen? Die notwendige Bedingung, mehr
+ * nicht — ob der Tag am Ende wirklich dort endet, entscheidet die Packung
+ * (`candidateHonoursPins`).
+ *
+ * Sie muss VOR der `vorauswahl` greifen, und das ist der ganze Grund, dass es
+ * sie gibt: die Vorauswahl kappt je Schicht auf `KANDIDATEN_JE_SCHICHT`, und
+ * sie tat das nach einer Rangfolge, die den Pin des Skippers gar nicht kannte.
+ * Gemessen am 2026-08-07 gegen die ausgelieferte Bibliothek: von 126 Zielen,
+ * die das Etappen-Menü anbot und der Solver ablehnte, scheiterten 50 GENAU
+ * hier — es gab passende Runden, sie standen nur nicht unter den ersten 120.
+ *
+ * Die Abbildung Kettenposition → Törntag ist die des Packers, dieselbe wie in
+ * `reach.islandsPossibleOnDay`: Wartetage (`D − L`) schieben eine Etappe nach
+ * hinten, Doppelschlag-Tage (`params.doppelschlagMaxPerTrip`) nach vorn. Ein
+ * Hafentag-Pin (`toIslandId === null`) bindet keine Kette — welcher Tag ohne
+ * Etappe bleibt, entscheidet erst die Packung.
+ */
+function kannPinTragen(
+  c: Candidate,
+  pins: Pin[],
+  startDay: number,
+  daysAvailable: number,
+  doppelschlaege: number,
+): boolean {
+  const seq = routeIslandSequence(c.legs);
+  const wartetage = Math.max(0, daysAvailable - c.legs.length) + doppelschlaege;
+  for (const pin of pins) {
+    if (pin.toIslandId === null) continue;
+    const position = pin.day - startDay + 1;
+    let gefunden = false;
+    for (
+      let p = Math.max(1, position - wartetage);
+      p <= Math.min(position + doppelschlaege, c.legs.length);
+      p++
+    ) {
+      if (seq[p] === pin.toIslandId) {
+        gefunden = true;
+        break;
+      }
+    }
+    if (!gefunden) return false;
+  }
+  return true;
+}
+
 export function* candidateLayers(
   snapshot: PlanningSnapshot,
   startIslandId: string,
+  /**
+   * Die Pins des Skippers — sie schneiden den Kandidatenraum zu, BEVOR die
+   * Vorauswahl kappt (siehe `kannPinTragen`). Ohne sie liefert die Funktion
+   * denselben Raum wie zuvor.
+   */
+  pins: Pin[] = [],
 ): Generator<Candidate[]> {
   /**
    * Memo wie in roundTrips.ts, und aus demselben Grund: der Kandidatenraum
@@ -449,7 +501,16 @@ export function* candidateLayers(
     proSnapshot = new Map();
     candidateCache.set(snapshot, proSnapshot);
   }
-  const gecacht = proSnapshot.get(startIslandId);
+  // Der Pin gehört in den Schlüssel: er schneidet den Raum zu, also ist ein
+  // gepinnter Kandidatenraum ein ANDERER Raum als der freie.
+  const cacheKey = [
+    startIslandId,
+    ...pins
+      .filter((p) => p.toIslandId !== null)
+      .map((p) => `${p.day}=${p.toIslandId}`)
+      .sort(),
+  ].join('|');
+  const gecacht = proSnapshot.get(cacheKey);
   if (gecacht) {
     yield* gecacht;
     return;
@@ -457,13 +518,14 @@ export function* candidateLayers(
   const erzeugt: Candidate[][] = [];
   const merke = (cs: Candidate[]): Candidate[] => {
     erzeugt.push(cs);
-    proSnapshot.set(startIslandId, [...erzeugt]);
+    proSnapshot.set(cacheKey, [...erzeugt]);
     return cs;
   };
 
   const frame = deadlineFrame(snapshot.params);
+  const startDay = snapshot.trip.currentDay;
   // Ein Törntag, eine Verbindung: so viele Etappen wie Tage übrig sind.
-  const daysAvailable = frame.deadlineDay - snapshot.trip.currentDay + 1;
+  const daysAvailable = frame.deadlineDay - startDay + 1;
 
   const seen = new Set<string>();
   const fresh = (cs: Candidate[]): Candidate[] => {
@@ -478,11 +540,24 @@ export function* candidateLayers(
   };
 
   for (const layer of roundTripLayers(snapshot, startIslandId, daysAvailable)) {
+    const alle = layer.trips.map((legs) => {
+      const c = makeCandidate('runde', layer.layer, legs, snapshot);
+      return { ...c, variantId: `runde-${c.turnIslandId}-${legs.length}` };
+    });
+    // ZUERST der Pin, DANN die Kappung — sonst kappt die Vorauswahl nach einer
+    // Rangfolge, die vom Wunsch des Skippers nichts weiss (`kannPinTragen`).
     const candidates = vorauswahl(
-      layer.trips.map((legs) => {
-        const c = makeCandidate('runde', layer.layer, legs, snapshot);
-        return { ...c, variantId: `runde-${c.turnIslandId}-${legs.length}` };
-      }),
+      pins.length === 0
+        ? alle
+        : alle.filter((c) =>
+            kannPinTragen(
+              c,
+              pins,
+              startDay,
+              daysAvailable,
+              Math.max(0, snapshot.params.doppelschlagMaxPerTrip),
+            ),
+          ),
       daysAvailable,
       snapshot,
     );
@@ -1515,6 +1590,21 @@ export interface Pin {
   /** Island the skipper wants that day to end at; null = harbour day. */
   toIslandId: string | null;
   toPlaceId?: string;
+  /**
+   * NUR GEHALTEN, nicht festgelegt: der Tag bleibt, wo der bestehende Plan ihn
+   * schon hat, ist aber keine Entscheidung des Skippers.
+   *
+   * Der Unterschied zum echten Pin ist die HERKUNFT des Tages. Ein gehaltener
+   * Tag bindet die Suche genauso — er darf sich nicht verschieben —, aber er
+   * bekommt kein `source: 'skipper'`, taucht also nicht als Festlegung in der
+   * Ansicht auf und wird auch nicht mit "Festlegung lösen" wieder frei.
+   *
+   * Warum es das braucht (Skipper 2026-08-07): "es gibt ja eine Route, die bis
+   * dahin festgelegt ist und das neue Leg funktioniert auch, es gibt keinen
+   * Sinn nach hinten zu verändern." Wer Tag 5 ändert, ändert Tag 5 — nicht
+   * rückwirkend Tag 2.
+   */
+  gehalten?: boolean;
 }
 
 /**
@@ -1558,10 +1648,17 @@ function candidateHonoursPins(
   return true;
 }
 
-/** Re-stamp pinned days as skipper-owned and carry their place choice over. */
+/**
+ * Re-stamp pinned days as skipper-owned and carry their place choice over.
+ *
+ * GEHALTENE Tage bleiben aussen vor: sie binden die Suche, sind aber keine
+ * Entscheidung des Skippers (siehe `Pin.gehalten`). Sie hier mitzustempeln
+ * hiesse, den halben Törn als festgelegt auszugeben, weil der Skipper EINEN
+ * Tag geändert hat.
+ */
 function applyPins(days: PlanDay[], pins: Pin[]): PlanDay[] {
   return days.map((d) => {
-    const pin = pins.find((p) => p.day === d.day);
+    const pin = pins.find((p) => p.day === d.day && p.gehalten !== true);
     if (!pin) return d;
     if (d.kind === 'stage') {
       return { ...d, source: 'skipper' as const, toPlaceId: pin.toPlaceId ?? d.toPlaceId };
@@ -1706,7 +1803,7 @@ export function completePlan(
    * jede Gewichtung, weil ein Rangkriterium immer noch von genug anderen
    * Kriterien überstimmt werden kann.
    */
-  for (const candidates of candidateLayers(snapshot, startIslandId)) {
+  for (const candidates of candidateLayers(snapshot, startIslandId, futurePins)) {
     const inLayer = candidates.filter(
       (c) =>
         (opts.turnIslandId === undefined || c.turnIslandId === opts.turnIslandId) &&

@@ -53,10 +53,12 @@ import {
   planMetricsFor,
   planTurn,
   preferred,
+  type Pin,
   type PlanMetrics,
   type SolveResult,
 } from '../solver.ts';
 import { islandSequence } from '../legs.ts';
+import { islandAtEndOfDay } from '../schema/plan.ts';
 import { stagesOf } from '../schema/plan.ts';
 import { DEFAULT_PARAMS } from '../schema/params.ts';
 import { deadlineFrame } from '../time.ts';
@@ -175,6 +177,14 @@ const RAHMEN = deadlineFrame({ ...DEFAULT_PARAMS, tripStartDate: TRIP_START }).d
  */
 const VOLLE_BEWERTUNG_MS = 20_000;
 
+/**
+ * Die Frist für den Menü-Wächter weiter unten: er rechnet EINEN vollen
+ * Solver-Lauf je angebotenem Tagesziel, an einer Stichprobe von vier
+ * Törntagen also rund vierzig. Das ist der Preis dafür, die Zusage des Menüs
+ * gegen die echte Bibliothek zu prüfen statt gegen eine Miniatur.
+ */
+const ETAPPEN_MENUE_MS = 120_000;
+
 describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
   it('Der Törnrahmen ist elf Tage — elf Tage, elf Etappen', () => {
     expect(RAHMEN).toBe(11);
@@ -196,11 +206,15 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      * aufzählbar bleibt. Mit allen 110 wären es über 300 000, die Tiefensuche
      * liefe in den Deckel, und eine abgeschnittene Tiefensuche ist verzerrt:
      * sie lieferte gemessen einen Plan mit zehn statt elf Etappentagen.
+     * 2026-08-07 (zuletzt): 2947 → 3272, durch `SKIPPER_BESTAETIGT` —
+     * Serifos–Paros, vom Skipper als Tagesschlag bestätigt, umgeht die
+     * Ausdünnung. 545 dieser Runden fahren die Verbindung; über die Parameter
+     * hätte dieselbe Kante 23 585 Runden gekostet (roundTrips.ts).
      */
     const snapshot = realSnapshot();
     const [schichtA] = [...roundTripLayers(snapshot, 'athen', 11)];
     expect(schichtA?.gekappt).toBe(false);
-    expect(schichtA?.trips).toHaveLength(2947);
+    expect(schichtA?.trips).toHaveLength(3272);
   });
 
   it('Keine Runde der Schicht A läuft eine Insel zweimal an', () => {
@@ -229,6 +243,10 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      *   der Heimweg von Naxos muss nicht mehr über Paros laufen.
      *   ACHT (Törntag 4), seit die abgeleiteten Etappen den Graphen füllen.
      *
+     * Und die MINDESTLÄNGE ist am 2026-08-07 von neun auf acht Etappen
+     * gefallen, als Serifos–Paros dazukam (`SKIPPER_BESTAETIGT`): der Westteil
+     * der Runde spart eine Insel. Die Grenze "ab Törntag 5 nicht mehr" bleibt.
+     *
      * "Santorin geht ab Törntag 5 nicht mehr" ist die richtige Antwort. Falsch
      * war, dass die App das Ziel trotzdem angeboten und einen Plan dazugelegt
      * hat, der nicht dorthin führt.
@@ -236,8 +254,8 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
     const anTag1 = enumerateRoundTrips(realSnapshot({ currentDay: 1 }), 'athen', RAHMEN)
       .filter((t) => islandSequence(t).includes('santorin'));
     expect(anTag1.length).toBeGreaterThan(0);
-    // Neun Etappen ist das Minimum — keine kürzere Santorin-Runde existiert.
-    expect(Math.min(...anTag1.map((t) => t.length))).toBe(9);
+    // Acht Etappen ist das Minimum — keine kürzere Santorin-Runde existiert.
+    expect(Math.min(...anTag1.map((t) => t.length))).toBe(8);
 
     // Tag 4 lässt es noch zu, Tag 5 nicht mehr.
     const anTag4 = enumerateRoundTrips(realSnapshot({ currentDay: 4 }), 'athen', RAHMEN - 3)
@@ -490,6 +508,111 @@ describe('Zielmodell v3 — der Optionsraum lügt nicht mehr', () => {
       expect(kuratiert).not.toContain(opt.name);
     }
   }, VOLLE_BEWERTUNG_MS);
+});
+
+/**
+/**
+ * DAS ETAPPEN-MENÜ HÄLT, WAS ES ANBIETET.
+ *
+ * Der Befund des Skippers vom 2026-08-07: „Alle Optionen, die mir Menü Etappe
+ * ändern angeboten werden, sollten dann tatsächlich auch möglich sein. Hier
+ * habe ich Paros ausgewählt und das war ja auch angezeigt und dann sagt mir
+ * die App, dass das nicht möglich ist."
+ *
+ * Es war kein Einzelfall. Gemessen an der ausgelieferten Bibliothek (mildes
+ * Fenster, 14 kn aus Nord) lehnte der Solver 126 von 208 angebotenen Zielen
+ * ab — sechs von zehn. Drei Ursachen, alle gezählt:
+ *
+ *   76 — `reach.ts` fragte den vollen Etappen-Index nach zwei Hops ab dem
+ *        Vortagsziel, der Solver sucht aber Runden über den AUSGEDÜNNTEN
+ *        Aufzählungs-Graphen.
+ *   50 — `solver.vorauswahl` kappte je Schicht auf 120 Kandidaten nach einer
+ *        Rangfolge, die den Pin nicht kannte. Passende Runden gab es, sie
+ *        standen nur nicht unter den ersten 120.
+ *    - — und Serifos–Paros selbst fehlte im Aufzählungs-Graphen ganz; sie
+ *        steht jetzt in `roundTrips.SKIPPER_BESTAETIGT`.
+ *
+ * Dieser Test ist der Wächter darüber: JEDES Ziel, das im Menü steht, muss
+ * sich auch übernehmen lassen — bei gehaltenen Vortagen, so wie die App es
+ * tut.
+ */
+describe('Zielmodell v3 — das Etappen-Menü verspricht nichts, was der Solver ablehnt', () => {
+  it('Jedes angebotene Tagesziel lässt sich auch übernehmen', () => {
+    const snapshot = realSnapshot();
+    const frei = completePlan(snapshot, 'athen', []);
+    expect(frei).not.toBeNull();
+    const mitPlan: PlanningSnapshot = {
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: frei!.plan },
+    };
+    const assessment = assessPlanning(mitPlan);
+
+    /** Die Tage davor gehalten — genau das, was `usePlanning.editStage` tut. */
+    const gehaltenBis = (day: number): Pin[] => {
+      const out: Pin[] = [];
+      for (let d = mitPlan.trip.currentDay; d < day; d++) {
+        const islandId = islandAtEndOfDay(frei!.plan, d);
+        if (islandId) out.push({ day: d, toIslandId: islandId, gehalten: true });
+      }
+      return out;
+    };
+
+    const angeboten: string[] = [];
+    const abgelehnt: string[] = [];
+    for (const stage of assessment.mainRoute!.stages) {
+      for (const islandId of stage.reachableIslandIds) {
+        angeboten.push(`Tag ${stage.day} → ${islandId}`);
+        const solved = completePlan(mitPlan, assessment.currentIslandId!, [
+          ...gehaltenBis(stage.day),
+          { day: stage.day, toIslandId: islandId },
+        ]);
+        if (!solved) abgelehnt.push(`Tag ${stage.day} → ${islandId}`);
+      }
+    }
+
+    // Der Test darf nicht dadurch grün werden, dass gar nichts mehr im Menü
+    // steht: der Filter ist eine Zusage, keine Sperre.
+    expect(angeboten.length).toBeGreaterThan(25);
+    expect(abgelehnt, abgelehnt.join(', ')).toHaveLength(0);
+  }, ETAPPEN_MENUE_MS);
+
+  it('Paros ab Serifos — der Fall, mit dem der Befund anfing', () => {
+    /**
+     * „Meiner Meinung nach Paros durchaus Sinn von Serifos kommend … es ist
+     * der erste Teil der Reise, und es ist weiter östlich, also eigentlich
+     * meiner Meinung nach durchaus optimal."
+     *
+     * Zwei Zusagen in einem: die Insel steht an Tag 3 im Menü, UND die
+     * Übernahme lässt die Tage davor in Ruhe.
+     */
+    const snapshot = realSnapshot();
+    const mitSerifos = completePlan(snapshot, 'athen', [
+      { day: 2, toIslandId: 'serifos' },
+    ]);
+    expect(mitSerifos).not.toBeNull();
+    const mitPlan: PlanningSnapshot = {
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: mitSerifos!.plan },
+    };
+    const tag3 = assessPlanning(mitPlan).mainRoute!.stages.find((s) => s.day === 3)!;
+    expect(tag3.reachableIslandIds).toContain('paros');
+
+    const vorher = [1, 2].map((d) => islandAtEndOfDay(mitSerifos!.plan, d));
+    const gepinnt = completePlan(mitPlan, 'athen', [
+      { day: 1, toIslandId: vorher[0]!, gehalten: true },
+      { day: 2, toIslandId: vorher[1]!, gehalten: true },
+      { day: 3, toIslandId: 'paros' },
+    ]);
+    expect(gepinnt).not.toBeNull();
+    expect(islandAtEndOfDay(gepinnt!.plan, 3)).toBe('paros');
+    // KEINE Rückwirkung nach hinten — der Kern der Beanstandung.
+    expect([1, 2].map((d) => islandAtEndOfDay(gepinnt!.plan, d))).toEqual(vorher);
+    // Und die Tage davor sind deshalb noch lange keine Festlegungen.
+    for (const d of [1, 2]) {
+      const tag = gepinnt!.plan.days.find((x) => x.day === d)!;
+      expect(tag.source, `Tag ${d}`).not.toBe('skipper');
+    }
+  }, ETAPPEN_MENUE_MS);
 });
 
 /**

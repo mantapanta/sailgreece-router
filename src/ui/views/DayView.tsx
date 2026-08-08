@@ -448,8 +448,18 @@ function StageEditor({
     setError(null);
     const ok = editStage(stage.day, islandId, placeId);
     if (!ok) {
+      /**
+       * Der Satz sagt jetzt, was wirklich fehlt. Bis 2026-08-07 stand hier "es
+       * führt keine Etappe der Bibliothek dorthin" — und das war beim Befund
+       * des Skippers (Paros ab Serifos) schlicht falsch: die Etappe gibt es,
+       * es gab nur keine RUNDE, die sie an diesem Tag fährt und rechtzeitig
+       * heimkommt. Eine Fehlermeldung, die auf die Bibliothek zeigt, schickt
+       * beim Suchen in die falsche Richtung.
+       */
       fail(
-        'Mit diesem Ziel lässt sich kein Round-Trip bauen — es führt keine Etappe der Bibliothek dorthin.',
+        islandId
+          ? `Kein Round-Trip führt an Tag ${stage.day} nach ${islandName(snapshot, islandId)} und von dort rechtzeitig zur Basis zurück — bei unveränderten Tagen davor geht dieser Tag nicht auf.`
+          : 'Mit einem Hafentag an diesem Tag lässt sich kein Round-Trip mehr bauen, der rechtzeitig zur Basis zurückkommt.',
       );
       return;
     }
@@ -496,7 +506,8 @@ function StageEditor({
       <p className="beschreibung">
         Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
         raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
-        Vortagsziel, die die Etappen-Bibliothek an einem Tag erreicht.
+        Vortagsziel, die eine Runde von dort aus auch ansteuern kann. Die Tage
+        davor bleiben stehen — geändert wird ab hier.
       </p>
       {placesOnIsland.length > 0 && (
         <label>

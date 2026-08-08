@@ -76,8 +76,15 @@ const MAX_LEGS_CEILING = 20;
  * Dass sie greift, wird über `RoundTripEnumeration.gekappt` nach oben gemeldet
  * — die alte Bremse schwieg, und eine Suche, die still die halbe Ägäis
  * abschneidet, ist genau die Art Fehler, die zwei Monate unentdeckt bleibt.
+ *
+ * VON 50 000 AUF 80 000, als `SKIPPER_BESTAETIGT` dazukam. Schicht B stand mit
+ * 45 470 Runden schon bei 91 % des alten Deckels; eine einzige zusätzliche
+ * Kante kippte sie darüber (50 752). Die Zahl ist deshalb nicht "mehr Luft
+ * nach oben", sondern der Preis dafür, dass die Schicht VOLLSTÄNDIG bleibt —
+ * gemessen 0,6 s, und Schicht B wird ohnehin nur befragt, wenn Schicht A
+ * nichts trägt.
  */
-const HARD_CEILING = 50_000;
+const HARD_CEILING = 80_000;
 
 /**
  * Wie viele ZWEITANLÄUFE eine Runde höchstens haben darf.
@@ -110,6 +117,46 @@ const MAX_ZWEITANLAEUFE = 2;
  */
 const ABGELEITETE_JE_INSEL = 2;
 const ABLEITUNG_AUFZAEHLUNG_NM = 30;
+
+/**
+ * ABGELEITETE ETAPPEN, DIE DER SKIPPER ALS TAGESSCHLAG BESTÄTIGT HAT — sie
+ * umgehen die Ausdünnung, in BEIDEN Richtungen.
+ *
+ * Die Ausdünnung ist eine Rechen-Heuristik ("die zwei kürzesten je Insel"),
+ * kein seemännisches Urteil. Sie kann deshalb eine Verbindung wegwerfen, die
+ * ein Segler selbstverständlich fährt — und das ist am 2026-08-07 passiert:
+ *
+ *   „Meiner Meinung nach Paros durchaus Sinn von Serifos kommend … es ist der
+ *    erste Teil der Reise, und es ist weiter östlich, also eigentlich meiner
+ *    Meinung nach durchaus optimal."
+ *
+ * Serifos–Paros sind 31,2 sm. Serifos hat mit Polyaigos (23,5 sm) und Syros
+ * (24,5 sm) schon zwei kürzere abgeleitete Nachbarn, Antiparos (27,1 sm) wäre
+ * die dritte — die Etappe fiel also doppelt durch: am Deckel von zwei und an
+ * der 30-sm-Grenze. Ab Paros ist sie sogar die siebtkürzeste.
+ *
+ * WARUM NICHT EINFACH DIE PARAMETER HOCHDREHEN: gemessen an der
+ * ausgelieferten Bibliothek über elf Etappen holt `n=3 / 35 sm` diese Etappe
+ * gar nicht herein (Paros bleibt die vierte) und verdreifacht den Suchraum
+ * trotzdem — 9354 Runden statt 2947. Erst `n=4` bringt sie, dann aber
+ * achtfach (23 585) und nur in EINER Richtung, weil die Ausdünnung je
+ * Ausgangsinsel entscheidet. Diese Liste kostet +11 % (3272 Runden) und wirkt
+ * symmetrisch.
+ *
+ * WARUM NICHT `abgeleitet: false` IN DEN DATEN: das Feld behauptet eine
+ * RECHERCHIERTE Distanz und geprüfte Düsen-Warnungen (seeding/tools/
+ * deriveLegs.ts). Die Etappe bleibt eine gemessene Geometrie — bestätigt ist
+ * ihre seemännische Sinnhaftigkeit, nicht ihre Recherche. Zwei verschiedene
+ * Aussagen, zwei verschiedene Orte.
+ *
+ * Schlüssel ist das Insel-PAAR, alphabetisch sortiert und mit `--` verbunden.
+ */
+const SKIPPER_BESTAETIGT = new Set<string>([
+  // Skipper 2026-08-07, siehe oben.
+  'paros--serifos',
+]);
+
+const inselPaar = (a: string, b: string): string => [a, b].sort().join('--');
 
 /** Welche Schicht einen Kandidaten hervorgebracht hat. */
 export type RoundTripLayer = 'voll-ohne-wiederholung' | 'voll-mit-zweitanlauf' | 'verkuerzt';
@@ -191,6 +238,15 @@ function adjacencyOf(snapshot: PlanningSnapshot): Adjacency {
       .sort((a, b) => a.distanceNm - b.distanceNm || a.id.localeCompare(b.id));
     const genommen = new Set(kuratiert.map((l) => l.toIslandId));
     const dazu: Leg[] = [];
+    // ZUERST die vom Skipper bestätigten Etappen — sie stehen ausserhalb des
+    // Deckels und der sm-Grenze, sonst wären sie keine Bestätigung.
+    for (const leg of list) {
+      if (leg.abgeleitet !== true) continue;
+      if (genommen.has(leg.toIslandId)) continue;
+      if (!SKIPPER_BESTAETIGT.has(inselPaar(insel, leg.toIslandId))) continue;
+      genommen.add(leg.toIslandId);
+      dazu.push(leg);
+    }
     for (const leg of abgeleitet) {
       if (dazu.length >= ABGELEITETE_JE_INSEL) break;
       // Eine abgeleitete Etappe zu einer Insel, die schon kuratiert erreichbar
