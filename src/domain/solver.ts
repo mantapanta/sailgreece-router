@@ -510,17 +510,15 @@ export function* candidateLayers(
       .map((p) => `${p.day}=${p.toIslandId}`)
       .sort(),
   ].join('|');
-  const gecacht = proSnapshot.get(cacheKey);
-  if (gecacht) {
-    yield* gecacht;
-    return;
-  }
-  const erzeugt: Candidate[][] = [];
-  const merke = (cs: Candidate[]): Candidate[] => {
-    erzeugt.push(cs);
-    proSnapshot.set(cacheKey, [...erzeugt]);
-    return cs;
-  };
+  /**
+   * POSITIONSWEISE gecacht, aus demselben Grund wie in `roundTripLayers`: der
+   * Eintrag ist ein VORRAT der schon aufgezählten Schichten, kein vollständiges
+   * Ergebnis. Ein `yield* gecacht; return;` hätte einem späteren Aufrufer, der
+   * tiefer suchen muss, die Schichten B und C verschwiegen — nur weil ein
+   * früherer nach Schicht A fertig war.
+   */
+  const erzeugt = proSnapshot.get(cacheKey) ?? [];
+  proSnapshot.set(cacheKey, erzeugt);
 
   const frame = deadlineFrame(snapshot.params);
   const startDay = snapshot.trip.currentDay;
@@ -528,10 +526,12 @@ export function* candidateLayers(
   const daysAvailable = frame.deadlineDay - startDay + 1;
 
   const seen = new Set<string>();
+  const schluessel = (c: Candidate): string =>
+    c.legs.length > 0 ? c.legs.map((l) => l.id).join('>') : '(bleiben)';
   const fresh = (cs: Candidate[]): Candidate[] => {
     const out: Candidate[] = [];
     for (const c of cs) {
-      const key = c.legs.length > 0 ? c.legs.map((l) => l.id).join('>') : '(bleiben)';
+      const key = schluessel(c);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(c);
@@ -539,7 +539,21 @@ export function* candidateLayers(
     return out;
   };
 
+  let index = -1;
   for (const layer of roundTripLayers(snapshot, startIslandId, daysAvailable)) {
+    index++;
+    const gecacht = erzeugt[index];
+    if (gecacht) {
+      // Die Dedup-Menge muss den Vorrat kennen, sonst gäbe eine tiefere
+      // Schicht Ketten noch einmal aus, die schon eine frühere geliefert hat.
+      for (const c of gecacht) seen.add(schluessel(c));
+      yield gecacht;
+      continue;
+    }
+    const merke = (cs: Candidate[]): Candidate[] => {
+      erzeugt[index] = cs;
+      return cs;
+    };
     const alle = layer.trips.map((legs) => {
       const c = makeCandidate('runde', layer.layer, legs, snapshot);
       return { ...c, variantId: `runde-${c.turnIslandId}-${legs.length}` };
