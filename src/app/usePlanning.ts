@@ -14,7 +14,14 @@ import { useQuery } from '@tanstack/react-query';
 import { loadLibraryBundle } from '../adapters/firestore.ts';
 import { collectLocations, fetchForecastBundle } from '../adapters/openMeteo.ts';
 import { assessPlanning } from '../domain/assess.ts';
+import { ROUTENBERATUNG } from '../domain/features.ts';
 import { isLateDeparture } from '../domain/scoring.ts';
+import {
+  emptyManualPlan,
+  setDayStopover,
+  setDayTarget,
+  type DayTarget,
+} from '../domain/manualPlan.ts';
 import {
   completePlan,
   planKey,
@@ -162,18 +169,36 @@ export function usePlanningEngine() {
   ]);
 
   const assessment: Assessment | null = useMemo(
-    () => (snapshot ? assessPlanning(snapshot) : null),
+    () =>
+      snapshot ? assessPlanning(snapshot, { routenberatung: ROUTENBERATUNG }) : null,
     [snapshot],
   );
 
-  // The ONE plan-changing reaction to an assessment (AD-12): on first start
-  // there must be a main route. Guarded in the reducer too, so an unreadable
-  // stored plan is never silently replaced.
+  /**
+   * Der EINE plan-ändernde Reflex beim ersten Start (AD-12): es muss ein Plan
+   * dastehen, den der Skipper füllen kann.
+   *
+   * OHNE ROUTENBERATUNG ist das der LEERE Törn — jeder Tag ein Hafentag an der
+   * Basis, nichts entschieden (`manualPlan.emptyManualPlan`). Vorher stand
+   * hier der Vorschlag des Solvers; ein Vorschlag ist aber genau die
+   * Empfehlung, die der Skipper nicht mehr will. Im Reducer ebenfalls
+   * abgesichert, damit ein unlesbarer gespeicherter Plan nie stillschweigend
+   * ersetzt wird.
+   */
+  const erstPlan = useMemo(
+    () =>
+      ROUTENBERATUNG
+        ? (assessment?.proposal?.plan ?? null)
+        : params
+          ? emptyManualPlan(params)
+          : null,
+    [assessment?.proposal, params],
+  );
   useEffect(() => {
-    if (!trip.plan && !trip.planUnreadable && assessment?.proposal) {
-      dispatch({ type: 'ADOPT_INITIAL', plan: assessment.proposal.plan });
+    if (!trip.plan && !trip.planUnreadable && erstPlan) {
+      dispatch({ type: 'ADOPT_INITIAL', plan: erstPlan });
     }
-  }, [trip.plan, trip.planUnreadable, assessment?.proposal, dispatch]);
+  }, [trip.plan, trip.planUnreadable, erstPlan, dispatch]);
 
   /** Current skipper pins, read off the persisted plan. */
   const pins: Pin[] = useMemo(
@@ -200,6 +225,9 @@ export function usePlanningEngine() {
    */
   useEffect(() => {
     if (
+      // Ohne Routenberatung gibt es keinen Vorschlag, durch den ersetzt werden
+      // könnte — der Plan gehört dem Skipper, veraltet ist er nie.
+      ROUTENBERATUNG &&
       trip.plan &&
       planOutdated(trip.plan) &&
       currentDay === 1 &&
@@ -306,6 +334,50 @@ export function usePlanningEngine() {
     [snapshot, trip.plan, dispatch],
   );
 
+  /**
+   * FREIE HANDPLANUNG — das Tagesziel EINES Törntags setzen (manualPlan.ts).
+   *
+   * Das ist der Weg, auf dem der Plan seit 2026-08-08 entsteht: keine Suche,
+   * keine Reichweite, keine Rundkurs-Bedingung. Jede Insel der Bibliothek ist
+   * wählbar; fehlt die Verbindung, wird sie landfrei erzeugt und zusammen mit
+   * dem Plan als EIN Payload persistiert — nie ein Plan ohne seine Etappe.
+   *
+   * `islandId: null` macht den Tag zum Hafentag. False heisst genau eine
+   * Sache: für einen Schlag dieser Kette gibt es keinen landfreien Kurs.
+   */
+  const planDay = useCallback(
+    (day: number, target: DayTarget): boolean => {
+      if (!snapshot || !trip.plan) return false;
+      const change = setDayTarget(trip.plan, day, target, snapshot);
+      if (!change) return false;
+      dispatch({ type: 'PLAN_DAY', plan: change.plan, customLegs: change.customLegs });
+      return true;
+    },
+    [snapshot, trip.plan, dispatch],
+  );
+
+  /**
+   * Den Zwischenstopp eines Tages setzen, verlegen oder löschen — dieselbe
+   * Freiheit wie beim Tagesziel: auch die beiden Hälften eines Umwegs dürfen
+   * erzeugt werden, wenn sie niemand recherchiert hat.
+   */
+  const planStopover = useCallback(
+    (day: number, islandId: string | null, placeId?: string): boolean => {
+      if (!snapshot || !trip.plan) return false;
+      const change = setDayStopover(trip.plan, day, { islandId, placeId }, snapshot);
+      if (!change) return false;
+      dispatch({ type: 'PLAN_DAY', plan: change.plan, customLegs: change.customLegs });
+      return true;
+    },
+    [snapshot, trip.plan, dispatch],
+  );
+
+  /** Alles verwerfen und mit dem leeren Törn neu anfangen. */
+  const resetPlan = useCallback(() => {
+    if (!params) return;
+    dispatch({ type: 'RESET_PLAN', plan: emptyManualPlan(params) });
+  }, [params, dispatch]);
+
   /** FR29 — adopt a proposal or alternative as the new main route. */
   const checkIn = useCallback(
     (plan: Plan) => dispatch({ type: 'CHECK_IN', plan }),
@@ -371,6 +443,9 @@ export function usePlanningEngine() {
     assessment,
     currentDay,
     pins,
+    planDay,
+    planStopover,
+    resetPlan,
     editStage,
     setStopover,
     checkIn,

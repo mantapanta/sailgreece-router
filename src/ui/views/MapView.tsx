@@ -28,11 +28,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { APIProvider, AdvancedMarker, Map, useMap } from '@vis.gl/react-google-maps';
-import type { Ampel } from '../../domain/schema/common.ts';
 import type { Assessment, PlanningSnapshot } from '../../domain/schema/snapshot.ts';
 import { hourIndexAt } from '../../domain/time.ts';
-import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
-import { TripStatusLine } from '../components/TripStatusLine.tsx';
+import { AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import {
   AMPEL_GRAPHIC_HEX,
   COLORS,
@@ -46,16 +44,8 @@ import { WindBarb } from '../components/WindBarb.tsx';
 import { buildLegsById, stageEndMarkers, stagePath } from '../mapPath.ts';
 import { type BarbPoint, windFieldFor } from '../windField.ts';
 import { compass, formatKn } from '../format.ts';
-import {
-  altRouteAt,
-  altRouteViews,
-  gezeigteRoute,
-  KONZEPT_KURZ,
-  type AltRouteView,
-} from '../altRoutes.ts';
 import { staleForecastLabel } from '../dayViewModel.ts';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
-import { useRouteView } from '../../app/routeViewContext.tsx';
 import { resolveMapsEnv } from '../mapsEnv.ts';
 
 const REVIER_CENTER = { lat: 37.3, lng: 24.6 };
@@ -194,17 +184,12 @@ function WindLayer({
  * offen ist.
  */
 function LegendPopover({
-  restTripAmpel,
   turnLabel,
   windCount,
-  alternatives,
   kiteShown,
 }: {
-  restTripAmpel: Ampel;
   turnLabel: string | null;
   windCount: { shown: number; hidden: number };
-  /** Je Alternative: Identitätsfarbe + "Wendepunkt {Insel} · {n} Etappen". */
-  alternatives: { key: string; color: string; label: string; shown: boolean }[];
   /** Ist die Kite-Ebene eingeschaltet? Nur dann wird sie erklärt. */
   kiteShown: boolean;
 }) {
@@ -285,9 +270,6 @@ function LegendPopover({
               </span>
               Etappe — antippen öffnet sie in „Heute“
             </div>
-            <div className="lg-row">
-              Rest-Trip: <AmpelBadge ampel={restTripAmpel} />
-            </div>
             <div className="lg-row lg-wind">
               <span>
                 <WindBarb dirDeg={0} knots={5} size={26} /> 5 kn
@@ -334,28 +316,6 @@ function LegendPopover({
                 </p>
               </>
             )}
-            {alternatives.length > 0 && (
-              <>
-                {alternatives.map((alt) => (
-                  <div key={alt.key} className="lg-row" style={{ color: alt.color }}>
-                    <span className="lg-line dashed" aria-hidden="true" />
-                    <span style={{ color: 'inherit' }}>
-                      {alt.label}
-                      {alt.shown && ' · wird gezeigt'}
-                    </span>
-                  </div>
-                ))}
-                <p className="lg-caption">
-                  Eine Alternative ersetzt die Hauptroute im Bild, sie liegt
-                  nicht darüber — sichtbar ist immer genau eine Route. Es sind
-                  dieselben Routen wie im Optionsraum der Heute-Ansicht, unter
-                  demselben Namen: dort stehen Reichweite, Preis und Frist, hier
-                  liegt die Linie. Die gewählte Route bleibt beim Wechsel auf
-                  „Heute" stehen und lässt sich dort Etappe für Etappe ansehen;
-                  übernommen wird sie erst dort.
-                </p>
-              </>
-            )}
             <p className="lg-caption">
               Tonnen, Leuchtfeuer, Häfen ab Zoomstufe&nbsp;8 — ©{' '}
               <a href="https://www.openseamap.org" target="_blank" rel="noreferrer">
@@ -368,170 +328,6 @@ function LegendPopover({
         </>
       )}
     </>
-  );
-}
-
-/**
- * Routenwahl der Karte hinter EINEM Chip (Feedback 2026-08-06, zweiter
- * Durchgang): ein Chip je Alternative waren bei sieben Alternativen sieben
- * Chips — auf dem Telefon brachen sie in drei Reihen um und nahmen der Karte
- * die halbe Höhe. Jetzt nennt der Chip die gezeigte Route und öffnet die Liste;
- * gewählt wird darin, Hauptroute inklusive.
- *
- * Popover-Kontrakt wie AvatarMenu (Interaction Primitives): eines zur Zeit,
- * Esc/Backdrop/Auslöser schliessen, Fokus geht hinein und zurück zum Auslöser.
- * Der Auslöser ist KEIN Umschalter (kein aria-pressed) — er öffnet ein Menü;
- * welche Route gerade gilt, sagen sein Name und die aria-checked-Zeile.
- *
- * Die Zeilen tragen den NAMEN der Route aus dem Optionsraum und darunter ihre
- * Herkunft (altRoutes.ts). Vorher stand hier „3. Wendepunkt Amorgos" und im
- * Optionsraum „Verlängerung Amorgos" — dieselbe Route unter zwei Namen, und
- * damit blieb unsichtbar, dass die Alternativen die Pläne der Optionen SIND
- * (Skipper 2026-08-06).
- */
-function AltRouteMenu({
-  alternatives,
-  shownIndex,
-  onPick,
-}: {
-  alternatives: AltRouteView[];
-  shownIndex: number | null;
-  onPick: (index: number | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const close = () => {
-    setOpen(false);
-    triggerRef.current?.focus();
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const items = () => menuRef.current?.querySelectorAll<HTMLElement>('button');
-    items()?.[0]?.focus();
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        close();
-        return;
-      }
-      if (e.key === 'Tab') {
-        // Einfache Fokusfalle: im Menü zirkulieren, solange es offen ist.
-        const focusables = items();
-        if (!focusables || focusables.length === 0) return;
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open]);
-
-  const shown = shownIndex === null ? null : (alternatives[shownIndex] ?? null);
-
-  return (
-    <span className="popover-wrap">
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`layer-chip${shown ? ' active' : ''}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={
-          shown
-            ? `Gezeigt: ${shown.name} — andere Route wählen`
-            : 'Alternative statt der Hauptroute zeigen'
-        }
-        onClick={() => (open ? close() : setOpen(true))}
-      >
-        {shown && (
-          <span
-            className="chip-dot"
-            style={{ background: shown.color }}
-            aria-hidden="true"
-          />
-        )}
-        {/* Der volle Name kann lang sein (er kommt aus dem Optionsraum): der
-            Chip kürzt ihn mit Ellipse, damit die Chip-Reihe nicht umbricht und
-            das Menü darunter im Bild bleibt. Ungekürzt steht er im Menü, in der
-            Etappenliste und im aria-label des Auslösers. */}
-        <span className="chip-label" aria-hidden="true">
-          {shown
-            ? shown.name
-            : alternatives.length === 1
-              ? 'Alternative'
-              : 'Alternativen'}
-        </span>
-      </button>
-      {open && (
-        <>
-          <div className="menu-backdrop" aria-hidden="true" onClick={close} />
-          <div
-            ref={menuRef}
-            className="alt-menu"
-            role="menu"
-            aria-label="Route auf der Karte"
-          >
-            <button
-              type="button"
-              role="menuitemradio"
-              aria-checked={shownIndex === null}
-              onClick={() => {
-                onPick(null);
-                close();
-              }}
-            >
-              {/* Hinweg-Blau wie ihre Linie auf der Karte (tokens.ts ist die
-                  einzige TS-Farbquelle — darum inline, nicht in styles.css). */}
-              <span
-                className="am-dot"
-                style={{ background: HIN_LINE_COLOR }}
-                aria-hidden="true"
-              />
-              <span className="am-label">Hauptroute</span>
-            </button>
-            {alternatives.map((alt) => (
-              <button
-                key={`${alt.index}-${alt.plan.variantId}-${alt.turnIslandId}`}
-                type="button"
-                role="menuitemradio"
-                aria-checked={shownIndex === alt.index}
-                onClick={() => {
-                  onPick(alt.index);
-                  close();
-                }}
-              >
-                <span
-                  className="am-dot"
-                  style={{ background: alt.color }}
-                  aria-hidden="true"
-                />
-                {/* Name UND Herkunft: der Name ist der des Optionsraums, die
-                    zweite Zeile sagt, aus welcher Option und welchem
-                    Routen-Konzept die Route stammt. */}
-                <span className="am-label">
-                  {alt.name}
-                  <span className="am-sub">
-                    Wendepunkt {alt.turnName} · {alt.stageCount} Etappen
-                    {alt.option && ` · ${KONZEPT_KURZ[alt.option.konzeptId]}`}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </span>
   );
 }
 
@@ -561,7 +357,6 @@ export function MapView({
   onOpenDay?: () => void;
 }) {
   const day = snapshot.trip.currentDay;
-  const { params } = snapshot;
   /**
    * Blick-Zustand der Karte (AD-11): Hervorhebung und Ebenen — transienter
    * View-State, bewusst NICHT im TripContext. Das Ein-/Ausblenden ist eine
@@ -584,24 +379,11 @@ export function MapView({
    */
   const [showSeamarks, setShowSeamarks] = useState(true);
   /**
-   * FEEDBACK 2026-08-05: die Alternativ-Routen waren auf der Karte unsichtbar.
-   * Jetzt sind sie EINBLENDBAR — gestrichelt, jede in ihrer Farbe (dieselbe
-   * wie in der Vorschau der Tagesansicht, altRouteColors.ts).
-   *
-   * FEEDBACK 2026-08-06: sie lagen ÜBER der Hauptroute — zwei Routen im selben
-   * Bild, und wo sie sich decken, war nicht mehr zu sehen, welche Linie welche
-   * ist. Jetzt ist es ein UMSCHALTER statt eines Overlays: sichtbar ist immer
-   * genau EINE Route — die Hauptroute, oder STATT ihrer eine Alternative.
-   * Darum ein Index und kein Boolean: bei mehreren Alternativen wäre "alle an"
-   * dasselbe Übereinanderlegen, nur zwischen den Alternativen.
-   *
-   * FEEDBACK 2026-08-06 (zweiter Durchgang): die Wahl liegt nicht mehr LOKAL in
-   * dieser View, sondern im geteilten routeViewContext — beim Wechsel auf
-   * „Heute" bleibt dieselbe Route gewählt und wird dort Etappe für Etappe
-   * aufgeschlagen. Die Klemme gegen verschwundene Alternativen sitzt im
-   * Provider, hier wird nur noch gelesen.
+   * ALTERNATIV-ROUTEN gab es hier bis 2026-08-08 als Umschalter (ein Chip,
+   * eine Route statt der Hauptroute im Bild). Mit der Routenberatung sind sie
+   * entfallen: es gibt genau EINEN Törn, und den legt der Skipper von Hand.
+   * Der Schalter dafür steht in domain/features.ts.
    */
-  const { shownAltIndex, showAlt } = useRouteView();
   /**
    * KITE-EBENE (Skipper-Wunsch 2026-08-06). Standard AN: die Bibliothek hat ein
    * gutes Dutzend Spots im ganzen Revier, das deckt nichts zu — und eine Ebene,
@@ -628,52 +410,14 @@ export function MapView({
     snapshot.library.islands.find((i) => i.id === id)?.name ?? id;
 
   /**
-   * Die wählbaren Alternativen mit ihrer EINEN Identität (altRoutes.ts) —
-   * derselbe Name, den der Optionsraum und die Tagesansicht verwenden.
+   * Die Route, die die Karte ZEIGT — der Plan des Skippers, sonst nichts.
+   * Alles Routenbezogene hängt hieran (Linien, Etappennummern, Kontextmenge
+   * der Pins und Windfiedern), damit die Karte nie eine Route zeichnet und die
+   * Nummern einer anderen dazu.
    */
-  const altChoices = useMemo(
-    () => altRouteViews(assessment, islandName),
-    // islandName hängt allein an der Bibliothek.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [assessment, snapshot.library.islands],
-  );
-
-  /** Die eingeblendete Alternative — oder null für die Hauptroute. */
-  const shownChoice = altRouteAt(altChoices, shownAltIndex);
-  const shownAlt = shownChoice?.plan ?? null;
-  const shownAltColor = shownChoice?.color ?? null;
-
-  /**
-   * DER VORSCHLAG, solange keine Hauptroute übernommen ist.
-   *
-   * Bis 2026-08-07 hing die Karte allein an `mainRoute` — und die gibt es erst
-   * mit übernommenem Plan (`assess.ts`: `trip.plan ? assessPlan(…) : null`).
-   * Vorher zeichnete die Karte GAR NICHTS: keine Linie, keine Etappennummern,
-   * keine Etappenliste. Eine leere See.
-   *
-   * Das war die Beanstandung des Skippers "es wird gar keine Hauptroute
-   * berechnet" — und sie war genau invertiert. Berechnet wird sie immer; sie
-   * ist der teuerste Schritt der ganzen Bewertung, und die Tagesansicht zeigt
-   * sie Tag für Tag. Nur die Karte schwieg, bis jemand "Übernehmen" drückte.
-   * Für den, der davorsitzt, sieht das aus wie ein Rechenfehler.
-   *
-   * Der Vorschlag wird deshalb GEZEICHNET, aber nicht als Hauptroute
-   * AUSGEGEBEN: die Zeile unter den Ebenen-Chips sagt, dass es einer ist, und
-   * der Hinweiskasten über der Karte sagt weiterhin, wie man ihn übernimmt.
-   * Dieselbe Doktrin wie überall sonst — anzeigen ja, behaupten nein.
-   */
-  const gezeigt = gezeigteRoute(shownAlt, main, assessment.proposal);
-  /** Zeigt die Karte den Vorschlag, weil noch keine Hauptroute übernommen ist? */
-  const zeigtVorschlag = gezeigt.herkunft === 'vorschlag';
-
-  /**
-   * Die Route, die die Karte ZEIGT — Hauptroute, eingeblendete Alternative
-   * oder, solange keine Hauptroute übernommen ist, der Vorschlag.
-   * Alles Routenbezogene hängt hieran (Linien, Etappennummern, Etappenliste,
-   * Kontextmenge der Pins und Windfiedern), damit die Karte nie eine Route
-   * zeichnet und die Nummern oder die Liste einer anderen dazu.
-   */
-  const gezeigterPlan = gezeigt.plan;
+  const gezeigterPlan = main;
+  /** Kein einziges Ziel gesetzt: die Karte hat nichts zu zeichnen. */
+  const planLeer = (main?.stages ?? []).every((s) => s.kind === 'harbour');
   const displayRouteStages = useMemo(
     () => gezeigterPlan?.stages ?? [],
     [gezeigterPlan],
@@ -806,16 +550,6 @@ export function MapView({
     return () => clearInterval(id);
   }, []);
   const staleLabel = staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS);
-  const atBase = assessment.currentIslandId === params.baseIslandId;
-  const pprHinweise = atBase ? [] : assessment.ppr.reasons;
-
-  /** Legenden-Zeilen der Alternativen — Identität bleibt benannt (VERIFY 3). */
-  const legendAlternatives = altChoices.map((choice) => ({
-    key: `${choice.index}-${choice.plan.variantId}-${choice.turnIslandId}`,
-    color: choice.color,
-    label: `${choice.name} · Wendepunkt ${choice.turnName} · ${choice.stageCount} Etappen`,
-    shown: choice.index === shownAltIndex,
-  }));
 
   const turnLabel =
     turnDay !== null && turnIsland
@@ -833,26 +567,22 @@ export function MapView({
   return (
     <div className="map-view">
       <h1 className="visually-hidden">Karte</h1>
-      {/* Das Verdikt bleibt über der Karte stehen (AC 2): es war der einzige
-          Teil des entfallenen Sheets, den die Karte selbst nicht sagen kann —
-          "Round-Trip trägt / unter Vorbehalt", Rückkehr-Frist, Stale-Hinweis
-          und, aufgeklappt, die Begründungen. Die Etappen selbst stehen in der
-          Tagesansicht; die Nummern auf der Karte führen dorthin. */}
-      <div className="map-status">
-        <TripStatusLine
-          assessment={assessment}
-          main={main}
-          pprHinweise={pprHinweise}
-          staleLabel={staleLabel}
-        />
-        {!main && (
-          <div className="hint-panel">
-            {zeigtVorschlag
-              ? 'Noch keine Hauptroute übernommen — die Karte zeigt den Vorschlag der App. Übernehmen geht in der Tagesansicht.'
-              : 'Noch keine Hauptroute — in der Tagesansicht den Vorschlag übernehmen.'}
-          </div>
-        )}
-      </div>
+      {/* Über der Karte stand bis 2026-08-08 die Trip-Statuszeile mit dem
+          Rest-Trip-Verdikt, der Rückkehr-Frist und den PPR-Begründungen. Mit
+          der Routenberatung ist sie entfallen (domain/features.ts) — geblieben
+          ist der EINE Hinweis, den die Karte selbst nicht sagen kann: dass die
+          Werte im Bild alt sind. */}
+      {(staleLabel || planLeer) && (
+        <div className="map-status">
+          {staleLabel && <div className="hint-panel">{staleLabel}</div>}
+          {planLeer && (
+            <div className="hint-panel">
+              Noch keine Ziele gesetzt — in der Tagesansicht Tag für Tag die
+              Zielinsel wählen, dann liegt der Törn hier als Linie.
+            </div>
+          )}
+        </div>
+      )}
       <div className="map-sticky">
         {MAPS_ENV.ok ? (
           <APIProvider apiKey={MAPS_ENV.env.apiKey}>
@@ -873,31 +603,6 @@ export function MapView({
                   die Ebene kann Route und Ampeln nie zudecken. */}
               {showSeamarks && <SeamarkLayer />}
 
-              {/* Eingeblendete Alternative — ANSTELLE der Hauptroute
-                  (Feedback 2026-08-06), gestrichelt in ihrer Identitätsfarbe
-                  und mit Fahrtrichtungspfeilen, weil die EINE Farbe der
-                  Alternative Hin- und Rückweg nicht trennen kann. Kein
-                  Übereinanderlegen mehr: die Hauptroute ist so lange
-                  ausgeblendet, und deshalb trägt die Linie hier auch die
-                  Strichstärke und den zIndex einer Route, nicht die eines
-                  Overlays darunter. */}
-              {shownAlt &&
-                displayStages.map((stage) => {
-                  const path = stagePath(stage, legsById, snapshot);
-                  if (path.length < 2) return null;
-                  return (
-                    <Polyline
-                      key={`alt-${shownAlt.variantId}-${shownAlt.turnIslandId}-${stage.day}`}
-                      path={path}
-                      strokeColor={shownAltColor!}
-                      dashed
-                      directionArrows
-                      strokeWeight={activeDay === stage.day ? 6 : 4}
-                      zIndex={activeDay === stage.day ? 60 : 20}
-                    />
-                  );
-                })}
-
               {/* FR2 — round-trip overlay: Hinweg und Rückweg in ihren Farben,
                   gefahren durchgezogen, geplant gestrichelt, Pfeile in
                   Fahrtrichtung. One polyline per stage, so a single stage can
@@ -906,12 +611,8 @@ export function MapView({
                   Etappe nutzen, scheint der Hinweg durch die Lücken der oberen
                   Strichelung — der gemeinsame Abschnitt zeigt beide Farben im
                   Wechsel statt nur der zuletzt gezeichneten (Polyline.tsx,
-                  dashOffset).
-
-                  Ausgeblendet, solange eine Alternative gezeigt wird: zwei
-                  Routen im selben Bild waren nicht mehr auseinanderzuhalten. */}
-              {!shownAlt &&
-                displayStages.map((stage) => {
+                  dashOffset). */}
+              {displayStages.map((stage) => {
                   const path = stagePath(stage, legsById, snapshot);
                   if (path.length < 2) return null;
                   const isPast = stage.day < day;
@@ -931,7 +632,7 @@ export function MapView({
                       zIndex={activeDay === stage.day ? 60 : rueck ? 21 : 20}
                     />
                   );
-                })}
+              })}
 
               {/* FR2 — Etappennummern am Tagesziel, EINE Markierung je Insel.
                   Der Round-Trip läuft hin und zurück über dieselbe Kette; je
@@ -945,15 +646,9 @@ export function MapView({
                   meinen zwei verschiedene Tage; eine Kapsel für beide hätte nur
                   den ersten erreichbar gemacht.
 
-                  Sie zählen die GEZEIGTE Route: bei eingeblendeter Alternative
-                  deren Etappen, in deren Farbe. Der Sprung stimmt dabei auch für
-                  eine Alternative, seit die Wahl im geteilten routeViewContext
-                  liegt — die Tagesansicht schlägt DIESELBE Route auf, nicht die
-                  Hauptroute. Der Name der Route steht deshalb im aria-label:
-                  wer sie antippt, soll wissen, wessen Etappe er öffnet. */}
+                  Sie zählen die Etappen des Plans. */}
               {endMarkers.map((marker) => {
                 const active = marker.stops.some((s) => s.day === activeDay);
-                const routeWort = shownChoice ? `${shownChoice.name} — ` : '';
                 return (
                   <AdvancedMarker
                     key={marker.key}
@@ -966,12 +661,7 @@ export function MapView({
                           key={stop.day}
                           type="button"
                           className={`stage-capsule${stop.day === activeDay ? ' highlight' : ''}${stop.day < day ? ' past' : ''}`}
-                          style={
-                            shownAltColor
-                              ? { background: shownAltColor, color: COLORS.onAccent }
-                              : undefined
-                          }
-                          aria-label={`${routeWort}${islandName(marker.islandId)} — Etappe ${
+                          aria-label={`${islandName(marker.islandId)} — Etappe ${
                             stop.stageNumber ?? '–'
                           } (Tag ${stop.day})${
                             stop.day === day ? ', heute' : ''
@@ -1171,16 +861,6 @@ export function MapView({
                 >
                   Windfiedern
                 </button>
-                {/* EIN Chip für die Routenwahl statt einer Chip-Reihe: er
-                    nennt die gezeigte Route und öffnet die Liste
-                    (AltRouteMenu). */}
-                {altChoices.length > 0 && (
-                  <AltRouteMenu
-                    alternatives={altChoices}
-                    shownIndex={shownAltIndex}
-                    onPick={showAlt}
-                  />
-                )}
                 <button
                   type="button"
                   className="layer-chip"
@@ -1209,28 +889,14 @@ export function MapView({
                   </button>
                 )}
               </div>
-              {/* Keine stille Ersetzung: solange eine Alternative gezeigt
-                  wird, sagt die Karte in einer Zeile, dass die Hauptroute
-                  fehlt — welche Alternative es ist, steht im Chip daneben.
-                  Und wenn die Karte den VORSCHLAG zeichnet, weil noch keine
-                  Hauptroute übernommen ist, sagt sie auch das: eine gezeichnete
-                  Linie ohne Herkunftsangabe wäre eine Behauptung.
-                  Leer = kein Kasten (CSS :empty). */}
-              <p className="alt-note" aria-live="polite">
-                {shownChoice
-                  ? `${shownChoice.name} · Hauptroute ausgeblendet`
-                  : zeigtVorschlag
-                    ? 'Vorschlag der App · noch nicht übernommen'
-                    : ''}
-              </p>
               {/* Der Verweis auf die Heute-Ansicht steht HIER, weil hier die
-                  Frage aufkommt: „schön, aber taugt die Route?" — beantwortet
-                  wird sie an den einzelnen Etappen. Die Zahlen auf der Karte
-                  führen auf eine BESTIMMTE Etappe, dieser Knopf auf den Kopf
-                  der Ansicht (Name, Herkunft, Übernehmen). */}
-              {shownChoice && onOpenDay && (
+                  Frage aufkommt: „schön — und wie lange dauert das?" Beantwortet
+                  wird sie an den einzelnen Tagen. Die Zahlen auf der Karte
+                  führen auf einen BESTIMMTEN Tag, dieser Knopf auf den Kopf der
+                  Ansicht. */}
+              {onOpenDay && (
                 <button type="button" className="alt-note as-link" onClick={onOpenDay}>
-                  Etappen dieser Route in der Heute-Ansicht ansehen ›
+                  Törn Tag für Tag in „Heute" ansehen ›
                 </button>
               )}
             </div>
@@ -1250,10 +916,8 @@ export function MapView({
               </span>
             )}
             <LegendPopover
-              restTripAmpel={assessment.restTripAmpel}
               turnLabel={turnLabel}
               windCount={windCount}
-              alternatives={legendAlternatives}
               kiteShown={showKite && (snapshot.library.kiteSpots ?? []).length > 0}
             />
           </APIProvider>

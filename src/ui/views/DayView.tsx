@@ -1,65 +1,49 @@
 /**
- * FR21/FR22/FR28/FR29/FR30 — Tagesansicht "Was machen wir heute?".
+ * FR28/FR30 — Tagesansicht "Was machen wir heute?", seit 2026-08-08 die
+ * FREIE HANDPLANUNG.
  *
- * Consumer-Warm spine (Story 1.2): one trip status line with an expandable
- * rest-trip detail, a day-context block with the position popover, ONE hero
- * StageCard for the open decision of the day (hero-switch rule), a collapsed
- * rest-trip list card, the collapsed Optionsraum summary, the assumption info
- * chip and the collapsed "Bereits gefahren" chips. There is no header select
- * for route options — there is one main route, and alternatives are checked
- * in explicitly (FR29).
+ * Der Skipper legt die Kette selbst, Tag für Tag, Insel zu Insel: jeder Tag
+ * eine Auswahl, jede Insel des Reviers zulässig, jede Verbindung erlaubt
+ * (`domain/manualPlan.ts`). Die Ansicht RECHNET ihm den Tag vor — Distanz,
+ * Abfahrt, Fahrtzeit, Ankunft, Wind auf Kurs, Nacht-Ampel des Liegeplatzes —
+ * und beurteilt seinen Törn NICHT: kein Optionsraum, kein Routen-Konzept, kein
+ * Point of Return, keine Alternativen, kein Vorschlag, keine Rest-Trip-Ampel.
  *
- * All values come from the assessment (AD-2: views never compute domain
- * values); display aggregation (hero switch, options summary, staleness)
- * lives in the tested pure helpers of dayViewModel.ts.
+ * Was davon verschwunden ist, steht nicht im Papierkorb, sondern hinter einem
+ * Schalter: `domain/features.ts` (ROUTENBERATUNG). Die Ansichten dazu liegen
+ * in der Git-Historie vor diesem Commit.
+ *
+ * Alle Werte kommen weiterhin aus der Bewertung (AD-2: Views rechnen keine
+ * Domänenwerte); die Anzeige-Aggregation (Hero-Switch, Staleness) lebt in den
+ * getesteten Helfern von dayViewModel.ts.
  */
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import type {
   Assessment,
   LegAssessment,
   PlanningSnapshot,
-  RouteOptionAssessment,
   StageAssessment,
   KursAbschnitt,
   LegHourBreakdown,
   PointPassage,
 } from '../../domain/schema/snapshot.ts';
-import { planOutdated } from '../../domain/schema/plan.ts';
 import { forecastModelLabel } from '../../domain/schema/models.ts';
-import type { KonzeptEignung } from '../../domain/schema/konzept.ts';
-import {
-  KONZEPT_REGLER,
-  konzeptSchwellenOf,
-  setKonzeptSchwelle,
-  type KonzeptSchwellen,
-} from '../../domain/konzept.ts';
-import { planKey } from '../../domain/solver.ts';
+import { planIsEmpty } from '../../domain/manualPlan.ts';
 import { departureHourChoices, kreuzGelbReason } from '../../domain/scoring.ts';
 import { AbfahrtMenu } from '../components/AbfahrtMenu.tsx';
 import { AmpelBadge, AMPEL_LABEL } from '../components/AmpelBadge.tsx';
 import { PositionPopover } from '../components/PositionPopover.tsx';
-import { TripStatusLine } from '../components/TripStatusLine.tsx';
-import { RouteMap } from '../components/RouteMap.tsx';
 import { StageMap } from '../components/StageMap.tsx';
 import { StageThumb } from '../components/StageThumb.tsx';
 import { WindBarb } from '../components/WindBarb.tsx';
-import {
-  altRouteAt,
-  altRouteViews,
-  EMPFEHLUNG_LABEL,
-  KONZEPT_KURZ,
-  OPTION_STATE_LABEL,
-  type AltRouteView,
-} from '../altRoutes.ts';
 import {
   buildLegsById,
   pointNumberByForecastKey,
   stagePoints,
 } from '../mapPath.ts';
 import { usePlanning } from '../../app/planningContext.tsx';
-import { useRouteView } from '../../app/routeViewContext.tsx';
 import { STALE_TIME_MS } from '../../app/usePlanning.ts';
 import {
   compass,
@@ -82,7 +66,6 @@ import {
 import {
   dayViewStages,
   kiteHinweisAnzeige,
-  optionsSummary,
   stageFocusPlacement,
   staleForecastLabel,
 } from '../dayViewModel.ts';
@@ -377,13 +360,21 @@ function KursChips({
 }
 
 /**
- * FR28 — change this day's target: another island, another berth, or stay.
+ * DER TAGES-EDITOR — freie Handplanung (Skipper 2026-08-08).
  *
- * Und den WEG dorthin: der Zwischenstopp ist hier ein Ziel wie jedes andere —
- * setzen, verlegen, Hafen wechseln, wieder löschen (Skipper 2026-08-07: "man
- * kann den Hafen eines Zwischenstopps nur löschen, nicht ändern, und auch
- * keinen neuen hinzufügen"). Alle vier Fälle laufen über EIN select, weil sie
- * EINE Frage beantworten: wo halten wir unterwegs an?
+ * „Ich plane den Trip Insel zu Insel frei von Hand … alle Verbindungen sind
+ * zugelassen."
+ *
+ * Es gibt hier deshalb KEINE gefilterte Auswahl mehr. Bis 2026-08-07 zeigte
+ * das Tagesziel nur Inseln in Tagesreichweite, für die eine Runde existierte,
+ * die rechtzeitig zur Basis zurückkommt — und lehnte alles andere mit einer
+ * Begründung ab, die der Skipper nicht bestellt hatte. Jetzt steht jede Insel
+ * des Reviers zur Wahl, und was der Schlag kostet, sagt die Karte hinterher in
+ * Meilen, Stunden und Wind.
+ *
+ * Fehlschlagen kann eine Wahl nur noch aus EINEM Grund: für einen Schlag der
+ * Kette findet sich kein landfreier Kurs. Eine Luftlinie über Land behauptet
+ * diese App nie.
  */
 function StageEditor({
   stage,
@@ -396,49 +387,43 @@ function StageEditor({
   nightAmpeln: Assessment['nightAmpeln'];
   onClose: () => void;
 }) {
-  const { editStage, releasePin, setStopHours, setStopover } = usePlanning();
+  const { planDay, planStopover, setStopHours } = usePlanning();
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
+
+  /** ALLE Inseln der Bibliothek, alphabetisch — die Auswahl filtert nichts. */
+  const islands = useMemo(
+    () =>
+      [...snapshot.library.islands].sort((a, b) => a.name.localeCompare(b.name, 'de')),
+    [snapshot.library.islands],
+  );
+  const isHarbour = stage.kind === 'harbour';
   const placesOnIsland = snapshot.library.places.filter(
     (p) => p.islandId === stage.toIslandId,
   );
 
-  // Kontextfilter (Feedback 2026-08-05): NUR Inseln in Tagesreichweite der
-  // vorherigen Plan-Insel. Die Menge kommt aus dem Assessment (AD-2) — hier
-  // wird nur noch die aktuell gewählte Insel ergänzt, damit das select nie
-  // einen Wert anzeigt, der nicht in seinen Optionen vorkommt.
-  const selectableIslands = snapshot.library.islands.filter(
-    (i) =>
-      stage.reachableIslandIds.includes(i.id) ||
-      (stage.kind === 'stage' && i.id === stage.toIslandId),
-  );
+  /** Ausgangsinsel des Tages — sie kann weder Ziel noch Zwischenstopp sein. */
+  const fromIslandId = stage.legs[0]?.sailedLeg?.fromIslandId ?? null;
 
   /**
    * DER ZWISCHENSTOPP DES TAGES — einer, denn ein Tag trägt höchstens zwei
-   * Etappen (params.maxLegsPerDay). Auch seine Auswahl kommt aus der Bewertung
-   * (AD-2): welche Inseln unterwegs liegen, rechnet domain/reach.ts.
-   *
-   * Die aktuell gestoppte Insel wird ergänzt, damit das select nie einen Wert
-   * anzeigt, der nicht in seinen Optionen steht — dieselbe Regel wie beim
-   * Tagesziel.
+   * Schläge. Auch er ist frei: jede Insel, die nicht Start oder Ziel ist, und
+   * fehlt eine der beiden Hälften in der Bibliothek, wird sie erzeugt.
    */
   const stopover = stage.zwischenstopps[0] ?? null;
-  const stopoverIslandOptions = snapshot.library.islands.filter(
-    (i) => stage.stopoverIslandIds.includes(i.id) || i.id === stopover?.islandId,
+  const stopoverIslandOptions = islands.filter(
+    (i) => i.id !== stage.toIslandId && i.id !== fromIslandId,
   );
   /**
    * Die Häfen der Stopp-Insel — ALLE, ohne Ampel und ohne Rangfolge. Am
    * Zwischenstopp muss das Boot nicht sicher liegen (Skipper 2026-08-07): die
-   * Nacht-Kriterien (Schutzsektoren, Kuratierungs-Vorbehalt) beantworten eine
-   * Frage, die hier niemand stellt, und ein Ampel-Wort in dieser Liste würde
-   * genau die Verwechslung anzeigen. Was der Umweg kostet, sagt die Ampel des
-   * TAGES, nachdem er gesetzt ist.
+   * Nacht-Kriterien beantworten eine Frage, die hier niemand stellt.
    */
   const placesOnStopoverIsland = stopover
     ? snapshot.library.places.filter((p) => p.islandId === stopover.islandId)
     : [];
 
-  /** Fehler zeigen und den Fokus dorthin führen (EXPERIENCE StageEditor). */
+  /** Fehler zeigen und den Fokus dorthin führen. */
   const fail = (text: string) => {
     setError(text);
     requestAnimationFrame(() => errorRef.current?.focus());
@@ -446,43 +431,28 @@ function StageEditor({
 
   const apply = (islandId: string | null, placeId?: string) => {
     setError(null);
-    const ok = editStage(stage.day, islandId, placeId);
-    if (!ok) {
-      /**
-       * Der Satz sagt jetzt, was wirklich fehlt. Bis 2026-08-07 stand hier "es
-       * führt keine Etappe der Bibliothek dorthin" — und das war beim Befund
-       * des Skippers (Paros ab Serifos) schlicht falsch: die Etappe gibt es,
-       * es gab nur keine RUNDE, die sie an diesem Tag fährt und rechtzeitig
-       * heimkommt. Eine Fehlermeldung, die auf die Bibliothek zeigt, schickt
-       * beim Suchen in die falsche Richtung.
-       */
-      fail(
-        islandId
-          ? `Kein Round-Trip führt an Tag ${stage.day} nach ${islandName(snapshot, islandId)} und von dort rechtzeitig zur Basis zurück — bei unveränderten Tagen davor geht dieser Tag nicht auf.`
-          : 'Mit einem Hafentag an diesem Tag lässt sich kein Round-Trip mehr bauen, der rechtzeitig zur Basis zurückkommt.',
-      );
+    if (planDay(stage.day, { islandId, placeId })) {
+      onClose();
       return;
     }
-    onClose();
+    fail(
+      islandId
+        ? `Nach ${islandName(snapshot, islandId)} findet die App keinen landfreien Kurs — weder direkt noch über die bekannten Etappen. Eine Luftlinie über Land behauptet sie nicht. Über eine Zwischeninsel geht derselbe Weg: erst dorthin, am nächsten Tag weiter.`
+        : 'Dieser Tag lässt sich nicht als Hafentag setzen — für den Kurs des Folgetags fände die App dann keinen landfreien Weg mehr.',
+    );
   };
 
-  /**
-   * Zwischenstopp setzen, verlegen oder löschen — EIN Weg für alle drei, weil
-   * es EINE Entscheidung ist. Ein zweiter Knopf "Zwischenstopp löschen" neben
-   * diesem select wäre eine zweite Stelle, an der dieselbe Frage beantwortet
-   * wird; "— kein Zwischenstopp —" ist dieselbe Antwort an der Stelle, an der
-   * sie hingehört.
-   */
+  /** Zwischenstopp setzen, verlegen oder löschen — EIN Weg für alle drei. */
   const applyStopover = (islandId: string | null, placeId?: string) => {
     setError(null);
-    if (setStopover(stage.day, islandId, placeId)) {
+    if (planStopover(stage.day, islandId, placeId)) {
       onClose();
       return;
     }
     fail(
       islandId === null
-        ? `Der Zwischenstopp lässt sich nicht löschen — es gibt keine direkte Etappe zum Tagesziel ${islandName(snapshot, stage.toIslandId)}, und ein landfreier Direktkurs ließ sich nicht berechnen.`
-        : `Über ${islandName(snapshot, islandId)} führt kein Weg zum Tagesziel ${islandName(snapshot, stage.toIslandId)} — die Etappen-Bibliothek kennt nicht beide Hälften des Umwegs.`,
+        ? `Der Zwischenstopp lässt sich nicht löschen — für den direkten Kurs nach ${islandName(snapshot, stage.toIslandId)} findet sich kein landfreier Weg.`
+        : `Über ${islandName(snapshot, islandId)} liess sich kein landfreier Weg zum Tagesziel ${islandName(snapshot, stage.toIslandId)} legen.`,
     );
   };
 
@@ -491,12 +461,12 @@ function StageEditor({
       <label>
         Tagesziel (Insel)
         <select
-          value={stage.kind === 'harbour' ? '' : stage.toIslandId}
+          value={isHarbour ? '' : stage.toIslandId}
           onChange={(e) => apply(e.target.value || null)}
           aria-describedby={error ? 'stage-editor-error' : undefined}
         >
           <option value="">— Hafentag: hier bleiben —</option>
-          {selectableIslands.map((i) => (
+          {islands.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
             </option>
@@ -504,10 +474,10 @@ function StageEditor({
         </select>
       </label>
       <p className="beschreibung">
-        Nur Inseln in Tagesreichweite ({snapshot.params.maxDayRangeNm} sm
-        raumschots, {snapshot.params.maxDayRangeUpwindNm} sm gegenan) ab dem
-        Vortagsziel, die eine Runde von dort aus auch ansteuern kann. Die Tage
-        davor bleiben stehen — geändert wird ab hier.
+        Jede Insel des Reviers — nichts ist gesperrt. Kennt die Bibliothek die
+        Verbindung nicht, rechnet die App den kürzesten landfreien Kurs selbst
+        (Distanz aus der Geometrie, nicht kuratiert). Die Tage davor bleiben
+        stehen; die Tage danach behalten ihr Ziel und werden neu verbunden.
       </p>
       {placesOnIsland.length > 0 && (
         <label>
@@ -515,7 +485,7 @@ function StageEditor({
           <select
             value={stage.placeIsSuggestion ? '' : (stage.placeId ?? '')}
             onChange={(e) =>
-              apply(stage.toIslandId, e.target.value || undefined)
+              apply(isHarbour ? null : stage.toIslandId, e.target.value || undefined)
             }
             aria-describedby={error ? 'stage-editor-error' : undefined}
           >
@@ -529,7 +499,7 @@ function StageEditor({
           </select>
         </label>
       )}
-      {stage.kind === 'stage' && stopoverIslandOptions.length > 0 && (
+      {!isHarbour && stopoverIslandOptions.length > 0 && (
         <>
           <label>
             Zwischenstopp (Insel)
@@ -547,12 +517,9 @@ function StageEditor({
             </select>
           </label>
           <p className="beschreibung">
-            Inseln, die unterwegs liegen: die Bibliothek muss beide Hälften des
-            Umwegs kennen — hin zum Stopp und von dort weiter zum Tagesziel. Das
-            Tagesziel bleibt dasselbe, und der Tag gilt danach als festgelegt.
-            Ohne Stopp wird der Tag EINE direkte Etappe; kennt die Bibliothek
-            dafür keine Verbindung, berechnet die App den kürzesten landfreien
-            Kurs selbst (Distanz aus der Geometrie, nicht kuratiert).
+            Baden, essen, weiterfahren: das Tagesziel bleibt dasselbe, der Tag
+            fährt nur über diese Insel. Beide Hälften des Umwegs dürfen erzeugt
+            werden, wenn die Bibliothek sie nicht kennt.
           </p>
         </>
       )}
@@ -577,11 +544,9 @@ function StageEditor({
           </label>
           <p className="beschreibung">
             Ohne Ampel, und das ist der Unterschied zum Liegeplatz oben: die
-            Ampel-Kriterien beurteilen eine NACHT am Platz (Schutzsektoren,
-            Kuratierungs-Vorbehalt) — am Zwischenstopp wird gebadet, gegessen und
-            weitergefahren, sicher liegen muss das Boot dort nicht. Deshalb steht
-            jeder Hafen der Insel zur Wahl. Was der Umweg wirklich kostet, sagt
-            die Ampel dieses Tages: sie rechnet beide Schläge samt Pause.
+            Ampel-Kriterien beurteilen eine NACHT am Platz — am Zwischenstopp
+            wird gebadet, gegessen und weitergefahren. Was der Umweg kostet,
+            sagen Länge und Fahrtzeit dieses Tages.
           </p>
         </>
       )}
@@ -616,18 +581,6 @@ function StageEditor({
         </p>
       )}
       <div className="editor-actions">
-        {stage.pinned && (
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => {
-              releasePin(stage.day);
-              onClose();
-            }}
-          >
-            Festlegung lösen
-          </button>
-        )}
         <button type="button" className="btn-secondary" onClick={onClose}>
           Schließen
         </button>
@@ -665,7 +618,6 @@ function StageCard({
   onOpenPlace,
   mapId,
   harbourPointer,
-  readOnly = false,
 }: {
   stage: StageAssessment;
   snapshot: PlanningSnapshot;
@@ -678,16 +630,6 @@ function StageCard({
   mapId: string | null;
   /** Hafentag-Hero: Hinweis auf den nächsten Segeltag ("Weiter am Mi: …"). */
   harbourPointer?: string | null;
-  /**
-   * Die Etappe einer ANGESEHENEN ALTERNATIVE: lesen ja, ändern nein.
-   *
-   * Ohne diese Sperre bearbeitete „Etappe ändern" die HAUPTROUTE, während der
-   * Skipper eine ganz andere Route auf dem Schirm hat — eine stille Änderung
-   * am falschen Plan. Ampel, Wind, Kreuz-Abschnitte und die Stundenrechnung
-   * bleiben vollständig sichtbar: sie sind der Grund, sich eine Alternative
-   * überhaupt anzusehen. Erst das Übernehmen (FR29) macht sie änderbar.
-   */
-  readOnly?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -781,7 +723,7 @@ function StageCard({
         empfehlung.hinweis,
         stage.abfahrtVomSkipper
           ? `Gerechnet wird mit deiner Abfahrt um ${departureHour}:00.` +
-            (readOnly ? '' : ' Die Kachel gibt den Tag an die Empfehlung zurück.')
+            ' Die Kachel gibt den Tag an die Empfehlung zurück.'
           : null,
       ]
         .filter(Boolean)
@@ -833,7 +775,7 @@ function StageCard({
         )}
       </div>
 
-      {(!isHarbour || stage.pinned) && (
+      {!isHarbour && (
         <div className="chip-list">
           {!isHarbour && distance > 0 && (
             <span className="chip">{Math.round(distance)} sm</span>
@@ -868,7 +810,6 @@ function StageCard({
           {!isHarbour && (
             <KursChips abschnitte={kursGemeldet} params={params} />
           )}
-          {stage.pinned && <span className="chip">Festgelegt</span>}
         </div>
       )}
 
@@ -899,10 +840,8 @@ function StageCard({
                 dieses Tages. Der frühere ±-Stepper stand nur an der
                 Hero-Kachel von heute — an jedem anderen Tag zeigte die Karte
                 eine Abfahrt, die sich nicht anfassen liess. Vergangene Tage
-                sind gefahren und bleiben Anzeige — und eine nur ANGESEHENE
-                Alternative (readOnly) auch: sie ist nicht der Plan, ihre
-                Abfahrt zu stellen hätte den Plan verstellt. */}
-            {stage.day >= currentDay && !readOnly ? (
+                sind gefahren und bleiben Anzeige. */}
+            {stage.day >= currentDay ? (
               <AbfahrtMenu
                 variant="tile"
                 day={stage.day}
@@ -983,16 +922,12 @@ function StageCard({
         </div>
       )}
 
-      {/* ENTSCHEIDUNGSTOR (Törnanalyse): legt sich der Plan an diesem Tag
-          hinter ein Tor fest, steht hier, ob 48-h-Fenster und Rückweg die
-          Festlegung decken — die Entscheidung am Tag der Entscheidung. Der
-          Status steht als Farbe UND im Text ("gedeckt" / "NICHT gedeckt" aus
-          konzept.ts) — kein Emoji als Bedeutungsträger. */}
-      {stage.torCheck && (
-        <div className={`tor-zeile${stage.torCheck.erfuellt ? ' ok' : ' offen'}`}>
-          {stage.torCheck.note}
-        </div>
-      )}
+      {/* ENTSCHEIDUNGSTOR und HEIMWEG-STATUS standen hier als eigene Zeilen —
+          "48-h-Fenster gedeckt", "Heimweg hält auch bei vollem Meltemi". Beide
+          sind mit der Routenberatung entfallen (Skipper 2026-08-08): sie
+          BEURTEILTEN den Törn, und genau das soll die Karte nicht mehr tun.
+          Gerechnet werden sie weiterhin (konzept.ts, solver.ts) — der Schalter
+          dafür steht in domain/features.ts. */}
 
       {/* Der Heimweg-Status stand hier als eigene Zeile an JEDER Karte ("Heimweg
           hält auch bei vollem Meltemi …") und sagte an den meisten Tagen
@@ -1074,22 +1009,22 @@ function StageCard({
         <div className="next-sailing">{harbourPointer}</div>
       )}
 
-      {/* Hafentag-HERO: bewusst OHNE Kacheln, Stepper und CTA (EXPERIENCE-
-          Variante) — Umplanung bleibt über die Rest-Trip-Zeilen und den
-          Optionsraum erreichbar. */}
-      {!(hero && isHarbour) && (
-        <div className="cta-column">
-          {/* An einer angesehenen Alternative fehlt der Ändern-Knopf: er würde
-              die Hauptroute bearbeiten, die gerade gar nicht im Bild ist. */}
-          {!readOnly && (
-            <button
-              type="button"
-              className={hero ? 'btn-primary' : 'btn-secondary'}
-              onClick={() => setEditing((v) => !v)}
-            >
-              {editing ? 'Bearbeiten abbrechen' : 'Etappe ändern'}
-            </button>
-          )}
+      {/* JEDER Tag lässt sich ändern — auch der Hafentag-Hero. Bis 2026-08-08
+          fehlte ihm der Knopf, weil Umplanung über den Optionsraum lief; den
+          gibt es nicht mehr, und ein Tag ohne Ziel ist gerade der, an dem man
+          eines setzen will. */}
+      <div className="cta-column">
+          <button
+            type="button"
+            className={hero ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setEditing((v) => !v)}
+          >
+            {editing
+              ? 'Bearbeiten abbrechen'
+              : isHarbour
+                ? 'Tag ändern'
+                : 'Etappe ändern'}
+          </button>
           {!isHarbour && (
             <button
               type="button"
@@ -1098,10 +1033,9 @@ function StageCard({
               onClick={() => setExpanded((v) => !v)}
             >
               {expanded ? 'Rechnung ausblenden' : 'Wie kommt die Zeit zustande?'}
-            </button>
-          )}
-        </div>
-      )}
+          </button>
+        )}
+      </div>
 
       {editing && (
         <StageEditor stage={stage} snapshot={snapshot} nightAmpeln={nightAmpeln} onClose={() => setEditing(false)} />
@@ -1147,660 +1081,6 @@ function StageCard({
   );
 }
 
-/**
- * Zustands-, Konzept- und Empfehlungs-Beschriftungen leben in altRoutes.ts:
- * die Karten-Ansicht nennt dieselben Routen und braucht dieselben Wörter
- * (Skipper 2026-08-06 — „die Namen sind anders").
- */
-const EIGNUNG_LABEL: Record<KonzeptEignung, string> = {
-  geeignet: 'trägt',
-  grenzwertig: 'grenzwertig',
-  ungeeignet: 'trägt nicht',
-};
-
-/**
- * ROUTEN-KONZEPT — die zentrale, alles überschreibende Logik der App
- * (Skipper 2026-08-05, domain/konzept.ts): NACH WELCHEM der beiden
- * Revier-Konzepte segeln wir? Hier steht sie als EINE Aussage mit Begründung,
- * Wechsel-Hinweis und der Rückweg-Empfehlung der Törnanalyse.
- *
- * NACHGEORDNET UND EINGEKLAPPT (Skipper 2026-08-06). Das Panel stand zuvor
- * ausgeschrieben zwischen Statuszeile und Hero und schob damit den heutigen
- * Tag — das, womit die Ansicht beginnen soll — unter den Falz. Die Entscheidung
- * ist zwar übergeordnet, aber sie fällt selten: der Solver hat sie beim Ranking
- * bereits angewendet, die Options-Liste trägt sie je Ziel. Sie gehört deshalb
- * ans Ende, hinter den Optionsraum, als Summenzeile im Haus-Muster (wie dieser)
- * — aufklappbar, wenn der Skipper sie nachlesen will.
- *
- * Was NICHT verschwinden darf, ist der Fall, in dem das aktive Konzept kippt:
- * dafür steht über dem Hero eine einzeilige Alarm-Zeile (`konzept-alarm`), die
- * dieses Panel aufklappt und anspringt — ein Satz statt eines halben Bildschirms.
- */
-/**
- * DIE SCHWELLEN ALS REGLER (Skipper 2026-08-06). Wo "zu viel Wind" anfängt,
- * ist kein Naturgesetz, sondern die Risikobereitschaft dieses Skippers auf
- * diesem Törn — und weil die Schwelle nur noch bestimmt, wovon ABGERATEN wird
- * (nichts wird gesperrt), kann sie gefahrlos in seine Hand.
- *
- * Die Regler stehen bewusst IM Konzept-Panel, direkt unter den Karten, deren
- * Eignungs-Chips sie umschalten: der Effekt ist im selben Blick sichtbar.
- * Bereiche, Schritt und Beschriftung kommen aus `KONZEPT_REGLER`
- * (domain/konzept.ts) — das Formular weiss nichts über das Revier.
- */
-function KonzeptRegler({ snapshot }: { snapshot: PlanningSnapshot }) {
-  const { setKonzeptSchwellen, konzeptReglerVerstellt } = usePlanning();
-  const stand = konzeptSchwellenOf(snapshot.params);
-
-  /**
-   * Der Stand WÄHREND des Ziehens. Jede Übergabe an die Engine rechnet den
-   * Solver neu — der teuerste Schritt der ganzen Bewertung — und ein
-   * `<input type="range">` feuert bei jedem Pixel. Der Regler folgt deshalb
-   * sofort der Hand (Entwurf), gerechnet wird, sobald sie still steht.
-   * Null = kein Entwurf offen, es gilt der Stand der Engine.
-   */
-  const [entwurf, setEntwurf] = useState<KonzeptSchwellen | null>(null);
-  const anzeige = entwurf ?? stand;
-
-  useEffect(() => {
-    if (!entwurf) return;
-    const timer = setTimeout(() => {
-      setKonzeptSchwellen(entwurf);
-      setEntwurf(null);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [entwurf, setKonzeptSchwellen]);
-
-  return (
-    <details className="hint-panel konzept-regler">
-      <summary>
-        Ab wann rät die App ab? — Schwellen einstellen
-        {konzeptReglerVerstellt && <span className="badge badge-frist">verstellt</span>}
-      </summary>
-      <p className="beschreibung">
-        Ein Konzept gilt als „trägt nicht", sobald der Revier-Spitzenwind die
-        Schwelle über so viele Tage IN FOLGE erreicht. Die Voreinstellung stammt
-        aus der Törnanalyse. Die Regler ändern nur, wovon die App abrät — gesperrt
-        wird nichts.
-      </p>
-      {KONZEPT_REGLER.map((r) => (
-        <label className="regler-zeile" key={r.key}>
-          <span className="regler-kopf">
-            <span className="regler-label">{r.label}</span>
-            <output className="regler-wert">
-              {anzeige[r.key]} {r.einheit}
-            </output>
-          </span>
-          <input
-            type="range"
-            min={r.min}
-            max={r.max}
-            step={r.step}
-            value={anzeige[r.key]}
-            onChange={(e) =>
-              // Die Bewegungsregeln (Klemme, "Route 2 schiebt Route 1 mit")
-              // stehen in der Domäne — das Formular wendet sie nur an.
-              setEntwurf(setKonzeptSchwelle(anzeige, r.key, Number(e.target.value)))
-            }
-          />
-          <span className="beschreibung">{r.hilfe}</span>
-        </label>
-      ))}
-      {konzeptReglerVerstellt && (
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => {
-            setEntwurf(null);
-            setKonzeptSchwellen(null);
-          }}
-        >
-          Zurück auf die Werte der Törnanalyse
-        </button>
-      )}
-    </details>
-  );
-}
-
-function KonzeptPanel({
-  assessment,
-  snapshot,
-  open,
-  onToggle,
-  panelRef,
-  altRoutes,
-  shownAltIndex,
-  onShow,
-}: {
-  assessment: Assessment;
-  snapshot: PlanningSnapshot;
-  /** Eingeklappt oder offen — der Stand liegt in der DayView, weil auch die
-   *  Alarm-Zeile über dem Hero ihn aufklappt. */
-  open: boolean;
-  onToggle: () => void;
-  panelRef: RefObject<HTMLElement | null>;
-  /** Die ansehbaren Routen — je Konzept-Karte die, die ihm folgen. */
-  altRoutes: AltRouteView[];
-  shownAltIndex: number | null;
-  onShow: (index: number) => void;
-}) {
-  const entscheid = assessment.konzeptEntscheid;
-  // Das aktive Konzept trägt die Summenzeile: es ist die eine Aussage, die
-  // eingeklappt sichtbar bleiben muss. Die Karten führen es immer, aber die
-  // Zeile darf daran nicht zerbrechen.
-  const aktiv = entscheid.konzepte.find((k) => k.aktiv) ?? entscheid.konzepte[0] ?? null;
-  const empfohlen =
-    entscheid.konzepte.find((k) => k.id === entscheid.empfohlenId) ?? null;
-
-  return (
-    <section className="konzept-panel" ref={panelRef}>
-      <h2 className="section-title">Routen-Konzept</h2>
-      <div className="list-card">
-        <button
-          type="button"
-          className="trip-row summary-row"
-          aria-expanded={open}
-          aria-controls="konzept-detail"
-          onClick={onToggle}
-        >
-          <span>
-            <span className="place">
-              {aktiv ? aktiv.name : 'Nach welchem Konzept segeln wir?'}
-            </span>
-            <span className="meta">
-              {entscheid.wechselHinweis
-                ? 'Das aktive Konzept trägt die Lage nicht — Begründung und Wechsel-Empfehlung ansehen.'
-                : empfohlen && aktiv && empfohlen.id === aktiv.id
-                  ? 'Trägt die Lage — Empfehlung der App. Beurteilung, Karten und Schwellen ansehen.'
-                  : 'Beurteilung beider Konzepte, Schwellen und Rückweg-Empfehlung ansehen.'}
-            </span>
-          </span>
-          {aktiv && (
-            <span className={`state-chip eignung-${aktiv.eignung}`}>
-              {EIGNUNG_LABEL[aktiv.eignung]}
-            </span>
-          )}
-          <span className="chev" aria-hidden="true">
-            ›
-          </span>
-        </button>
-        {open && (
-          <div id="konzept-detail" className="optionsraum-body">
-            <p className="beschreibung">
-              Die übergeordnete Törn-Entscheidung: Route 1 (klassische Runde,
-              Rückweg im westlichen Lee-Korridor) oder Route 2 (Ost-Kykladen,
-              nur bei moderatem Meltemi). Vorschlag und Rangfolge der App folgen
-              dieser Beurteilung — kippt das aktive Konzept, empfiehlt die App
-              den Wechsel. Beide Konzepte und alle Routen darin bleiben trotzdem
-              wählbar: bei zu viel Wind rät die App ab, sie sperrt nicht. Das
-              Konzept wählt keine Route aus; es beurteilt, ob die Wetterlage die
-              Strategie trägt, der eine Route folgt. Welche Routen das je
-              Konzept sind, steht unten in seiner Karte — dieselben, die der
-              Optionsraum listet und die Karten-Ansicht als Linie zeigt.
-            </p>
-            {entscheid.wechselHinweis && (
-              <div className="hint-panel konzept-wechsel">
-                <strong>{entscheid.wechselHinweis}</strong>
-              </div>
-            )}
-            <div className="konzept-karten">
-              {entscheid.konzepte.map((k) => (
-                <div
-                  key={k.id}
-                  className={`konzept-karte eignung-${k.eignung}${k.empfohlen ? ' empfohlen' : ''}`}
-                >
-                  <div className="option-kopf">
-                    <span className="option-name">{k.name}</span>
-                    <span className={`state-chip eignung-${k.eignung}`}>
-                      {EIGNUNG_LABEL[k.eignung]}
-                    </span>
-                  </div>
-                  <p className="beschreibung">{k.beschreibung}</p>
-                  <div className="badges">
-                    {k.aktiv && (
-                      <span className="badge" title="Die aktuelle Haupt- bzw. Vorschlagsroute folgt diesem Konzept.">
-                        aktives Konzept
-                      </span>
-                    )}
-                    {k.empfohlen && (
-                      <span className="badge badge-empfohlen">Empfehlung der App</span>
-                    )}
-                  </div>
-                  <ul className="reasons">
-                    {k.gruende.map((g) => (
-                      <li key={g}>{g}</li>
-                    ))}
-                  </ul>
-                  {/* WELCHE ROUTEN FOLGEN DIESEM KONZEPT (Skipper 2026-08-06):
-                      das Panel beurteilte zwei Strategien, ohne je zu sagen,
-                      welche der ansehbaren Routen dazugehören — die Kette
-                      Konzept → Optionsraum → Linie auf der Karte war von hier
-                      aus unsichtbar. Jetzt steht sie hier namentlich, in
-                      derselben Farbe, mit demselben Knopf wie im Optionsraum. */}
-                  {(() => {
-                    const routen = altRoutes.filter(
-                      (r) => r.option?.konzeptId === k.id,
-                    );
-                    if (routen.length === 0) {
-                      /* EIN LEERER ZUSTAND MUSS SAGEN, WARUM (Skipper
-                         2026-08-07: "sagt, dass es trägt, hat aber keine
-                         Routing-Option im Angebot"). Ein Konzept ohne Route
-                         ist genau dann eine Aussage, wenn dabeisteht, ob der
-                         Optionsraum keins seiner Ziele führt oder ob seine
-                         Route schlicht die Hauptroute IST — der zweite Fall
-                         sah bis dahin aus wie der erste. */
-                      const ziele = assessment.routeOptions.filter(
-                        (o) => o.konzeptId === k.id,
-                      );
-                      const istHauptroute = ziele.some(
-                        (o) => o.plan !== null && o.previewIndex === null,
-                      );
-                      return (
-                        <p className="beschreibung">
-                          {istHauptroute
-                            ? 'Keine zusätzliche Route: die Hauptroute folgt diesem Konzept — ' +
-                              'ihre Etappen stehen unten in der Tagesansicht.'
-                            : ziele.length > 0
-                              ? `Der Optionsraum führt ${ziele.length === 1 ? 'ein Ziel' : `${ziele.length} Ziele`} in diesem Konzept, ` +
-                                'aber zu keinem davon trägt der aktuelle Forecast einen Plan.'
-                              : 'Im aktuellen Törnrahmen gibt es keine volle Runde in diesem Konzept — ' +
-                                'die Beurteilung oben gilt der Wetterlage, nicht dem Angebot.'}
-                        </p>
-                      );
-                    }
-                    return (
-                      <div className="konzept-routen">
-                        <span className="versal">Routen in diesem Konzept</span>
-                        {routen.map((r) => (
-                          <button
-                            key={r.index}
-                            type="button"
-                            className="konzept-route-zeile"
-                            aria-pressed={r.index === shownAltIndex}
-                            onClick={() => onShow(r.index)}
-                          >
-                            <span
-                              className="alt-farbe"
-                              style={{ background: r.color }}
-                              aria-hidden="true"
-                            />
-                            <span className="kr-name">{r.name}</span>
-                            <span className="kr-meta">
-                              {r.index === shownAltIndex
-                                ? 'wird angesehen'
-                                : 'Etappen ansehen ›'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              ))}
-            </div>
-            <KonzeptRegler snapshot={snapshot} />
-            {entscheid.basisAnnahme && (
-              <p className="beschreibung">
-                Die Konzept-Beurteilung stützt sich teilweise auf die
-                Persistenz-Annahme jenseits des Forecast-Horizonts — Vorbehalt,
-                kein Urteil.
-              </p>
-            )}
-            {assessment.rueckwegEmpfehlung.length > 0 && (
-              <div className="rueckweg-empfehlung">
-                <span className="versal">Rückweg-Empfehlung</span>
-                <ul className="reasons">
-                  {assessment.rueckwegEmpfehlung.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/**
- * DER KOPF DER ALTERNATIV-ANSICHT (Skipper 2026-08-06): „Für mich reicht es,
- * wenn ich eine Alternative wie in der Kartenansicht anschauen kann — dann
- * erkenne ich anhand der einzelnen Etappen, warum sie möglicherweise nicht
- * geeignet ist."
- *
- * Genau das passiert hier: die gewählte Alternative (routeViewContext, dieselbe
- * Wahl wie auf der Karte) übernimmt die ganze Tagesansicht. Dieser Kopf sagt,
- * WELCHE Route man sieht und woher sie kommt; darunter stehen ihre Etappen in
- * denselben Karten wie die der Hauptroute — mit Ampel, Kreuz-Abschnitten,
- * Abfahrt/Ankunft und der aufklappbaren Stundenrechnung.
- *
- * Die frühere `AltPreview` (Routenkarte + Kurzliste, eingeklappt IN der
- * Options-Zeile) ist damit ersetzt: zwei Arten, dieselbe Route anzusehen, waren
- * ein Teil des Problems. Übernommen wird weiterhin nur nach dem Ansehen —
- * der Knopf steht hier, nicht an der Options-Zeile (Feedback 2026-08-05).
- */
-function AltRouteBanner({
-  route,
-  snapshot,
-  mapId,
-  onOpenMap,
-  onClose,
-}: {
-  route: AltRouteView;
-  snapshot: PlanningSnapshot;
-  mapId: string | null;
-  onOpenMap?: () => void;
-  onClose: () => void;
-}) {
-  const { checkIn } = usePlanning();
-  const option = route.option;
-  const stages = route.plan.stages.filter((s) => s.kind === 'stage');
-  const nm = stages.reduce(
-    (sum, s) => sum + s.legs.reduce((l, leg) => l + (leg.sailedLeg?.distanceNm ?? 0), 0),
-    0,
-  );
-
-  return (
-    <section className="alt-banner" style={{ borderLeftColor: route.color }}>
-      <div className="option-kopf">
-        <span className="option-name">
-          <span className="alt-farbe" style={{ background: route.color }} />
-          {route.name}
-        </span>
-        <span className="state-chip">Alternative</span>
-      </div>
-
-      <p className="alt-banner-lead">
-        <strong>Angesehen, nicht übernommen</strong> — die Hauptroute bleibt,
-        wie sie ist.
-      </p>
-
-      {/* Die Antwort auf „wie passt das mit Routen-Konzept und Optionsraum
-          zusammen?" — sie steht AN der Route, nicht in einem anderen Panel. */}
-      <p className="beschreibung">{route.herkunft}</p>
-
-      <div className="badges">
-        <span className="badge" title="Insel am fernen Ende dieser Route">
-          Wendepunkt {route.turnName}
-        </span>
-        <span className="badge">
-          {route.stageCount} Etappen{nm > 0 && ` · ${Math.round(nm)} sm`}
-        </span>
-        {route.plan.turnDay !== null && (
-          <span className="badge">Wende an Tag {route.plan.turnDay}</span>
-        )}
-        {option && (
-          <>
-            <span className={`state-chip state-${option.state}`}>
-              {OPTION_STATE_LABEL[option.state]}
-            </span>
-            <span
-              className={`badge badge-empfehlung badge-empfehlung-${option.empfehlung}`}
-              title="Empfehlung der App zu dieser Route. Abgeraten heisst abgeraten, nicht gesperrt."
-            >
-              {EMPFEHLUNG_LABEL[option.empfehlung]}
-            </span>
-            <span className="badge badge-konzept">{KONZEPT_KURZ[option.konzeptId]}</span>
-            {option.closesOnDay !== null && (
-              <span className="badge badge-frist">
-                Entscheidung bis Tag {option.closesOnDay}
-              </span>
-            )}
-          </>
-        )}
-      </div>
-
-      {option?.costNote && (
-        <p className="beschreibung">Kostet: {option.costNote}.</p>
-      )}
-
-      {mapId ? (
-        <RouteMap
-          stages={route.plan.stages}
-          snapshot={snapshot}
-          color={route.color}
-          mapId={mapId}
-        />
-      ) : (
-        <p className="beschreibung">
-          Routenkarte nicht verfügbar — es fehlt: <code>{MAPS_MISSING}</code>. Die
-          Etappen unten sind davon unberührt.
-        </p>
-      )}
-
-      {route.abratenGruende.length > 0 && (
-        <div className="hint-panel abraten-hinweis">
-          <strong>
-            Von dieser Route wird abgeraten — übernehmen kannst du sie trotzdem.
-          </strong>
-          <ul className="reasons">
-            {route.abratenGruende.map((g) => (
-              <li key={g}>{g}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <p className="beschreibung">
-        Unten stehen die Etappen DIESER Route, Tag für Tag — Ampel, Wind,
-        Kreuz-Abschnitte und Ankunft wie bei der Hauptroute. Geändert wird an
-        einer Alternative nichts: erst das Übernehmen macht sie zur Hauptroute
-        (bisherige Festlegungen werden dabei gelöst).
-      </p>
-
-      <div className="alt-banner-actions">
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => {
-            checkIn(route.plan.plan);
-            onClose();
-          }}
-        >
-          {route.abratenGruende.length > 0
-            ? 'Trotz Abraten als Hauptroute übernehmen'
-            : 'Als Hauptroute übernehmen'}
-        </button>
-        {onOpenMap && (
-          <button type="button" className="btn-secondary" onClick={onOpenMap}>
-            Auf der Karte zeigen
-          </button>
-        )}
-        <button type="button" className="btn-secondary" onClick={onClose}>
-          Zurück zur Hauptroute
-        </button>
-      </div>
-    </section>
-  );
-}
-
-/**
- * FR9/FR18/FR20/FR29 — EINE Zeile je Option, verschmolzen mit ihrer
- * Alternativ-Route (Feedback 2026-08-05: Optionsraum und "Andere Round-Trips"
- * waren zwei Listen über dieselbe Frage; dieselben Ziele standen doppelt da —
- * einmal mit Preis und Frist, einmal mit Vorschau).
- *
- * Drei Angaben je Option, und keine davon darf fehlen:
- *   Reichweite — wie weit komme ich damit (die Törnfrage),
- *   Preis      — was nehme ich dafür in Kauf (Doppelschläge, Nachtetappen),
- *   Frist      — bis wann kann ich mich noch dafür entscheiden.
- *
- * Dazu die ROUTE hinter diesen Angaben: `route` ist der bewertete Plan der
- * Option (assessment.alternatives[previewIndex] — angesehen wird exakt, was
- * übernommen würde, AD-3), mit Farbe und Namen der Karten-Ansicht. „Etappen
- * ansehen" schlägt sie oben in der Tagesansicht auf, Tag für Tag; das ist
- * derselbe Knopf wie die Routenwahl auf der Karte, nur von hier aus.
- */
-function OptionRow({
-  option,
-  snapshot,
-  today,
-  route,
-  onShow,
-  shown,
-}: {
-  option: RouteOptionAssessment;
-  snapshot: PlanningSnapshot;
-  today: number;
-  /** Null: kein Plan — oder der Plan ist bereits die Hauptroute. */
-  route: AltRouteView | null;
-  /** Diese Route ansehen (Tagesansicht schlägt ihre Etappen auf). */
-  onShow: (index: number) => void;
-  /** True, während genau diese Route oben angesehen wird. */
-  shown: boolean;
-}) {
-  const rest = option.closesOnDay !== null ? option.closesOnDay - today : null;
-  const dringend =
-    rest !== null && rest >= 0 && rest <= snapshot.params.decisionLookaheadDays;
-  /** previewIndex null TROTZ Plan heisst genau: entspricht der Hauptroute. */
-  const istHauptroute = option.plan !== null && route === null;
-  const color = route?.color ?? null;
-
-  return (
-    <div
-      className={`option-row state-${option.state} empfehlung-${option.empfehlung}${dringend ? ' dringend' : ''}`}
-    >
-      <div className="option-kopf">
-        <span className="option-name">
-          {color && <span className="alt-farbe" style={{ background: color }} />}
-          {option.name}
-        </span>
-        <span className={`state-chip state-${option.state}`}>
-          {OPTION_STATE_LABEL[option.state]}
-        </span>
-      </div>
-
-      <div className="badges">
-        {/* Die Empfehlung steht NEBEN dem Zustand, nicht statt seiner: der
-            Zustand sagt, ob es geht, die Empfehlung, ob die App dazu rät.
-            Abgeraten ist kein Ausschluss — die Route bleibt ansehbar und
-            übernehmbar (Skipper 2026-08-06). */}
-        <span
-          className={`badge badge-empfehlung badge-empfehlung-${option.empfehlung}`}
-          title="Empfehlung der App zu dieser Route. Abgeraten heisst abgeraten, nicht gesperrt."
-        >
-          {EMPFEHLUNG_LABEL[option.empfehlung]}
-        </span>
-        <span
-          className={`badge badge-konzept${option.konzeptWarnung ? ' badge-konzept-warnung' : ''}`}
-          title="Routen-Konzept dieser Option (siehe Panel „Routen-Konzept“)."
-        >
-          {KONZEPT_KURZ[option.konzeptId]}
-        </span>
-        <span className="badge" title="Entfernung von der Basis zum Wendepunkt">
-          bis {islandName(snapshot, option.turnIslandId)}
-          {option.reachNm !== null && ` · ${Math.round(option.reachNm)} sm`}
-        </span>
-        {option.turnDay !== null && (
-          <span className="badge" title="Tag, an dem der Plan den Wendepunkt erreicht">
-            Wende an Tag {option.turnDay}
-          </span>
-        )}
-        {option.closesOnDay !== null && (
-          <span className={`badge${dringend ? ' badge-frist' : ''}`}>
-            {rest !== null && rest <= 0
-              ? 'letzte Entscheidung heute'
-              : `noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'} · bis Tag ${option.closesOnDay}`}
-          </span>
-        )}
-        <AmpelBadge ampel={option.ampel} />
-      </div>
-
-      {/* Der Preis. Eine offene Option ohne ihn wäre eine Behauptung ohne
-          Preisschild — genau die Information, die fehlte, wenn man wissen
-          wollte, was ein weiter gestecktes Ziel eigentlich bedeutet. */}
-      <div className="beschreibung">
-        {option.costNote
-          ? `Kostet: ${option.costNote}.`
-          : option.plan
-            ? 'Kein tragfähiger Plan zu diesem Ziel — der beste Versuch steht trotzdem zum Ansehen bereit.'
-            : 'Für dieses Ziel gibt es derzeit keinen tragfähigen Plan.'}
-        {istHauptroute && ' Dieser Plan ist bereits die Hauptroute.'}
-      </div>
-
-      {/* Warum abgeraten wird, steht AN der Option, nicht nur im Panel oben:
-          wer hier "Verlängerung Amorgos · offen" liest, soll im selben Blick
-          sehen, dass das Ost-Konzept die Lage gerade nicht trägt — und dass
-          die Route deswegen nicht weg ist, sondern nur nicht empfohlen. */}
-      {option.abratenGruende.map((g) => (
-        <div className="konzept-warnung" key={g}>
-          {g}
-        </div>
-      ))}
-
-      {option.reasons.length > 0 && (
-        <ul className="reasons">
-          {option.reasons.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-      )}
-
-      {route && (
-        <div className="stage-actions">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => onShow(route.index)}
-            aria-pressed={shown}
-          >
-            {shown ? 'Wird oben angesehen' : 'Etappen ansehen'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * FR29/AD-13 — eine Alternative, auf die KEINE Option zeigt: der FR2-Zeuge,
- * wenn sein Plan von keinem Optionsplan abgedeckt ist. Er steht hinter den
- * Optionen in derselben Sektion — ein gelbes Licht muss einlösbar bleiben.
- */
-function AlternativeRow({
-  route,
-  snapshot,
-  onShow,
-  shown,
-}: {
-  route: AltRouteView;
-  snapshot: PlanningSnapshot;
-  onShow: (index: number) => void;
-  shown: boolean;
-}) {
-  const stages = route.plan.stages.filter((s) => s.kind === 'stage');
-  return (
-    <div className="alt-route" style={{ borderLeftColor: route.color }}>
-      <div className="option-kopf">
-        <span className="option-name">
-          <span className="alt-farbe" style={{ background: route.color }} />
-          {route.name}
-        </span>
-        <span className="beschreibung">{stages.length} Etappen</span>
-      </div>
-      <p className="beschreibung">{route.herkunft}</p>
-      <span className="legs-inline">
-        {stages.slice(0, 6).map((s) => (
-          <span className="leg-chip" key={s.day}>
-            {islandName(snapshot, s.toIslandId)}
-          </span>
-        ))}
-        {stages.length > 6 && <span className="leg-chip">…</span>}
-      </span>
-      <div className="stage-actions">
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => onShow(route.index)}
-          aria-pressed={shown}
-        >
-          {shown ? 'Wird oben angesehen' : 'Etappen ansehen'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function DayView({
   snapshot,
   assessment,
@@ -1819,54 +1099,21 @@ export function DayView({
    * an und setzt den Fokus dorthin; null heisst "normal öffnen, oben".
    */
   focusDay?: number | null;
-  /**
-   * Zur Karten-Ansicht wechseln — die angesehene Route bleibt dabei stehen
-   * (routeViewContext). Optional, damit die View ohne Navigationsrahmen rendert.
-   */
+  /** Zur Karten-Ansicht wechseln. Optional, damit die View allein rendert. */
   onOpenMap?: () => void;
 }) {
   const day = snapshot.trip.currentDay;
   const { params } = snapshot;
-  const { checkIn } = usePlanning();
+  const { resetPlan } = usePlanning();
   const hereName = assessment.currentIslandId
     ? islandName(snapshot, assessment.currentIslandId)
     : null;
 
   const main = assessment.mainRoute;
-
-  /**
-   * DIE ANGESEHENE ROUTE (Skipper 2026-08-06): dieselbe Wahl wie auf der Karte
-   * (routeViewContext). Ist eine Alternative gewählt, zeigt die Tagesansicht
-   * DEREN Etappen — in denselben Karten wie die der Hauptroute, damit sich an
-   * den einzelnen Etappen erkennen lässt, warum eine Route taugt oder nicht.
-   * Der Plan selbst bleibt unangetastet, bis die Route übernommen wird (FR29).
-   */
-  const { shownAltIndex, showAlt } = useRouteView();
-  const altRoutes = useMemo(
-    () => altRouteViews(assessment, (id) => islandName(snapshot, id)),
-    [assessment, snapshot],
-  );
-  const shownRoute = altRouteAt(altRoutes, shownAltIndex);
-  const viewRoute = shownRoute?.plan ?? main;
-
-  /** Hero-Switch + Listen-Split — pure helper (AC 8/9), kein eigenes Branching. */
-  const { hero, rest, past } = dayViewStages(
-    viewRoute,
-    day,
-    assessment.currentIslandId,
-  );
-  /**
-   * Eine Alternative ansehen und an den Kopf der Seite springen — sonst
-   * schaltete der Knopf im Optionsraum eine Ansicht um, die weit über dem
-   * sichtbaren Ausschnitt beginnt.
-   */
-  const showRoute = (index: number) => {
-    showAlt(index);
-    window.scrollTo?.({ top: 0, behavior: 'smooth' });
-  };
+  const { hero, rest, past } = dayViewStages(main, day, assessment.currentIslandId);
 
   // Staleness (FR13/AD-7): geprüft höchstens einmal pro Minute; das Label
-  // selbst kommt aus dem getesteten Helper (AC 2/14).
+  // selbst kommt aus dem getesteten Helper.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 60_000);
@@ -1874,59 +1121,28 @@ export function DayView({
   }, []);
   const staleLabel = staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS);
 
-  // AC 3 — nach jeder Neuberechnung des ganzen Plans (Editor-Apply, Check-in,
-  // Refresh mit neuem Verdikt) landet der Fokus auf der Statuszeile, die das
-  // neue Verdikt über ihre Live-Region ansagt. Erst-Render übersprungen.
-  const statusRef = useRef<HTMLButtonElement>(null);
-  const planStamp = main ? `${planKey(main.plan)}|${assessment.restTripAmpel}` : null;
-  const prevStamp = useRef<string | null>(null);
-  useEffect(() => {
-    if (
-      prevStamp.current !== null &&
-      planStamp !== null &&
-      prevStamp.current !== planStamp
-    ) {
-      statusRef.current?.focus();
-    }
-    prevStamp.current = planStamp;
-  }, [planStamp]);
-
   const [assumptionOpen, setAssumptionOpen] = useState(false);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
-  const [showAllRest, setShowAllRest] = useState(false);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const [pastOpen, setPastOpen] = useState(false);
-  // Das Konzept-Panel steht am Ende und ist eingeklappt; die Alarm-Zeile über
-  // dem Hero klappt es auf und springt es an — deshalb liegen Stand und Anker
-  // hier oben, nicht im Panel.
-  const [konzeptOpen, setKonzeptOpen] = useState(false);
-  const konzeptRef = useRef<HTMLElement>(null);
+  /** Zurücksetzen ist unumkehrbar — es fragt einmal nach. */
+  const [resetOpen, setResetOpen] = useState(false);
 
   /**
-   * ANSPRINGEN EINER ETAPPE (Feedback 2026-08-06): die Etappennummern der
-   * Karte führen hierher. Der Tag kann an drei Stellen stehen, und jede
-   * braucht einen eigenen Handgriff, damit die Card wirklich sichtbar wird:
-   * der Hero steht offen da, eine Rest-Trip-Zeile muss aufgeklappt werden
-   * (und die Liste zeigt normalerweise nur drei Tage), ein gefahrener Tag
-   * steht als Chip in der eingeklappten Sektion "Bereits gefahren".
+   * ANSPRINGEN EINER ETAPPE: die Etappennummern der Karte führen hierher. Der
+   * Tag kann an drei Stellen stehen — Hero, Plan-Zeile oder Chip der Sektion
+   * "Bereits gefahren" —, und jede braucht einen eigenen Handgriff.
    *
    * Zwei Effekte, weil das Ziel im ersten Durchgang noch nicht im DOM ist: der
    * erste öffnet, was zu öffnen ist, der zweite scrollt und fokussiert, sobald
-   * das Element existiert. `focusDone` macht daraus einen EINMALIGEN Sprung —
-   * sonst würde jedes spätere Auf- und Zuklappen erneut dorthin scrollen.
+   * das Element existiert. `focusDone` macht daraus einen EINMALIGEN Sprung.
    */
   const focusTargets = useRef<Record<number, HTMLElement | null>>({});
   const focusDone = useRef<number | null>(null);
   useEffect(() => {
     if (focusDay === null) return;
     focusDone.current = null;
-    // Welche Stelle es ist, entscheidet der getestete Helper (AC-Muster der
-    // Story: Anordnung für einen Schirm gehört in dayViewModel.ts).
     const placement = stageFocusPlacement({ hero, rest, past }, focusDay);
-    if (placement === 'rest') {
-      setShowAllRest(true);
-      setExpandedDay(focusDay);
-    }
+    if (placement === 'rest') setExpandedDay(focusDay);
     if (placement === 'past') setPastOpen(true);
     // Nur der Zieltag ist die Eingabe: `rest`/`past` sind bei jedem Render neue
     // Arrays, und ihre Inhalte ändern den Sprung nicht mehr, wenn er getan ist.
@@ -1937,66 +1153,33 @@ export function DayView({
     const el = focusTargets.current[focusDay];
     if (!el) return; // noch nicht gerendert — der nächste Durchgang holt es
     focusDone.current = focusDay;
-    // Optional gerufen wie in der Konzept-Alarm-Zeile: scrollIntoView fehlt in
-    // jsdom, und daran darf die Ansicht nicht zerbrechen.
+    // Optional gerufen: scrollIntoView fehlt in jsdom, und daran darf die
+    // Ansicht nicht zerbrechen.
     el.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     el.focus?.({ preventScroll: true });
   });
 
-  /**
-   * PPR-Hinweise für das Statuszeilen-Detail (Feedback 2026-08-05): an der
-   * Basis trägt der einzige Hinweis ("Bereits an der Basis") nichts — dort
-   * bleibt die Liste leer.
-   */
-  const atBase = assessment.currentIslandId === params.baseIslandId;
-  const pprHinweise = atBase ? [] : assessment.ppr.reasons;
-
-  /**
-   * Alternativen, auf die KEINE Option zeigt — nach Konstruktion der FR2-Zeuge,
-   * wenn sein Plan von keinem Optionsplan abgedeckt ist (AD-13: ein gelbes
-   * Licht muss einlösbar bleiben). Sie behalten ihren Index in
-   * `assessment.alternatives`, damit die Farbe zur Karten-Ansicht passt.
-   */
-  const extraAlternatives = altRoutes.filter((r) => r.option === null);
-
-  const summary = optionsSummary(assessment.routeOptions);
-  const hasOptionContent =
-    assessment.routeOptions.length > 0 || extraAlternatives.length > 0;
-  const visibleRest = showAllRest ? rest : rest.slice(0, 3);
-
   // Hafentag-Hero: Zeiger auf den nächsten Segeltag ("Weiter am Mi: A → B").
   const nextSailing =
-    hero && hero.kind === 'harbour' && viewRoute
-      ? (viewRoute.stages.find((s) => s.day > hero.day && s.kind === 'stage') ?? null)
+    hero && hero.kind === 'harbour' && main
+      ? (main.stages.find((s) => s.day > hero.day && s.kind === 'stage') ?? null)
       : null;
   const harbourPointer =
     hero && nextSailing
       ? `Weiter am ${formatTripDayWeekdayShort(params.tripStartDate, nextSailing.day)}: ${islandName(snapshot, hero.toIslandId)} → ${islandName(snapshot, nextSailing.toIslandId)}`
       : null;
 
+  const leer = main ? planIsEmpty(main.plan) : false;
+
   // Exactly ONE APIProvider for the whole view: several expanded stage cards
   // then share a single Maps script load instead of each mounting its own.
-  // Story 1.3, AC 9: fehlende Konfiguration ist ein benannter Fehler — kein
-  // stiller Demo-Map-Fallback (mapsEnv.ts, MAPS_ENV oben im Modul).
   const mapId = MAPS_ENV.ok ? MAPS_ENV.env.mapId : null;
 
   const content = (
     <div>
-      <TripStatusLine
-        assessment={assessment}
-        main={main}
-        pprHinweise={pprHinweise}
-        staleLabel={staleLabel}
-        triggerRef={statusRef}
-      />
-
       <div className="day-context">
         <div className="day-kicker">
           Tag {day} · {formatTripDayDate(params.tripStartDate, day)}
-          {/* Der Törnzeitraum stand bis zum 2026-08-06 am Kopf der
-              Etappenliste der Karte. Die Liste ist entfallen, die Angabe
-              nicht: sie gehört zu "welcher Tag ist heute" und steht deshalb
-              hier, in derselben Zeile, als leise Fortsetzung. */}
           <span className="zeitraum">
             {' · '}
             {formatTripRange(params.tripStartDate, params.tripLengthDays)} ·{' '}
@@ -2021,93 +1204,27 @@ export function DayView({
         {assessment.positionNote && (
           <div className="hint-panel">{assessment.positionNote}</div>
         )}
-      </div>
-
-      {/* Kippt das aktive Konzept, ist das der wichtigste Satz der Seite — und
-          bleibt oben stehen, während das Panel selbst ans Ende gewandert ist.
-          Eine Zeile, kein Panel: der heutige Tag beginnt gleich darunter. */}
-      {assessment.konzeptEntscheid.wechselHinweis && (
-        <button
-          type="button"
-          className="konzept-alarm"
-          onClick={() => {
-            setKonzeptOpen(true);
-            // scrollIntoView fehlt in jsdom — die Zeile klappt trotzdem auf.
-            konzeptRef.current?.scrollIntoView?.({
-              behavior: 'smooth',
-              block: 'start',
-            });
-          }}
-        >
-          <span className="status-dot rot" aria-hidden="true" />
-          <span>
-            <strong>Das aktive Routen-Konzept trägt diese Lage nicht.</strong>{' '}
-            Begründung und Wechsel-Empfehlung ansehen
-          </span>
-          <span className="chev" aria-hidden="true">
-            ›
-          </span>
-        </button>
-      )}
-
-      {/* DIE ANGESEHENE ALTERNATIVE übernimmt die Ansicht: Kopf mit Herkunft
-          und Übernehmen-Knopf, darunter ihre Etappen in denselben Karten wie
-          die der Hauptroute. Solange sie steht, bleiben die Hinweise zur
-          Hauptroute (Vorschlag, veralteter Solver-Stand) aus dem Bild — sie
-          gehören zu einer Route, die man gerade nicht ansieht. */}
-      {shownRoute && (
-        <AltRouteBanner
-          route={shownRoute}
-          snapshot={snapshot}
-          mapId={mapId}
-          onOpenMap={onOpenMap}
-          onClose={() => showAlt(null)}
-        />
-      )}
-
-      {!shownRoute && !main && assessment.proposal && (
-        <div className="card-surface hero-card">
-          <h1 className="route-dest-sm">Noch keine Hauptroute festgelegt.</h1>
-          <p>
-            Vorschlag der App:{' '}
-            {islandName(snapshot, assessment.proposal.turnIslandId)} und zurück,{' '}
-            {assessment.proposal.stages.filter((s) => s.kind === 'stage').length}{' '}
-            Etappen.
-          </p>
-          <div className="cta-column">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => checkIn(assessment.proposal!.plan)}
-            >
-              Vorschlag übernehmen
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Veralteter Solver-Stand: die Fälle, die der Auto-Refresh (usePlanning)
-          bewusst NICHT anfasst — Törn läuft schon oder Pins gesetzt. Die
-          Neuberechnung bleibt dann eine sichtbare Skipper-Entscheidung. */}
-      {!shownRoute &&
-        main &&
-        planOutdated(main.plan) &&
-        assessment.proposal &&
-        planKey(assessment.proposal.plan) !== planKey(main.plan) && (
+        {staleLabel && (
           <div className="hint-panel">
-            Der Planer wurde verbessert — die gespeicherte Hauptroute stammt aus
-            einer älteren Version und würde so nicht mehr vorgeschlagen.
-            Übernehmen ersetzt sie durch den aktuellen Vorschlag; bisherige
-            Festlegungen werden dabei gelöst.{' '}
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => checkIn(assessment.proposal!.plan)}
-            >
-              Route neu berechnen
-            </button>
+            {staleLabel} — Forecast über die Aktualisierung im Kopf neu holen.
           </div>
         )}
+      </div>
+
+      {/* DER LEERE TÖRN: bis der Skipper das erste Ziel setzt, behauptet die
+          App nichts über seine Reise. Ein Satz, der sagt, wo man anfängt —
+          kein Vorschlag, den man erst wieder loswerden müsste. */}
+      {leer && (
+        <div className="card-surface hero-card">
+          <h1 className="route-dest-sm">Der Törn ist noch leer.</h1>
+          <p>
+            Jeder Tag liegt an der Basis. Tippe einen Tag an, wähle unter
+            „Etappe ändern" seine Zielinsel — und die Kette wächst von dort.
+            Jede Insel des Reviers ist zugelassen; die App rechnet dir Distanz,
+            Abfahrt, Fahrtzeit, Ankunft und Wind dazu.
+          </p>
+        </div>
+      )}
 
       {hero && (
         // tabIndex -1: Sprungziel für eine angetippte Etappennummer der Karte
@@ -2128,7 +1245,6 @@ export function DayView({
             onOpenPlace={onOpenPlace}
             mapId={mapId}
             harbourPointer={harbourPointer}
-            readOnly={shownRoute !== null}
           />
         </div>
       )}
@@ -2150,7 +1266,7 @@ export function DayView({
               i
             </span>
             <span>
-              Ab Tag {assessment.assumedFromDay} beruht die Planung auf einer{' '}
+              Ab Tag {assessment.assumedFromDay} beruht die Rechnung auf einer{' '}
               <u>Annahme</u>.
             </span>
           </button>
@@ -2183,23 +1299,21 @@ export function DayView({
                     keine Störung, sondern der Abstand zwischen zwei Modellen.
                   </li>
                 )}
-                <li>
-                  Eine Annahme kann den Rest-Trip nicht grün machen — aber auch nicht rot:
-                  sie warnt, sie verurteilt nicht.
-                </li>
               </ul>
             </div>
           )}
         </div>
       )}
 
+      {/* DER PLAN — alle kommenden Tage, jeder aufklappbar. Das ist seit der
+          Handplanung das Rückgrat der Ansicht und deshalb NICHT mehr auf drei
+          Zeilen gekürzt: was man Tag für Tag selbst legt, will man Tag für Tag
+          sehen. */}
       {rest.length > 0 && (
         <section>
-          <h2 className="section-title">
-            {shownRoute ? 'Weitere Etappen dieser Alternative' : 'Rest-Trip'}
-          </h2>
+          <h2 className="section-title">Weitere Tage</h2>
           <div className="list-card">
-            {visibleRest.map((s) => (
+            {rest.map((s) => (
               <div key={s.day}>
                 <button
                   type="button"
@@ -2237,131 +1351,14 @@ export function DayView({
                       currentDay={day}
                       onOpenPlace={onOpenPlace}
                       mapId={mapId}
-                      readOnly={shownRoute !== null}
                     />
                   </div>
                 )}
               </div>
             ))}
-            {rest.length > 3 && (
-              <button
-                type="button"
-                className="trip-row more"
-                aria-expanded={showAllRest}
-                onClick={() => setShowAllRest((v) => !v)}
-              >
-                {showAllRest
-                  ? 'Weniger anzeigen'
-                  : `Alle ${rest.length} Tage anzeigen`}
-              </button>
-            )}
           </div>
         </section>
       )}
-
-      {/* FR9/FR18/FR20/FR29 — Optionsraum und Alternativ-Routen VERSCHMOLZEN
-          (Feedback 2026-08-05), jetzt hinter einer eingeklappten Summenzeile:
-          "{N} Optionen offen · Nächste Deadline: Tag X". Die Sektion ist NIE
-          versteckt — null offene Optionen sind eine Aussage, kein Leerraum. */}
-      <section>
-        <h2 className="section-title">Optionsraum</h2>
-        <div className="list-card">
-          {hasOptionContent ? (
-            <button
-              type="button"
-              className="trip-row summary-row"
-              aria-expanded={optionsOpen}
-              onClick={() => setOptionsOpen((o) => !o)}
-            >
-              <span>
-                <span className="place">
-                  {summary.openCount === 0
-                    ? 'Keine Optionen mehr offen — Rückweg fixiert.'
-                    : summary.openCount === 1
-                      ? '1 Option offen'
-                      : `${summary.openCount} Optionen offen`}
-                </span>
-                {summary.openCount === 0 ? (
-                  <span className="meta">
-                    Der Plan folgt der festgelegten Rückroute; neue Fenster
-                    meldet der nächste Forecast-Lauf.
-                  </span>
-                ) : (
-                  summary.nextDeadlineDay !== null && (
-                    <span className="meta">
-                      Nächste Deadline: Tag {summary.nextDeadlineDay}
-                    </span>
-                  )
-                )}
-              </span>
-              <span className="chev" aria-hidden="true">
-                ›
-              </span>
-            </button>
-          ) : (
-            <div className="optionsraum-body">
-              <strong>Keine Optionen mehr offen — Rückweg fixiert.</strong>
-              <p className="trip-caption">
-                Der Plan folgt der festgelegten Rückroute; neue Fenster meldet
-                der nächste Forecast-Lauf.
-              </p>
-            </div>
-          )}
-          {optionsOpen && hasOptionContent && (
-            <div className="optionsraum-body">
-              {/* WIE DAS ZUSAMMENHÄNGT (Skipper 2026-08-06): Konzept →
-                  Optionsraum → Alternative auf der Karte war drei Namen für
-                  eine Sache. Der Satz sagt die Kette, die Zeilen darunter
-                  tragen sie: derselbe Name, dieselbe Farbe, dieselbe Route. */}
-              <p className="beschreibung">
-                Reichweite, Preis und Frist je Route — eine Option schließt an dem
-                Tag, ab dem kein tragfähiger Restplan mehr existiert. Jede Option
-                IST eine dieser Routen: „Etappen ansehen“ schlägt sie hier oben
-                Tag für Tag auf, und in der Karten-Ansicht liegt genau sie unter
-                demselben Namen und derselben Farbe als Linie im Bild.
-                Das Routen-Konzept (Panel darunter) sagt, welcher der beiden
-                Revier-Strategien eine Option folgt — es wählt keine Route aus,
-                es beurteilt, ob deren Konzept die Wetterlage trägt. Übernommen
-                wird eine Route erst nach dem Ansehen.
-              </p>
-              {assessment.routeOptions.map((o) => (
-                <OptionRow
-                  key={o.routeId}
-                  option={o}
-                  snapshot={snapshot}
-                  today={day}
-                  route={altRouteAt(altRoutes, o.previewIndex)}
-                  onShow={showRoute}
-                  shown={o.previewIndex !== null && o.previewIndex === shownAltIndex}
-                />
-              ))}
-              {extraAlternatives.map((r) => (
-                <AlternativeRow
-                  key={`${r.plan.variantId}-${r.turnIslandId}`}
-                  route={r}
-                  snapshot={snapshot}
-                  onShow={showRoute}
-                  shown={r.index === shownAltIndex}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ROUTEN-KONZEPT — die zentrale Logik, hinter dem Optionsraum und
-          eingeklappt: die Entscheidung liegt über allem, fällt aber selten,
-          und der Solver hat sie oben schon angewendet (siehe KonzeptPanel). */}
-      <KonzeptPanel
-        assessment={assessment}
-        snapshot={snapshot}
-        altRoutes={altRoutes}
-        shownAltIndex={shownAltIndex}
-        onShow={showRoute}
-        open={konzeptOpen}
-        onToggle={() => setKonzeptOpen((o) => !o)}
-        panelRef={konzeptRef}
-      />
 
       {past.length > 0 && (
         <section>
@@ -2400,22 +1397,47 @@ export function DayView({
         </section>
       )}
 
-      {/* Die früheren Sektionen "Point of Return" und "Entscheidungspunkte"
-          sind bewusst ENTFERNT (Feedback 2026-08-05): am Seitenende trugen
-          sie nichts — alles stand dort doppelt. Der späteste Umkehrtag und
-          "Meltemi-fest bis" stehen jetzt im Detail der Trip-Statuszeile oben
-          (neben der Rückkehr-Frist, zu der sie gehören), die PPR-Hinweise in
-          dessen Begründungsliste — und `assessment.decisionPoints` rendert
-          seit Story 1.2 ebenfalls dort (FR20 sichtbar). Die Options-Fristen
-          aus FR20 zeigt der Optionsraum weiterhin je Option (Frist-Badge
-          inkl. Dringlichkeit und Preis). */}
-
-      {/* Die frühere Sektion "Platzbibliothek — Alle Plätze mit Nacht-Ampel"
-          ist bewusst ENTFERNT (Feedback 2026-08-05): ~60 Plätze des ganzen
-          Reviers unter Tag 1 sind Rauschen — Aegiali liegt mehrere Tagesreisen
-          entfernt. Plätze erscheinen jetzt nur im Kontext ihrer Insel: im
-          Platz-Dropdown der Etappe (mit Ampel) und auf der Karte entlang des
-          Plans. Ungültige Platz-Dokumente meldet weiterhin der Seeding-Report. */}
+      <div className="cta-column">
+        {onOpenMap && (
+          <button type="button" className="btn-secondary" onClick={onOpenMap}>
+            Törn auf der Karte ansehen
+          </button>
+        )}
+        {/* Neu anfangen ist ein Handgriff, kein Unfall: erst fragen, dann
+            löschen — der Plan ist das Einzige, was der Skipper investiert hat. */}
+        {!leer &&
+          (resetOpen ? (
+            <div className="hint-panel">
+              Alle Tage zurück an die Basis? Die gesetzten Ziele gehen dabei
+              verloren.{' '}
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  resetPlan();
+                  setResetOpen(false);
+                }}
+              >
+                Ja, Törn leeren
+              </button>{' '}
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setResetOpen(false)}
+              >
+                Abbrechen
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => setResetOpen(true)}
+            >
+              Törn leeren und neu planen
+            </button>
+          ))}
+      </div>
     </div>
   );
 

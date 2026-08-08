@@ -107,6 +107,15 @@ export type TripAction =
    */
   | { type: 'SET_STOPOVER'; plan: Plan; customLegs: Leg[] }
   /**
+   * FREIE HANDPLANUNG (2026-08-08): der Skipper hat ein Tagesziel oder einen
+   * Zwischenstopp gesetzt, und `domain/manualPlan.ts` hat die Kette dahinter
+   * geschlossen. Payload ist der FERTIGE Plan samt der dabei erzeugten
+   * Etappen — derselbe Vertrag wie SET_STOPOVER, nur ohne Solver dahinter.
+   */
+  | { type: 'PLAN_DAY'; plan: Plan; customLegs: Leg[] }
+  /** Alles verwerfen: der leere Törn ersetzt den Plan, erzeugte Etappen fallen weg. */
+  | { type: 'RESET_PLAN'; plan: Plan }
+  /**
    * Ein gespeicherter Plan stammt von einem älteren Solver-Stand
    * (planOutdated) und wird durch den aktuellen Vorschlag ersetzt — nur
    * solange der Skipper nichts investiert hat: trägt der Plan Pins
@@ -182,7 +191,8 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
       return { ...state, plan: releaseAllPins(action.plan), planUnreadable: false };
     case 'EDIT_STAGE':
       return { ...state, plan: action.plan, planUnreadable: false };
-    case 'SET_STOPOVER': {
+    case 'SET_STOPOVER':
+    case 'PLAN_DAY': {
       // Dedupe per Id: dieselbe Direktroute zweimal zu erzeugen (Stopp löschen,
       // zurückbauen, wieder löschen) darf die Bibliothek nicht doppelt füllen.
       const customLegs = [...state.customLegs];
@@ -191,6 +201,15 @@ export function tripReducer(state: TripState, action: TripAction): TripState {
       }
       return { ...state, plan: action.plan, customLegs, planUnreadable: false };
     }
+    case 'RESET_PLAN':
+      // Erzeugte Etappen gehen mit: der neue Plan referenziert keine von ihnen,
+      // und jede kostet einen Forecast-Abruf für ihre Umfahrungspunkte.
+      return {
+        ...state,
+        plan: action.plan,
+        customLegs: [],
+        planUnreadable: false,
+      };
     case 'REFRESH_OUTDATED':
       // Nur ersetzen, was der Solver selbst gelegt hat: ein Pin ist eine
       // Skipper-Entscheidung, und die wird nie stillschweigend verworfen

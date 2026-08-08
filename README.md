@@ -1,72 +1,108 @@
 # sailgreece-router
 
 Törnplanungs-Web-App für den 12-Tage-Kykladen-Familientörn ab 8. August 2026.
-Die App übersetzt Windvorhersagen täglich in bewertete Routen-Optionen — sie
-ersetzt das Kopfrechnen des Skippers, **nicht sein seemännisches Urteil**.
+Der Skipper plant den Törn **Insel zu Insel frei von Hand**; die App rechnet
+ihm jeden Tag vor — sie ersetzt sein Kopfrechnen, **nicht sein seemännisches
+Urteil** und seit dem 2026-08-08 auch nicht mehr seine Routenwahl.
 
-- **Routen-Konzept (zentrale Logik):** Geroutet wird nach einem von zwei
-  Revier-Konzepten — Route 1 (Klassische Kykladen-Runde West & Zentral,
-  Rückweg im Lee-Korridor Milos–Sifnos–Serifos–Kythnos) oder Route 2
-  (Ost-Kykladen, nur bei moderatem Meltemi). Die Konzept-Eignung kommt aus dem
-  Forecast (`domain/konzept.ts`), überschreibt im Solver die Reichweite,
-  erzeugt den Konzeptwechsel-Entscheid („Vorstoß nach Osten — abgeraten") und
-  trägt die Rückweg-Empfehlung der Törnanalyse.
-- **Abraten statt verbieten:** Zu viel Wind nimmt keine Best-Practice-Route
-  aus dem Angebot. Jede kuratierte Route (Westkykladen-Runde, Ostkykladen-
-  Runde …) behält ihren Plan, bleibt ansehbar und übernehmbar und trägt die
-  Empfehlung `empfohlen` / `möglich` / `abgeraten · wählbar` samt Begründung.
-  Der Zustand („offen / schließt / zu") beantwortet weiterhin, ob ein
-  tragfähiger Plan existiert — zwei Aussagen, keine Sperre. Und eine kuratierte
-  Route wird als sie selbst geplant: „Westkykladen-Runde" heißt die
-  Westkykladen-Runde, nicht irgendeine Kette zum selben Wendepunkt.
-- **Schwellen als Regler:** Wo „zu viel Wind" anfängt, stellt der Skipper im
-  Konzept-Panel ein (eingeklappt am Ende der Tagesansicht) — je Konzept eine kn-Schwelle und die Zahl der Tage in
-  Folge, über die sie halten muss (`KONZEPT_REGLER` in `domain/konzept.ts`,
-  persistiert im Trip-Kontext, jederzeit auf die Törnanalyse-Werte
-  zurücksetzbar). Die Regler sind gekoppelt: Route 2 darf nie über Route 1
-  liegen — wer den einen darüber schiebt, schiebt den anderen mit.
+- **Freie Handplanung (zentrale Logik):** Jeder Törntag trägt ein Ziel, das der
+  Skipper setzt — eine Insel, oder „hier bleiben" als Hafentag. **Jede Insel des
+  Reviers ist wählbar und jede Verbindung zugelassen:** steht sie kuratiert in
+  der Bibliothek, gilt sie mit ihrer geprüften Distanz; kennt die Bibliothek sie
+  nicht, wird der Kurs landfrei erzeugt (`domain/manualPlan.ts`, `searoute.ts`)
+  oder aus den bekannten Etappen verkettet. Keine Reichweite, kein Zeitbudget,
+  keine Rundkurs-Bedingung, kein Nein. Wer Tag 5 umlegt, ändert die
+  Ausgangsinsel von Tag 6 — der wird darum neu verbunden und behält sein Ziel;
+  alles davor bleibt stehen.
+- **Was die App dazu sagt — Zahlen, keine Urteile über den Törn:** je Etappentag
+  Distanz, Abfahrt, Fahrtzeit, Ankunft, Wind auf Kurs, Kreuz-Abschnitte und die
+  Stunde-für-Stunde-Rechnung dahinter; je Liegeplatz die Nacht-Ampel. Was ein
+  Tag kostet, steht als Zahl da, nicht als Verbot.
 - **Früh los, 15:00 vor Anker:** Je Etappentag empfiehlt die App die späteste
   Abfahrtsstunde, deren simulierte Ankunft das Ankerziel 15:00 noch hält
   (`domain/abfahrt.ts`) — Crowd-Strategie: entspannt anlegen, bevor der
-  Nachmittags-Meltemi steht. Diese Empfehlung ist der **Default der Abfahrt**:
-  Solver, Gültigkeit, Karte und Anzeige rechnen mit ihr, nicht mit einer
-  pauschalen Standardstunde (`scoring.departureHourForDay`). Abweichen geht per
-  Klick in der Abfahrt-Kachel der Etappenkarte; die Wahl gilt pro Törntag und
-  ist jederzeit auf die Empfehlung zurückzusetzen.
-- **Entscheidungstore:** An natürlichen Knoten (Paros/Naxos, Syros) prüft die
-  App am Tag der Festlegung, ob ein 48-h-Forecast-Fenster samt machbarem
-  Rückweg den Vorstoß dahinter deckt (`domain/konzept.ts`,
-  `deriveTorChecks`).
-- **Tagesansicht:** „Was machen wir heute?" — Tagesoptionen mit Etappen-Score,
-  bester Platz je Ziel-Insel mit Nacht-Ampel, Zustand des Mittelfristplans
-  (offen / schließt am Tag X / geschlossen), Predicted Point of Return,
-  Entscheidungspunkte.
-- **Karte:** Besprechungsbild mit Ampel-Markern, gestrichelten Routen-Optionen,
-  Windpfeilen (Google Maps, Hybrid-Ansicht). Über der Karte nur die
-  Trip-Statuszeile, darunter nichts — die Etappen stehen in der Tagesansicht,
-  und jede **Etappennummer auf der Karte ist ein Knopf dorthin** (Feedback
-  2026-08-06: die Etappenliste unter der Karte wiederholte die Tagesansicht).
+  Nachmittags-Meltemi steht. Diese Empfehlung ist der **Default der Abfahrt**;
+  abweichen geht per Klick in der Abfahrt-Kachel, die Wahl gilt pro Törntag und
+  ist jederzeit zurückzusetzen.
+- **Tagesansicht:** der heutige Tag als Karte, darunter der Plan Tag für Tag,
+  jeder aufklappbar und jeder änderbar. „Törn leeren und neu planen" setzt alles
+  auf den leeren Törn zurück.
+- **Karte:** Besprechungsbild mit Ampel-Markern, der geplanten Route mit
+  Fahrtrichtungspfeilen, Windpfeilen (Google Maps, Hybrid-Ansicht). Jede
+  **Etappennummer auf der Karte ist ein Knopf** in die Tagesansicht.
 - **Platz-Detail:** Foto, Qualitäten, sicherer Liegeplatz (kuratiert), Nacht-Ampel,
   **Liegeplatz-Details** (Tiefe, Grössenlimit, Anlegeart, Haltegrund;
   Reservierbarkeit, Müll, Strom, Wasser, Diesel, Preis) und die
   **Gastronomie-Subebene** des Platzes — die kuratierten Tavernen mit
   Bewertung, Spezialitäten, Anlandung und Reservierungskontakt
-  (`domain/schema/gastro.ts`). Beides bewertet nichts: weder Ampel noch Solver
-  lesen davon ein Feld. Ein unbestätigter Reservierungskontakt trägt seinen
-  Vorbehalt sichtbar, statt wie eine gesicherte Nummer auszusehen.
+  (`domain/schema/gastro.ts`). Beides bewertet nichts.
 
 - **Kite-Spots:** Die kuratierten Spots des Reviers als eigene Ebene auf der
   Karte **und** als Hinweis an der Etappe — liegt einer auf der Start- oder
   Ziel-Insel des Tages oder am Kurs, sagt die Tagesansicht es samt Link auf den
-  Spot (`domain/kite.ts`). Bewertet wird davon nichts: kein Feld geht in Ampel,
-  Solver oder Plan ein. Ausführlich unten: „Kite-Spots".
+  Spot (`domain/kite.ts`). Bewertet wird davon nichts. Ausführlich unten:
+  „Kite-Spots".
 
 - **Topografische Windkorrektur:** Windschatten und Kanaldüsen, die ICON-EU auf
   7 km nicht auflöst (`domain/windTopo.ts`). Sie sind kuratiert, nicht
-  gerechnet, weil sie Topografie sind und kein Wetter — bei gleicher
-  Windrichtung liegen sie immer an derselben Stelle. Angewandt wird
+  gerechnet, weil sie Topografie sind und kein Wetter. Angewandt wird
   **asymmetrisch**: Düsen bewerten, Schatten beraten nur. Ausführlich unten:
   „Topografische Windkorrektur".
+
+## Die Routenberatung ist abgeschaltet, nicht gelöscht
+
+Bis zum 2026-08-07 war diese App ein Routen-BERATER: sie rechnete zwei
+Revier-Konzepte samt Wechsel-Empfehlung, einen Optionsraum mit Reichweite,
+Preis und Frist je Ziel, Alternativ-Routen zum Ansehen und Übernehmen, den
+Predicted Point of Return, Entscheidungstore, eine Rest-Trip-Ampel und einen
+Solver, der den ganzen Rundkurs vorschlug. Der Skipper hat das abbestellt:
+
+> „Ich möchte die App vereinfachen. Ich plane den Trip Insel zu Insel frei von
+> Hand ohne Routen-Warnungen und Empfehlungen — alle Verbindungen sind
+> zugelassen."
+
+**Gelöscht wurde dafür nichts.** Solver (`solver.ts`), Rundkurs-Aufzählung
+(`roundTrips.ts`), Optionen (`options.ts`), Konzepte (`konzept.ts`), PPR
+(`ppr.ts`), Reichweite (`reach.ts`) und Engpass (`engpass.ts`) liegen samt
+ihren Tests unverändert im Repo — sie werden nur nicht mehr gerechnet und nicht
+mehr angezeigt. Der Schalter dafür ist eine Zeile:
+
+```ts
+// src/domain/features.ts
+export const ROUTENBERATUNG = false;
+```
+
+`assessPlanning(snapshot, { routenberatung })` nimmt ihn als Parameter (Default
+`true`, damit Tests und Werkzeuge unverändert die volle Bewertung sehen);
+abgeschaltet wird an genau einer Stelle, in `app/usePlanning.ts`. Warum ein
+Schalter und nicht bloss eine stumme Oberfläche: der Solver ist der teuerste
+Schritt der ganzen Bewertung, und ihn bei jeder Planänderung für ein Ergebnis
+laufen zu lassen, das niemand mehr sieht, wäre Wartezeit ohne Gegenwert. Die
+zugehörigen Ansichten (Optionsraum, Konzept-Panel, Alternativ-Menü der Karte,
+Trip-Statuszeile) stehen in der Git-Historie vor dem Commit
+„Handplanung"; ihre Bausteine (`ui/altRoutes.ts`,
+`ui/components/TripStatusLine.tsx`) liegen weiter im Repo.
+
+Was der Umbau NICHT angetastet hat: Wind- und Wellenrechnung, Polare, Kreuzen,
+Abfahrtsempfehlung, Nacht-Ampeln, Landfreiheit der Kurse, Kite, Windtopo,
+Gastro, Seeding.
+
+### Wo die Erzeugung von Verbindungen aufhört
+
+Drei Anläufe je Insel-Paar, in dieser Reihenfolge: die kuratierte Etappe
+(Gegenrichtungen eingeschlossen), der direkte landfreie Kurs zwischen den Häfen
+beider Inseln, und — wenn beides nichts hergibt — die kürzeste bekannte Kette
+durch die Etappen-Bibliothek, zu EINER Etappe verkettet (die Zwischeninseln
+werden Wegpunkte, keine Stopps). Inseln ohne eigene Etappe hängen sich über
+einen kurzen selbst gerechneten Schlag an die nächste Insel am Graphen.
+
+Damit ist jede Nachbarschaft des Reviers wählbar und selbst Attika → Amorgos
+(97 sm) darstellbar. Nicht darstellbar bleiben **Dokos, Ermioni, Porto Heli und
+Spetses** im Argolischen Golf: dort löst `searoute.ts` die Ansteuerung nicht
+auf, und keine kuratierte Etappe führt hin. Das ist eine Grenze der Geometrie
+in einer Ecke ausserhalb des Kykladen-Reviers — sie steht als benannte Ausnahme
+in `domain/__tests__/manualPlanLibrary.test.ts`, statt stillschweigend
+mitgeschleppt zu werden.
 
 Stack: Vite 8 · React 19 · TypeScript 5.9 · TanStack Query 5 · Zod 4 ·
 @vis.gl/react-google-maps 1.x · Firebase (Authentication + Firestore +
@@ -396,9 +432,13 @@ eine Verbindung.
 ```text
 src/
   domain/          # purer Core: schema/ (Zod), time, polar, scoring,
-                   # ampel, options, ppr, persistence, assess, searoute,
-                   # legGeometry, kite — kein React/Firebase/fetch,
-                   # Zeit/Törntag/Position werden injiziert (AD-2)
+                   # ampel, manualPlan (freie Handplanung), persistence,
+                   # assess, searoute, legGeometry, kite — kein
+                   # React/Firebase/fetch, Zeit/Törntag/Position werden
+                   # injiziert (AD-2)
+                   # features.ts — EIN Schalter: ROUTENBERATUNG
+                   # abgeschaltet, aber vollständig vorhanden: solver,
+                   # roundTrips, options, konzept, ppr, reach, engpass
     data/          # landmass.ts — GENERIERTE Küstenlinien des Reviers
                    # (seeding/tools/extractLandmass.ts)
     __tests__/     # Vitest-Fixturen (Referenzfälle Sektorsemantik, 25-kn-Regel,
