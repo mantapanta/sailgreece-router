@@ -210,11 +210,35 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      * Serifos–Paros, vom Skipper als Tagesschlag bestätigt, umgeht die
      * Ausdünnung. 545 dieser Runden fahren die Verbindung; über die Parameter
      * hätte dieselbe Kante 23 585 Runden gekostet (roundTrips.ts).
+     * 2026-08-08: 3272 → 5192, durch `kea--serifos` in derselben Liste. Kea
+     * hatte KEINEN abgeleiteten Nachbarn unter 30 sm — Serifos ist mit 40,1 sm
+     * der kürzeste —, und damit stand ab Kea nur die kuratierte Nachbarschaft
+     * im Etappen-Menü (Attika, Kythnos, Syros, Athen).
      */
     const snapshot = realSnapshot();
     const [schichtA] = [...roundTripLayers(snapshot, 'athen', 11)];
     expect(schichtA?.gekappt).toBe(false);
-    expect(schichtA?.trips).toHaveLength(3272);
+    expect(schichtA?.trips).toHaveLength(5192);
+  });
+
+  it('KEINE Schicht ist gekappt — auch die verkürzte nicht', () => {
+    /**
+     * Der Deckel (`roundTrips.HARD_CEILING`) ist eine Notbremse, kein
+     * Arbeitsmittel: greift er, sammelt die Tiefensuche ihre Runden aus EINER
+     * Ecke des Raumes, weil alle einen langen gemeinsamen Anfang teilen.
+     *
+     * Gemessen am 2026-08-08, als `kea--serifos` dazukam: die verkürzte Schicht
+     * wuchs von 68 527 auf 95 814 Runden und lief in den damaligen Deckel von
+     * 80 000 — und die kürzeste Santorin-Runde (acht Etappen, der Test unten)
+     * verschwand aus dem Ergebnis. Nicht weil es sie nicht mehr gäbe, sondern
+     * weil der DFS vorher abbrach. Genau diese stille Verzerrung fängt dieser
+     * Test ab; wer eine Etappe ergänzt und ihn rot macht, muss den Deckel
+     * heben, nicht die Zusage senken.
+     */
+    const snapshot = realSnapshot();
+    for (const layer of roundTripLayers(snapshot, 'athen', 11)) {
+      expect(layer.gekappt, layer.layer).toBe(false);
+    }
   });
 
   it('Keine Runde der Schicht A läuft eine Insel zweimal an', () => {
@@ -612,6 +636,40 @@ describe('Zielmodell v3 — das Etappen-Menü verspricht nichts, was der Solver 
       const tag = gepinnt!.plan.days.find((x) => x.day === d)!;
       expect(tag.source, `Tag ${d}`).not.toBe('skipper');
     }
+  }, ETAPPEN_MENUE_MS);
+
+  it('Serifos ab Kea — derselbe Fall andersherum (Skipper 2026-08-08)', () => {
+    /**
+     * „Warum kann ich beim manuellen Ändern einer Etappe nicht von Kea nach
+     * Serifos einstellen?"
+     *
+     * Nicht die sm-Regel sperrte: 40,1 sm raumschots liegen weit innerhalb der
+     * Tagesreichweite. Es war die Ausdünnung des Aufzählungs-Graphen — Kea hat
+     * KEINE abgeleitete Etappe unter 30 sm (Serifos 40,1 · Delos/Rinia 50 ·
+     * Mykonos 51,2), also blieb nur die kuratierte Nachbarschaft übrig und
+     * keine Runde konnte die Verbindung fahren. Die Etappe steht seither in
+     * `roundTrips.SKIPPER_BESTAETIGT`.
+     *
+     * Zwei Zusagen wie beim Paros-Fall: die Insel steht im Menü, UND die
+     * Übernahme lässt den Tag davor in Ruhe.
+     */
+    const snapshot = realSnapshot();
+    const mitKea = completePlan(snapshot, 'athen', [{ day: 1, toIslandId: 'kea' }]);
+    expect(mitKea).not.toBeNull();
+    const mitPlan: PlanningSnapshot = {
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: mitKea!.plan },
+    };
+    const tag2 = assessPlanning(mitPlan).mainRoute!.stages.find((s) => s.day === 2)!;
+    expect(tag2.reachableIslandIds).toContain('serifos');
+
+    const gepinnt = completePlan(mitPlan, 'athen', [
+      { day: 1, toIslandId: 'kea', gehalten: true },
+      { day: 2, toIslandId: 'serifos' },
+    ]);
+    expect(gepinnt).not.toBeNull();
+    expect(islandAtEndOfDay(gepinnt!.plan, 1)).toBe('kea');
+    expect(islandAtEndOfDay(gepinnt!.plan, 2)).toBe('serifos');
   }, ETAPPEN_MENUE_MS);
 });
 
