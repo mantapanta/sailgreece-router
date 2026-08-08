@@ -185,6 +185,14 @@ const VOLLE_BEWERTUNG_MS = 20_000;
  */
 const ETAPPEN_MENUE_MS = 120_000;
 
+/**
+ * Die Frist für Tests, die ALLE DREI Schichten aufzählen — Schicht C zählt
+ * gegen den Deckel (80 000 Runden) und ist die teuerste der drei. In der App
+ * wird sie nur befragt, wenn die vollen Runden nichts tragen; hier ist genau
+ * ihre Vollständigkeit die Frage.
+ */
+const ALLE_SCHICHTEN_MS = 60_000;
+
 describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
   it('Der Törnrahmen ist elf Tage — elf Tage, elf Etappen', () => {
     expect(RAHMEN).toBe(11);
@@ -330,6 +338,13 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      * Geprüft über ALLE Schichten, nicht nur die wiederholungsfreie — in
      * Schicht A kann es ohnehin nicht vorkommen, und genau deshalb wäre ein
      * Test nur darauf wertlos.
+     *
+     * DIE EIGENE FRIST steht hier seit 2026-08-08, und sie ist der Preis dafür,
+     * dass der Test seit dem Cache-Fix wirklich tut, was er behauptet: der
+     * Schicht-Cache lieferte einem späteren Aufrufer nur die Schichten, die ein
+     * früherer schon gebraucht hatte (roundTrips.ts) — dieser Test lief also
+     * bislang meist über Schicht A allein und war damit genau das, was der
+     * Absatz darüber ausschliesst. Jetzt zählt er B (50 752 Runden) und C auf.
      */
     const snapshot = realSnapshot();
     const sackgassen = new Set(['delos-rinia']);
@@ -348,7 +363,7 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
         }
       }
     }
-  });
+  }, ALLE_SCHICHTEN_MS);
 
   it('KEIN UMWEG NACH LUV: von Polyaigos geht es nicht 40 sm nach Paros, wenn Sifnos 11 sm entfernt liegt', () => {
     /**
@@ -636,6 +651,75 @@ describe('Zielmodell v3 — das Etappen-Menü verspricht nichts, was der Solver 
       const tag = gepinnt!.plan.days.find((x) => x.day === d)!;
       expect(tag.source, `Tag ${d}`).not.toBe('skipper');
     }
+  }, ETAPPEN_MENUE_MS);
+
+  /**
+   * DIE ROUTE ZIEHT NACH (Skipper 2026-08-08).
+   *
+   * „Ich will am ersten Tag statt vorgeschlagen attische Küste direkt nach Kea
+   * … der zweite Tag will wieder zurück nach attische Küste, statt Kea–Kythnos
+   * oder Kea–Syros vorzugeben."
+   *
+   * Der Plan zog durchaus nach — das Menü tat es nicht. Nach der Änderung stand
+   * für Tag 2 GENAU EIN Ziel zur Wahl (Syros), während der Solver bei
+   * gehaltenem Tag 1 zehn Ziele lieferte. Ein Tag mit einer einzigen Option
+   * sieht aus wie ein Tag, der nichts mehr hergibt.
+   */
+  it('Tag 1 nach Kea — und Tag 2 bietet Kythnos UND Syros an', () => {
+    const snapshot = realSnapshot();
+    const nachKea = completePlan(snapshot, 'athen', [{ day: 1, toIslandId: 'kea' }]);
+    expect(nachKea).not.toBeNull();
+    expect(islandAtEndOfDay(nachKea!.plan, 1)).toBe('kea');
+
+    const mitPlan: PlanningSnapshot = {
+      ...snapshot,
+      trip: { ...snapshot.trip, plan: nachKea!.plan },
+    };
+    const tag2 = assessPlanning(mitPlan).mainRoute!.stages.find((s) => s.day === 2)!;
+    // Die beiden Ziele, die der Skipper beim Namen genannt hat.
+    expect(tag2.reachableIslandIds).toContain('kythnos');
+    expect(tag2.reachableIslandIds).toContain('syros');
+
+    // Und beide lassen sich auch übernehmen, mit gehaltenem Tag 1.
+    for (const ziel of ['kythnos', 'syros']) {
+      const gepinnt = completePlan(mitPlan, 'athen', [
+        { day: 1, toIslandId: 'kea', gehalten: true },
+        { day: 2, toIslandId: ziel },
+      ]);
+      expect(gepinnt, ziel).not.toBeNull();
+      expect(islandAtEndOfDay(gepinnt!.plan, 1), ziel).toBe('kea');
+      expect(islandAtEndOfDay(gepinnt!.plan, 2)).toBe(ziel);
+    }
+  }, ETAPPEN_MENUE_MS);
+
+  /**
+   * DER SCHICHT-CACHE DARF KEINE ANTWORT ERFINDEN (Fehler bis 2026-08-08).
+   *
+   * `roundTripLayers` ist lazy und gecacht — und der Cache gab das, was der
+   * ERSTE Aufrufer gebraucht hatte, als vollständige Aufzählung aus. Der erste
+   * Aufrufer ist in der App immer die Hauptroute, und die bricht nach Schicht A
+   * ab. Jede spätere Frage auf demselben Snapshot war damit blind für die
+   * Schichten B und C: eine manuelle Änderung, die eine Runde mit Zweitanlauf
+   * braucht, wurde abgelehnt — mit der Begründung, es führe keine Runde
+   * dorthin. Auf einem frischen Snapshot ging dieselbe Änderung durch.
+   *
+   * Deshalb prüft dieser Test dieselbe Frage ZWEIMAL auf demselben Snapshot,
+   * einmal davor und einmal danach. Es muss dieselbe Antwort sein.
+   */
+  it('Dieselbe Frage vor und nach dem Lauf der Hauptroute — dieselbe Antwort', () => {
+    const pins: Pin[] = [
+      { day: 1, toIslandId: 'attika', gehalten: true },
+      { day: 2, toIslandId: 'kea', gehalten: true },
+      // Kythnos an Tag 3 gibt es NUR in Schicht B: keine wiederholungsfreie
+      // Runde läuft es so früh an und kommt trotzdem elftägig heim.
+      { day: 3, toIslandId: 'kythnos' },
+    ];
+    const frisch = realSnapshot();
+    expect(completePlan(frisch, 'athen', pins)).not.toBeNull();
+
+    const gebraucht = realSnapshot();
+    completePlan(gebraucht, 'athen', []); // die Hauptroute, bricht nach Schicht A ab
+    expect(completePlan(gebraucht, 'athen', pins)).not.toBeNull();
   }, ETAPPEN_MENUE_MS);
 
   it('Serifos ab Kea — derselbe Fall andersherum (Skipper 2026-08-08)', () => {

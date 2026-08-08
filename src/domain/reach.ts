@@ -64,7 +64,7 @@
 import type { PlanningSnapshot } from './schema/snapshot.ts';
 import { bearingDeg, distanceNm, normDeg, twaDeg } from './geo.ts';
 import { islandSequence, legIndexWithReverses } from './legs.ts';
-import { roundTripLayers } from './roundTrips.ts';
+import { roundTripLayers, type RoundTripEnumeration } from './roundTrips.ts';
 import { deadlineFrame, hourIndices, legWindow } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -140,10 +140,32 @@ export interface Planlage {
  * Positionsvergleich fände dann gar nichts mehr und das Menü wäre LEER —
  * schlimmer als zu grosszügig, weil es den Tag unbearbeitbar macht.
  *
- * NUR DIE ERSTE TRAGENDE SCHICHT. `completePlan` fragt die Schichten in
- * derselben Vorzugsreihenfolge und bricht ab, sobald eine trägt — der Filter
- * bleibt damit auf der sicheren Seite: er bietet höchstens an, was die Suche
- * auch zuerst anfassen würde, nie mehr.
+ * BEIDE VOLLEN SCHICHTEN, nicht nur die erste (Skipper 2026-08-08: „ich will am
+ * ersten Tag statt attische Küste direkt nach Kea … der zweite Tag will wieder
+ * zurück, statt Kea–Kythnos oder Kea–Syros vorzugeben").
+ *
+ * Der Filter brach bis dahin bei der ersten Schicht ab, die überhaupt Runden
+ * trug — und das ist immer Schicht A, denn die Aufzählung hängt am Graphen, nicht
+ * am Wetter. GEMESSEN an der echten Bibliothek: nach „Tag 1 nach Kea" stand für
+ * Tag 2 genau EIN Ziel zur Wahl (Syros; seit `kea--serifos` in der Aufzählung
+ * ist, wären es zwei), während der Solver bei gehaltenem Tag 1 zehn Ziele
+ * lieferte — vier davon über den vollen Rahmen. Ein Tag mit einer einzigen
+ * Option sieht aus, als zöge die App die Route nicht mehr nach.
+ *
+ * Der Fehler war die Abbruch-Bedingung, nicht die Schicht: `completePlan` bricht
+ * ab, sobald eine Schicht einen TRAGENDEN PLAN geliefert hat — mit einem Pin,
+ * den Schicht A nicht tragen kann, zählt sie folgerichtig weiter. Kea–Kythnos an
+ * Tag 2 ist genau so ein Fall: Kythnos steht in KEINER wiederholungsfreien
+ * Runde direkt hinter Kea, wohl aber in einer mit Zweitanlauf (Schicht B), und
+ * die fährt der Solver dann auch. Angeboten wird deshalb, was die beiden Runden
+ * des VOLLEN Rahmens hergeben.
+ *
+ * Die verkürzte Schicht bleibt draussen, solange die vollen etwas hergeben. Sie
+ * ist die FR18-Notantwort ("heute umkehren", "gar nicht erst losfahren"); ihre
+ * Ziele sind zwar lieferbar, aber als Tagesziel-Vorschlag wäre die Basis an
+ * Tag 2 genau der Menüeintrag, den dieser Filter loswerden sollte. Nur wenn
+ * KEINE volle Runde existiert, ist sie die einzige Antwort, die es gibt — dann
+ * steht sie auch im Menü, denn ein leeres Menü macht den Tag unbearbeitbar.
  */
 const tagszieleCache = new WeakMap<PlanningSnapshot, Map<string, Set<string>>>();
 
@@ -172,6 +194,23 @@ function positionNachVorgeschichte(
   return p <= maxPosition ? p : null;
 }
 
+/**
+ * Die Insel-Folgen einer Schicht, EINMAL gebaut. Die Schicht-Objekte selbst
+ * sind je Snapshot gecacht (roundTrips.layerCache), ihre Identität also stabil
+ * — und Schicht B trägt über 45 000 Runden, die sonst für jeden Törntag neu
+ * durchgerechnet würden.
+ */
+const sequenzCache = new WeakMap<RoundTripEnumeration, string[][]>();
+
+function sequenzenOf(layer: RoundTripEnumeration): string[][] {
+  let seqs = sequenzCache.get(layer);
+  if (!seqs) {
+    seqs = layer.trips.map(islandSequence);
+    sequenzCache.set(layer, seqs);
+  }
+  return seqs;
+}
+
 function islandsPossibleNext(
   snapshot: PlanningSnapshot,
   lage: Planlage,
@@ -198,15 +237,20 @@ function islandsPossibleNext(
   const maxPosition = Math.max(0, day - startDay);
   const out = new Set<string>();
   for (const layer of roundTripLayers(snapshot, lage.startIslandId, daysAvailable)) {
-    for (const trip of layer.trips) {
-      const islands = islandSequence(trip);
+    /**
+     * Die verkürzte Schicht ist die FR18-Notantwort und kein Angebot — solange
+     * die vollen Runden überhaupt etwas hergeben. Geben sie nichts her (ein
+     * Revier, in dem keine Runde den Rahmen füllt), ist sie die einzige
+     * Antwort, die es gibt, und dann steht ihr Ziel auch im Menü: ein leeres
+     * Menü macht den Tag unbearbeitbar.
+     */
+    if (layer.layer === 'verkuerzt' && out.size > 0) break;
+    for (const islands of sequenzenOf(layer)) {
       const p = positionNachVorgeschichte(islands, lage.vorgeschichte, maxPosition);
       if (p === null) continue;
       const naechste = islands[p + 1];
       if (naechste !== undefined) out.add(naechste);
     }
-    // Die erste Schicht, die überhaupt Runden trägt, entscheidet.
-    if (layer.trips.length > 0) break;
   }
   proSnapshot.set(key, out);
   return out;

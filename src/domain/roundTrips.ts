@@ -470,42 +470,61 @@ export function* roundTripLayers(
     proSnapshot = new Map();
     layerCache.set(snapshot, proSnapshot);
   }
-  const gecacht = proSnapshot.get(key);
-  if (gecacht) {
-    yield* gecacht;
-    return;
-  }
-
-  const adj = adjacencyOf(snapshot);
-  const alle: RoundTripEnumeration[] = [];
   /**
-   * Die Lazy-Auswertung bleibt erhalten: gecacht wird, was TATSÄCHLICH
-   * aufgezählt wurde. Bricht der Aufrufer nach Schicht A ab, steht auch nur
-   * Schicht A im Cache — und der nächste Aufruf zählt erst weiter, wenn er
-   * weiter braucht.
+   * DER CACHE IST EIN VORRAT, KEIN ERGEBNIS (Fehler bis 2026-08-08).
+   *
+   * Hier stand `const gecacht = proSnapshot.get(key); if (gecacht) { yield*
+   * gecacht; return; }` — und weil die Aufzählung LAZY ist, enthielt der
+   * Eintrag genau die Schichten, die der ERSTE Aufrufer gebraucht hatte. Der
+   * erste Aufrufer ist immer die Hauptroute, und die bricht nach Schicht A ab,
+   * sobald diese trägt. Ab da war der Snapshot für ALLE weiteren Fragen blind
+   * für die Schichten B und C: das `return` gab vor, es gäbe keine mehr.
+   *
+   * Gemessen an der echten Bibliothek war das der Grund, warum eine manuelle
+   * Änderung nicht mehr durchging. „Tag 3 nach Kythnos" braucht bei gehaltenen
+   * Vortagen eine Runde mit Zweitanlauf (Schicht B): KEINE der 5192 Runden der
+   * Schicht A trägt diesen Pin, 1316 der 71 088 Runden der Schicht B tragen
+   * ihn. Auf einem frischen Snapshot liefert der Solver den
+   * Plan; nach dem Lauf der Hauptroute auf DEMSELBEN Snapshot — also immer, in
+   * der laufenden App — lieferte er `null`, und die Ansicht meldete „kein
+   * Round-Trip führt dorthin". Der Fehler war nicht die Suche, sondern ein
+   * Cache, der Unwissen als Antwort auslieferte.
+   *
+   * Gecacht wird deshalb POSITIONSWEISE: was schon aufgezählt ist, kommt aus
+   * dem Vorrat, der Rest wird jetzt gerechnet. Die Lazy-Auswertung bleibt
+   * damit erhalten — nur endet sie nicht mehr im Cache selbst.
    */
-  const merke = (e: RoundTripEnumeration): RoundTripEnumeration => {
-    alle.push(e);
-    proSnapshot.set(key, [...alle]);
-    return e;
-  };
+  const alle = proSnapshot.get(key) ?? [];
+  proSnapshot.set(key, alle);
 
-  // A — der Vertrag: jeder Törntag eine Etappe, jede Insel höchstens einmal.
-  yield merke(search(adj, startIslandId, { legCount, exact: true, maxRepeats: 0 }));
+  /** Die drei Schichten als Bauplan — gerechnet wird erst, was gebraucht wird. */
+  const bauplan: SearchOpts[] = [
+    // A — der Vertrag: jeder Törntag eine Etappe, jede Insel höchstens einmal.
+    { legCount, exact: true, maxRepeats: 0 },
+    // B — voller Rahmen, bis zu MAX_ZWEITANLAEUFE Zweitanläufe an anderen
+    //     Häfen. Das ist, was die Ost-Kykladen überhaupt in Reichweite bringt:
+    //     Amorgos und die Kleinen Kykladen kommen in KEINER wiederholungsfreien
+    //     Runde vor, mit zwei Zweitanläufen schon.
+    { legCount, exact: true, maxRepeats: MAX_ZWEITANLAEUFE },
+    // C — kürzer als der Rahmen. Restplan von unterwegs, und die FR18-Antwort,
+    //     wenn das Wetter jede volle Runde rot färbt.
+    { legCount, exact: false, maxRepeats: MAX_ZWEITANLAEUFE },
+  ];
 
-  // B — voller Rahmen, bis zu MAX_ZWEITANLAEUFE Zweitanläufe an anderen Häfen.
-  //     Das ist, was die Ost-Kykladen überhaupt in Reichweite bringt: Amorgos
-  //     und die Kleinen Kykladen kommen in KEINER wiederholungsfreien Runde
-  //     vor, mit zwei Zweitanläufen schon.
-  yield merke(
-    search(adj, startIslandId, { legCount, exact: true, maxRepeats: MAX_ZWEITANLAEUFE }),
-  );
-
-  // C — kürzer als der Rahmen. Restplan von unterwegs, und die FR18-Antwort,
-  //     wenn das Wetter jede volle Runde rot färbt.
-  yield merke(
-    search(adj, startIslandId, { legCount, exact: false, maxRepeats: MAX_ZWEITANLAEUFE }),
-  );
+  let adj: Adjacency | null = null;
+  for (const [i, opts] of bauplan.entries()) {
+    const gecacht = alle[i];
+    if (gecacht) {
+      yield gecacht;
+      continue;
+    }
+    adj ??= adjacencyOf(snapshot);
+    const erzeugt = search(adj, startIslandId, opts);
+    // VOR dem yield in den Vorrat: ein Aufrufer, der innerhalb seiner Schleife
+    // dieselbe Aufzählung noch einmal anstösst, findet sie dann schon vor.
+    alle[i] = erzeugt;
+    yield erzeugt;
+  }
 }
 
 /**
