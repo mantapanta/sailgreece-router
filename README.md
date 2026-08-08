@@ -400,6 +400,25 @@ ist die Sicherheitsfrage, und ein Mittelwert hat darauf keine Antwort.
 Was ohne Daten bleibt, bleibt leer: ein Ort ohne einen einzigen echten Wert
 wird nicht erfunden, er bleibt `unbewertet`.
 
+### Und wenn gar kein Forecast kommt
+
+Antwortet Open-Meteo überhaupt nicht — Netz weg, HTTP 429 am Ratenlimit — und
+liegt auch kein früherer Datenstand im Query-Cache, dann tritt der **windfreie
+Stand** an seine Stelle (`OHNE_FORECAST` in `src/adapters/openMeteo.ts`): ein
+Bundle mit leerer Stundenachse und leerer Ortsmenge.
+
+Der Törn bleibt damit **planbar**. Vom Wetter hängt nur ein Teil der Planung
+ab — die Bewertung; Inseln, Plätze, Etappen, Distanzen und die Kette der Tage
+stehen in der Bibliothek. Vorher blieb `snapshot` in diesem Fall null, und mit
+ihm verschwand die ganze Ansicht hinter dem roten Fehlerpanel.
+
+Erfunden wird trotzdem nichts: die Fortschreibung greift nicht (sie hätte
+keinen Tagesgang, aus dem sie schöpfen könnte), jede Ampel bleibt
+`unbewertet`, und `Assessment.forecastHorizonIso` bleibt null. Genau dieses
+Feld liest die Anzeige — Fehlerpanel und Fusszeile sagen dann „keine
+Winddaten“ statt einen Modellnamen und einen Abrufzeitpunkt zu behaupten, die
+es nicht gibt.
+
 ### Trip-Parameter (Törn-Rahmen)
 
 | Feld | Bedeutung | Default |

@@ -168,9 +168,9 @@ describe('fetchForecastBundle — Nahfeld/Fernfeld', () => {
     expect(bb.windKn[24]).toBe(13);
     expect(bb.waveM[0]).toBe(1.9);
 
-    expect(b.provenance.wind.nearReachHours).toBe(24);
-    expect(b.provenance.wind.near).toBe('dwd_icon_eu');
-    expect(b.provenance.wave.nearReachHours).toBe(24);
+    expect(b.provenance!.wind.nearReachHours).toBe(24);
+    expect(b.provenance!.wind.near).toBe('dwd_icon_eu');
+    expect(b.provenance!.wave.nearReachHours).toBe(24);
     expect(b.model).toBe('DWD ICON-EU 7 km + ECMWF IFS 0.25°');
   });
 
@@ -188,7 +188,7 @@ describe('fetchForecastBundle — Nahfeld/Fernfeld', () => {
     expect(a.windKn.slice(0, 6)).toEqual([12, 12, 12, 12, 12, 12]);
     expect(a.windKn.slice(6, 18)).toEqual(Array(12).fill(22));
     expect(a.windKn[18]).toBe(12);
-    expect(b.provenance.wind.nearReachHours).toBe(18);
+    expect(b.provenance!.wind.nearReachHours).toBe(18);
   });
 
   // --- DEGRADATION ---------------------------------------------------------
@@ -201,8 +201,8 @@ describe('fetchForecastBundle — Nahfeld/Fernfeld', () => {
     });
     const b = await fetchForecastBundle(library, params, now);
     expect(b.forecast['a']!.windKn.every((v) => v === 12)).toBe(true);
-    expect(b.provenance.wind.near).toBeNull();
-    expect(b.provenance.wind.nearReachHours).toBe(0);
+    expect(b.provenance!.wind.near).toBeNull();
+    expect(b.provenance!.wind.nearReachHours).toBe(0);
     // Die Fusszeile darf keine Auflösung behaupten, die nicht in den Zahlen ist.
     expect(b.model).toBe('ECMWF IFS 0.25°');
   });
@@ -229,7 +229,7 @@ describe('fetchForecastBundle — Nahfeld/Fernfeld', () => {
     const b = await fetchForecastBundle(library, params, now);
     expect(b.forecast['a']!.windKn[0]).toBe(22);
     expect(b.forecast['a']!.waveM.every((v) => v === null)).toBe(true);
-    expect(b.provenance.wave.near).toBeNull();
+    expect(b.provenance!.wave.near).toBeNull();
   });
 
   it('leeres *Near schaltet den Hybrid ab: nur zwei Datenabrufe', async () => {
