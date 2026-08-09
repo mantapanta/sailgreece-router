@@ -317,6 +317,32 @@ diese vier Schritte der Reihe nach durch:
 4. **Bundle:** `npm run build && firebase deploy` — die neuen Karten
    (Gastro, Kite) stecken im Bundle, nicht in den Daten.
 
+#### Nachschub aus dem Bundle (seit 2026-08-09)
+
+Diese Doku allein hat den Fall nicht gelöst: Die Ebene fehlte im Deploy, und
+im Boot sieht man das nicht als „Import ausstehend", sondern als „es gibt
+keine Kite-Spots". Deshalb füllt der Firestore-Adapter **genau zwei** Ebenen
+aus den freigegebenen Staging-Dateien im Bundle nach, wenn Firestore für sie
+nichts liefert (`src/adapters/firestore.ts`, Modulkopf):
+
+- **Kite-Spots**, wenn die Sammlung leer ist oder die Rules sie sperren;
+- **Tavernen**, wenn **kein einziger** `places`-Eintrag einen Gastro-Block
+  trägt. Trägt einer, gilt der Import — ein Platz ohne Tavernen ist dann eine
+  echte Lücke („nicht recherchiert") und wird nicht überschrieben.
+
+Die Grenze: nur diese beiden Ebenen, weil sie **nichts bewerten** (weder
+Ampel noch Solver noch Gültigkeit lesen ein Feld). Schutzsektoren, Etappen,
+Parameter und Polare bleiben bei der konfigurierten Quelle, auch wenn sie
+schweigt — ein stiller Ersatz könnte dort einen Liegeplatz grün zeigen, den
+die Kuration längst zurückgezogen hat. Nachgeladen wird nur aus Dateien mit
+`approved: true`, also durch dasselbe Freigabe-Gate wie der Import.
+
+Und es passiert nie stumm: Die Fusszeile („Forecast: … " antippen) zählt
+jede Ebene auf — `Bibliothek: 42 Inseln · 97 Plätze · … · 14 Kite-Spots` —
+und nennt darunter, welche Ebene aus dem Bundle kam statt aus Firestore.
+**Das ersetzt den Import nicht**, es überbrückt ihn: die vier Schritte oben
+bleiben der Weg, der die Datenbank in Ordnung bringt.
+
 ## Tuning-Parameter
 
 Alle fachlichen Parameter (Polar-Offset +0,5 kn, Motorfahrt 8 kn,

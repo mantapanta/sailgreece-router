@@ -7,6 +7,26 @@
  *     `islands`, `places`, `routes`, `config` (documents polar, parameters)
  * The app never writes (AD-5). An invalid place document is logged and kept
  * as 'unbewertet' — never silently hidden, never green.
+ *
+ * NACHSCHUB AUS DEM BUNDLE (2026-08-09, Skipper: "die Kitespots & Restaurants
+ * sind nicht sichtbar"): Ein Merge nach `main` bringt Code, keine Daten. Die
+ * Kite-Sammlung und die Tavernen an den Plätzen kommen erst mit einem erneuten
+ * `npm run seed:import` nach Firestore — bis dahin liefert die konfigurierte
+ * Quelle für diese beiden Ebenen schlicht nichts, und "nichts" sah in der App
+ * exakt aus wie "nicht recherchiert". Deshalb füllt der Firestore-Zweig genau
+ * diese ZWEI Ebenen aus den freigegebenen Staging-Dateien nach, die ohnehin im
+ * Bundle liegen, und schreibt in `library.nachgeladen`, dass er es getan hat.
+ *
+ * Die Grenze ist eng gezogen und sie ist der Punkt:
+ *   - NUR rein informative Ebenen (schema/snapshot.ts, `NachgeladeneEbene`).
+ *     Was ein Urteil trägt — Schutzsektoren, Etappen, Parameter, Polare —
+ *     bleibt bei der Quelle, auch wenn sie schweigt.
+ *   - NUR wenn die Ebene GANZ fehlt. Eine halb importierte Ebene wird nicht
+ *     aufgefüllt: dann steht ein Import dahinter, und dessen Ergebnis gilt.
+ *   - NUR aus Dateien mit `approved: true`. Dasselbe Freigabe-Gate wie beim
+ *     Import (AD-10) — der Ersatz zeigt nie, was die Review nicht gesehen hat.
+ *   - NIE stumm: die Anzeige nennt die Herkunft (ui/bibliothekProvenienz.ts).
+ * Der local-Modus kennt keinen Nachschub — dort IST das Staging die Quelle.
  */
 
 import { z } from 'zod';
@@ -37,6 +57,8 @@ import type {
   Leg,
   Variant,
   KiteSpot,
+  NachgeladeneEbene,
+  Restaurant,
   WindTopoZone,
   Params,
   Polar,
@@ -100,13 +122,20 @@ function parseTolerant<T>(schema: z.ZodType<T>, raw: unknown, what: string): T |
   return null;
 }
 
+/**
+ * Die Insel-Staging-Dateien als LAZY Importe — Modulebene, weil beide Zweige
+ * sie brauchen: der local-Modus als Quelle, der Firestore-Modus als Nachschub
+ * für die Gastro-Ebene. Vite macht daraus eigene Chunks; im Firestore-Deploy
+ * wird also nichts davon geladen, solange die Tavernen aus Firestore kommen.
+ */
+const islandStagingModules = import.meta.glob('../../seeding/data/islands/*.json');
+
 // ---------------------------------------------------------------------------
 // Local backend: staging JSONs (same schemas, same contract)
 // ---------------------------------------------------------------------------
 
 async function loadFromLocal(): Promise<LibraryBundle> {
-  const islandModules = import.meta.glob('../../seeding/data/islands/*.json');
-
+  const islandModules = islandStagingModules;
   const islands: Island[] = [];
   const rawPlaces: unknown[] = [];
   for (const path of Object.keys(islandModules).sort()) {
@@ -234,6 +263,96 @@ async function loadFromLocal(): Promise<LibraryBundle> {
 }
 
 // ---------------------------------------------------------------------------
+// Nachschub aus dem Bundle für die rein informativen Ebenen (Modulkopf)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fehlt die Kite-Ebene GANZ? Kein Spot geladen heisst: entweder nie importiert
+ * oder von den Rules abgelehnt (der Adapter fängt beides ab). Beides ist eine
+ * fehlende Ebene, keine leere Kuration — das Revier hat Kite-Spots.
+ */
+export function kiteEbeneFehlt(kiteSpots: KiteSpot[]): boolean {
+  return kiteSpots.length === 0;
+}
+
+/**
+ * Fehlt die Gastro-Ebene GANZ? Sie hat keine eigene Sammlung: die Tavernen
+ * stecken in den `places`-Dokumenten (schema/gastro.ts). Trägt KEIN einziger
+ * Platz eine, dann ist der Import älter als die Kuration — trägt einer eine,
+ * ist die Ebene da, und ein Platz ohne Tavernen ist dann eine echte Lücke
+ * ("nicht recherchiert") und wird nicht überschrieben.
+ */
+export function gastroEbeneFehlt(places: Place[]): boolean {
+  return !places.some((p) => (p.restaurants?.length ?? 0) > 0);
+}
+
+/**
+ * Legt die kuratierten Tavernen an die passenden Plätze — neue Objekte, die
+ * Eingabe bleibt unberührt. Ein Platz ohne Eintrag im Bundle bleibt ohne
+ * Gastro-Block; erfunden wird nichts.
+ */
+export function mitRestaurants(
+  places: Place[],
+  byPlaceId: Map<string, Restaurant[]>,
+): { places: Place[]; ergaenzt: number } {
+  let ergaenzt = 0;
+  const next = places.map((p) => {
+    const restaurants = byPlaceId.get(p.id);
+    if (!restaurants || restaurants.length === 0) return p;
+    ergaenzt++;
+    return { ...p, restaurants };
+  });
+  return { places: next, ergaenzt };
+}
+
+/**
+ * Kite-Spots aus der FREIGEGEBENEN Staging-Datei — sonst leer.
+ *
+ * Exportiert, damit ein Test belegen kann, dass im Bundle wirklich etwas liegt:
+ * ein Nachschub, der still nichts liefert, wäre genau der Fehler, den er
+ * beheben soll.
+ */
+export async function freigegebeneStagingKiteSpots(): Promise<KiteSpot[]> {
+  try {
+    const mod = (await import('../../seeding/data/kitespots.json')) as { default: unknown };
+    const file = KiteSpotsStagingFileSchema.safeParse(mod.default);
+    if (!file.success) {
+      console.warn('kitespots.json im Bundle ungültig — kein Nachschub:', file.error.issues);
+      return [];
+    }
+    if (!file.data.approved) {
+      console.warn('kitespots.json ist nicht freigegeben (approved: false) — kein Nachschub.');
+      return [];
+    }
+    return file.data.kiteSpots;
+  } catch (e) {
+    console.warn('kitespots.json im Bundle nicht ladbar — kein Nachschub:', e);
+    return [];
+  }
+}
+
+/** Tavernen je Platz-Id aus den FREIGEGEBENEN Insel-Staging-Dateien. */
+export async function freigegebeneStagingRestaurants(): Promise<Map<string, Restaurant[]>> {
+  const byPlaceId = new Map<string, Restaurant[]>();
+  for (const path of Object.keys(islandStagingModules).sort()) {
+    try {
+      const mod = (await islandStagingModules[path]!()) as { default: unknown };
+      const file = IslandStagingFileSchema.safeParse(mod.default);
+      // Ungültig oder nicht freigegeben: überspringen, nicht retten. Anders als
+      // im local-Modus ist das hier ERSATZ für eine Datenbank — was die Review
+      // nicht gesehen hat, darf im Deploy nicht auftauchen.
+      if (!file.success || !file.data.approved) continue;
+      for (const place of file.data.places) {
+        if (place.restaurants?.length) byPlaceId.set(place.id, place.restaurants);
+      }
+    } catch (e) {
+      console.warn(`Staging-Datei ${path} nicht ladbar — kein Gastro-Nachschub daraus:`, e);
+    }
+  }
+  return byPlaceId;
+}
+
+// ---------------------------------------------------------------------------
 // Firestore backend (strictly read-only, AD-5)
 // ---------------------------------------------------------------------------
 
@@ -306,7 +425,7 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     .map((d) => parseTolerant(IslandSchema, { id: d.id, ...d.data() }, 'Insel'))
     .filter((i): i is Island => i !== null);
 
-  const { places, invalidPlaces } = parsePlaces(
+  const { places: firestorePlaces, invalidPlaces } = parsePlaces(
     placesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
   );
 
@@ -318,9 +437,43 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     .map((d) => parseTolerant(VariantSchema, { id: d.id, ...d.data() }, 'Variante'))
     .filter((v): v is Variant => v !== null);
 
-  const kiteSpots = (kiteSpotsSnap?.docs ?? [])
+  let kiteSpots = (kiteSpotsSnap?.docs ?? [])
     .map((d) => parseTolerant(KiteSpotSchema, { id: d.id, ...d.data() }, 'Kite-Spot'))
     .filter((s): s is KiteSpot => s !== null);
+
+  /**
+   * DER NACHSCHUB (Modulkopf) — nur diese beiden Ebenen, nur wenn sie ganz
+   * fehlen, nur aus freigegebenen Dateien, und nie ohne es zu sagen.
+   */
+  let places = firestorePlaces;
+  const nachgeladen: NachgeladeneEbene[] = [];
+
+  if (kiteEbeneFehlt(kiteSpots)) {
+    const ausBundle = await freigegebeneStagingKiteSpots();
+    if (ausBundle.length > 0) {
+      kiteSpots = ausBundle;
+      nachgeladen.push('kiteSpots');
+      console.warn(
+        `Kite-Ebene aus Firestore leer — ${ausBundle.length} Spots aus dem Bundle nachgeladen. ` +
+          'Endgültig behoben ist das erst mit `npm run seed:import` (Collection kiteSpots) ' +
+          'plus deployten Rules.',
+      );
+    }
+  }
+
+  if (gastroEbeneFehlt(places)) {
+    const byPlaceId = await freigegebeneStagingRestaurants();
+    const gefuellt = mitRestaurants(places, byPlaceId);
+    if (gefuellt.ergaenzt > 0) {
+      places = gefuellt.places;
+      nachgeladen.push('restaurants');
+      console.warn(
+        `Kein Platz-Dokument trug Tavernen — Gastro-Ebene für ${gefuellt.ergaenzt} Plätze aus ` +
+          'dem Bundle nachgeladen. Restaurants haben kein eigenes Dokument: sie wandern nur ' +
+          'mit einem erneuten Insel-Import (`npm run seed:import`) nach Firestore.',
+      );
+    }
+  }
 
   const windTopoZones = (windTopoSnap?.docs ?? [])
     .map((d) => parseTolerant(WindTopoZoneSchema, { id: d.id, ...d.data() }, 'Windzone'))
@@ -339,7 +492,18 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
   }
 
   return {
-    library: { islands, places, invalidPlaces, legs, variants, kiteSpots, windTopoZones },
+    library: {
+      islands,
+      places,
+      invalidPlaces,
+      legs,
+      variants,
+      kiteSpots,
+      windTopoZones,
+      // Leer heisst: alles kam aus der konfigurierten Quelle. Das Feld bleibt
+      // dann weg, damit "nachgeladen" nie als leere Behauptung dasteht.
+      ...(nachgeladen.length > 0 ? { nachgeladen } : {}),
+    },
     params,
     polar,
   };
