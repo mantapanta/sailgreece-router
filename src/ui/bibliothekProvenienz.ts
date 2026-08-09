@@ -1,19 +1,19 @@
 /**
- * WAS IST ÜBERHAUPT GELADEN — die Bibliothek in einer Zeile, plus der Satz zur
- * Herkunft der nachgeladenen Ebenen (adapters/firestore.ts, Modulkopf).
+ * WAS IST ÜBERHAUPT GELADEN — die Bibliothek in einer Zeile.
  *
  * Der Anlass ist eine Frage, die die App bis 2026-08-09 nicht beantworten
  * konnte: „Die Kitespots & Restaurants sind nicht sichtbar." Eine Ebene, die
  * fehlt, sah aus wie eine Ebene, die es nicht gibt — auf der Karte kein Chip,
  * im Platzdetail keine Karte, in der Fusszeile kein Wort. Die Zählzeile macht
- * daraus eine Auskunft: 0 Kite-Spots heisst „nicht geladen", 14 heisst
- * „geladen, heute liegt eben keiner an der Route".
+ * daraus eine Auskunft: 0 Kite-Spots heisst „nicht geladen" (dann steht etwas
+ * in der Datei nicht, was dort stehen sollte), 14 heisst „geladen, heute liegt
+ * eben keiner an der Route".
  *
  * Reine Anzeige-Verdichtung (AD-2): hier wird nichts bewertet und nichts
  * gerechnet, was die Domain nicht schon weiss.
  */
 
-import type { Library, NachgeladeneEbene } from '../domain/schema/snapshot.ts';
+import type { Library } from '../domain/schema/snapshot.ts';
 
 /** Deutscher Singular/Plural ohne Bibliothek — die App zählt kleine Zahlen. */
 function zaehl(n: number, singular: string, plural: string): string {
@@ -39,26 +39,14 @@ export function bibliothekZeile(library: Library): string {
   return `Bibliothek: ${teile.join(' · ')}`;
 }
 
-const EBENEN_LABEL: Record<NachgeladeneEbene, string> = {
-  kiteSpots: 'Kite-Spots',
-  restaurants: 'Tavernen',
-};
-
 /**
- * Der Herkunftssatz für nachgeladene Ebenen — null, wenn alles aus der
- * konfigurierten Quelle kam (der Normalfall, und dann steht hier auch nichts).
- *
- * Er nennt beides: dass die Ebene da ist, UND dass die Datenbank sie nicht
- * hatte. Nur das erste zu sagen wäre bequem und würde den ausstehenden Import
- * verschweigen — der Ersatz ist ein Notnagel, kein Zustand.
+ * Woher die beiden Ebenen kommen, die NICHT in der Datenbank stehen
+ * (adapters/firestore.ts, Modulkopf) — ein Satz, damit niemand sie dort sucht.
  */
-export function nachgeladenSatz(library: Library): string | null {
-  const ebenen = library.nachgeladen ?? [];
-  if (ebenen.length === 0) return null;
-  const namen = ebenen.map((e) => EBENEN_LABEL[e]).join(' und ');
+export function dateiEbenenSatz(): string {
   return (
-    `${namen} stammen aus dem App-Bundle, nicht aus Firestore: dort war die Ebene leer. ` +
-    'Die Daten sind die freigegebenen Staging-Stände — nach dem nächsten Import ' +
-    '(npm run seed:import) kommen sie wieder aus der Datenbank.'
+    'Kite-Spots und Tavernen kommen aus den JSON-Dateien der App ' +
+    '(seeding/data/kitespots.json, seeding/data/islands/*.json), nicht aus Firestore — ' +
+    'sie sind mit jedem Deploy aktuell und brauchen keinen Import.'
   );
 }

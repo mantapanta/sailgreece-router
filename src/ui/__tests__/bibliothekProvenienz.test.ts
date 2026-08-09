@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bibliothekZeile, nachgeladenSatz } from '../bibliothekProvenienz.ts';
+import { bibliothekZeile, dateiEbenenSatz } from '../bibliothekProvenienz.ts';
 import type { Library } from '../../domain/schema/snapshot.ts';
 
 function bibliothek(over: Partial<Library> = {}): Library {
@@ -38,20 +38,12 @@ describe('bibliothekZeile', () => {
   });
 });
 
-describe('nachgeladenSatz', () => {
-  it('schweigt, wenn alles aus der konfigurierten Quelle kam', () => {
-    expect(nachgeladenSatz(bibliothek())).toBeNull();
-  });
-
-  it('nennt die Ebene UND den ausstehenden Import', () => {
-    const satz = nachgeladenSatz(bibliothek({ nachgeladen: ['kiteSpots'] }));
-    expect(satz).toContain('Kite-Spots');
-    expect(satz).toContain('nicht aus Firestore');
-    expect(satz).toContain('seed:import');
-  });
-
-  it('verbindet zwei Ebenen zu einem Satz', () => {
-    const satz = nachgeladenSatz(bibliothek({ nachgeladen: ['kiteSpots', 'restaurants'] }));
+describe('dateiEbenenSatz', () => {
+  it('nennt beide Ebenen, die Datei und dass es keinen Import braucht', () => {
+    const satz = dateiEbenenSatz();
     expect(satz).toContain('Kite-Spots und Tavernen');
+    expect(satz).toContain('kitespots.json');
+    expect(satz).toContain('nicht aus Firestore');
+    expect(satz).toContain('keinen Import');
   });
 });

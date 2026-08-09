@@ -14,7 +14,7 @@ import { AvatarMenu } from '../ui/components/AvatarMenu.tsx';
 import { DayViewSkeleton } from '../ui/components/DayViewSkeleton.tsx';
 import { MapViewSkeleton } from '../ui/components/MapViewSkeleton.tsx';
 import { staleForecastLabel } from '../ui/dayViewModel.ts';
-import { bibliothekZeile, nachgeladenSatz } from '../ui/bibliothekProvenienz.ts';
+import { bibliothekZeile, dateiEbenenSatz } from '../ui/bibliothekProvenienz.ts';
 import { formatStamp } from '../ui/format.ts';
 import { attributionsFor, forecastModelLabel } from '../domain/schema/models.ts';
 import type { Library } from '../domain/schema/snapshot.ts';
@@ -87,15 +87,15 @@ function RefreshButton({ stale = false }: { stale?: boolean }) {
  * Sie steht dort und nicht als Panel, weil sie im Normalfall nichts meldet —
  * aber die Frage „warum sehe ich die Kite-Spots nicht?" ohne Browser-Konsole
  * beantwortbar macht. „0 Kite-Spots" ist die Antwort; der Satz darunter sagt,
- * wenn die Ebene aus dem Bundle kam statt aus Firestore.
+ * dass diese beiden Ebenen aus den JSON-Dateien der App kommen und nicht aus
+ * Firestore — damit sie niemand mehr in der Datenbank sucht.
  */
 function BibliothekZeilen({ library }: { library: Library | null }) {
   if (!library) return null;
-  const herkunft = nachgeladenSatz(library);
   return (
     <>
       <p>{bibliothekZeile(library)}</p>
-      {herkunft && <p>{herkunft}</p>}
+      <p>{dateiEbenenSatz()}</p>
     </>
   );
 }

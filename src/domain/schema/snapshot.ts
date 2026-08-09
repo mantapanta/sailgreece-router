@@ -166,34 +166,7 @@ export interface Library {
    * App exakt wie vor der Einführung (domain/windTopo.ts, applyWindTopo).
    */
   windTopoZones?: WindTopoZone[];
-  /**
-   * Ebenen, die NICHT aus der konfigurierten Datenquelle kamen, sondern aus den
-   * freigegebenen Staging-Dateien im Bundle (adapters/firestore.ts).
-   *
-   * Der Fall, für den es dieses Feld gibt: ein Merge nach `main` bringt Code,
-   * keine Daten — die Kite-Sammlung und die Tavernen an den Plätzen kommen erst
-   * mit einem erneuten `npm run seed:import` nach Firestore. Bis dahin ist die
-   * Ebene dort leer, und leer sah bis 2026-08-09 exakt aus wie "nicht
-   * recherchiert": nichts auf der Karte, nichts im Platzdetail, kein Wort dazu.
-   *
-   * Nachgeladen wird deshalb — aber die Anzeige muss sagen können, WOHER, sonst
-   * wäre der Ersatz eine stille Behauptung über den Stand der Datenbank. Genau
-   * dafür steht diese Liste hier und nirgends sonst; kein Rechenweg liest sie.
-   */
-  nachgeladen?: NachgeladeneEbene[];
 }
-
-/**
- * Eine rein informative Ebene, die aus dem Bundle nachgeladen werden DARF.
- *
- * Die Aufzählung ist die Grenze selbst: Kite-Spots und Tavernen bewerten
- * nichts (schema/kite.ts, schema/gastro.ts) — weder Ampel noch Solver noch
- * Gültigkeit liest ein Feld von ihnen. Alles, was ein Urteil trägt (Schutz-
- * sektoren, Etappen, Parameter, Polare), bleibt bei der konfigurierten Quelle,
- * auch wenn sie schweigt: ein stiller Ersatz aus dem Bundle könnte einen
- * Liegeplatz grün zeigen, den die Kuration inzwischen zurückgezogen hat.
- */
-export type NachgeladeneEbene = 'kiteSpots' | 'restaurants';
 
 export interface PlanningSnapshot {
   /** Retrieval timestamp (FR13) — injected by the adapter. */

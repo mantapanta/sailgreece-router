@@ -1,18 +1,15 @@
 /**
- * Der Nachschub aus dem Bundle (adapters/firestore.ts, Modulkopf): WANN eine
- * Ebene als fehlend gilt und was das Auffüllen mit den Plätzen macht.
+ * Die beiden Ebenen aus der JSON-Datei (adapters/firestore.ts, Modulkopf):
+ * dass in den Dateien wirklich etwas steht, und was das Anlegen an die Plätze
+ * macht — die Datei gewinnt, wo sie etwas sagt, und erfindet sonst nichts.
  *
- * Die Firestore-Abfrage selbst ist hier nicht im Spiel — geprüft werden die
- * drei reinen Entscheidungen, an denen die Regel hängt: ganz fehlend statt
- * halb, nie überschreiben, nie erfinden.
+ * Die Firestore-Abfrage selbst ist hier nicht im Spiel.
  */
 
 import { describe, expect, it } from 'vitest';
 import {
   freigegebeneStagingKiteSpots,
   freigegebeneStagingRestaurants,
-  gastroEbeneFehlt,
-  kiteEbeneFehlt,
   mitRestaurants,
 } from '../firestore.ts';
 import type { Place, Restaurant } from '../../domain/schema/index.ts';
@@ -43,30 +40,6 @@ function platz(id: string, restaurants?: Restaurant[]): Place {
   };
 }
 
-describe('kiteEbeneFehlt', () => {
-  it('meldet die leere Sammlung als fehlende Ebene', () => {
-    expect(kiteEbeneFehlt([])).toBe(true);
-  });
-
-  it('meldet eine geladene Sammlung nicht als fehlend', () => {
-    expect(kiteEbeneFehlt([{ id: 'kite-naxos-mikri-vigla' } as never])).toBe(false);
-  });
-});
-
-describe('gastroEbeneFehlt', () => {
-  it('fehlt, wenn kein einziger Platz Tavernen trägt', () => {
-    expect(gastroEbeneFehlt([platz('a'), platz('b')])).toBe(true);
-  });
-
-  it('fehlt NICHT, sobald ein Platz Tavernen trägt — der Rest ist dann eine echte Lücke', () => {
-    expect(gastroEbeneFehlt([platz('a'), platz('b', [TAVERNE])])).toBe(false);
-  });
-
-  it('behandelt einen leeren Gastro-Block wie keinen', () => {
-    expect(gastroEbeneFehlt([platz('a', [])])).toBe(true);
-  });
-});
-
 describe('mitRestaurants', () => {
   it('legt die Tavernen an den passenden Platz und zählt sie', () => {
     const places = [platz('antiparos-hafen'), platz('paros-naoussa')];
@@ -79,10 +52,25 @@ describe('mitRestaurants', () => {
     expect(next[1]!.restaurants).toBeUndefined();
   });
 
-  it('erfindet nichts für einen Platz ohne Eintrag im Bundle', () => {
+  it('erfindet nichts für einen Platz ohne Eintrag in der Datei', () => {
     const { places: next, ergaenzt } = mitRestaurants([platz('kea-vourkari')], new Map());
     expect(ergaenzt).toBe(0);
     expect(next[0]!.restaurants).toBeUndefined();
+  });
+
+  it('überschreibt nichts an einem Platz, den die Datei nicht kennt', () => {
+    const konsolenStand: Restaurant = { ...TAVERNE, id: 'kea-notkorrektur' };
+    const { places: next } = mitRestaurants([platz('kea-vourkari', [konsolenStand])], new Map());
+    expect(next[0]!.restaurants).toEqual([konsolenStand]);
+  });
+
+  it('die Datei gewinnt, wo sie etwas sagt', () => {
+    const alt: Restaurant = { ...TAVERNE, id: 'antiparos-alt', name: 'Alter Stand' };
+    const { places: next } = mitRestaurants(
+      [platz('antiparos-hafen', [alt])],
+      new Map([['antiparos-hafen', [TAVERNE]]]),
+    );
+    expect(next[0]!.restaurants).toEqual([TAVERNE]);
   });
 
   it('lässt die Eingabe unberührt (neue Objekte)', () => {
@@ -93,10 +81,10 @@ describe('mitRestaurants', () => {
 });
 
 /**
- * Der Nachschub steht und fällt damit, dass im Bundle wirklich etwas liegt:
- * ein Ersatz, der still nichts liefert, wäre genau der Fehler, den er beheben
- * soll. Deshalb wird hier gegen die ECHTEN Staging-Dateien gelesen — dieselbe
- * Freigabe-Prüfung wie im Import.
+ * Beide Ebenen stehen und fallen damit, dass in den Dateien wirklich etwas
+ * steht: eine Quelle, die still nichts liefert, wäre genau der Fehler, den
+ * dieser Weg beheben soll. Deshalb wird hier gegen die ECHTEN Dateien gelesen
+ * — mit derselben Freigabe-Prüfung wie im Import.
  */
 describe('Freigegebene Staging-Stände im Bundle', () => {
   it('trägt Kite-Spots', async () => {
