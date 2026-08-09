@@ -51,11 +51,48 @@ export interface ForecastBundle {
   fetchedAtIso: string;
   modelRunIso: string | null;
   model: string;
-  provenance: ForecastProvenance;
+  /**
+   * Nah/Fern-Herkunft je Art. OPTIONAL wie im Snapshot — und aus demselben
+   * Grund: ein Bundle, für das gar nichts abgerufen wurde (`OHNE_FORECAST`),
+   * hat keine Herkunft. Eine leere Modell-Id hineinzuschreiben wäre eine
+   * Behauptung über Daten, die es nicht gibt.
+   */
+  provenance?: ForecastProvenance;
   /** Normative UTC hour axis (ISO strings). */
   times: string[];
   forecast: Record<string, PointForecast>;
 }
+
+/**
+ * DER WINDFREIE STAND — ein Bundle ohne eine einzige Stunde.
+ *
+ * Es beschreibt genau eine Lage: Open-Meteo hat nicht geantwortet (Netz weg,
+ * HTTP 429 am Ratenlimit), und es liegt auch kein früherer Datenstand im
+ * Query-Cache. Bis 2026-08-08 stand dann NICHTS da — ohne Forecast kein
+ * Snapshot, ohne Snapshot keine Bewertung, und die App zeigte nur noch das rote
+ * Fehlerpanel. Der Törn war damit nicht planbar, obwohl vom Wetter nur EIN Teil
+ * der Planung abhängt: die Bewertung. Inseln, Plätze, Etappen, Distanzen und die
+ * Kette der Tage stehen in der Bibliothek und brauchen keinen Wind.
+ *
+ * Leere Achse, leere Ortsmenge — nicht etwa Nullwerte über einer erfundenen
+ * Achse: die Domäne trägt diesen Fall bereits (persistence.ts, "Kein Forecast
+ * vorhanden — keine Fortschreibung möglich"), jede Ampel wird 'unbewertet' und
+ * `Assessment.forecastHorizonIso` bleibt null. Damit sagt die Bewertung selbst,
+ * dass sie ohne Winddaten zustande kam; die Anzeige liest genau dieses Feld und
+ * muss den Ausfall nicht ein zweites Mal ableiten.
+ *
+ * `fetchedAtIso` und `model` sind LEER, nicht gefüllt: es wurde nichts
+ * abgerufen, also gibt es weder einen Abrufzeitpunkt noch ein Modell.
+ * `formatStamp('')` sagt dazu "unbekannt", und der Stand-Hinweis der
+ * Tagesansicht (staleForecastLabel) bleibt aus, statt ein Alter zu rechnen.
+ */
+export const OHNE_FORECAST: ForecastBundle = Object.freeze({
+  fetchedAtIso: '',
+  modelRunIso: null,
+  model: '',
+  times: [] as string[],
+  forecast: {} as Record<string, PointForecast>,
+});
 
 interface LocationEntry {
   key: string;

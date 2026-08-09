@@ -115,6 +115,19 @@ function Shell() {
     ? staleForecastLabel(assessment.fetchedAtIso, nowMs, STALE_TIME_MS)
     : null;
 
+  /**
+   * KEINE WINDDATEN — die Bewertung kam ohne eine einzige verwertbare
+   * Modellstunde zustande (`forecastHorizonIso` ist per Vertrag null, wenn es
+   * gar keinen brauchbaren Forecast gibt).
+   *
+   * Das ist der gescheiterte Abruf ohne Datenstand im Cache
+   * (`usePlanning.OHNE_FORECAST`) — und ebenso der seltenere Fall einer
+   * Antwort, in der nichts Verwertbares stand. Beide bedeuten dasselbe für den
+   * Skipper: geplant wird weiter, bewertet wird nichts. Deshalb hängt die
+   * Anzeige am ERGEBNIS und nicht am Query-Zustand.
+   */
+  const ohneWinddaten = assessment !== null && assessment.forecastHorizonIso === null;
+
   /** Nah/Fern-Herkunft — optional, weil ein Bundle von vor der Umstellung noch
       im Query-Cache liegen kann. */
   const prov = assessment?.provenance;
@@ -182,7 +195,12 @@ function Shell() {
               : String(libraryQuery.error)}
           </div>
         )}
-        {forecastQuery.isError && (
+        {/* ZWEI VERSCHIEDENE LAGEN, zwei verschiedene Sätze. Bis 2026-08-08
+            stand hier EIN Text ("angezeigt wird der letzte Datenstand"), auch
+            wenn es gar keinen gab — daneben eine leere Seite. Was der Skipper
+            wissen muss, ist nicht der HTTP-Code, sondern ob er weiterplanen
+            kann. */}
+        {forecastQuery.isError && !ohneWinddaten && (
           <div className="error-panel" role="alert">
             Forecast nicht erreichbar — angezeigt wird der letzte Datenstand
             {assessment ? ` (abgerufen ${formatStamp(assessment.fetchedAtIso)})` : ''}.
@@ -193,9 +211,29 @@ function Shell() {
               : String(forecastQuery.error)}
           </div>
         )}
+        {ohneWinddaten && (
+          <div className="error-panel" role="alert">
+            Keine Winddaten — der Törn lässt sich trotzdem planen: Inseln,
+            Etappen und Distanzen stehen in der Bibliothek. Jede Ampel bleibt
+            „unbewertet", bis der Forecast wieder antwortet — es wird nichts
+            angenommen und nichts geschätzt. Aktualisieren, sobald wieder Netz
+            da ist.
+            {forecastQuery.isError && (
+              <>
+                {' '}Ursache:{' '}
+                {forecastQuery.error instanceof Error
+                  ? forecastQuery.error.message
+                  : String(forecastQuery.error)}
+              </>
+            )}
+          </div>
+        )}
 
         {!snapshot || !assessment ? (
-          !libraryQuery.isError && !forecastQuery.isError ? (
+          /* Ohne BIBLIOTHEK gibt es nichts zu planen — dann bleibt es beim
+             Fehlerpanel oben. Ein gescheiterter Forecast erreicht diesen Zweig
+             nicht mehr: er liefert den windfreien Snapshot (usePlanning). */
+          !libraryQuery.isError ? (
             view.kind === 'tag' ? (
               <DayViewSkeleton />
             ) : view.kind === 'karte' ? (
@@ -245,13 +283,31 @@ function Shell() {
             onClick={() => setDetailOpen((o) => !o)}
           >
             {staleLabel && <span className="stale">{staleLabel} · </span>}
-            Forecast: {assessment?.model ?? '…'} · Lauf{' '}
-            {formatStamp(assessment?.modelRunIso ?? null)} · abgerufen{' '}
-            {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}
+            {/* Ohne Winddaten gibt es kein Modell, keinen Lauf und keinen
+                Abruf — "Forecast: … · Lauf unbekannt" hier stehen zu lassen
+                sähe aus wie ein Ladezustand, der gleich vorbei ist. */}
+            {ohneWinddaten ? (
+              <>Forecast: keine Winddaten · Etappen unbewertet</>
+            ) : (
+              <>
+                Forecast: {assessment?.model ?? '…'} · Lauf{' '}
+                {formatStamp(assessment?.modelRunIso ?? null)} · abgerufen{' '}
+                {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}
+              </>
+            )}
           </button>
           <RefreshButton stale={staleLabel !== null} />
         </p>
-        {detailOpen && (
+        {detailOpen && ohneWinddaten && (
+          <div className="provenance-detail">
+            <p>
+              Es liegt keine Modellstunde vor — weder Wind noch Wellen. Die
+              Etappen tragen deshalb Distanz und Kette, aber kein Urteil.
+            </p>
+            <p>Cache-TTL: {Math.round(STALE_TIME_MS / 3_600_000)} h</p>
+          </div>
+        )}
+        {detailOpen && !ohneWinddaten && (
           <div className="provenance-detail">
             {/* Zwei Modelle je Art — sonst behauptete "Modell: X" eine
                 Auflösung, die nur die erste Hälfte der Reihe hat. */}

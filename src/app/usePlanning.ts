@@ -12,7 +12,12 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadLibraryBundle } from '../adapters/firestore.ts';
-import { collectLocations, fetchForecastBundle } from '../adapters/openMeteo.ts';
+import {
+  collectLocations,
+  fetchForecastBundle,
+  OHNE_FORECAST,
+  type ForecastBundle,
+} from '../adapters/openMeteo.ts';
 import { assessPlanning } from '../domain/assess.ts';
 import { ROUTENBERATUNG } from '../domain/features.ts';
 import { isLateDeparture } from '../domain/scoring.ts';
@@ -119,6 +124,23 @@ export function usePlanningEngine() {
   });
 
   /**
+   * DER FORECAST DIESES LAUFS — oder der windfreie Stand.
+   *
+   * Solange der Abruf läuft, ist das null und die App zeigt ihr Skelett. Ist er
+   * GESCHEITERT, tritt `OHNE_FORECAST` an seine Stelle (adapters/openMeteo.ts):
+   * eine leere Achse, aus der die Bewertung lauter 'unbewertet' macht — und der
+   * Törn bleibt planbar. Vorher blieb `snapshot` in diesem Fall null, und mit
+   * ihm verschwand die ganze Planung hinter dem Fehlerpanel; Inseln, Etappen
+   * und Distanzen hängen aber an der Bibliothek, nicht am Wetter.
+   *
+   * Ein noch im Cache liegender ECHTER Datenstand gewinnt immer (`data` steht
+   * vor dem Ersatz): ein Forecast von vor zwei Stunden ist besser als keiner,
+   * und genau das sagt das Fehlerpanel dann auch.
+   */
+  const forecast: ForecastBundle | null =
+    forecastQuery.data ?? (forecastQuery.isError ? OHNE_FORECAST : null);
+
+  /**
    * Die Parameter der Bibliothek, überschrieben von den Konzept-Reglern des
    * Skippers (domain/konzept.ts). EIN Einfügepunkt, damit Solver, Optionsraum,
    * Konzept-Panel und Karte dieselben Schwellen sehen — "ab wie viel Wind rät
@@ -138,9 +160,9 @@ export function usePlanningEngine() {
       : deriveCurrentDay(bundle?.params.tripStartDate, tripLengthDays);
 
   const snapshot: PlanningSnapshot | null = useMemo(() => {
-    if (!bundle || !library || !params || !forecastQuery.data) return null;
+    if (!bundle || !library || !params || !forecast) return null;
     return {
-      ...forecastQuery.data,
+      ...forecast,
       library,
       polar: bundle.polar,
       params,
@@ -160,7 +182,7 @@ export function usePlanningEngine() {
     bundle,
     library,
     params,
-    forecastQuery.data,
+    forecast,
     currentDay,
     trip.position,
     trip.plan,
