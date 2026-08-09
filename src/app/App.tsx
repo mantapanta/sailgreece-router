@@ -14,8 +14,10 @@ import { AvatarMenu } from '../ui/components/AvatarMenu.tsx';
 import { DayViewSkeleton } from '../ui/components/DayViewSkeleton.tsx';
 import { MapViewSkeleton } from '../ui/components/MapViewSkeleton.tsx';
 import { staleForecastLabel } from '../ui/dayViewModel.ts';
+import { bibliothekZeile, dateiEbenenSatz } from '../ui/bibliothekProvenienz.ts';
 import { formatStamp } from '../ui/format.ts';
 import { attributionsFor, forecastModelLabel } from '../domain/schema/models.ts';
+import type { Library } from '../domain/schema/snapshot.ts';
 import '../ui/styles.css';
 
 const queryClient = new QueryClient({
@@ -76,6 +78,25 @@ function RefreshButton({ stale = false }: { stale?: boolean }) {
         <span className="visually-hidden">Aktualisierung läuft …</span>
       )}
     </button>
+  );
+}
+
+/**
+ * Die Bibliothek in der Herkunfts-Aufklappung: was geladen ist, und woher.
+ *
+ * Sie steht dort und nicht als Panel, weil sie im Normalfall nichts meldet —
+ * aber die Frage „warum sehe ich die Kite-Spots nicht?" ohne Browser-Konsole
+ * beantwortbar macht. „0 Kite-Spots" ist die Antwort; der Satz darunter sagt,
+ * dass diese beiden Ebenen aus den JSON-Dateien der App kommen und nicht aus
+ * Firestore — damit sie niemand mehr in der Datenbank sucht.
+ */
+function BibliothekZeilen({ library }: { library: Library | null }) {
+  if (!library) return null;
+  return (
+    <>
+      <p>{bibliothekZeile(library)}</p>
+      <p>{dateiEbenenSatz()}</p>
+    </>
   );
 }
 
@@ -305,6 +326,7 @@ function Shell() {
               Etappen tragen deshalb Distanz und Kette, aber kein Urteil.
             </p>
             <p>Cache-TTL: {Math.round(STALE_TIME_MS / 3_600_000)} h</p>
+            <BibliothekZeilen library={snapshot?.library ?? null} />
           </div>
         )}
         {detailOpen && !ohneWinddaten && (
@@ -329,6 +351,7 @@ function Shell() {
             )}
             <p>Abgerufen: {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}</p>
             <p>Cache-TTL: {Math.round(STALE_TIME_MS / 3_600_000)} h</p>
+            <BibliothekZeilen library={snapshot?.library ?? null} />
           </div>
         )}
         <p className="footnote">

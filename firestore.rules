@@ -35,10 +35,12 @@ service cloud.firestore {
       allow read: if istAngemeldet();
       allow write: if false;
     }
-    // Kite-Spots (aus kitespots.json). Eigene Collection, weil ein Spot nicht
-    // zum Hafen gehoert (src/domain/schema/kite.ts). Fehlt dieser Block, bleibt
-    // die Kite-Ebene leer — der Adapter faengt die Ablehnung ab, damit eine
-    // nicht deployte Regel nicht die ganze Bibliothek mitnimmt.
+    // Kite-Spots (aus kitespots.json). Der Import befuellt die Sammlung weiter,
+    // aber DIE APP LIEST SIE NICHT MEHR: die Kite-Ebene kommt seit 2026-08-09
+    // direkt aus der JSON-Datei im Bundle (src/adapters/firestore.ts,
+    // Modulkopf), damit sie an keinem Import und an keiner Rule mehr haengt.
+    // Der Block bleibt, weil die Daten liegen, wo sie liegen — und weil er
+    // nichts oeffnet, was nicht ohnehin im Bundle steht.
     match /kiteSpots/{spotId} {
       allow read: if istAngemeldet();
       allow write: if false;

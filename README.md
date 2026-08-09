@@ -295,27 +295,63 @@ Manuell, kein CI — reicht für einen Nutzer und 9 Tage (AD-8).
 
 ### Neue Bibliotheksdaten sind in der App nicht sichtbar
 
-Ein Merge nach `main` bringt **Code**, keine **Daten**. Restaurants
-(`place.restaurants`, Subebene des Platzes) und Kite-Spots (eigene Collection
-`kiteSpots`) leben in Firestore und kommen dort nur durch einen neuen Import
-an. Im local-Modus (`VITE_DATA_SOURCE=local`) sind sie sofort da, weil die
-Staging-JSONs direkt gelesen werden — das `approved`-Flag gilt nur für den
-Import, nicht für den local-Modus. Wer die Ebene im Deploy vermisst, geht
-diese vier Schritte der Reihe nach durch:
+Ein Merge nach `main` bringt **Code**, keine **Daten**. Die Bibliothek lebt in
+Firestore und kommt dort nur durch einen neuen Import an. Im local-Modus
+(`VITE_DATA_SOURCE=local`) ist alles sofort da, weil die Staging-JSONs direkt
+gelesen werden — das `approved`-Flag gilt nur für den Import, nicht für den
+local-Modus. Wer eine Ebene im Deploy vermisst, geht diese vier Schritte der
+Reihe nach durch:
+
+> **Ausnahme: Kite-Spots und Tavernen.** Die beiden brauchen keinen Import
+> mehr — sie kommen direkt aus den JSON-Dateien im Bundle. Siehe den Abschnitt
+> gleich darunter.
 
 1. **Freigabe:** trägt die Staging-Datei `approved: true`? Eine Datei ohne
    Freigabe wird bei *jedem* Import stillschweigend übersprungen — der Lauf
    endet trotzdem mit Exit 0.
 2. **Import:** `npm run seed:import` erneut laufen lassen und die Schlusszeile
-   lesen. Restaurants haben **kein eigenes Dokument** — sie stecken in den
-   `places`-Dokumenten und wandern nur mit einem erneuten Insel-Import mit.
+   lesen.
 3. **Rules:** `firebase deploy --only firestore:rules`. Eine Collection ohne
    eigenen Block fällt in den Catch-All und ist gesperrt; der Adapter fängt
-   die Ablehnung für `kiteSpots` und `windTopoZones` bewusst ab, damit eine
-   fehlende Regel nicht die ganze Bibliothek mitnimmt — die Ebene bleibt dann
-   still leer, mit einer Meldung in der Browser-Konsole.
-4. **Bundle:** `npm run build && firebase deploy` — die neuen Karten
-   (Gastro, Kite) stecken im Bundle, nicht in den Daten.
+   die Ablehnung für `windTopoZones` bewusst ab, damit eine fehlende Regel
+   nicht die ganze Bibliothek mitnimmt — die Korrektur fehlt dann still, mit
+   einer Meldung in der Browser-Konsole.
+4. **Bundle:** `npm run build && firebase deploy` — neue Ansichten stecken im
+   Bundle, nicht in den Daten.
+
+#### Zwei Ebenen stehen gar nicht in Firestore (seit 2026-08-09)
+
+Die vier Schritte oben gelten für alles, was in der Datenbank lebt — für
+**Kite-Spots und Tavernen aber nicht mehr.** Sie kommen in *beiden* Modi
+direkt aus den JSON-Dateien im App-Bundle:
+
+| Ebene | Quelle | Firestore |
+| --- | --- | --- |
+| Kite-Spots | `seeding/data/kitespots.json` | Sammlung `kiteSpots` wird **nicht gelesen** |
+| Tavernen (`place.restaurants`) | `restaurants`-Blöcke in `seeding/data/islands/*.json` | Datei gewinnt, wo sie etwas sagt |
+
+Grund: Für Ebenen, die **nichts bewerten**, war der Umweg über den Import der
+ganze Fehler. Ein Merge nach `main` bringt Code, keine Daten — die Ebene fehlte
+im Deploy, und im Boot sieht man das nicht als „Import ausstehend", sondern als
+„es gibt keine Kite-Spots". Die Datei liegt ohnehin im Bundle, ist mit jedem
+Deploy aktuell, kann nicht halb importiert sein und hängt an keiner Rule.
+Praktisch heisst das: **Datei ändern, `npm run build && firebase deploy` —
+fertig.** Kein Service-Account, kein Import, kein Rules-Deploy.
+
+Die Grenze ist eng und sie ist der Punkt: **nur diese beiden Ebenen.** Weder
+Ampel noch Solver noch Gültigkeit liest ein Feld von ihnen (`schema/kite.ts`,
+`schema/gastro.ts`). Alles, was ein Urteil trägt — Plätze mit ihren
+Schutzsektoren, Etappen, Parameter, Polare — bleibt in Firestore, weil dort
+eine zurückgezogene Kuratierung **ohne Redeploy** wirksam wird; genau dafür
+gibt es die Datenbank (AD-8). Gelesen wird nur aus Dateien mit
+`approved: true`, also durch dasselbe Freigabe-Gate wie der Import (im
+local-Modus gilt es wie bisher nicht).
+
+Der Import schreibt die `kiteSpots`-Sammlung weiterhin — die App liest sie
+bloss nicht mehr. Was geladen ist, sagt die Fusszeile („Forecast: …"
+antippen): `Bibliothek: 42 Inseln · 97 Plätze · … · 14 Kite-Spots`, mit dem
+Hinweis, dass diese beiden Ebenen aus den Dateien kommen. **0 Kite-Spots**
+heisst dann: in der Datei steht etwas nicht — nicht „Import ausstehend".
 
 ## Tuning-Parameter
 
@@ -615,8 +651,9 @@ entscheiden weiterhin FR16-Windregel und Fahrtbudgets.
 ## Kite-Spots
 
 Das Board kommt mit — also muss die App sagen, wo man es benutzen kann. Die
-Kite-Spots sind eine **eigene Bibliothek** (`seeding/data/kitespots.json`,
-Firestore-Sammlung `kiteSpots`, Schema `src/domain/schema/kite.ts`) und keine
+Kite-Spots sind eine **eigene Bibliothek** (`seeding/data/kitespots.json` —
+gelesen direkt aus der Datei, nicht aus Firestore; Schema
+`src/domain/schema/kite.ts`) und keine
 Subebene des Platzes wie die Gastronomie: ein Spot liegt dort, wo Wind und
 Wasser stimmen, und das ist regelmässig nicht der Hafen — Mikri Vigla liegt 5 sm
 von Naxos-Stadt, der Pounda-Kanal gehört zu Paros, geankert wird auf Antiparos.

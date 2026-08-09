@@ -7,6 +7,32 @@
  *     `islands`, `places`, `routes`, `config` (documents polar, parameters)
  * The app never writes (AD-5). An invalid place document is logged and kept
  * as 'unbewertet' — never silently hidden, never green.
+ *
+ * ZWEI EBENEN KOMMEN IMMER AUS DER JSON-DATEI, in BEIDEN Modi (2026-08-09,
+ * Skipper: "die Kitespots & Restaurants sind nicht sichtbar" — "ich dachte, du
+ * legst die Daten als JSON an und liest sie so aus, dafür kein Firebase"):
+ *
+ *   - KITE-SPOTS aus `seeding/data/kitespots.json`
+ *   - TAVERNEN aus den `restaurants`-Blöcken in `seeding/data/islands/*.json`
+ *
+ * Beide waren im Deploy unsichtbar, weil ein Merge nach `main` Code bringt und
+ * keine Daten: sie lagen in Firestore, und dorthin kommen sie nur mit einem
+ * erneuten `npm run seed:import`. Für Ebenen, die NICHTS bewerten, ist dieser
+ * Umweg der ganze Fehler — die Datei liegt ohnehin im Bundle, sie ist bei jedem
+ * Deploy aktuell, und sie kann nicht halb importiert sein. Der Firestore-Zweig
+ * liest sie deshalb gar nicht mehr aus der Datenbank; die `kiteSpots`-Sammlung
+ * dort wird ignoriert, auch wenn der Import sie weiter befüllt.
+ *
+ * Die Grenze ist eng gezogen und sie ist der Punkt:
+ *   - NUR diese beiden Ebenen. Sie bewerten nichts (schema/kite.ts,
+ *     schema/gastro.ts) — weder Ampel noch Solver noch Gültigkeit liest ein
+ *     Feld von ihnen. Alles, was ein Urteil trägt (Plätze mit ihren Schutz-
+ *     sektoren, Etappen, Parameter, Polare), bleibt bei Firestore: dort wird
+ *     eine zurückgezogene Kuratierung ohne Redeploy wirksam, und genau das ist
+ *     bei sicherheitsrelevanten Daten der Sinn der Datenbank (AD-8).
+ *   - NUR aus Dateien mit `approved: true` (AD-10). Ein noch nicht
+ *     freigegebener Stand erreicht das Deploy nicht, so wie er den Import nicht
+ *     erreicht — im local-Modus gilt das Gate wie bisher nicht.
  */
 
 import { z } from 'zod';
@@ -37,6 +63,7 @@ import type {
   Leg,
   Variant,
   KiteSpot,
+  Restaurant,
   WindTopoZone,
   Params,
   Polar,
@@ -100,13 +127,20 @@ function parseTolerant<T>(schema: z.ZodType<T>, raw: unknown, what: string): T |
   return null;
 }
 
+/**
+ * Die Insel-Staging-Dateien als LAZY Importe — Modulebene, weil beide Zweige
+ * sie brauchen: der local-Modus als Quelle, der Firestore-Modus als Nachschub
+ * für die Gastro-Ebene. Vite macht daraus eigene Chunks; im Firestore-Deploy
+ * wird also nichts davon geladen, solange die Tavernen aus Firestore kommen.
+ */
+const islandStagingModules = import.meta.glob('../../seeding/data/islands/*.json');
+
 // ---------------------------------------------------------------------------
 // Local backend: staging JSONs (same schemas, same contract)
 // ---------------------------------------------------------------------------
 
 async function loadFromLocal(): Promise<LibraryBundle> {
-  const islandModules = import.meta.glob('../../seeding/data/islands/*.json');
-
+  const islandModules = islandStagingModules;
   const islands: Island[] = [];
   const rawPlaces: unknown[] = [];
   for (const path of Object.keys(islandModules).sort()) {
@@ -234,6 +268,81 @@ async function loadFromLocal(): Promise<LibraryBundle> {
 }
 
 // ---------------------------------------------------------------------------
+// Die beiden Ebenen aus der JSON-Datei (Modulkopf) — Quelle in beiden Modi
+// ---------------------------------------------------------------------------
+
+/**
+ * Legt die kuratierten Tavernen an die passenden Plätze — neue Objekte, die
+ * Eingabe bleibt unberührt.
+ *
+ * Die Datei gewinnt, wo sie etwas sagt. Ein Platz ohne Eintrag behält, was er
+ * mitgebracht hat (im Regelfall nichts): so überschreibt ein Deploy keine
+ * Konsolen-Notkorrektur an einem Platz, den die Datei gar nicht kennt.
+ * Erfunden wird nichts.
+ */
+export function mitRestaurants(
+  places: Place[],
+  byPlaceId: Map<string, Restaurant[]>,
+): { places: Place[]; ergaenzt: number } {
+  let ergaenzt = 0;
+  const next = places.map((p) => {
+    const restaurants = byPlaceId.get(p.id);
+    if (!restaurants || restaurants.length === 0) return p;
+    ergaenzt++;
+    return { ...p, restaurants };
+  });
+  return { places: next, ergaenzt };
+}
+
+/**
+ * Kite-Spots aus der FREIGEGEBENEN `kitespots.json` — sonst leer.
+ *
+ * Exportiert, damit ein Test belegen kann, dass in der Datei wirklich etwas
+ * steht: eine Quelle, die still nichts liefert, wäre genau der Fehler, den
+ * dieser Weg beheben soll.
+ */
+export async function freigegebeneStagingKiteSpots(): Promise<KiteSpot[]> {
+  try {
+    const mod = (await import('../../seeding/data/kitespots.json')) as { default: unknown };
+    const file = KiteSpotsStagingFileSchema.safeParse(mod.default);
+    if (!file.success) {
+      console.error('kitespots.json ungültig — Kite-Ebene bleibt leer:', file.error.issues);
+      return [];
+    }
+    if (!file.data.approved) {
+      console.warn(
+        'kitespots.json ist nicht freigegeben (approved: false) — Kite-Ebene bleibt im Deploy leer.',
+      );
+      return [];
+    }
+    return file.data.kiteSpots;
+  } catch (e) {
+    console.error('kitespots.json nicht ladbar — Kite-Ebene bleibt leer:', e);
+    return [];
+  }
+}
+
+/** Tavernen je Platz-Id aus den FREIGEGEBENEN Insel-Dateien. */
+export async function freigegebeneStagingRestaurants(): Promise<Map<string, Restaurant[]>> {
+  const byPlaceId = new Map<string, Restaurant[]>();
+  for (const path of Object.keys(islandStagingModules).sort()) {
+    try {
+      const mod = (await islandStagingModules[path]!()) as { default: unknown };
+      const file = IslandStagingFileSchema.safeParse(mod.default);
+      // Ungültig oder nicht freigegeben: überspringen, nicht retten. Was die
+      // Review nicht gesehen hat, darf im Deploy nicht auftauchen (AD-10).
+      if (!file.success || !file.data.approved) continue;
+      for (const place of file.data.places) {
+        if (place.restaurants?.length) byPlaceId.set(place.id, place.restaurants);
+      }
+    } catch (e) {
+      console.warn(`Staging-Datei ${path} nicht ladbar — keine Tavernen daraus:`, e);
+    }
+  }
+  return byPlaceId;
+}
+
+// ---------------------------------------------------------------------------
 // Firestore backend (strictly read-only, AD-5)
 // ---------------------------------------------------------------------------
 
@@ -253,7 +362,15 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     placesSnap,
     legsSnap,
     variantsSnap,
-    kiteSpotsSnap,
+    /**
+     * KITE-SPOTS UND TAVERNEN STEHEN HIER NICHT (Modulkopf). Sie kommen aus den
+     * JSON-Dateien im Bundle, nicht aus Firestore — die `kiteSpots`-Sammlung
+     * wird nicht mehr gelesen, auch wenn der Import sie weiter befüllt. Damit
+     * hängt keine der beiden Ebenen mehr an einem Import oder an einer
+     * deployten Rule; sie sind da, sobald die App da ist.
+     */
+    stagingKiteSpots,
+    stagingRestaurants,
     windTopoSnap,
     paramsSnap,
     polarSnap,
@@ -264,26 +381,8 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     // (AD-4/AD-5); variants reference them by id.
     getDocs(collection(db, 'legs')),
     getDocs(collection(db, 'routes')),
-    /**
-     * Kite-Spots: eigene Sammlung, weil ein Spot nicht zum Hafen gehört
-     * (schema/kite.ts). Eine noch nicht importierte Sammlung ist leer, kein
-     * Fehler — die Ebene fehlt dann einfach.
-     *
-     * ABGEFANGEN, und das ist Absicht: solange die neuen Security Rules nicht
-     * deployt sind, lehnt Firestore diesen Lesezugriff ab
-     * (`permission-denied`). In einem `Promise.all` würde das die GANZE
-     * Bibliothek scheitern lassen — die App zeigte statt der Törnplanung ein
-     * Fehlerpanel, wegen einer Ebene, die nichts bewertet. Der Preis ist
-     * genannt: ohne Regel bleibt die Kite-Ebene leer, mit einer Meldung in der
-     * Konsole.
-     */
-    getDocs(collection(db, 'kiteSpots')).catch((e) => {
-      console.warn(
-        'Kite-Spots nicht lesbar — Ebene bleibt leer. Sind die Firestore-Rules deployt (Collection kiteSpots)?',
-        e,
-      );
-      return null;
-    }),
+    freigegebeneStagingKiteSpots(),
+    freigegebeneStagingRestaurants(),
     /**
      * Topografische Windzonen: eigene Sammlung, aus demselben Grund abgefangen
      * wie die Kite-Spots — ohne deployte Rule antwortet Firestore mit
@@ -306,7 +405,7 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     .map((d) => parseTolerant(IslandSchema, { id: d.id, ...d.data() }, 'Insel'))
     .filter((i): i is Island => i !== null);
 
-  const { places, invalidPlaces } = parsePlaces(
+  const { places: firestorePlaces, invalidPlaces } = parsePlaces(
     placesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
   );
 
@@ -318,9 +417,10 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
     .map((d) => parseTolerant(VariantSchema, { id: d.id, ...d.data() }, 'Variante'))
     .filter((v): v is Variant => v !== null);
 
-  const kiteSpots = (kiteSpotsSnap?.docs ?? [])
-    .map((d) => parseTolerant(KiteSpotSchema, { id: d.id, ...d.data() }, 'Kite-Spot'))
-    .filter((s): s is KiteSpot => s !== null);
+  // Die beiden Ebenen aus der Datei (Modulkopf): die Kite-Bibliothek, wie sie
+  // in kitespots.json steht, und die Tavernen an ihre Plätze gelegt.
+  const kiteSpots = stagingKiteSpots;
+  const { places } = mitRestaurants(firestorePlaces, stagingRestaurants);
 
   const windTopoZones = (windTopoSnap?.docs ?? [])
     .map((d) => parseTolerant(WindTopoZoneSchema, { id: d.id, ...d.data() }, 'Windzone'))
@@ -339,7 +439,15 @@ async function loadFromFirestore(): Promise<LibraryBundle> {
   }
 
   return {
-    library: { islands, places, invalidPlaces, legs, variants, kiteSpots, windTopoZones },
+    library: {
+      islands,
+      places,
+      invalidPlaces,
+      legs,
+      variants,
+      kiteSpots,
+      windTopoZones,
+    },
     params,
     polar,
   };
