@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { forecastModelInfo, type ForecastKind } from './models.ts';
+// `time.ts` importiert nichts — die Tagesrechnung kommt von dort, damit der
+// Check unten nicht eine zweite Datumsarithmetik neben `deadlineFrame` stellt.
+import { tripDayForDate } from '../time.ts';
 
 /**
  * AD-8: all tuning parameters live in the Firestore `config` document
@@ -219,11 +222,22 @@ const ParamsObjectSchema = z.object({
   nightEndHourAthens: z.number().int().min(0).max(23).default(9),
 
   // --- trip frame (FR18/FR19) -----------------------------------------------
+  /**
+   * DER RAHMEN DES ECHTEN TÖRNS (Skipper 2026-08-12): Übernahme Samstag
+   * 8. August, zurück in Marina Alimos am FREITAG, 21. August, 19:00. Das sind
+   * vierzehn Törntage — Tag 1 = Sa 8.8., Tag 14 = Fr 21.8.
+   *
+   * Vorher stand hier ein Elf-Tage-Rahmen (Stichtag Di 18.8.), und die App
+   * plante deshalb einen Törn, der drei Tage vor der Rückgabe endete: "die
+   * Routing App endet am Tag zwölf am Mittwoch, aber wir müssen Freitagabend
+   * 19:00 wieder in Marina Alimos sein". Der Rahmen ist keine Schätzung,
+   * sondern der Chartervertrag.
+   */
   tripStartDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .default('2026-08-08'),
-  tripLengthDays: z.number().int().positive().default(11),
+  tripLengthDays: z.number().int().positive().default(14),
   /**
    * THE ONE deadline (AD-8/AD-9): contractual return to the base.
    * Everything else — effective deadline day, PoR reserve — is DERIVED from
@@ -232,8 +246,8 @@ const ParamsObjectSchema = z.object({
   returnDeadlineDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .default('2026-08-18'),
-  returnDeadlineHourAthens: z.number().int().min(0).max(23).default(18),
+    .default('2026-08-21'),
+  returnDeadlineHourAthens: z.number().int().min(0).max(23).default(19),
   /** PoR reserve in days — the buffer/harbour day IS this reserve (AD-9, FR19). */
   bufferDays: z.number().int().min(0).default(1),
 
@@ -578,6 +592,30 @@ export const ParamsSchema = ParamsObjectSchema.check((ctx) => {
     ctx.issues.push({
       code: 'custom',
       message: 'returnDeadlineDate darf nicht vor tripStartDate liegen',
+      input: p,
+    });
+  }
+  /**
+   * DIE ANZEIGE UND DER STICHTAG MÜSSEN DENSELBEN TÖRN MEINEN.
+   *
+   * `tripLengthDays` trägt ausschliesslich die Anzeige (Tagesachse, Törnspanne,
+   * Tag-Auswahl) und die Klemme in `deriveCurrentDay`; geplant wird gegen
+   * `returnDeadlineDate` (`deadlineFrame`). Ohne diesen Check sind das zwei
+   * unabhängig gepflegte Rahmen — und genau daran ist der Törn am 2026-08-12
+   * aufgelaufen: die App zeigte einen Rahmen, dessen letzter Tag Tage vor der
+   * vertraglichen Rückgabe lag, und plante folgerichtig zu kurz.
+   *
+   * Der Check verlangt nicht Gleichheit — ein Törn darf nach der Rückgabe noch
+   * Tage an Land haben. Er verlangt nur, dass der Stichtag INNERHALB der
+   * angezeigten Achse liegt: was geplant wird, muss sichtbar sein.
+   */
+  const deadlineDay = tripDayForDate(p.tripStartDate, p.returnDeadlineDate);
+  if (deadlineDay > p.tripLengthDays) {
+    ctx.issues.push({
+      code: 'custom',
+      message:
+        `returnDeadlineDate liegt auf Törntag ${deadlineDay}, die Törnachse endet aber ` +
+        `an Tag ${p.tripLengthDays} — tripLengthDays muss den Stichtag enthalten`,
       input: p,
     });
   }

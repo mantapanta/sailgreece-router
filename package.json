@@ -1,7 +1,7 @@
 {
   "name": "sailgreece-router",
   "version": "0.1.0",
-  "description": "Toernplanungs-Web-App fuer den 12-Tage-Kykladen-Familientoern ab 8. August 2026",
+  "description": "Toernplanungs-Web-App fuer den 14-Tage-Kykladen-Familientoern vom 8. bis 21. August 2026",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

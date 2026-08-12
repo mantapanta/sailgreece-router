@@ -53,6 +53,7 @@ import {
   planMetricsFor,
   planTurn,
   preferred,
+  type Candidate,
   type Pin,
   type PlanMetrics,
   type SolveResult,
@@ -174,8 +175,15 @@ const RAHMEN = deadlineFrame({ ...DEFAULT_PARAMS, tripStartDate: TRIP_START }).d
  * Die Frist ist bewusst grosszügig und bewusst SICHTBAR: sie ist kein
  * Freibrief, sondern der Ort, an dem eine Laufzeit-Regression auffällt. Wer
  * sie erhöhen muss, hat etwas verlangsamt.
+ *
+ * VON 20 s AUF 60 s (2026-08-12): verlangsamt hat sie der TÖRNRAHMEN. Er ist
+ * von elf auf vierzehn Etappen gewachsen (Rückgabe Fr 21.8.), und damit die
+ * Schicht A von 5192 auf 85 452 Runden — gemessen 1,0 s → 2,6 s für einen
+ * Solver-Lauf und 4,9 s → 8,6 s für eine volle Bewertung, im kalten Prozess
+ * mit den Optionen darüber. Nicht der Code ist langsamer geworden, der Raum
+ * ist grösser.
  */
-const VOLLE_BEWERTUNG_MS = 20_000;
+const VOLLE_BEWERTUNG_MS = 60_000;
 
 /**
  * Die Frist für den Menü-Wächter weiter unten: er rechnet EINEN vollen
@@ -194,11 +202,17 @@ const ETAPPEN_MENUE_MS = 120_000;
 const ALLE_SCHICHTEN_MS = 60_000;
 
 describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
-  it('Der Törnrahmen ist elf Tage — elf Tage, elf Etappen', () => {
-    expect(RAHMEN).toBe(11);
+  it('Der Törnrahmen ist vierzehn Tage — vierzehn Tage, vierzehn Etappen', () => {
+    /**
+     * Der Rahmen ist der Chartervertrag: Übernahme Sa 8.8., zurück in Marina
+     * Alimos am Fr 21.8. um 19:00 (Skipper 2026-08-12). Bis dahin standen hier
+     * elf Tage mit Stichtag Di 18.8., und die App plante folgerichtig einen
+     * Törn, der drei Tage vor der Rückgabe endete.
+     */
+    expect(RAHMEN).toBe(14);
   });
 
-  it('Schicht A liefert GENAU die 2947 wiederholungsfreien 11-Etappen-Runden', () => {
+  it('Schicht A liefert GENAU die 85 452 wiederholungsfreien 14-Etappen-Runden', () => {
     /**
      * Die Zahl ist der eigentliche Befund: 68 Runden füllen den Rahmen sauber,
      * und die App hat lange keine einzige davon angeboten. Der Suchraum ist
@@ -222,14 +236,19 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      * hatte KEINEN abgeleiteten Nachbarn unter 30 sm — Serifos ist mit 40,1 sm
      * der kürzeste —, und damit stand ab Kea nur die kuratierte Nachbarschaft
      * im Etappen-Menü (Attika, Kythnos, Syros, Athen).
+     * 2026-08-12: 5192 → 85 452, weil der Rahmen von elf auf VIERZEHN Etappen
+     * gewachsen ist (Rückgabe Fr 21.8. statt Di 18.8.). Nicht die Bibliothek
+     * hat sich geändert, sondern die Etappenzahl — drei Etappen mehr kosten
+     * gemessen den Faktor 16 im Suchraum (5192 → 14 453 → 37 013 → 85 452).
+     * Die Schicht bleibt VOLLSTÄNDIG; sie ist die, die den Rahmen trägt.
      */
     const snapshot = realSnapshot();
-    const [schichtA] = [...roundTripLayers(snapshot, 'athen', 11)];
+    const [schichtA] = [...roundTripLayers(snapshot, 'athen', RAHMEN)];
     expect(schichtA?.gekappt).toBe(false);
-    expect(schichtA?.trips).toHaveLength(5192);
-  });
+    expect(schichtA?.trips).toHaveLength(85_452);
+  }, ALLE_SCHICHTEN_MS);
 
-  it('KEINE Schicht ist gekappt — auch die verkürzte nicht', () => {
+  it('SCHICHT A ist vollständig — und ab elf Etappen sind es wieder alle drei', () => {
     /**
      * Der Deckel (`roundTrips.HARD_CEILING`) ist eine Notbremse, kein
      * Arbeitsmittel: greift er, sammelt die Tiefensuche ihre Runden aus EINER
@@ -239,29 +258,48 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      * wuchs von 68 527 auf 95 814 Runden und lief in den damaligen Deckel von
      * 80 000 — und die kürzeste Santorin-Runde (acht Etappen, der Test unten)
      * verschwand aus dem Ergebnis. Nicht weil es sie nicht mehr gäbe, sondern
-     * weil der DFS vorher abbrach. Genau diese stille Verzerrung fängt dieser
-     * Test ab; wer eine Etappe ergänzt und ihn rot macht, muss den Deckel
-     * heben, nicht die Zusage senken.
+     * weil der DFS vorher abbrach. Deshalb wurde der Deckel damals gehoben und
+     * nicht die Zusage gesenkt.
+     *
+     * SEIT DEM VIERZEHN-TAGE-RAHMEN (2026-08-12) IST DIE ZUSAGE KLEINER, UND
+     * DAS IST EINE MESSUNG, KEINE MEINUNG. Über vierzehn Etappen hat Schicht B
+     * 2 861 717 und Schicht C 4 123 050 Runden (Deckel probeweise auf 20 Mio.);
+     * sie vollständig zu halten kostet 2,7 GB und 50 s. Das ist im Browser
+     * nicht bezahlbar, und die Zahlen stehen bei `HARD_CEILING`.
+     *
+     * Was hier deshalb geprüft wird, ist das, was auch gilt:
+     *   - Schicht A — die Schicht, die den Rahmen trägt — ist VOLLSTÄNDIG,
+     *     über den vollen Rahmen und über jede kürzere Restlänge;
+     *   - ab elf Etappen (also ab Törntag 4, wenn der Rahmen geschrumpft ist)
+     *     sind wieder ALLE DREI Schichten vollständig.
+     *
+     * Wer die verkürzte Schicht auch an Törntag 1 vollständig braucht, zählt
+     * sie nach steigender Etappenzahl auf (Notiz bei `HARD_CEILING`) — der
+     * Deckel ist dafür das falsche Werkzeug.
      */
     const snapshot = realSnapshot();
+    for (let legCount = RAHMEN; legCount >= 2; legCount--) {
+      const [schichtA] = [...roundTripLayers(snapshot, 'athen', legCount)];
+      expect(schichtA?.gekappt, `Schicht A bei ${legCount} Etappen`).toBe(false);
+    }
     for (const layer of roundTripLayers(snapshot, 'athen', 11)) {
       expect(layer.gekappt, layer.layer).toBe(false);
     }
-  });
+  }, ALLE_SCHICHTEN_MS);
 
   it('Keine Runde der Schicht A läuft eine Insel zweimal an', () => {
     const snapshot = realSnapshot();
-    const [schichtA] = [...roundTripLayers(snapshot, 'athen', 11)];
+    const [schichtA] = [...roundTripLayers(snapshot, 'athen', RAHMEN)];
     for (const trip of schichtA?.trips ?? []) {
       const seq = islandSequence(trip);
       // Die Basis steht am Anfang UND am Ende — sie ist die Ausnahme.
       const ohneBasis = seq.filter((id) => id !== 'athen');
       expect(new Set(ohneBasis).size).toBe(ohneBasis.length);
-      expect(trip).toHaveLength(11);
+      expect(trip).toHaveLength(RAHMEN);
     }
-  });
+  }, ALLE_SCHICHTEN_MS);
 
-  it('Santorin braucht neun Etappen — ab Törntag 5 gibt es keine Santorin-Runde mehr', () => {
+  it('Santorin braucht acht Etappen — danach reicht der Rest des Rahmens nicht mehr', () => {
     /**
      * Der wahre Sachverhalt hinter der Beanstandung "die Verlängerung nach
      * Santorin führt nicht nach Santorin": Santorin hängt im Graphen nur an
@@ -283,21 +321,41 @@ describe('Zielmodell v3 — der Suchraum enthält die richtigen Runden', () => {
      * war, dass die App das Ziel trotzdem angeboten und einen Plan dazugelegt
      * hat, der nicht dorthin führt.
      */
-    const anTag1 = enumerateRoundTrips(realSnapshot({ currentDay: 1 }), 'athen', RAHMEN)
+    /**
+     * DIE MINDESTLÄNGE IST EINE EIGENSCHAFT DER BIBLIOTHEK, NICHT DES RAHMENS —
+     * gefragt wird sie deshalb über ELF Etappen. Über die vierzehn des echten
+     * Törns wäre die flache Aufzählung gekappt (Zahlen bei
+     * `roundTrips.HARD_CEILING`), und gemessen kommt die achtstellige
+     * Santorin-Runde dann nicht mehr vor: der Test würde 10 statt 8 sehen und
+     * eine Eigenschaft des Deckels für eine des Reviers ausgeben.
+     */
+    const kurzeRunden = enumerateRoundTrips(realSnapshot({ currentDay: 1 }), 'athen', 11)
       .filter((t) => islandSequence(t).includes('santorin'));
-    expect(anTag1.length).toBeGreaterThan(0);
+    expect(kurzeRunden.length).toBeGreaterThan(0);
     // Acht Etappen ist das Minimum — keine kürzere Santorin-Runde existiert.
-    expect(Math.min(...anTag1.map((t) => t.length))).toBe(8);
+    expect(Math.min(...kurzeRunden.map((t) => t.length))).toBe(8);
 
-    // Tag 4 lässt es noch zu, Tag 5 nicht mehr.
-    const anTag4 = enumerateRoundTrips(realSnapshot({ currentDay: 4 }), 'athen', RAHMEN - 3)
-      .filter((t) => islandSequence(t).includes('santorin'));
-    expect(anTag4.length).toBeGreaterThan(0);
+    /**
+     * UND WANN GEHT ES NICHT MEHR? Die Grenze verschiebt sich mit dem Rahmen,
+     * die Rechnung dahinter bleibt dieselbe: ab Törntag N bleiben
+     * `RAHMEN − N + 1` Etappen, und unter acht ist Santorin nicht zu erreichen.
+     * Im Elf-Tage-Rahmen war das Törntag 5, im Vierzehn-Tage-Rahmen Törntag 8.
+     */
+    const letzterTag = RAHMEN - 8 + 1;
+    const nochMoeglich = enumerateRoundTrips(
+      realSnapshot({ currentDay: letzterTag }),
+      'athen',
+      RAHMEN - letzterTag + 1,
+    ).filter((t) => islandSequence(t).includes('santorin'));
+    expect(nochMoeglich.length, `Törntag ${letzterTag}`).toBeGreaterThan(0);
 
-    const anTag5 = enumerateRoundTrips(realSnapshot({ currentDay: 5 }), 'athen', RAHMEN - 4)
-      .filter((t) => islandSequence(t).includes('santorin'));
-    expect(anTag5).toHaveLength(0);
-  });
+    const nichtMehr = enumerateRoundTrips(
+      realSnapshot({ currentDay: letzterTag + 1 }),
+      'athen',
+      RAHMEN - letzterTag,
+    ).filter((t) => islandSequence(t).includes('santorin'));
+    expect(nichtMehr, `Törntag ${letzterTag + 1}`).toHaveLength(0);
+  }, ALLE_SCHICHTEN_MS);
 
   it('Die Ost-Kykladen sind WIEDERHOLUNGSFREI erreichbar — Amorgos, Donousa, die Kleinen Kykladen', () => {
     /**
@@ -444,24 +502,24 @@ describe('Zielmodell v3 — die Hauptroute erfüllt den Vertrag', () => {
   const snapshot = realSnapshot();
   const solved = completePlan(snapshot, 'athen');
 
-  it('Elf Törntage, elf Etappentage, kein Hafentag', () => {
+  it('Vierzehn Törntage, vierzehn Etappentage, kein Hafentag', () => {
     // Beispiel 1: die App lieferte neun Etappen in elf Tagen, weil die
     // Etappenzahl auf Rang 14 von 14 stand und bis zu fünf Hafentage nur ein
     // weicher Strukturbefund waren.
     expect(solved).not.toBeNull();
-    expect(solved!.plan.days).toHaveLength(11);
-    expect(stagesOf(solved!.plan)).toHaveLength(11);
+    expect(solved!.plan.days).toHaveLength(RAHMEN);
+    expect(stagesOf(solved!.plan)).toHaveLength(RAHMEN);
     expect(solved!.plan.days.filter((d) => d.kind === 'harbour')).toHaveLength(0);
   });
 
-  it('Keine Insel zweimal — und elf verschiedene', () => {
+  it('Keine Insel zweimal — und vierzehn verschiedene', () => {
     // Beispiel 2: "Paros–Naxos" war eine gerade Linie hin und zurück, mit
     // fünf Inseln doppelt. Solche Ketten entstanden im Generator "Variante +
     // Rückfallkette", weil die Kette die Umkehrung der Varianten ist.
     const ziele = stagesOf(solved!.plan).map((s) => s.toIslandId);
     const ohneBasis = ziele.filter((id) => id !== 'athen');
     expect(new Set(ohneBasis).size).toBe(ohneBasis.length);
-    expect(new Set(ziele).size).toBe(11);
+    expect(new Set(ziele).size).toBe(RAHMEN);
   });
 
   it('Die Runde beginnt und endet an der Basis', () => {
@@ -783,20 +841,51 @@ describe('Zielmodell v3 — das Routen-Konzept überlebt bis ins Angebot', () =>
 
   it('Die Vorauswahl zieht ihre Quote JE KONZEPT — nicht über das Gesamtfeld', () => {
     const snapshot = realSnapshot();
-    const [schichtA] = [...candidateLayers(snapshot, 'athen')];
-    const nachKonzept = { klassik: 0, ost: 0 };
-    for (const c of schichtA ?? []) {
-      nachKonzept[konzeptOfIslands(routeIslandSequence(c.legs))] += 1;
-    }
+    const zaehle = (cs: Candidate[]): { klassik: number; ost: number } => {
+      const nachKonzept = { klassik: 0, ost: 0 };
+      for (const c of cs) nachKonzept[konzeptOfIslands(routeIslandSequence(c.legs))] += 1;
+      return nachKonzept;
+    };
+
     /**
-     * Die Quote ist 120 je Konzept, und Schicht A hat von beiden mehr als
-     * genug (2947 Runden, davon 188 klassik) — also schöpft jedes Konzept sie
-     * voll aus. Bricht das nach unten weg, kappt wieder etwas quer über die
-     * Konzepte hinweg, und das Angebot verliert eine ganze Strategie.
+     * DAS KLASSISCHE KONZEPT LIEGT IM VIERZEHN-TAGE-RAHMEN NICHT MEHR IN
+     * SCHICHT A — und das ist eine Eigenschaft des Reviers, kein Fehler.
+     *
+     * Eine wiederholungsfreie Runde über vierzehn Etappen braucht dreizehn
+     * verschiedene Inseln ausser der Basis, und so viele hat der Westen nicht:
+     * gemessen an der ausgelieferten Bibliothek sind ALLE 85 452 Runden der
+     * Schicht A „ost" (im Elf-Tage-Rahmen waren 333 von 5192 klassik, bei
+     * zwölf 237, bei dreizehn 86, bei vierzehn keine).
+     *
+     * Genau das tun die professionellen Zwei-Wochen-Vorschläge auch, an denen
+     * `MAX_ZWEITANLAEUFE` kalibriert ist: sie laufen Kythnos zweimal an. Die
+     * klassische Westrunde über vierzehn Tage IST eine Runde mit Zweitanlauf —
+     * also Schicht B, und dort muss sie ankommen.
      */
-    expect(nachKonzept.klassik).toBe(120);
-    expect(nachKonzept.ost).toBe(120);
-  });
+    const [schichtA, schichtB] = [...candidateLayers(snapshot, 'athen')];
+    const inA = zaehle(schichtA ?? []);
+    expect(inA.klassik).toBe(0);
+    expect(inA.ost).toBe(120);
+
+    /**
+     * UND IN SCHICHT B KOMMT ES AN, mit seiner VOLLEN Quote von 120 — obwohl
+     * die Aufzählung dieser Schicht über vierzehn Etappen gekappt ist (2,86
+     * Mio. Runden, gesammelt 120 000, davon gemessen 2382 klassik). Genau das
+     * ist der Sinn der Quote je Konzept: sie zieht ihre Spitzengruppe aus
+     * BEIDEN Konzepten statt aus dem Gesamtfeld. Bricht die Zahl weg, kappt
+     * wieder etwas quer über die Konzepte hinweg, und das Angebot verliert eine
+     * ganze Strategie — der Befund des Skippers vom 2026-08-07.
+     *
+     * Die ost-Zahl ist hier KLEINER (33), und das ist richtig so: Schicht B
+     * lässt Zweitanläufe ZU, verbietet sie aber nicht, ihr Raum ist also eine
+     * Obermenge von Schicht A. Ihre bestgerankten ost-Runden sind deshalb genau
+     * die, die Schicht A schon geliefert hat, und `fresh` gibt keine Kette
+     * zweimal aus. Was übrig bleibt, ist der ost-Zuwachs DURCH den Zweitanlauf.
+     */
+    const inB = zaehle(schichtB ?? []);
+    expect(inB.klassik).toBe(120);
+    expect(inB.ost).toBe(33);
+  }, ALLE_SCHICHTEN_MS);
 
   it('completePlan mit Konzept-Filter liefert nur Runden DIESES Konzepts', () => {
     const snapshot = realSnapshot();
@@ -806,7 +895,7 @@ describe('Zielmodell v3 — das Routen-Konzept überlebt bis ins Angebot', () =>
     expect(istOst(inseln), inseln.join(' > ')).toBe(false);
     expect(konzeptOfPlan(solved!.plan)).toBe('klassik');
     // Und der Rahmen-Vertrag gilt auch für die eingeschränkte Suche.
-    expect(planMetricsFor(snapshot)(solved!).legDays).toBe(11);
+    expect(planMetricsFor(snapshot)(solved!).legDays).toBe(RAHMEN);
   });
 
   it('Ein Ziel im Lee-Korridor bekommt eine Route-1-Antwort, keine Ost-Runde', () => {
@@ -933,9 +1022,19 @@ describe('Zielmodell v3 — Umlaufsinn und Rückweg', () => {
     const solved = completePlan(snapshot, 'athen')!;
     const metrics = planMetricsFor(snapshot)(solved);
 
-    // Der Rahmen-Vertrag hält — und die Richtung jetzt auch.
-    expect(metrics.legDays).toBe(11);
-    expect(metrics.distinctIslands).toBe(11);
+    /**
+     * Der Rahmen-Vertrag hält — und die Richtung jetzt auch.
+     *
+     * DREIZEHN verschiedene Inseln auf vierzehn Etappen: die Runde läuft eine
+     * Insel an einem zweiten Hafen an (Schicht B). Über elf Etappen war die
+     * Gewinnerin noch wiederholungsfrei; über vierzehn gibt es bei NNW 16 kn
+     * keine wiederholungsfreie, die den Lee-Korridor lückenlos hält — und die
+     * Korridor-Treue steht in der Rangfolge über der Inselvielfalt. Genau das
+     * tun die professionellen Zwei-Wochen-Törns auch (siehe
+     * `roundTrips.MAX_ZWEITANLAEUFE`).
+     */
+    expect(metrics.legDays).toBe(RAHMEN);
+    expect(metrics.distinctIslands).toBe(RAHMEN - 1);
     expect(metrics.clockwise).toBe(true);
     // Und der Rückweg bleibt vollständig im Lee-Korridor.
     expect(metrics.rueckwegAbweichung).toBe(0);

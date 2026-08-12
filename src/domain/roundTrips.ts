@@ -67,9 +67,7 @@ import { legIndexWithReverses } from './legs.ts';
 const MAX_LEGS_CEILING = 20;
 
 /**
- * Notbremse gegen einen Raum, der nicht mehr aufzählbar ist. An der
- * ausgelieferten Bibliothek greift sie bei KEINER Schicht — alle drei sind
- * vollständig (5192 / 71 088 / 95 814 Runden über elf Etappen).
+ * Notbremse gegen einen Raum, der nicht mehr aufzählbar ist.
  *
  * Dass sie greift, wird über `RoundTripEnumeration.gekappt` nach oben gemeldet
  * — die alte Bremse schwieg, und eine Suche, die still die halbe Ägäis
@@ -86,8 +84,33 @@ const MAX_LEGS_CEILING = 20;
  * teuer — gemessen fiel die kürzeste Santorin-Runde (acht Etappen) aus dem
  * Ergebnis, weil der Deckel griff, bevor der DFS bei ihr ankam. Genau die Sorte
  * stiller Verzerrung, gegen die der ausgedünnte Graph oben gebaut ist.
- * Gemessen kosten alle drei Schichten zusammen 0,9 s — einmal je Snapshot,
- * danach aus dem Memo (`layerCache`).
+ *
+ * BEI VIERZEHN ETAPPEN GREIFT SIE — und das ist ab 2026-08-12 der Rahmen des
+ * echten Törns (Rückgabe Fr 21.8. statt Di 18.8.). Gemessen an der
+ * ausgelieferten Bibliothek, mit dem Deckel probeweise auf 20 Mio. gesetzt:
+ *
+ *              Etappen     Schicht A        Schicht B        Schicht C
+ *                  11          5 192           71 088           95 814
+ *                  12         14 453        1,2 Mio.*        1,2 Mio.*
+ *                  14         85 452        2 861 717        4 123 050
+ *
+ *   Der Speicher ist die harte Grenze: A 0,13 GB, B 1,2 GB, C 2,7 GB — allein
+ *   für die Arrays der Runden. (*bei 12/13 nur als „über dem Deckel" gemessen.)
+ *
+ * SCHICHT A BLEIBT VOLLSTÄNDIG, und sie ist die, die trägt: `roundTripLayers`
+ * ist lazy, im Normalfall wird B und C nie gefragt (gemessen füllt Schicht A
+ * den Vierzehn-Tage-Rahmen mit vierzehn Etappen und vierzehn verschiedenen
+ * Inseln). Den Deckel dafür auf Millionen zu heben, wäre 2,7 GB und eine
+ * halbe Minute im Browser — für eine Schicht, die nur dann befragt wird, wenn
+ * das Wetter jede volle Runde rot färbt. Die Notantwort ist an Törntag 1
+ * deshalb aus einer Ecke des Raumes gezogen statt aus dem ganzen; ab Törntag 3
+ * (elf Etappen und kürzer) ist wieder alles vollständig, weil der Rahmen mit
+ * jedem Tag schrumpft.
+ *
+ * WER DAS BESSER MACHEN WILL, hebt nicht den Deckel, sondern zählt Schicht C
+ * nach STEIGENDER Etappenzahl auf (kurz zuerst) — dann ist die Notantwort
+ * vollständig, wo sie gebraucht wird. Das ist ein Umbau der Schichtung, kein
+ * Parameter.
  */
 const HARD_CEILING = 120_000;
 
@@ -202,6 +225,31 @@ interface Adjacency {
    * das Pendeln (siehe `dfs`) macht davon ihre einzige Ausnahme.
    */
   grad: (islandId: string) => number;
+  /**
+   * WIE VIELE ETAPPEN MINDESTENS NOCH BIS NACH HAUSE — die Luftlinie in
+   * Etappen, über den Aufzählungs-Graphen gezählt (Breitensuche, einmal je
+   * Bibliothek).
+   *
+   * Sie ist eine ZULÄSSIGE Schranke: Zweitanläufe und die Pendel-Regel können
+   * einen Weg nur verlängern, nie verkürzen. Passt `gefahren + heimHops` nicht
+   * mehr in den Rahmen, gibt es unter diesem Zweig keine geschlossene Runde
+   * mehr — der Zweig darf weg, ohne dass ein Ergebnis verloren geht.
+   *
+   * WARUM SIE DAZUKAM (2026-08-12): ohne sie läuft die Tiefensuche in jede
+   * Sackgasse hinein und erst am Rahmen wieder heraus. Über elf Etappen war das
+   * bezahlbar, über vierzehn nicht. Gemessen an EINER Bewertung der Tagesansicht
+   * (das Etappen-Menü für jeden Törntag, `reach.ts`), auf der echten
+   * Bibliothek:
+   *
+   *                                    ohne Schranke   mit Schranke
+   *     Kette mit Hafentagen an der Basis     7,8 s         2,3 s
+   *     volle Runde über vierzehn Etappen       —           2,0 s
+   *     dieselbe Frage im Elf-Tage-Rahmen     0,9 s         0,5 s
+   *
+   * Die Menge der angebotenen Inseln ist dabei Zeichen für Zeichen dieselbe —
+   * die Schranke schneidet nur Zweige weg, die nie hätten heimkommen können.
+   */
+  heimHops: (islandId: string) => number;
 }
 
 function adjacencyOf(snapshot: PlanningSnapshot): Adjacency {
@@ -309,13 +357,54 @@ function adjacencyOf(snapshot: PlanningSnapshot): Adjacency {
     set.add(leg.toIslandId);
     nachbarn.set(leg.fromIslandId, set);
   }
+  const base = snapshot.params.baseIslandId;
+  /**
+   * Breitensuche RÜCKWÄRTS von der Basis: die Zahl der Etappen, die eine Insel
+   * mindestens von ihr trennt. Unerreichbare Inseln bleiben unendlich weit weg
+   * und werden damit gar nicht erst betreten.
+   */
+  const heim = new Map<string, number>([[base, 0]]);
+  const rueckKanten = new Map<string, string[]>();
+  for (const leg of index.values()) {
+    const list = rueckKanten.get(leg.toIslandId) ?? [];
+    list.push(leg.fromIslandId);
+    rueckKanten.set(leg.toIslandId, list);
+  }
+  const schlange: string[] = [base];
+  for (let i = 0; i < schlange.length; i++) {
+    const node = schlange[i]!;
+    const d = heim.get(node)!;
+    for (const vor of rueckKanten.get(node) ?? []) {
+      if (heim.has(vor)) continue;
+      heim.set(vor, d + 1);
+      schlange.push(vor);
+    }
+  }
+
   return {
-    base: snapshot.params.baseIslandId,
+    base,
     edges,
     index,
     plaetze: (islandId) => plaetzeJeInsel.get(islandId) ?? 0,
     grad: (islandId) => nachbarn.get(islandId)?.size ?? 0,
+    heimHops: (islandId) => heim.get(islandId) ?? Number.POSITIVE_INFINITY,
   };
+}
+
+/**
+ * Der Aufzählungs-Graph, EINMAL je Snapshot. Er hängt nur an der Bibliothek und
+ * der Basis; gebaut wird er aber von jeder Frage, und das Etappen-Menü stellt
+ * vierzehn davon je Bewertung.
+ */
+const adjacencyCache = new WeakMap<PlanningSnapshot, Adjacency>();
+
+function adjacencyFor(snapshot: PlanningSnapshot): Adjacency {
+  let adj = adjacencyCache.get(snapshot);
+  if (!adj) {
+    adj = adjacencyOf(snapshot);
+    adjacencyCache.set(snapshot, adj);
+  }
+  return adj;
 }
 
 interface SearchOpts {
@@ -342,10 +431,74 @@ interface SearchOpts {
   maxRepeats: number;
 }
 
-function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundTripEnumeration {
+/**
+ * DIE TIEFENSUCHE SELBST — einmal geschrieben, zwei Auswertungen.
+ *
+ * `search` sammelt die Runden in ein Array (das ist die Aufzählung, die der
+ * Solver braucht). Das Etappen-MENÜ braucht etwas anderes: nur die Frage
+ * „welche Insel kann als nächste kommen?", und für die ist ein Array aus
+ * Millionen Runden der falsche Weg — es beantwortet eine kleine Frage mit dem
+ * ganzen Raum und läuft in den Deckel (siehe `moeglicheNaechsteInseln`).
+ *
+ * Deshalb läuft die Suche gegen einen BESUCHER: er sieht jede fertige Runde als
+ * `path` + Schluss-Etappe und sagt mit `false`, dass er genug gesehen hat.
+ *
+ * WICHTIG: `path` ist der LEBENDE Pfad der Suche, keine Kopie. Wer ihn behalten
+ * will, kopiert ihn selbst — genau das tut `search`.
+ */
+type TripVisitor = (path: readonly Leg[], closing: Leg, nachPosition: number) => boolean;
+
+/**
+ * DIE VORGESCHICHTE ALS SUCHVORGABE — nicht als Filter hinterher.
+ *
+ * Das Etappen-Menü fragt nach dem Tag N eines Plans, der bis zum Vorabend schon
+ * liegt. Die Runden, die dazu passen, sind ein winziger Teil des Raumes; sie
+ * hinterher herauszufiltern heisst, den ganzen Raum aufzuzählen, um ein paar
+ * Zweige zu behalten. Über vierzehn Etappen ist das nicht mehr bezahlbar.
+ *
+ * Als VORGABE gelesen führt dieselbe Bedingung die Suche: `folge` muss als
+ * Teilfolge in der Runde vorkommen, und ihr letztes Glied darf nicht hinter
+ * `maxPosition` liegen. Beides prunt hart —
+ *
+ *   - Trifft eine Etappe das nächste offene Glied der Folge, MUSS sie es
+ *     belegen (die Zuordnung ist gierig, genau wie die alte Filter-Rechnung in
+ *     `reach.positionNachVorgeschichte`: sie nahm immer das erste Vorkommen).
+ *   - Trifft sie es nicht, ist der Schritt nur erlaubt, solange die restlichen
+ *     Glieder noch vor `maxPosition` unterkommen. Im Regelfall — die Folge ist
+ *     so lang wie die Tage, die sie beschreibt — bleibt damit GENAU der Weg des
+ *     Plans übrig, und die Suche beginnt praktisch am Tag der Frage.
+ *
+ * `bereitsGefunden` ist der zweite Hebel: die Antwort ist eine MENGE von
+ * Inseln, und für jede genügt EINE Runde. Steht eine Insel schon in der Menge,
+ * braucht ihr Zweig nicht noch einmal durchsucht zu werden.
+ */
+export interface VorgabeGlied {
+  insel: string;
+  /** Frühestmögliche und spätestmögliche Position in der Insel-Folge (1-basiert). */
+  minPosition: number;
+  maxPosition: number;
+}
+
+interface Vorgabe {
+  glieder: readonly VorgabeGlied[];
+  /**
+   * Zweige überspringen, deren Insel direkt hinter der Vorgabe schon gefunden
+   * ist. Nur für Fragen, die eine MENGE von Inseln suchen und für jede genau
+   * eine Runde brauchen (`moeglicheNaechsteInseln`) — für die Aufzählung bleibt
+   * die Menge leer.
+   */
+  bereitsGefunden?: ReadonlySet<string>;
+}
+
+function walkRoundTrips(
+  adj: Adjacency,
+  startIslandId: string,
+  opts: SearchOpts,
+  besucher: TripVisitor,
+  vorgabe?: Vorgabe,
+): void {
   const bound = Math.min(Math.max(opts.legCount, 1), MAX_LEGS_CEILING);
-  const out: Leg[][] = [];
-  let gekappt = false;
+  let gestoppt = false;
 
   // Eine Runde ab der Basis braucht mindestens zwei Etappen (hin UND zurück);
   // von unterwegs ist schon die eine Etappe heim ein vollständiger Restplan.
@@ -355,21 +508,46 @@ function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundT
   const anlaeufe = new Map<string, number>([[startIslandId, 1]]);
   let wiederholungen = 0;
   const path: Leg[] = [];
+  /** Wie viele Glieder der Vorgabe schon belegt sind, und an welcher Position. */
+  let belegt = 0;
+  let nachPosition = 0;
+  const glieder = vorgabe?.glieder.length ?? 0;
 
   const accept = (closing: Leg): void => {
     const length = path.length + 1;
     if (length < minLegs) return;
     if (opts.exact && length !== bound) return;
-    out.push([...path, closing]);
+    /**
+     * DIE BASIS KANN DAS LETZTE GLIED SEIN. Sie wird nie durchfahren, steht in
+     * `dfs` also gar nicht zur Wahl — und ein Pin auf sie (der Skipper setzt
+     * „Tag 14 zurück nach Athen") wäre damit unerfüllbar geworden. Sie belegt
+     * ihr Glied deshalb hier, an der Schluss-Etappe, wo sie vorkommt.
+     */
+    let belegtHier = belegt;
+    let nachHier = nachPosition;
+    if (vorgabe !== undefined && belegt === glieder - 1) {
+      const glied = vorgabe.glieder[belegt]!;
+      if (
+        glied.insel === closing.toIslandId &&
+        length >= glied.minPosition &&
+        length <= glied.maxPosition
+      ) {
+        belegtHier = glieder;
+        nachHier = length;
+      }
+    }
+    // Eine Runde, die die Vorgabe nicht vollständig belegt, gehört nicht dazu.
+    if (belegtHier < glieder) return;
+    if (!besucher(path, closing, nachHier)) gestoppt = true;
   };
 
   const dfs = (node: string): void => {
-    if (out.length >= HARD_CEILING) {
-      gekappt = true;
-      return;
-    }
+    if (gestoppt) return;
     for (const leg of adj.edges.get(node) ?? []) {
+      if (gestoppt) return;
       const to = leg.toIslandId;
+      /** Position, die diese Etappe in der Insel-Folge der Runde einnimmt. */
+      const position = path.length + 1;
       if (to === adj.base) {
         // Die Basis wird nie DURCHFAHREN: wer sie erreicht, ist zu Hause.
         accept(leg);
@@ -377,6 +555,34 @@ function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundT
       }
       // Noch mindestens die Schluss-Etappe zur Basis muss danach passen.
       if (path.length + 2 > bound) continue;
+      // Und der Weg nach Hause muss überhaupt noch in den Rahmen passen
+      // (`Adjacency.heimHops` — zulässige Schranke, begründet dort).
+      if (position + adj.heimHops(to) > bound) continue;
+
+      /**
+       * DIE VORGABE FÜHRT DIE SUCHE (Begründung bei `Vorgabe`). Drei Fälle:
+       * das nächste offene Glied wird belegt, es wird übersprungen (nur solange
+       * die restlichen Glieder noch vor `maxPosition` passen), oder die Vorgabe
+       * ist voll und die Insel direkt dahinter ist eine, die schon gefunden ist.
+       */
+      let belegtJetzt = false;
+      if (vorgabe !== undefined) {
+        if (belegt < glieder) {
+          const glied = vorgabe.glieder[belegt]!;
+          // Hinter dem Fenster ist das Glied nicht mehr unterzubringen.
+          if (position > glied.maxPosition) continue;
+          // Die Zuordnung ist GIERIG: das früheste Vorkommen im Fenster belegt
+          // das Glied. Bei Fenstern in aufsteigender Reihenfolge lässt das den
+          // nachfolgenden Gliedern den grössten Spielraum — es kann also keine
+          // Runde verlieren, die die Vorgabe sonst erfüllt hätte.
+          if (to === glied.insel && position >= glied.minPosition) belegtJetzt = true;
+        } else if (
+          position === nachPosition + 1 &&
+          vorgabe.bereitsGefunden?.has(to) === true
+        ) {
+          continue;
+        }
+      }
 
       /**
        * KEIN PENDELN: nicht sofort dorthin zurück, wo man gerade herkam.
@@ -420,7 +626,16 @@ function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundT
 
       anlaeufe.set(to, bisher + 1);
       path.push(leg);
+      const nachPositionVorher = nachPosition;
+      if (belegtJetzt) {
+        belegt++;
+        nachPosition = position;
+      }
       dfs(to);
+      if (belegtJetzt) {
+        belegt--;
+        nachPosition = nachPositionVorher;
+      }
       path.pop();
       anlaeufe.set(to, bisher);
       if (bisher > 0) wiederholungen--;
@@ -428,6 +643,19 @@ function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundT
   };
 
   dfs(startIslandId);
+}
+
+function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundTripEnumeration {
+  const out: Leg[][] = [];
+  let gekappt = false;
+  walkRoundTrips(adj, startIslandId, opts, (path, closing) => {
+    out.push([...path, closing]);
+    if (out.length >= HARD_CEILING) {
+      gekappt = true;
+      return false;
+    }
+    return true;
+  });
   return {
     layer: opts.exact
       ? opts.maxRepeats > 0
@@ -458,6 +686,22 @@ function search(adj: Adjacency, startIslandId: string, opts: SearchOpts): RoundT
  * die Runden noch je Kandidat, und diese Verpackung ist billig.
  */
 const layerCache = new WeakMap<PlanningSnapshot, Map<string, RoundTripEnumeration[]>>();
+
+/** Die drei Schichten als Bauplan — gerechnet wird erst, was gebraucht wird. */
+function bauplanFor(legCount: number): SearchOpts[] {
+  return [
+    // A — der Vertrag: jeder Törntag eine Etappe, jede Insel höchstens einmal.
+    { legCount, exact: true, maxRepeats: 0 },
+    // B — voller Rahmen, bis zu MAX_ZWEITANLAEUFE Zweitanläufe an anderen
+    //     Häfen. Das ist, was die Ost-Kykladen überhaupt in Reichweite bringt:
+    //     Amorgos und die Kleinen Kykladen kommen in KEINER wiederholungsfreien
+    //     Runde vor, mit zwei Zweitanläufen schon.
+    { legCount, exact: true, maxRepeats: MAX_ZWEITANLAEUFE },
+    // C — kürzer als der Rahmen. Restplan von unterwegs, und die FR18-Antwort,
+    //     wenn das Wetter jede volle Runde rot färbt.
+    { legCount, exact: false, maxRepeats: MAX_ZWEITANLAEUFE },
+  ];
+}
 
 export function* roundTripLayers(
   snapshot: PlanningSnapshot,
@@ -497,19 +741,7 @@ export function* roundTripLayers(
   const alle = proSnapshot.get(key) ?? [];
   proSnapshot.set(key, alle);
 
-  /** Die drei Schichten als Bauplan — gerechnet wird erst, was gebraucht wird. */
-  const bauplan: SearchOpts[] = [
-    // A — der Vertrag: jeder Törntag eine Etappe, jede Insel höchstens einmal.
-    { legCount, exact: true, maxRepeats: 0 },
-    // B — voller Rahmen, bis zu MAX_ZWEITANLAEUFE Zweitanläufe an anderen
-    //     Häfen. Das ist, was die Ost-Kykladen überhaupt in Reichweite bringt:
-    //     Amorgos und die Kleinen Kykladen kommen in KEINER wiederholungsfreien
-    //     Runde vor, mit zwei Zweitanläufen schon.
-    { legCount, exact: true, maxRepeats: MAX_ZWEITANLAEUFE },
-    // C — kürzer als der Rahmen. Restplan von unterwegs, und die FR18-Antwort,
-    //     wenn das Wetter jede volle Runde rot färbt.
-    { legCount, exact: false, maxRepeats: MAX_ZWEITANLAEUFE },
-  ];
+  const bauplan = bauplanFor(legCount);
 
   let adj: Adjacency | null = null;
   for (const [i, opts] of bauplan.entries()) {
@@ -518,13 +750,159 @@ export function* roundTripLayers(
       yield gecacht;
       continue;
     }
-    adj ??= adjacencyOf(snapshot);
+    adj ??= adjacencyFor(snapshot);
     const erzeugt = search(adj, startIslandId, opts);
     // VOR dem yield in den Vorrat: ein Aufrufer, der innerhalb seiner Schleife
     // dieselbe Aufzählung noch einmal anstösst, findet sie dann schon vor.
     alle[i] = erzeugt;
     yield erzeugt;
   }
+}
+
+/**
+ * DIE SCHICHTEN, VON EINER VORGABE GEFÜHRT — für eine Suche, die schon weiss,
+ * wo sie hin soll.
+ *
+ * `roundTripLayers` zählt den GANZEN Raum auf und lässt den Aufrufer filtern.
+ * Solange der Raum vollständig aufzählbar ist, ist das das Richtige: einmal
+ * gerechnet, je Snapshot gecacht, von allen Fragen benutzt. Über vierzehn
+ * Etappen ist er es nicht mehr (die Zahlen stehen bei `HARD_CEILING`) — und
+ * dann trifft der Deckel genau die Frage, die der Skipper stellt, wenn er einen
+ * Tag von Hand setzt: „gib mir eine Runde, die an Tag 3 nach Kythnos läuft".
+ * Gemessen bot das Menü vier Ziele an, die der Solver danach ablehnte, nicht
+ * weil es keine Runde gab, sondern weil sie nicht unter den ersten 120 000 der
+ * Tiefensuche stand.
+ *
+ * Mit der Vorgabe fällt der Filter in die Suche: die gepinnten Inseln führen
+ * die Tiefensuche, und der Raum, der übrig bleibt, ist klein. Der genaue Test
+ * bleibt trotzdem stehen (`solver.kannPinTragen`) — die Vorgabe ist die
+ * NOTWENDIGE Bedingung, die Tag-zu-Position-Rechnung des Packers ist die
+ * hinreichende.
+ *
+ * BEWUSST OHNE MEMO: ein geführter Raum ist ein anderer je Vorgabe, und der
+ * Aufrufer cacht ihn schon unter seinem Pin-Schlüssel (`solver.candidateCache`).
+ */
+export function* roundTripLayersGefuehrt(
+  snapshot: PlanningSnapshot,
+  startIslandId: string,
+  legCount: number,
+  glieder: readonly VorgabeGlied[],
+): Generator<RoundTripEnumeration> {
+  const adj = adjacencyFor(snapshot);
+  for (const opts of bauplanFor(legCount)) {
+    const out: Leg[][] = [];
+    let gekappt = false;
+    walkRoundTrips(
+      adj,
+      startIslandId,
+      opts,
+      (path, closing) => {
+        out.push([...path, closing]);
+        if (out.length >= HARD_CEILING) {
+          gekappt = true;
+          return false;
+        }
+        return true;
+      },
+      { glieder },
+    );
+    yield {
+      layer: opts.exact
+        ? opts.maxRepeats > 0
+          ? 'voll-mit-zweitanlauf'
+          : 'voll-ohne-wiederholung'
+        : 'verkuerzt',
+      trips: out,
+      gekappt,
+    };
+  }
+}
+
+/**
+ * WELCHE INSEL KANN ALS NÄCHSTE KOMMEN? — die Frage des Etappen-Menüs, direkt
+ * gestellt statt über den aufgezählten Raum.
+ *
+ * `reach.islandsPossibleNext` hat sie bis 2026-08-12 an den Schichten
+ * beantwortet: alle Runden materialisieren, je Runde die Vorgeschichte als
+ * Teilfolge suchen, die Insel dahinter einsammeln. Über elf Etappen ging das
+ * (71 088 Runden in Schicht B); über VIERZEHN nicht mehr — dort hat Schicht B
+ * 2,86 Mio. Runden, der Deckel greift bei 120 000, und die Tiefensuche sammelt
+ * sie alle aus EINER Ecke des Raumes.
+ *
+ * GEMESSEN AM ECHTEN TÖRN war das kein Randfall: nach „Tag 1 Kea" enthielten
+ * die gekappten Schichten B und C über vierzehn Etappen NICHT EINE EINZIGE
+ * Runde, die überhaupt über Kea läuft. Das Menü an Tag 2 verlor damit Kythnos
+ * — genau die Zusage, die der Skipper am 2026-08-08 beim Namen genannt hatte.
+ *
+ * DIE FRAGE IST ABER KLEIN. Die Antwort kann nie mehr Inseln enthalten, als die
+ * letzte Insel der Vorgeschichte Nachbarn hat — im Revier zwischen zwei und
+ * dreizehn. Sie braucht also keinen aufgezählten Raum, sondern eine Suche, die
+ * unterwegs einsammelt und AUFHÖRT, sobald die Nachbarschaft ausgeschöpft ist.
+ * Genau das steht hier: dieselben Regeln, dieselbe Schichtung, kein Array und
+ * kein Deckel.
+ *
+ * `vorgeschichte` ist der Weg des Plans bis zum Vorabend, als TEILFOLGE
+ * gesucht (nicht als Präfix — dieselbe Regel wie vorher, sie lässt Wartetage
+ * zwischen den Zielen zu), und `maxPosition` begrenzt, wie weit vorne in der
+ * Runde diese Teilfolge enden darf.
+ */
+export function moeglicheNaechsteInseln(
+  snapshot: PlanningSnapshot,
+  startIslandId: string,
+  legCount: number,
+  vorgeschichte: readonly string[],
+  maxPosition: number,
+): Set<string> {
+  const adj = adjacencyFor(snapshot);
+  const out = new Set<string>();
+
+  /**
+   * Die Sättigungsgrenze: mehr als die Nachbarschaft der letzten
+   * Vorgeschichte-Insel kann nicht herauskommen. Ist sie voll, ist die Antwort
+   * fertig und die Suche darf abbrechen — der Normalfall, und mit der Vorgabe
+   * oben der Grund, dass diese Frage auch über vierzehn Etappen billig bleibt.
+   */
+  const letzte = vorgeschichte[vorgeschichte.length - 1] ?? startIslandId;
+  const nachbarschaft = new Set((adj.edges.get(letzte) ?? []).map((l) => l.toIslandId));
+
+  for (const opts of bauplanFor(legCount)) {
+    /**
+     * Die verkürzte Schicht ist die FR18-Notantwort und kein Angebot — solange
+     * die vollen Runden überhaupt etwas hergeben. Dieselbe Regel wie vorher in
+     * `reach.islandsPossibleNext`, nur steht sie jetzt neben der Suche, die sie
+     * betrifft.
+     */
+    if (!opts.exact && out.size > 0) break;
+    if (out.size >= nachbarschaft.size) break;
+    /**
+     * Die Vorgeschichte als Vorgabe: Glied j muss mindestens auf Position j+1
+     * liegen, und das LETZTE nicht hinter `maxPosition` — die Fenster der
+     * vorderen Glieder folgen daraus, sie müssen den hinteren Platz lassen.
+     * Damit steht hier dieselbe Bedingung wie in der alten Filter-Rechnung,
+     * nur führt sie jetzt die Suche.
+     */
+    const glieder: VorgabeGlied[] = vorgeschichte.map((insel, j) => ({
+      insel,
+      minPosition: j + 1,
+      maxPosition: maxPosition - (vorgeschichte.length - 1 - j),
+    }));
+    walkRoundTrips(
+      adj,
+      startIslandId,
+      opts,
+      (path, closing, nachPosition) => {
+        // Die Insel an der Position hinter der Vorgeschichte — ohne die
+        // Insel-Folge der Runde zu bauen.
+        const i = nachPosition + 1;
+        const insel = i === path.length + 1 ? closing.toIslandId : path[i - 1]?.toIslandId;
+        if (insel !== undefined) out.add(insel);
+        // Weitersuchen nur, solange die Nachbarschaft nicht ausgeschöpft ist.
+        return out.size < nachbarschaft.size;
+      },
+      { glieder, bereitsGefunden: out },
+    );
+  }
+  return out;
 }
 
 /**

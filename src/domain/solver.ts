@@ -111,7 +111,12 @@ import {
 import type { KonzeptId } from './schema/konzept.ts';
 import { seaRoute } from './searoute.ts';
 import { sailedLegsByDay } from './legGeometry.ts';
-import { roundTripLayers, type RoundTripLayer } from './roundTrips.ts';
+import {
+  roundTripLayers,
+  roundTripLayersGefuehrt,
+  type RoundTripLayer,
+  type VorgabeGlied,
+} from './roundTrips.ts';
 import { deadlineFrame } from './time.ts';
 import { distanceNm, isClockwise } from './geo.ts';
 import type { Coordinates } from './schema/common.ts';
@@ -539,8 +544,46 @@ export function* candidateLayers(
     return out;
   };
 
+  /**
+   * DER PIN FÜHRT DIE AUFZÄHLUNG, nicht erst den Filter danach (2026-08-12).
+   *
+   * `kannPinTragen` unten bleibt der genaue Test. Er kam aber immer zu spät,
+   * wenn die Aufzählung selbst am Deckel abbrach: über die vierzehn Etappen des
+   * echten Törns hat Schicht B 2,86 Mio. Runden, gesammelt werden 120 000, und
+   * die stammen alle aus einer Ecke des Raumes. Gemessen bot das Etappen-Menü
+   * dann vier Ziele an, die der Solver ablehnte — nicht, weil keine Runde
+   * dorthin führte, sondern weil sie nicht unter den ersten 120 000 stand.
+   *
+   * Dieselben Fenster wie in `kannPinTragen`, nur eben VOR der Suche: die
+   * gepinnten Inseln in Tagesreihenfolge, jede in dem Positionsfenster, das
+   * Wartetage und Doppelschläge ihr lassen. Die Vorgabe ist bewusst die
+   * WEITERE Bedingung (sie kennt die Kettenlänge noch nicht und rechnet mit der
+   * grosszügigsten) — was sie durchlässt, prüft `kannPinTragen` exakt.
+   */
+  const doppelschlaege = Math.max(0, snapshot.params.doppelschlagMaxPerTrip);
+  const gepinnteGlieder: VorgabeGlied[] = pins
+    .filter((pin) => pin.toIslandId !== null)
+    .sort((a, b) => a.day - b.day)
+    .map((pin) => {
+      const position = pin.day - startDay + 1;
+      return {
+        insel: pin.toIslandId!,
+        // Kürzere Ketten schieben die Etappe nach vorn (Wartetage), Doppel-
+        // schlag-Tage nach hinten. Die Kettenlänge steht während der Suche noch
+        // nicht fest, also gilt das weiteste Fenster: eine Kette darf bis auf
+        // zwei Etappen zusammenschrumpfen (roundTrips: minLegs).
+        minPosition: Math.max(1, position - (daysAvailable - 2) - doppelschlaege),
+        maxPosition: position + doppelschlaege,
+      };
+    });
+
+  const schichten =
+    gepinnteGlieder.length === 0
+      ? roundTripLayers(snapshot, startIslandId, daysAvailable)
+      : roundTripLayersGefuehrt(snapshot, startIslandId, daysAvailable, gepinnteGlieder);
+
   let index = -1;
-  for (const layer of roundTripLayers(snapshot, startIslandId, daysAvailable)) {
+  for (const layer of schichten) {
     index++;
     const gecacht = erzeugt[index];
     if (gecacht) {
@@ -564,13 +607,7 @@ export function* candidateLayers(
       pins.length === 0
         ? alle
         : alle.filter((c) =>
-            kannPinTragen(
-              c,
-              pins,
-              startDay,
-              daysAvailable,
-              Math.max(0, snapshot.params.doppelschlagMaxPerTrip),
-            ),
+            kannPinTragen(c, pins, startDay, daysAvailable, doppelschlaege),
           ),
       daysAvailable,
       snapshot,
