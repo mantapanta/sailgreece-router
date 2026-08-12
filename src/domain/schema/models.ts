@@ -59,6 +59,24 @@ export interface ForecastModelInfo {
    * vertauschtes Nah/Fern-Paar auf.
    */
   readonly horizonHours: number;
+  /**
+   * GITTERWEITE IN GRAD — die native Auflösung des Modells.
+   *
+   * Sie ist keine Anzeige, sie ist eine SPARMASSNAHME (2026-08-09, Skipper:
+   * "HTTP 429"): Open-Meteo rechnet sein Ratenlimit aus Orten × Variablen ×
+   * Tagen, und die Bibliothek fragt 585 Orte ab — 97 Liegeplätze und 488
+   * Etappen-Wegpunkte. Zwischen zwei Wegpunkten, die 800 m auseinander liegen,
+   * gibt es aber keine zwei Modellwerte: dasselbe Gitterfeld antwortet zweimal.
+   * Der Adapter rastert die Ortsliste deshalb je Modell auf dessen Gitter und
+   * fragt jede Zelle nur einmal (adapters/openMeteo.ts, `aufModellgitter`).
+   *
+   * Die Zahl ist die grobste Kante des Gitters — bei anisotropen Gittern
+   * (EWAM: dx 0,1° / dy 0,05°) also die FEINERE der beiden, damit die Rasterung
+   * nie gröber wird als das Modell. Gerastert wird zusätzlich auf der HALBEN
+   * Weite: dann liegen zwei Orte einer Zelle sicher im selben Gitterfeld, auch
+   * wenn Open-Meteo nicht exakt auf den nächsten Gitterpunkt greift.
+   */
+  readonly gridDeg: number;
   /** Deckt das Gitter die Kykladen (24–26 °E) ab? */
   readonly coversAegean: boolean;
   /** WARUM (nicht) — diesen Satz zitiert die Fehlermeldung. */
@@ -94,6 +112,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wind',
     label: 'ECMWF IFS 0.25°',
     horizonHours: 360,
+    gridDeg: 0.25,
     coversAegean: true,
     coverageNote: 'global',
     attribution: ECMWF,
@@ -105,6 +124,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wind',
     label: 'ECMWF IFS HRES 9 km',
     horizonHours: 240,
+    gridDeg: 0.09,
     coversAegean: true,
     coverageNote: 'global',
     attribution: ECMWF,
@@ -116,6 +136,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wind',
     label: 'ECMWF AIFS 0.25°',
     horizonHours: 360,
+    gridDeg: 0.25,
     coversAegean: true,
     coverageNote: 'global',
     attribution: ECMWF,
@@ -127,6 +148,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wind',
     label: 'DWD ICON-EU 7 km',
     horizonHours: 120,
+    gridDeg: 0.0625,
     coversAegean: true,
     coverageNote:
       'Gitter 29,5–70,5 °N / 23,5 °W–62,5 °E — die Ägäis liegt vollständig darin',
@@ -139,6 +161,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wind',
     label: 'DWD ICON Global 11 km',
     horizonHours: 180,
+    gridDeg: 0.1,
     coversAegean: true,
     coverageNote: 'global',
     attribution: DWD,
@@ -156,6 +179,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wind',
     label: 'DWD ICON Seamless',
     horizonHours: 180,
+    gridDeg: 0.02,
     coversAegean: true,
     coverageNote: 'global (von Open-Meteo aus D2/EU/Global zusammengesetzt)',
     attribution: DWD,
@@ -173,6 +197,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wind',
     label: 'ItaliaMeteo ARPAE ICON-2I 2 km',
     horizonHours: 60,
+    gridDeg: 0.025,
     coversAegean: false,
     coverageNote:
       'Gitter endet bei 22 °E — die Kykladen liegen bei 24–26 °E. Deckt nur das Ionische Meer ab, nicht das Törnrevier',
@@ -192,6 +217,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wave',
     label: 'Open-Meteo Best Match (MFWAM ~8 km)',
     horizonHours: 240,
+    gridDeg: 0.08,
     coversAegean: true,
     coverageNote: 'global',
     attribution: OPEN_METEO_ONLY,
@@ -209,6 +235,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wave',
     label: 'DWD EWAM 5 km',
     horizonHours: 79,
+    gridDeg: 0.05,
     coversAegean: true,
     coverageNote:
       'Gitter 30–66 °N / 10,5 °W–42 °E — die Ägäis liegt vollständig darin',
@@ -221,6 +248,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wave',
     label: 'DWD GWAM 0.25°',
     horizonHours: 180,
+    gridDeg: 0.25,
     coversAegean: true,
     coverageNote: 'global',
     attribution: DWD,
@@ -232,6 +260,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wave',
     label: 'ECMWF WAM 0.25°',
     horizonHours: 240,
+    gridDeg: 0.25,
     coversAegean: true,
     coverageNote: 'global',
     attribution: ECMWF,
@@ -243,6 +272,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wave',
     label: 'MeteoFrance MFWAM 8 km',
     horizonHours: 240,
+    gridDeg: 0.08,
     coversAegean: true,
     coverageNote: 'global',
     attribution: 'Météo-France / Copernicus Marine',
@@ -254,6 +284,7 @@ export const FORECAST_MODELS: readonly ForecastModelInfo[] = [
     kind: 'wave',
     label: 'NCEP GFS Wave 0.25°',
     horizonHours: 384,
+    gridDeg: 0.25,
     coversAegean: true,
     coverageNote: 'global',
     attribution: 'NOAA NCEP',
@@ -307,6 +338,22 @@ export function nearRequestDays(nearId: string, farDays: number): number {
   const info = BY_ID.get(nearId);
   if (!info) return farDays;
   return Math.max(1, Math.min(farDays, Math.ceil(info.horizonHours / 24)));
+}
+
+/**
+ * Die RASTERWEITE, mit der die Ortsliste für dieses Modell zusammengelegt wird
+ * (`gridDeg`, Feldkommentar) — die halbe Gitterweite, damit zwei Orte einer
+ * Rasterzelle sicher dasselbe Gitterfeld treffen.
+ *
+ * 0 für ein unbekanntes Modell, und das heisst „gar nicht rastern": lieber die
+ * volle Ortsliste abfragen als still Werte teilen, deren Gitter niemand kennt.
+ * Der Adapter weist unbekannte Ids ohnehin vorher ab — das hier ist die
+ * Rückfallebene, keine Erwartung.
+ */
+export function rasterDegFor(modelId: string): number {
+  const info = BY_ID.get(modelId);
+  if (!info || !(info.gridDeg > 0)) return 0;
+  return info.gridDeg / 2;
 }
 
 /**

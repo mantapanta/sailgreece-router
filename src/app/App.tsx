@@ -14,7 +14,11 @@ import { AvatarMenu } from '../ui/components/AvatarMenu.tsx';
 import { DayViewSkeleton } from '../ui/components/DayViewSkeleton.tsx';
 import { MapViewSkeleton } from '../ui/components/MapViewSkeleton.tsx';
 import { staleForecastLabel } from '../ui/dayViewModel.ts';
-import { bibliothekZeile, dateiEbenenSatz } from '../ui/bibliothekProvenienz.ts';
+import {
+  ausSpeicherSatz,
+  bibliothekZeile,
+  dateiEbenenSatz,
+} from '../ui/bibliothekProvenienz.ts';
 import { formatStamp } from '../ui/format.ts';
 import { attributionsFor, forecastModelLabel } from '../domain/schema/models.ts';
 import type { Library } from '../domain/schema/snapshot.ts';
@@ -90,10 +94,18 @@ function RefreshButton({ stale = false }: { stale?: boolean }) {
  * dass diese beiden Ebenen aus den JSON-Dateien der App kommen und nicht aus
  * Firestore — damit sie niemand mehr in der Datenbank sucht.
  */
-function BibliothekZeilen({ library }: { library: Library | null }) {
+function BibliothekZeilen({
+  library,
+  forecastAusSpeicher,
+}: {
+  library: Library | null;
+  forecastAusSpeicher: boolean;
+}) {
   if (!library) return null;
+  const speicher = ausSpeicherSatz(forecastAusSpeicher);
   return (
     <>
+      {speicher && <p>{speicher}</p>}
       <p>{bibliothekZeile(library)}</p>
       <p>{dateiEbenenSatz()}</p>
     </>
@@ -105,7 +117,8 @@ function Shell() {
   /** Footer provenance detail expander (FR13 — meaning never in a tooltip). */
   const [detailOpen, setDetailOpen] = useState(false);
   const planning = usePlanning();
-  const { libraryQuery, forecastQuery, snapshot, assessment } = planning;
+  const { libraryQuery, forecastQuery, forecastAusSpeicher, snapshot, assessment } =
+    planning;
   const { state: tripState, dispatch } = useTrip();
 
   useEffect(() => {
@@ -326,7 +339,10 @@ function Shell() {
               Etappen tragen deshalb Distanz und Kette, aber kein Urteil.
             </p>
             <p>Cache-TTL: {Math.round(STALE_TIME_MS / 3_600_000)} h</p>
-            <BibliothekZeilen library={snapshot?.library ?? null} />
+            <BibliothekZeilen
+              library={snapshot?.library ?? null}
+              forecastAusSpeicher={forecastAusSpeicher}
+            />
           </div>
         )}
         {detailOpen && !ohneWinddaten && (
@@ -351,7 +367,10 @@ function Shell() {
             )}
             <p>Abgerufen: {assessment ? formatStamp(assessment.fetchedAtIso) : '…'}</p>
             <p>Cache-TTL: {Math.round(STALE_TIME_MS / 3_600_000)} h</p>
-            <BibliothekZeilen library={snapshot?.library ?? null} />
+            <BibliothekZeilen
+              library={snapshot?.library ?? null}
+              forecastAusSpeicher={forecastAusSpeicher}
+            />
           </div>
         )}
         <p className="footnote">

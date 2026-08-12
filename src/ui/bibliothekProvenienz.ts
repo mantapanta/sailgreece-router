@@ -40,6 +40,24 @@ export function bibliothekZeile(library: Library): string {
 }
 
 /**
+ * Der Satz zum gesicherten Forecast (adapters/forecastCache.ts) — null, solange
+ * die Zahlen frisch vom Netz kommen.
+ *
+ * Er sagt zweierlei, und das zweite ist das wichtigere: dass etwas dasteht, UND
+ * dass es von vorhin ist. Wie alt genau, steht schon in derselben Zeile
+ * ("abgerufen …") und in der Stale-Markierung davor — hier fehlt also nur noch,
+ * WOHER es kommt, damit niemand einen laufenden Abruf dahinter vermutet.
+ */
+export function ausSpeicherSatz(ausSpeicher: boolean): string | null {
+  if (!ausSpeicher) return null;
+  return (
+    'Diese Zahlen stammen aus dem Gerätespeicher — dem letzten Abruf, der ' +
+    'durchkam. Sobald wieder Netz da ist, ersetzt der nächste Abruf sie von ' +
+    'selbst; bis dahin gilt der Zeitstempel oben.'
+  );
+}
+
+/**
  * Woher die beiden Ebenen kommen, die NICHT in der Datenbank stehen
  * (adapters/firestore.ts, Modulkopf) — ein Satz, damit niemand sie dort sucht.
  */

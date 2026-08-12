@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { bibliothekZeile, dateiEbenenSatz } from '../bibliothekProvenienz.ts';
+import {
+  ausSpeicherSatz,
+  bibliothekZeile,
+  dateiEbenenSatz,
+} from '../bibliothekProvenienz.ts';
 import type { Library } from '../../domain/schema/snapshot.ts';
 
 function bibliothek(over: Partial<Library> = {}): Library {
@@ -45,5 +49,17 @@ describe('dateiEbenenSatz', () => {
     expect(satz).toContain('kitespots.json');
     expect(satz).toContain('nicht aus Firestore');
     expect(satz).toContain('keinen Import');
+  });
+});
+
+describe('ausSpeicherSatz', () => {
+  it('schweigt, solange die Zahlen frisch vom Netz kommen', () => {
+    expect(ausSpeicherSatz(false)).toBeNull();
+  });
+
+  it('nennt den Gerätespeicher UND dass der Zeitstempel oben gilt', () => {
+    const satz = ausSpeicherSatz(true)!;
+    expect(satz).toContain('Gerätespeicher');
+    expect(satz).toContain('Zeitstempel');
   });
 });
