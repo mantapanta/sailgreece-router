@@ -8,7 +8,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchForecastBundle, OpenMeteoError } from '../openMeteo.ts';
+import { aufModellgitter, fetchForecastBundle, OpenMeteoError } from '../openMeteo.ts';
 import { DEFAULT_PARAMS } from '../../domain/schema/params.ts';
 import type { Library } from '../../domain/schema/snapshot.ts';
 import type { Params } from '../../domain/schema/params.ts';
@@ -268,5 +268,134 @@ describe('fetchForecastBundle — Nahfeld/Fernfeld', () => {
     ).rejects.toThrow(/icon_eu/);
     // Kein einziger Abruf — der Fehler kommt vor dem Netz.
     expect(calls).toHaveLength(0);
+  });
+});
+
+/**
+ * RATENLIMIT UND MODELLGITTER (2026-08-09, Skipper: "HTTP 429, in der App
+ * erscheint immer unbewertet").
+ *
+ * Open-Meteo gewichtet nach Orten × Variablen × Tagen. Die beiden Tests-Blöcke
+ * hier nageln die zwei Antworten darauf fest: weniger fragen (Rasterung auf das
+ * Modellgitter) und den 429 als das behandeln, was er ist — ein Kontingent, das
+ * sich von selbst füllt, kein Ausfall.
+ */
+describe('Rasterung auf das Modellgitter', () => {
+  it('legt Orte im selben Gitterfeld zusammen, erster Ort vertritt die Zelle', () => {
+    const orte = [
+      { key: 'platz', coordinates: { lat: 37.4, lon: 25.3 } },
+      { key: 'leg:x:0', coordinates: { lat: 37.4003, lon: 25.3004 } }, // ~40 m
+      { key: 'fern', coordinates: { lat: 36.9, lon: 25.1 } },
+    ];
+    const g = aufModellgitter(orte, 0.125);
+    expect(g.orte.map((o) => o.key)).toEqual(['platz', 'fern']);
+    // Der Wegpunkt liest die Reihe des Platzes, nicht umgekehrt.
+    expect(g.vertreterIndex).toEqual([0, 0, 1]);
+  });
+
+  it('ohne Raster vertritt jeder Ort sich selbst (unbekanntes Modell)', () => {
+    const orte = [
+      { key: 'a', coordinates: { lat: 37.4, lon: 25.3 } },
+      { key: 'b', coordinates: { lat: 37.4001, lon: 25.3001 } },
+    ];
+    const g = aufModellgitter(orte, 0);
+    expect(g.orte).toHaveLength(2);
+    expect(g.vertreterIndex).toEqual([0, 1]);
+  });
+
+  it('fragt einen Wegpunkt neben dem Platz NICHT zweimal ab — und füllt ihn doch', async () => {
+    stubFetch({
+      windFar: [windResp(48, 12, 350), windResp(48, 13, 340)],
+      windNear: [windResp(24, 22, 10), windResp(24, 23, 20)],
+      waveFar: [waveResp(48, 1.0, 200), waveResp(48, 1.1, 210)],
+      waveNear: [waveResp(24, 1.8, 20), waveResp(24, 1.9, 30)],
+    });
+    const eng: Library = {
+      ...library,
+      places: [
+        { id: 'a', coordinates: { lat: 37.4, lon: 25.3 } },
+        { id: 'b', coordinates: { lat: 36.9, lon: 25.1 } },
+        // 40 m neben 'a' — dasselbe Gitterfeld in JEDEM Modell der Registry.
+        { id: 'a-nebenan', coordinates: { lat: 37.4003, lon: 25.3004 } },
+      ] as unknown as Library['places'],
+    };
+    const b = await fetchForecastBundle(eng, params, now);
+
+    // Drei Orte, aber nur zwei Koordinatenpaare je Anfrage.
+    const far = calls.find((u) => u.includes('models=ecmwf_ifs025'))!;
+    expect(far.match(/latitude=([^&]*)/)![1]!.split(',')).toHaveLength(2);
+
+    // Der Nachbar ist trotzdem bewertet — mit den Werten seiner Zelle.
+    expect(Object.keys(b.forecast).sort()).toEqual(['a', 'a-nebenan', 'b']);
+    expect(b.forecast['a-nebenan']!.windKn[0]).toBe(22);
+    expect(b.forecast['a-nebenan']!.windKn[24]).toBe(12);
+    expect(b.forecast['b']!.windKn[24]).toBe(13);
+
+    // Und er teilt sich keinen Speicher mit seinem Vertreter: eine spätere
+    // Korrektur an einem Ort darf nie den anderen mitverändern.
+    expect(b.forecast['a-nebenan']!.windKn).not.toBe(b.forecast['a']!.windKn);
+  });
+});
+
+describe('HTTP 429 — Ratenlimit', () => {
+  /** 429 mit dem Grund im Rumpf, wie Open-Meteo ihn liefert. */
+  function stub429(reason: string, dannGut?: unknown): void {
+    calls.length = 0;
+    let n = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        calls.push(url);
+        if (url.includes('/static/meta.json')) {
+          return { ok: true, json: async () => ({}) } as unknown as Response;
+        }
+        n++;
+        if (n === 1 || dannGut === undefined) {
+          return {
+            ok: false,
+            status: 429,
+            text: async () => JSON.stringify({ error: true, reason }),
+          } as unknown as Response;
+        }
+        return { ok: true, json: async () => dannGut } as unknown as Response;
+      }),
+    );
+  }
+
+  it('nennt den Grund im Fehler statt "HTTP 429"', async () => {
+    stub429('Daily API request limit exceeded. Please try again tomorrow.');
+    await expect(fetchForecastBundle(library, params, now)).rejects.toThrow(
+      /Ratenlimit.*Daily API request limit/s,
+    );
+  });
+
+  it('wiederholt beim TAGES-Limit nicht — jeder weitere Versuch macht es schlimmer', async () => {
+    stub429('Daily API request limit exceeded. Please try again tomorrow.');
+    await expect(fetchForecastBundle(library, params, now)).rejects.toThrow();
+    const proUrl = new Map<string, number>();
+    for (const u of calls.filter((c) => !c.includes('meta.json'))) {
+      proUrl.set(u, (proUrl.get(u) ?? 0) + 1);
+    }
+    expect([...proUrl.values()].every((n) => n === 1)).toBe(true);
+  });
+
+  it('wiederholt beim MINUTEN-Limit und kommt durch', async () => {
+    vi.useFakeTimers();
+    try {
+      stub429('Minutely API request limit exceeded. Please try again in one minute.', [
+        windResp(48, 12, 350),
+        windResp(48, 12, 350),
+      ]);
+      const p = fetchForecastBundle(
+        library,
+        { ...params, forecastModelNear: '', waveModelNear: '' },
+        now,
+      );
+      await vi.runAllTimersAsync();
+      const b = await p;
+      expect(b.forecast['a']!.windKn[0]).toBe(12);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

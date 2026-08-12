@@ -393,6 +393,47 @@ ECMWF-geglättete Werte eingestellt. Ein 7-km-Modell zeigt in den Kanälen
 schärfere Spitzen — Ampeln können dort kippen, wo sie vorher grün waren. Das ist
 gewollt; nachjustiert wird über dieselben Config-Parameter, ohne Redeploy.
 
+#### Ratenlimit: warum jeder Abruf auf das Modellgitter gerastert wird
+
+Open-Meteo gewichtet sein Free-Tier-Kontingent nach **Orten × Variablen ×
+Tagen**, nicht nach Anfragen. Die Bibliothek hat 585 Orte (97 Liegeplätze +
+488 Etappen-Wegpunkte), und vier Modell-Abrufe ergaben damit rund
+**602 Call-Einheiten pro Aktualisierung** — bei einem Minutenlimit von 600.
+Jede Aktualisierung lag also genau auf der Kante: mal ging sie durch, mal kam
+**HTTP 429**, und weil der Fern-Wind das Fundament ist, stand die App danach
+auf „unbewertet". Das Tageslimit (10 000) war nach 16 Aktualisierungen leer.
+
+Behoben wird das dort, wo die Verschwendung sitzt: zwei Wegpunkte 800 m
+auseinander bekommen aus einem 25-km-Gitter **denselben Wert**. Der Adapter
+rastert die Ortsliste deshalb je Modell auf dessen halbe Gitterweite
+(`gridDeg` in `models.ts`, `aufModellgitter` in `openMeteo.ts`) und fragt jede
+Zelle einmal:
+
+| Anfrage | Modell | Orte | Gewicht |
+|---|---|---|---|
+| Wind fern | `ecmwf_ifs025` (0,25°) | 585 → **95** | 167 → 27 |
+| Wind nah | `dwd_icon_eu` (0,0625°) | 585 → **212** | 84 → 30 |
+| Wellen fern | `best_match` (~0,08°) | 585 → **194** | 251 → 83 |
+| Wellen nah | `ewam` (0,05°) | 585 → **234** | 100 → 40 |
+| **gesamt** | | | **602 → 181** (30 %) |
+
+Damit passt eine Aktualisierung wieder deutlich unter das Minutenlimit, und
+das Tageskontingent trägt ~55 statt 16 Aktualisierungen. **Verloren geht
+dabei nichts:** zwei Orte einer Rasterzelle liegen höchstens eine halbe
+Gitterweite auseinander und treffen dasselbe Gitterfeld — es ist derselbe
+Wert, nur einmal geholt. Was die Modelle im Kanal wirklich nicht auflösen,
+beantwortet die kuratierte Topografie-Korrektur (`domain/windTopo.ts`), nicht
+ein zweiter Abruf ins selbe Gitterfeld.
+
+Kommt trotzdem ein 429, unterscheidet der Adapter die drei Kontingente:
+beim **Minutenlimit** wartet er und fragt noch einmal (4 s, dann 12 s), beim
+**Stunden- oder Tageslimit** nicht — das wäre nur mehr Last. Der von
+Open-Meteo genannte Grund steht wörtlich im Fehlerpanel, statt „HTTP 429".
+
+Weitere Hebel, falls es wieder eng wird — beide ohne Redeploy in
+`config/parameters`: `forecastModelNear: ""` und `waveModelNear: ""` schalten
+die Nahfelder ab (−39 %), ein kleineres `forecastDays` kürzt proportional.
+
 **Poseidon (HCMR) ist nicht anbindbar** — nicht aus Mangel an Daten: das
 griechische System verteilt ausschliesslich NetCDF über THREDDS/OPeNDAP, ohne
 CORS, und diese App ist reines Hosting ohne Backend. Bei Open-Meteo ist Poseidon

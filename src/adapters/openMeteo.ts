@@ -30,6 +30,7 @@ import {
   forecastModelIds,
   forecastModelInfo,
   nearRequestDays,
+  rasterDegFor,
   type ForecastKind,
 } from '../domain/schema/models.ts';
 
@@ -118,6 +119,66 @@ export function collectLocations(library: Library): LocationEntry[] {
   return entries;
 }
 
+/**
+ * DIE ORTSLISTE AUF DAS MODELLGITTER LEGEN — die Antwort auf HTTP 429.
+ *
+ * Open-Meteo gewichtet sein Ratenlimit nach Orten × Variablen × Zeitraum, und
+ * diese Bibliothek fragte 585 Orte ab: 97 Liegeplätze plus 488 Etappen-
+ * Wegpunkte. Ein Wegpunkt liegt aber oft wenige hundert Meter neben dem
+ * nächsten, und kein Modell dieser Registry löst das auf — ECMWF IFS025 rechnet
+ * 0,25° (~25 km), ICON-EU 7 km. Die zweite Anfrage kostete Kontingent und
+ * lieferte dieselbe Zahl.
+ *
+ * Gerastert wird deshalb je MODELL auf `rasterDegFor` (die halbe Gitterweite,
+ * schema/models.ts) und je Zelle genau EIN Ort abgefragt; alle übrigen Orte der
+ * Zelle lesen dessen Reihe. Für das Fernfeld schrumpft die Liste damit von 585
+ * auf unter 100 Orte.
+ *
+ * WAS DABEI NICHT VERLOREN GEHT: zwei Orte derselben Zelle liegen höchstens eine
+ * halbe Gitterweite auseinander, treffen also dasselbe Gitterfeld — es ist
+ * derselbe Wert, nur einmal statt zweimal geholt. Was die Modelle im Kanal
+ * wirklich nicht sehen, ist eine andere Frage; die beantwortet die kuratierte
+ * Topografie-Korrektur (domain/windTopo.ts) und nicht ein zweiter Abruf im
+ * selben Gitterfeld.
+ *
+ * VERTRETER IST DER ERSTE ORT DER ZELLE. Die Liegeplätze stehen in
+ * `collectLocations` vor den Wegpunkten — ein Platz vertritt deshalb immer sich
+ * selbst und wird nie von einem Wegpunkt vertreten.
+ */
+export interface Gitterabfrage {
+  /** Ein Vertreter je Zelle — genau diese Orte gehen in die URL. */
+  orte: LocationEntry[];
+  /** Je Original-Ort der Index seines Vertreters in `orte`. */
+  vertreterIndex: number[];
+}
+
+export function aufModellgitter(
+  locations: LocationEntry[],
+  rasterDeg: number,
+): Gitterabfrage {
+  // Kein Raster (unbekanntes Modell): jeder Ort vertritt sich selbst. Damit ist
+  // das Verhalten bitgleich dem von vor der Rasterung.
+  if (!(rasterDeg > 0)) {
+    return { orte: locations, vertreterIndex: locations.map((_, i) => i) };
+  }
+  const orte: LocationEntry[] = [];
+  const vertreterIndex: number[] = [];
+  const zelle = new Map<string, number>();
+  for (const loc of locations) {
+    const key = `${Math.round(loc.coordinates.lat / rasterDeg)}:${Math.round(
+      loc.coordinates.lon / rasterDeg,
+    )}`;
+    let idx = zelle.get(key);
+    if (idx === undefined) {
+      idx = orte.length;
+      zelle.set(key, idx);
+      orte.push(loc);
+    }
+    vertreterIndex.push(idx);
+  }
+  return { orte, vertreterIndex };
+}
+
 /** API returns UTC times without suffix ("2026-08-08T00:00") — normalize. */
 function toIsoUtc(t: string): string {
   return t.endsWith('Z') || t.includes('+') ? t : `${t}Z`;
@@ -160,19 +221,72 @@ function toTimedSeries(
   return { times, values };
 }
 
+/**
+ * HTTP 429 — das Ratenlimit, und warum es hier eine eigene Behandlung hat.
+ *
+ * Open-Meteo führt DREI Kontingente (Minute, Stunde, Tag) und nennt im Rumpf
+ * der 429-Antwort, welches gerissen ist. Der Unterschied entscheidet, was
+ * sinnvoll ist: ein Minuten-Limit ist in Sekunden vorbei und ein zweiter
+ * Versuch lohnt; ein Tageslimit ist bis Mitternacht UTC zu, und jeder weitere
+ * Versuch macht es nur schlimmer. Deshalb wird nur beim Minuten-Limit
+ * wiederholt — und der Grund wandert wörtlich in die Fehlermeldung, damit im
+ * Fehlerpanel „Ratenlimit, morgen wieder" steht statt „HTTP 429".
+ */
+const RETRY_WARTEN_MS = [4_000, 12_000] as const;
+
+function schlafen(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Der von Open-Meteo genannte Grund, gekürzt — leer, wenn keiner dasteht. */
+async function limitGrund(resp: Response): Promise<string> {
+  try {
+    const text = await resp.text();
+    const reason = (JSON.parse(text) as { reason?: unknown }).reason;
+    return typeof reason === 'string' ? reason.slice(0, 200) : '';
+  } catch {
+    return '';
+  }
+}
+
+/** Nur das MINUTEN-Kontingent ist es wert, gleich noch einmal zu fragen. */
+function lohntWiederholung(grund: string): boolean {
+  return /minut/i.test(grund);
+}
+
 async function fetchJson(
   url: string,
   endpoint: 'forecast' | 'marine',
   model: string,
 ): Promise<unknown> {
   let resp: Response;
-  try {
-    resp = await fetch(url);
-  } catch (e) {
-    throw new OpenMeteoError(
-      `Open-Meteo ${endpoint} (${model}) nicht erreichbar: ${String(e)}`,
-      endpoint,
+  for (let versuch = 0; ; versuch++) {
+    try {
+      resp = await fetch(url);
+    } catch (e) {
+      throw new OpenMeteoError(
+        `Open-Meteo ${endpoint} (${model}) nicht erreichbar: ${String(e)}`,
+        endpoint,
+      );
+    }
+    if (resp.status !== 429) break;
+
+    const grund = await limitGrund(resp);
+    const wartenMs = RETRY_WARTEN_MS[versuch];
+    if (wartenMs === undefined || !lohntWiederholung(grund)) {
+      throw new OpenMeteoError(
+        `Open-Meteo ${endpoint} (${model}): Ratenlimit erreicht (HTTP 429)` +
+          (grund ? ` — ${grund}` : '') +
+          '. Der Abruf zählt nach Orten × Variablen × Tagen; das Kontingent ' +
+          'füllt sich von selbst wieder auf.',
+        endpoint,
+      );
+    }
+    console.warn(
+      `Open-Meteo ${endpoint} (${model}): Minuten-Ratenlimit — neuer Versuch in ` +
+        `${Math.round(wartenMs / 1000)} s (${grund})`,
     );
+    await schlafen(wartenMs);
   }
   if (!resp.ok) {
     throw new OpenMeteoError(
@@ -323,14 +437,18 @@ export async function fetchForecastBundle(
    *
    * Geteilt wird deshalb nach ORTEN, nicht nach Modellen: jeder Block fragt
    * dieselben Stunden und dasselbe Modell, die Antworten werden IN DERSELBEN
-   * REIHENFOLGE aneinandergehängt. Damit bleibt `windFarList[li]` weiterhin der
-   * Ort `locations[li]` — die Zuordnung unten hängt an dieser Reihenfolge.
+   * REIHENFOLGE aneinandergehängt. Die Zuordnung unten hängt an dieser
+   * Reihenfolge — seit der Rasterung nicht mehr direkt auf `locations`, sondern
+   * über `Gitterabfrage.vertreterIndex` auf die abgefragte Vertreterliste.
    */
   const ORTE_JE_ANFRAGE = 150;
-  const bloecke: LocationEntry[][] = [];
-  for (let i = 0; i < locations.length; i += ORTE_JE_ANFRAGE) {
-    bloecke.push(locations.slice(i, i + ORTE_JE_ANFRAGE));
-  }
+  const bloecken = (orte: LocationEntry[]): LocationEntry[][] => {
+    const out: LocationEntry[][] = [];
+    for (let i = 0; i < orte.length; i += ORTE_JE_ANFRAGE) {
+      out.push(orte.slice(i, i + ORTE_JE_ANFRAGE));
+    }
+    return out;
+  };
   const koordinaten = (block: LocationEntry[]): { lats: string; lons: string } => ({
     lats: block.map((l) => l.coordinates.lat.toFixed(4)).join(','),
     lons: block.map((l) => l.coordinates.lon.toFixed(4)).join(','),
@@ -378,12 +496,32 @@ export async function fetchForecastBundle(
     urlFor: (block: LocationEntry[]) => string,
     endpoint: 'forecast' | 'marine',
     model: string,
+    gitter: Gitterabfrage,
   ): Promise<unknown[]> => {
     const teile = await Promise.all(
-      bloecke.map((block) => fetchJson(urlFor(block), endpoint, model)),
+      bloecken(gitter.orte).map((block) => fetchJson(urlFor(block), endpoint, model)),
     );
     return teile.flatMap((t) => asList(t));
   };
+
+  /**
+   * Je Modell sein eigenes Raster (`aufModellgitter`). Vier Anfragen, vier
+   * Ortslisten: das grobe Fernfeld fragt weniger Punkte als das feine Nahfeld,
+   * weil es ohnehin weniger unterscheiden kann.
+   */
+  const windFarGitter = aufModellgitter(locations, rasterDegFor(windFar));
+  const windNearGitter =
+    windNear === '' ? windFarGitter : aufModellgitter(locations, rasterDegFor(windNear));
+  const waveFarGitter = aufModellgitter(locations, rasterDegFor(waveFar));
+  const waveNearGitter =
+    waveNear === '' ? waveFarGitter : aufModellgitter(locations, rasterDegFor(waveNear));
+  console.info(
+    `Open-Meteo: ${locations.length} Orte → abgefragt ${windFarGitter.orte.length} ` +
+      `(${windFar}), ${windNear === '' ? 0 : windNearGitter.orte.length} (${windNear || 'kein Nahfeld'}), ` +
+      `${waveFarGitter.orte.length} (${waveFar}), ` +
+      `${waveNear === '' ? 0 : waveNearGitter.orte.length} (${waveNear || 'kein Nahfeld'}) — ` +
+      'je Modellgitter zusammengelegt.',
+  );
 
   /**
    * Eine NAH-Anfrage darf nie ein Fehler werden: sie ist eine Verbesserung, kein
@@ -407,7 +545,12 @@ export async function fetchForecastBundle(
   ] = await Promise.all([
     // Das Fernfeld des WINDES ist das einzige Fundament: sein Fehler bleibt
     // ungefangen und erreicht das Fehlerpanel (unverändert zu vorher).
-    fetchAlle((b) => windUrl(b, windFar, params.forecastDays), 'forecast', windFar),
+    fetchAlle(
+      (b) => windUrl(b, windFar, params.forecastDays),
+      'forecast',
+      windFar,
+      windFarGitter,
+    ),
     windNear === ''
       ? Promise.resolve(null)
       : optional(
@@ -415,13 +558,19 @@ export async function fetchForecastBundle(
             (b) => windUrl(b, windNear, nearRequestDays(windNear, params.forecastDays)),
             'forecast',
             windNear,
+            windNearGitter,
           ),
           `Nahfeld-Wind (${windNear})`,
         ),
     // Marine failure must not kill the wind forecast: waves become null
     // and places show 'unbewertet' contributions instead of a crash.
     optional(
-      fetchAlle((b) => waveUrl(b, waveFar, params.forecastDays), 'marine', waveFar),
+      fetchAlle(
+        (b) => waveUrl(b, waveFar, params.forecastDays),
+        'marine',
+        waveFar,
+        waveFarGitter,
+      ),
       `Wellen (${waveFar})`,
     ),
     waveNear === ''
@@ -431,6 +580,7 @@ export async function fetchForecastBundle(
             (b) => waveUrl(b, waveNear, nearRequestDays(waveNear, params.forecastDays)),
             'marine',
             waveNear,
+            waveNearGitter,
           ),
           `Nahfeld-Wellen (${waveNear})`,
         ),
@@ -453,20 +603,37 @@ export async function fetchForecastBundle(
   let windReach = 0;
   let waveReach = 0;
 
+  /**
+   * Die Antwort für DIESEN Ort: nicht mehr `liste[li]`, sondern die Reihe seines
+   * Gitter-Vertreters. Zwei Orte derselben Zelle lesen dieselbe Antwort — und
+   * bekommen daraus trotzdem je eigene Arrays, weil `toTimedSeries`/`seriesOf`
+   * pro Aufruf neu anlegen. Kein Ort teilt sich also einen Speicher mit einem
+   * anderen; die Serien sind Kopien, keine Verweise.
+   */
+  const antwort = (
+    liste: HourlyResponse[] | null,
+    gitter: Gitterabfrage,
+    li: number,
+  ): HourlyResponse | undefined => {
+    if (!liste) return undefined;
+    const idx = gitter.vertreterIndex[li];
+    return idx === undefined ? undefined : liste[idx];
+  };
+
   locations.forEach((loc, li) => {
     // Wind: verschmelzen. Die Umreihung auf die normative Achse steckt in
     // alignToAxis — das ersetzt die frühere per-Ort-Achsprüfung UND die
     // Marine-Umreihung, die es hier zweimal getrennt gab.
     const wind = mergeNearFar(
       times,
-      toTimedSeries(windNearList?.[li], WIND_NAMES),
-      toTimedSeries(windFarList[li], WIND_NAMES),
+      toTimedSeries(antwort(windNearList, windNearGitter, li), WIND_NAMES),
+      toTimedSeries(antwort(windFarList, windFarGitter, li), WIND_NAMES),
       WIND_GROUP,
     );
     const wave = mergeNearFar(
       times,
-      toTimedSeries(waveNearList?.[li], WAVE_NAMES),
-      toTimedSeries(waveFarList?.[li], WAVE_NAMES),
+      toTimedSeries(antwort(waveNearList, waveNearGitter, li), WAVE_NAMES),
+      toTimedSeries(antwort(waveFarList, waveFarGitter, li), WAVE_NAMES),
       WAVE_GROUP,
     );
     windReach = Math.max(windReach, wind.nearReachHours);
