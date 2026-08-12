@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadLibraryBundle } from '../adapters/firestore.ts';
+import { ladeForecast, speichereForecast } from '../adapters/forecastCache.ts';
 import {
   collectLocations,
   fetchForecastBundle,
@@ -115,13 +116,56 @@ export function usePlanningEngine() {
     [library],
   );
 
+  /**
+   * DER GESICHERTE STAND VOM LETZTEN MAL (adapters/forecastCache.ts).
+   *
+   * Er ist der STARTWERT der Abfrage, nicht ihr Ersatz: TanStack Query bekommt
+   * ihn als `initialData` samt seinem echten Abrufzeitpunkt, hält ihn deshalb
+   * für so alt wie er ist und lädt sofort nach. Zwei Dinge fallen dabei ab, und
+   * beide sind der Punkt:
+   *   - Ein Kaltstart OHNE NETZ zeigt die Planung statt lauter 'unbewertet' —
+   *     mit der Stale-Markierung der Fusszeile und dem Fehlerpanel darüber.
+   *   - Ein Neuladen INNERHALB der TTL kostet gar keinen Abruf mehr. Das ist
+   *     nebenbei die zweite Hälfte der Ratenlimit-Frage: auf dem Handy war
+   *     bisher jedes Neuladen ein voller Abruf.
+   *
+   * Der Schlüssel ist derselbe, an dem auch der Query-Cache hängt (Modellwahl +
+   * Ortsmenge) — ein Stand, der nicht dazu passt, wird nicht angefasst.
+   */
+  const forecastCacheId =
+    bundle && libHash ? `${forecastCacheKey(bundle.params)}|${libHash}` : null;
+  const gespeichert = useMemo(
+    () => (forecastCacheId ? ladeForecast(forecastCacheId) : null),
+    [forecastCacheId],
+  );
+
   const forecastQuery = useQuery({
     queryKey: ['forecast', bundle ? forecastCacheKey(bundle.params) : null, libHash],
     queryFn: () => fetchForecastBundle(library!, bundle!.params),
     enabled: !!bundle && !!library,
     staleTime: STALE_TIME_MS,
     refetchInterval: STALE_TIME_MS,
+    ...(gespeichert
+      ? {
+          initialData: gespeichert.bundle,
+          initialDataUpdatedAt: gespeichert.updatedAtMs,
+        }
+      : {}),
   });
+
+  /**
+   * Jeden ECHTEN Abruf sichern — nicht den Startwert, den wir gerade selbst
+   * gelesen haben (das wäre dieselbe Zeichenkette ein zweites Mal geschrieben).
+   */
+  useEffect(() => {
+    const data = forecastQuery.data;
+    if (!forecastCacheId || !data || data === gespeichert?.bundle) return;
+    speichereForecast(forecastCacheId, data);
+  }, [forecastCacheId, forecastQuery.data, gespeichert]);
+
+  /** Zeigt die App gerade den gesicherten Stand? Nur für die Herkunftszeile. */
+  const forecastAusSpeicher =
+    !!gespeichert && forecastQuery.data === gespeichert.bundle;
 
   /**
    * DER FORECAST DIESES LAUFS — oder der windfreie Stand.
@@ -460,6 +504,8 @@ export function usePlanningEngine() {
   return {
     libraryQuery,
     forecastQuery,
+    /** Der gezeigte Forecast stammt aus dem Gerätespeicher, nicht vom Netz. */
+    forecastAusSpeicher,
     bundle: bundle ?? null,
     snapshot,
     assessment,

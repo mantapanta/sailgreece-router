@@ -477,12 +477,48 @@ ist die Sicherheitsfrage, und ein Mittelwert hat darauf keine Antwort.
 Was ohne Daten bleibt, bleibt leer: ein Ort ohne einen einzigen echten Wert
 wird nicht erfunden, er bleibt `unbewertet`.
 
+### Der letzte Forecast überlebt den Neustart
+
+Der Abruf lag bisher nur im Speicher der Seite. Auf dem Handy heisst das: jedes
+Neuladen ist ein Kaltstart, und ohne Netz — Funkloch zwischen zwei Inseln,
+Ratenlimit, Captive Portal in der Marina — stand die ganze Planung auf
+„unbewertet", obwohl zwanzig Minuten vorher noch ein vollständiger Forecast da
+war. Der letzte erfolgreiche Abruf liegt deshalb im `localStorage`
+(`src/adapters/forecastCache.ts`) und ist beim nächsten Start der **Startwert**
+der Abfrage — nicht ihr Ersatz: TanStack Query bekommt ihn samt echtem
+Abrufzeitpunkt, hält ihn für so alt wie er ist und lädt sofort nach.
+
+Zwei Dinge fallen dabei ab, und beide sind der Punkt:
+
+- Ein **Kaltstart ohne Netz** zeigt die Planung statt lauter „unbewertet" —
+  mit der Stale-Markierung der Fusszeile und dem Fehlerpanel darüber.
+- Ein **Neuladen innerhalb der TTL** (1 h) kostet gar keinen Abruf mehr. Das
+  ist nebenbei die zweite Hälfte der Ratenlimit-Frage oben: bisher war jedes
+  Neuladen ein voller Abruf.
+
+**Nichts wird frischer gemacht, als es ist.** Gespeichert wird das Bundle mit
+seinem `fetchedAtIso`; Alter und Stale-Markierung rechnet die Fusszeile daraus
+wie bisher, und die Herkunfts-Aufklappung sagt zusätzlich, dass die Zahlen aus
+dem Gerätespeicher stammen. Drei Gründe schliessen die Nutzung hart aus:
+ein **anderer Schlüssel** (andere Modellwahl oder Ortsmenge — das wäre kein
+alter, sondern ein falscher Forecast), eine **Achse ganz in der Vergangenheit**
+(er sagt über heute nichts mehr) und ein **unlesbarer Eintrag** (fliegt still
+raus). Volle Quota oder Privatmodus bleiben folgenlos: der Speicher ist eine
+Bequemlichkeit, kein Vertrag.
+
+Damit er überhaupt hineinpasst, werden **inhaltsgleiche Reihen einmal**
+abgelegt: 585 Orte × 5 Reihen × 240 Stunden wären als JSON ~4,7 MB, mehr als
+die ~5 MB des ganzen Origins. Seit der Rasterung auf das Modellgitter sind
+viele Reihen bitgleich — gespeichert werden ~1,2 MB, und das ist keine
+Näherung, verglichen wird der Inhalt.
+
 ### Und wenn gar kein Forecast kommt
 
 Antwortet Open-Meteo überhaupt nicht — Netz weg, HTTP 429 am Ratenlimit — und
-liegt auch kein früherer Datenstand im Query-Cache, dann tritt der **windfreie
-Stand** an seine Stelle (`OHNE_FORECAST` in `src/adapters/openMeteo.ts`): ein
-Bundle mit leerer Stundenachse und leerer Ortsmenge.
+liegt auch kein früherer Datenstand im Query-Cache **oder im Gerätespeicher**,
+dann tritt der **windfreie Stand** an seine Stelle (`OHNE_FORECAST` in
+`src/adapters/openMeteo.ts`): ein Bundle mit leerer Stundenachse und leerer
+Ortsmenge.
 
 Der Törn bleibt damit **planbar**. Vom Wetter hängt nur ein Teil der Planung
 ab — die Bewertung; Inseln, Plätze, Etappen, Distanzen und die Kette der Tage

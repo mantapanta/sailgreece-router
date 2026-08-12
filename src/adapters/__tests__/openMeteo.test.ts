@@ -261,6 +261,28 @@ describe('fetchForecastBundle — Nahfeld/Fernfeld', () => {
     expect(meta.some((u) => u.includes('best_match'))).toBe(false);
   });
 
+  /**
+   * Der Speicher (adapters/forecastCache.ts) legt die Annahme-Markierungen NICHT
+   * ab, sondern setzt sie beim Lesen auf false — weil der Adapter nur Fakten
+   * liefert und die Fortschreibung erst danach in der Domäne passiert
+   * (domain/persistence.ts). Fiele diese Zusage, würde der Speicher stumm eine
+   * Annahme verschlucken. Deshalb steht sie hier als Test.
+   */
+  it('liefert NUR Fakten: keine Stunde ist als Annahme markiert', async () => {
+    stubFetch({
+      windFar: [windResp(48, 12, 350), windResp(48, 12, 350)],
+      windNear: [windResp(24, 22, 10), windResp(24, 22, 10)],
+      waveFar: [waveResp(24, 1.0), waveResp(24, 1.0)],
+      waveNear: [waveResp(24, 1.8, 20), waveResp(24, 1.8, 20)],
+    });
+    const b = await fetchForecastBundle(library, params, now);
+    for (const fc of Object.values(b.forecast)) {
+      expect(fc.windAssumed.every((v) => v === false)).toBe(true);
+      expect(fc.waveAssumed.every((v) => v === false)).toBe(true);
+      expect(fc.windAdjusted).toBeUndefined();
+    }
+  });
+
   it('nennt eine unbekannte Modell-Id im Fehler statt leer zu liefern', async () => {
     stubFetch({});
     await expect(
