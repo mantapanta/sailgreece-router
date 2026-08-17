@@ -27,12 +27,18 @@
  * ausserdem über der 30-sm-Grenze. Angeboten wurde also ein Ziel, das die
  * Suche strukturell nie erreichen konnte.
  *
- * DESHALB FRAGT DER FILTER JETZT DIESELBE AUFZÄHLUNG, die auch der Solver
- * benutzt: angeboten wird eine Insel für Tag N, wenn eine der aufgezählten
- * Runden sie an Tag N ansteuern kann (`roundTripLayers`, Wartetage
- * eingerechnet). Das ist die einzige Bedingung, die hält, was das Menü
- * verspricht — jede andere ist ein Stellvertreter, der irgendwann auseinander
- * läuft.
+ * DESHALB FRAGT DER FILTER JETZT DIESELBE SUCHE, die auch der Solver benutzt:
+ * angeboten wird eine Insel für Tag N, wenn eine Runde sie an Tag N ansteuern
+ * kann (`roundTrips.moeglicheNaechsteInseln`, Wartetage eingerechnet). Das ist
+ * die einzige Bedingung, die hält, was das Menü verspricht — jede andere ist
+ * ein Stellvertreter, der irgendwann auseinander läuft.
+ *
+ * SUCHE, NICHT AUFZÄHLUNG (2026-08-12): bis dahin lief der Filter über die
+ * MATERIALISIERTEN Schichten (`roundTripLayers`) und suchte in jeder Runde die
+ * Vorgeschichte. Im Vierzehn-Tage-Rahmen des echten Törns ist dieser Raum
+ * millionenschwer und wird gekappt — das Menü verlor damit Ziele, die es gibt.
+ * Die Frage ist aber klein und wird jetzt direkt gestellt; die Messreihe steht
+ * an der Funktion.
  *
  * DIE TAGE DAVOR BLEIBEN STEHEN. Bis 2026-08-07 band ein Pin nur seinen
  * eigenen Tag, und der Solver legte den Törn ab der aktuellen Position neu —
@@ -63,8 +69,8 @@
 
 import type { PlanningSnapshot } from './schema/snapshot.ts';
 import { bearingDeg, distanceNm, normDeg, twaDeg } from './geo.ts';
-import { islandSequence, legIndexWithReverses } from './legs.ts';
-import { roundTripLayers, type RoundTripEnumeration } from './roundTrips.ts';
+import { legIndexWithReverses } from './legs.ts';
+import { moeglicheNaechsteInseln } from './roundTrips.ts';
 import { deadlineFrame, hourIndices, legWindow } from './time.ts';
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -126,8 +132,8 @@ export interface Planlage {
 
 /**
  * Welche Insel kann NACH dieser Vorgeschichte das nächste Tagesziel sein —
- * gelesen aus DEM Kandidatenraum, den auch der Solver durchsucht
- * (`roundTripLayers`).
+ * gefragt an DER Suche, die auch der Solver benutzt
+ * (`roundTrips.moeglicheNaechsteInseln`).
  *
  * DIE VORGESCHICHTE BESTIMMT DIE POSITION. Weil die Tage vor dem geänderten
  * gehalten werden (`solver.Pin.gehalten`), muss die Runde bis dorthin genau
@@ -169,48 +175,6 @@ export interface Planlage {
  */
 const tagszieleCache = new WeakMap<PlanningSnapshot, Map<string, Set<string>>>();
 
-/**
- * Position der LETZTEN Vorgeschichte-Insel in der Kette, oder null, wenn die
- * Kette die Vorgeschichte nicht in dieser Reihenfolge enthält. 0 heisst
- * "keine Vorgeschichte" — die Startinsel selbst.
- */
-function positionNachVorgeschichte(
-  islands: string[],
-  vorgeschichte: string[],
-  maxPosition: number,
-): number | null {
-  let p = 0;
-  for (const id of vorgeschichte) {
-    let gefunden = -1;
-    for (let k = p + 1; k < islands.length; k++) {
-      if (islands[k] === id) {
-        gefunden = k;
-        break;
-      }
-    }
-    if (gefunden < 0) return null;
-    p = gefunden;
-  }
-  return p <= maxPosition ? p : null;
-}
-
-/**
- * Die Insel-Folgen einer Schicht, EINMAL gebaut. Die Schicht-Objekte selbst
- * sind je Snapshot gecacht (roundTrips.layerCache), ihre Identität also stabil
- * — und Schicht B trägt über 45 000 Runden, die sonst für jeden Törntag neu
- * durchgerechnet würden.
- */
-const sequenzCache = new WeakMap<RoundTripEnumeration, string[][]>();
-
-function sequenzenOf(layer: RoundTripEnumeration): string[][] {
-  let seqs = sequenzCache.get(layer);
-  if (!seqs) {
-    seqs = layer.trips.map(islandSequence);
-    sequenzCache.set(layer, seqs);
-  }
-  return seqs;
-}
-
 function islandsPossibleNext(
   snapshot: PlanningSnapshot,
   lage: Planlage,
@@ -235,23 +199,27 @@ function islandsPossibleNext(
    * die über dieselbe Insel an Tag 10 nach Hause fährt.
    */
   const maxPosition = Math.max(0, day - startDay);
-  const out = new Set<string>();
-  for (const layer of roundTripLayers(snapshot, lage.startIslandId, daysAvailable)) {
-    /**
-     * Die verkürzte Schicht ist die FR18-Notantwort und kein Angebot — solange
-     * die vollen Runden überhaupt etwas hergeben. Geben sie nichts her (ein
-     * Revier, in dem keine Runde den Rahmen füllt), ist sie die einzige
-     * Antwort, die es gibt, und dann steht ihr Ziel auch im Menü: ein leeres
-     * Menü macht den Tag unbearbeitbar.
-     */
-    if (layer.layer === 'verkuerzt' && out.size > 0) break;
-    for (const islands of sequenzenOf(layer)) {
-      const p = positionNachVorgeschichte(islands, lage.vorgeschichte, maxPosition);
-      if (p === null) continue;
-      const naechste = islands[p + 1];
-      if (naechste !== undefined) out.add(naechste);
-    }
-  }
+  /**
+   * DIE FRAGE GEHT AN DIE SUCHE, NICHT AN DEN AUFGEZÄHLTEN RAUM (2026-08-12).
+   *
+   * Hier stand bis dahin eine Schleife über die materialisierten Schichten:
+   * jede Runde als Insel-Folge, Vorgeschichte als Teilfolge, Insel dahinter
+   * einsammeln. Über elf Etappen trug das; über die vierzehn des echten Törns
+   * nicht mehr — Schicht B hat dort 2,86 Mio. Runden, der Deckel greift bei
+   * 120 000, und gemessen enthielten die gekappten Schichten nach „Tag 1 Kea"
+   * keine einzige Runde über Kea. Das Menü verlor Ziele, die es gibt.
+   *
+   * `moeglicheNaechsteInseln` stellt dieselbe Frage mit denselben Regeln, nur
+   * ohne Array und ohne Deckel: es sammelt während der Suche ein und hört auf,
+   * sobald die Nachbarschaft ausgeschöpft ist (Begründung dort).
+   */
+  const out = moeglicheNaechsteInseln(
+    snapshot,
+    lage.startIslandId,
+    daysAvailable,
+    lage.vorgeschichte,
+    maxPosition,
+  );
   proSnapshot.set(key, out);
   return out;
 }

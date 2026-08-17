@@ -19,7 +19,7 @@ import {
   truncateForecast,
 } from './fixtures.ts';
 import { TEST_POLAR } from './fixtures.ts';
-import { dateForTripDay } from '../time.ts';
+import { dateForTripDay, deadlineFrame } from '../time.ts';
 import type {
   PlanningSnapshot,
   RouteOptionAssessment,
@@ -116,7 +116,15 @@ function twoIslandSnapshot(opts: {
       name: 'Rückfallkette West',
     }),
   ];
-  const times = makeTimes(12);
+  /**
+   * DIE ACHSE MUSS DEN TÖRNRAHMEN TRAGEN, sonst prüfen diese Fälle den
+   * Horizont statt den Kalender. Sie stand fest auf zwölf Tagen und wurde
+   * damit am 2026-08-12 zur bindenden Grenze, als der Rahmen auf vierzehn
+   * Törntage wuchs: der Schließtag-Scan lief über die Achse hinaus, und aus
+   * „schliesst"/„zu" wurde „offen-horizont". Deshalb kommt sie jetzt AUS dem
+   * Rahmen (plus ein Tag für das Nachtfenster über den Stichtag hinaus).
+   */
+  const times = makeTimes(Math.max(RAHMEN, opts.tripLengthDays ?? 0) + 1);
   const fc = constantForecast(times.length, opts.windKn, opts.windFromDeg);
   const snapshot = makeSnapshot({
     times,
@@ -171,16 +179,25 @@ function twoIslandSnapshot(opts: {
   return snapshot;
 }
 
+/**
+ * Der Törnrahmen aus der Konfiguration, in Törntagen — die Fälle unten prüfen
+ * KALENDER-Grenzen und müssen sie aus derselben Quelle lesen wie der Code.
+ */
+const RAHMEN = deadlineFrame({
+  ...makeSnapshot().params,
+  tripStartDate: TRIP_START,
+}).deadlineDay;
+
 describe('options — FR18 open / closes / closed', () => {
   it('gentle broad-reach wind, full forecast axis: option closes on the last startable day (FR18)', () => {
     // Axis covers the whole trip, so the calendar limit is computable.
-    // Zielmodell v3: der Törnrahmen sind elf Tage, und der Vertrag heisst
-    // "ein Törntag, eine Etappe". Der Plan zu diesem Ziel hat zwei Etappen
-    // (hin und zurück), der letzte Tag zum Auslaufen ist also Tag 10.
+    // Zielmodell v3: der Vertrag heisst "ein Törntag, eine Etappe". Der Plan zu
+    // diesem Ziel hat zwei Etappen (hin und zurück), der letzte Tag zum
+    // Auslaufen ist also der Stichtag minus eins.
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90 });
     const result = assessTargetOption('zielinsel', 'athen', snapshot);
     expect(result.state).toBe('schliesst');
-    expect(result.closesOnDay).toBe(10);
+    expect(result.closesOnDay).toBe(RAHMEN - 1);
   });
 
   it('feasible now, closing-day scan hits the horizon: offen-horizont with visible caveat', () => {
@@ -332,11 +349,11 @@ describe('ppr — FR19 predicted point of return', () => {
     const snapshot = twoIslandSnapshot({ windKn: 12, windFromDeg: 90, currentDay: 3 });
     const ppr = predictedPointOfReturn(snapshot, 'zielinsel');
     // Deadline semantics per review finding H3 (2026-08-02): arrival is due ON
-    // the return deadline date. Elf-Tage-Rahmen (Zielmodell v3, 2026-08-07):
-    // Stichtag ist Törntag 11, und der PoR hält zusätzlich den Puffertag in
-    // Reserve => Tag 10.
-    expect(ppr.effectiveDeadlineDay).toBe(10);
-    expect(ppr.latestReturnStartDay).toBe(10);
+    // the return deadline date, und der PoR hält zusätzlich den Puffertag in
+    // Reserve => Stichtag minus `bufferDays`.
+    const porTag = RAHMEN - snapshot.params.bufferDays;
+    expect(ppr.effectiveDeadlineDay).toBe(porTag);
+    expect(ppr.latestReturnStartDay).toBe(porTag);
     expect(ppr.remainingDistanceNm).toBe(20);
   });
 

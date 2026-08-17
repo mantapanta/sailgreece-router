@@ -74,6 +74,43 @@ describe('params schema — cross-field validation (AD-8: config editable withou
     ).toBe(false);
   });
 
+  /**
+   * DER FALL VOM 2026-08-12. Die Törnachse endete an Tag 11 (Di 18.8.), die
+   * vertragliche Rückgabe lag am Fr 21.8. — zwei Felder, ein Rahmen, und
+   * niemand hat sie verglichen. Die App plante folgerichtig einen Törn, der
+   * drei Tage vor der Rückgabe endete („die Routing App endet am Tag zwölf am
+   * Mittwoch, aber wir müssen ja Freitagabend 19:00 wieder in Marina Alimos
+   * sein"). Seit dem Check kann das nicht mehr stumm passieren.
+   */
+  it('rejects a return deadline beyond the displayed trip axis', () => {
+    expect(
+      ParamsSchema.safeParse({
+        tripStartDate: '2026-08-08',
+        returnDeadlineDate: '2026-08-21', // Törntag 14
+        tripLengthDays: 11,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts a deadline that lands exactly on the last trip day', () => {
+    const parsed = ParamsSchema.safeParse({
+      tripStartDate: '2026-08-08',
+      returnDeadlineDate: '2026-08-21',
+      tripLengthDays: 14,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('accepts shore days after the return — the axis may be longer', () => {
+    expect(
+      ParamsSchema.safeParse({
+        tripStartDate: '2026-08-08',
+        returnDeadlineDate: '2026-08-21',
+        tripLengthDays: 15,
+      }).success,
+    ).toBe(true);
+  });
+
   it('rejects a worst case that is not worse than the upwind threshold', () => {
     expect(
       ParamsSchema.safeParse({

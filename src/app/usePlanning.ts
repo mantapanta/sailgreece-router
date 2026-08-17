@@ -24,6 +24,7 @@ import { ROUTENBERATUNG } from '../domain/features.ts';
 import { isLateDeparture } from '../domain/scoring.ts';
 import {
   emptyManualPlan,
+  planMitRahmen,
   setDayStopover,
   setDayTarget,
   type DayTarget,
@@ -195,6 +196,24 @@ export function usePlanningEngine() {
     [bundle, trip.konzeptSchwellen],
   );
 
+  /**
+   * DER GESPEICHERTE PLAN, AUF DEN RAHMEN GEZOGEN (2026-08-12).
+   *
+   * Ein Plan wird einmal angelegt und danach nur bearbeitet; wächst der Rahmen
+   * später, fehlen ihm die neuen Tage. Gemessen mitten im Törn: der Rahmen ging
+   * von zwölf auf vierzehn Tage, der laufende Plan trug zwölf — Tag 13 und 14
+   * standen in der Achse, und `setDayTarget` lehnte sie ab, weil der Plan sie
+   * nicht kannte. Die Begründung der Ergänzung steht bei `planMitRahmen`.
+   *
+   * ABGELEITET, NICHT GESPEICHERT: der Reducer bleibt rechenfrei (AD-12), und
+   * geschrieben wird die Ergänzung erst, wenn der Skipper einen dieser Tage
+   * wirklich anfasst — dann trägt sie die nächste Plan-Aktion ohnehin mit.
+   */
+  const plan = useMemo(
+    () => (trip.plan && params ? planMitRahmen(trip.plan, params) : trip.plan),
+    [trip.plan, params],
+  );
+
   // Persisted overrides may stem from an older trip frame: clamp to
   // [1, tripLengthDays] so the engine never sees a day off the axis.
   const tripLengthDays = bundle?.params.tripLengthDays ?? DEFAULT_PARAMS.tripLengthDays;
@@ -213,7 +232,7 @@ export function usePlanningEngine() {
       trip: {
         currentDay,
         position: trip.position,
-        plan: trip.plan,
+        plan,
         departureHourByDay: trip.departureHourByDay,
         // Leer: die Empfehlungen rechnet die Bewertung selbst und legt sie in
         // ihren eigenen Snapshot (assess.withAbfahrtsempfehlungen). Sie hier
@@ -229,7 +248,7 @@ export function usePlanningEngine() {
     forecast,
     currentDay,
     trip.position,
-    trip.plan,
+    plan,
     trip.departureHourByDay,
     trip.stopHoursByDay,
   ]);
@@ -269,14 +288,14 @@ export function usePlanningEngine() {
   /** Current skipper pins, read off the persisted plan. */
   const pins: Pin[] = useMemo(
     () =>
-      (trip.plan?.days ?? [])
+      (plan?.days ?? [])
         .filter((d) => d.source === 'skipper')
         .map((d) => ({
           day: d.day,
           toIslandId: d.kind === 'stage' ? d.toIslandId : null,
           toPlaceId: d.kind === 'stage' ? d.toPlaceId : d.placeId,
         })),
-    [trip.plan],
+    [plan],
   );
 
   /**
@@ -342,10 +361,10 @@ export function usePlanningEngine() {
     (day: number, toIslandId: string | null, toPlaceId?: string): boolean => {
       if (!snapshot || !assessment?.currentIslandId) return false;
       const gehalten: Pin[] = [];
-      if (trip.plan) {
+      if (plan) {
         for (let d = snapshot.trip.currentDay; d < day; d++) {
           if (pins.some((p) => p.day === d)) continue;
-          const island = islandAtEndOfDay(trip.plan, d);
+          const island = islandAtEndOfDay(plan, d);
           // Ein Hafentag wird als "endet auf dieser Insel" gehalten — das
           // lässt ihn Hafentag bleiben, ohne ihn dazu zu zwingen.
           if (island) gehalten.push({ day: d, toIslandId: island, gehalten: true });
@@ -361,7 +380,7 @@ export function usePlanningEngine() {
       dispatch({ type: 'EDIT_STAGE', plan: solved.plan });
       return true;
     },
-    [snapshot, assessment?.currentIslandId, pins, trip.plan, dispatch],
+    [snapshot, assessment?.currentIslandId, pins, plan, dispatch],
   );
 
   /**
@@ -384,11 +403,11 @@ export function usePlanningEngine() {
    */
   const setStopover = useCallback(
     (day: number, islandId: string | null, placeId?: string): boolean => {
-      if (!snapshot || !trip.plan) return false;
+      if (!snapshot || !plan) return false;
       const change =
         islandId === null
-          ? planWithoutStopover(trip.plan, day, snapshot)
-          : planWithStopover(trip.plan, day, { islandId, placeId }, snapshot);
+          ? planWithoutStopover(plan, day, snapshot)
+          : planWithStopover(plan, day, { islandId, placeId }, snapshot);
       if (!change) return false;
       dispatch({
         type: 'SET_STOPOVER',
@@ -397,7 +416,7 @@ export function usePlanningEngine() {
       });
       return true;
     },
-    [snapshot, trip.plan, dispatch],
+    [snapshot, plan, dispatch],
   );
 
   /**
@@ -413,13 +432,13 @@ export function usePlanningEngine() {
    */
   const planDay = useCallback(
     (day: number, target: DayTarget): boolean => {
-      if (!snapshot || !trip.plan) return false;
-      const change = setDayTarget(trip.plan, day, target, snapshot);
+      if (!snapshot || !plan) return false;
+      const change = setDayTarget(plan, day, target, snapshot);
       if (!change) return false;
       dispatch({ type: 'PLAN_DAY', plan: change.plan, customLegs: change.customLegs });
       return true;
     },
-    [snapshot, trip.plan, dispatch],
+    [snapshot, plan, dispatch],
   );
 
   /**
@@ -429,13 +448,13 @@ export function usePlanningEngine() {
    */
   const planStopover = useCallback(
     (day: number, islandId: string | null, placeId?: string): boolean => {
-      if (!snapshot || !trip.plan) return false;
-      const change = setDayStopover(trip.plan, day, { islandId, placeId }, snapshot);
+      if (!snapshot || !plan) return false;
+      const change = setDayStopover(plan, day, { islandId, placeId }, snapshot);
       if (!change) return false;
       dispatch({ type: 'PLAN_DAY', plan: change.plan, customLegs: change.customLegs });
       return true;
     },
-    [snapshot, trip.plan, dispatch],
+    [snapshot, plan, dispatch],
   );
 
   /** Alles verwerfen und mit dem leeren Törn neu anfangen. */

@@ -1,6 +1,7 @@
 # sailgreece-router
 
-Törnplanungs-Web-App für den 12-Tage-Kykladen-Familientörn ab 8. August 2026.
+Törnplanungs-Web-App für den 14-Tage-Kykladen-Familientörn vom 8. bis 21. August
+2026 (Rückgabe in Marina Alimos am Freitag, 21.8., 19:00).
 Der Skipper plant den Törn **Insel zu Insel frei von Hand**; die App rechnet
 ihm jeden Tag vor — sie ersetzt sein Kopfrechnen, **nicht sein seemännisches
 Urteil** und seit dem 2026-08-08 auch nicht mehr seine Routenwahl.
@@ -537,17 +538,44 @@ es nicht gibt.
 | Feld | Bedeutung | Default |
 |---|---|---|
 | `tripStartDate` | Kalenderdatum von Törntag 1 (`YYYY-MM-DD`) | `2026-08-08` |
-| `tripLengthDays` | Törnlänge in Tagen (Tag 1 … Tag N) | `11` |
-| `returnDeadlineDate` | **DIE EINE Deadline** (AD-8/AD-9): Kalenderdatum der Rückgabe an der Basis. Alles andere — Stichtag in Törntagen, PoR-Reserve — wird daraus abgeleitet (`domain/time.ts` `deadlineFrame`). Nie eine zweite Deadline daneben pflegen. | `2026-08-18` |
-| `returnDeadlineHourAthens` | Uhrzeit der Rückgabe (Athen) — die Deadline ist ein Zeitpunkt, kein Tag | `18` |
+| `tripLengthDays` | Törnlänge in Tagen (Tag 1 … Tag N) — trägt die ANZEIGE (Tagesachse, Törnspanne); geplant wird gegen `returnDeadlineDate`. Der Stichtag muss innerhalb der Achse liegen, das Schema prüft es | `14` |
+| `returnDeadlineDate` | **DIE EINE Deadline** (AD-8/AD-9): Kalenderdatum der Rückgabe an der Basis. Alles andere — Stichtag in Törntagen, PoR-Reserve — wird daraus abgeleitet (`domain/time.ts` `deadlineFrame`). Nie eine zweite Deadline daneben pflegen. | `2026-08-21` |
+| `returnDeadlineHourAthens` | Uhrzeit der Rückgabe (Athen) — die Deadline ist ein Zeitpunkt, kein Tag | `19` |
 | `bufferDays` | PoR-Reserve in Tagen (FR19) — nur für den *Spätesten Umkehrtag*, nicht für die Plan-Gültigkeit | `1` |
 | `baseIslandId` / `basePlaceId` | Heimatbasis (Start/Ziel der Rückfallkette) | `athen` / `athen-alimos` |
 | `maxSnapNm` | Max. Distanz (sm), bis zu der ein GPS-Fix auf den nächsten Bibliotheksplatz gesnappt wird; weiter entfernte Fixes gelten als „außerhalb des Reviers" (sichtbare Meldung statt stummer Zuordnung) | `30` |
 | `nightLookaheadDays` | Wie viele Nächte ab heute für die Anzeige bewertet werden | `10` |
 
-Beispiel: `tripStartDate: 2026-08-08`, `returnDeadlineDate: 2026-08-18`
-⇒ Stichtag ist **Törntag 11**, und der Törn hat 11 Etappen — einen Törntag,
-eine Verbindung.
+Beispiel (der echte Törn): `tripStartDate: 2026-08-08` (Sa), `returnDeadlineDate:
+2026-08-21` (Fr) ⇒ Stichtag ist **Törntag 14**, und der Törn hat 14 Etappen —
+einen Törntag, eine Verbindung.
+
+> **Der Rahmen ist der Chartervertrag, keine Schätzung** (Skipper 2026-08-12).
+> Bis dahin standen hier elf Tage mit Stichtag Di 18.8. — die App plante damit
+> einen Törn, der drei Tage vor der Rückgabe endete („die Routing App endet am
+> Tag zwölf am Mittwoch, aber wir müssen ja Freitagabend 19:00 wieder in Marina
+> Alimos sein"). Weil `tripLengthDays` nur die Anzeige trug und
+> `returnDeadlineDate` allein geplant wurde, konnten beide auseinanderlaufen,
+> ohne dass etwas auffiel; seit 2026-08-12 verlangt das Schema, dass der
+> Stichtag innerhalb der angezeigten Achse liegt.
+
+**Was ein längerer Rahmen den Suchraum kostet.** Die Etappenzahl geht
+exponentiell in die Rundkurs-Aufzählung ein: über elf Etappen gibt es 5192
+wiederholungsfreie Runden, über vierzehn 85 452 — und in den Schichten mit
+Zweitanlauf Millionen statt Zehntausende. Drei Dinge hängen daran, alle im Code
+mit Messreihe belegt:
+
+* `roundTrips.HARD_CEILING` greift jenseits von elf Etappen. Die tragende
+  Schicht (jeder Törntag eine Etappe, keine Insel zweimal) bleibt vollständig;
+  die Notantwort-Schichten sind es nicht mehr.
+* Das **Etappen-Menü** fragt seit 2026-08-12 nicht mehr den aufgezählten Raum,
+  sondern die Suche selbst (`roundTrips.moeglicheNaechsteInseln`) — sonst
+  verliert es Ziele, die es gibt.
+* Ebenso der **Solver bei gesetzten Tagen**: der Pin führt die Aufzählung
+  (`roundTrips.roundTripLayersGefuehrt`), statt sie hinterher zu filtern.
+
+Wer den Rahmen wieder ändert, liest zuerst die Kommentare an diesen drei
+Stellen — dort stehen die Zahlen, nicht hier.
 
 > **Hafentage sind kein Parameter mehr** (Zielmodell v3, Skipper 2026-08-07).
 > `harbourDays`, `harbourDaysTargetMax` und `harbourDaysMax` sind entfallen.
