@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   emptyManualPlan,
   planIsEmpty,
+  planMitRahmen,
   setDayStopover,
   setDayTarget,
 } from '../manualPlan.ts';
@@ -69,6 +70,52 @@ describe('emptyManualPlan', () => {
     expect(planIsEmpty(plan)).toBe(true);
     // Der leere Törn muss durch dasselbe Schema wie jeder gespeicherte Plan.
     expect(PlanSchema.safeParse(plan).success).toBe(true);
+  });
+});
+
+/**
+ * DER RAHMEN WÄCHST MITTEN IM TÖRN (Skipper 2026-08-12: „die Routing App endet
+ * am Tag zwölf am Mittwoch, aber wir müssen ja Freitagabend 19:00 wieder in
+ * Marina Alimos sein"). Der laufende Plan trug zwölf Tage, der neue Rahmen
+ * vierzehn — und die zwei neuen Tage standen in der Achse, ohne planbar zu sein.
+ */
+describe('planMitRahmen — der gespeicherte Plan und ein gewachsener Rahmen', () => {
+  it('ohne die Ergänzung ist der neue Tag nicht planbar', () => {
+    const kurz = emptyManualPlan({ ...PARAMS, tripLengthDays: 3 });
+    // Das ist der Befund, nicht bloss eine Anzeigefrage: der Solver-freie
+    // Editor lehnt einen Tag ab, den der Plan nicht kennt.
+    expect(setDayTarget(kurz, 5, { islandId: 'alpha' }, snapshot())).toBeNull();
+  });
+
+  it('ergänzt die fehlenden Tage als Hafentage — und dann geht es', () => {
+    const kurz = emptyManualPlan({ ...PARAMS, tripLengthDays: 3 });
+    const lang = planMitRahmen(kurz, PARAMS);
+    expect(lang.days.map((d) => d.day)).toEqual([1, 2, 3, 4, 5]);
+    expect(lang.days.every((d) => d.kind === 'harbour')).toBe(true);
+    expect(PlanSchema.safeParse(lang).success).toBe(true);
+    expect(setDayTarget(lang, 5, { islandId: 'alpha' }, snapshot())).not.toBeNull();
+  });
+
+  it('die neuen Tage liegen dort, wo der Plan zuletzt steht — nicht an der Basis', () => {
+    const snap = snapshot();
+    const kurz = emptyManualPlan({ ...PARAMS, tripLengthDays: 3 });
+    // Tag 3 endet auf Alpha; die ergänzten Tage 4 und 5 bleiben dort liegen.
+    const mitZiel = setDayTarget(kurz, 3, { islandId: 'alpha' }, snap)!.plan;
+    const lang = planMitRahmen(mitZiel, PARAMS);
+    expect(islandAtEndOfDay(lang, 3)).toBe('alpha');
+    expect(islandAtEndOfDay(lang, 4)).toBe('alpha');
+    expect(islandAtEndOfDay(lang, 5)).toBe('alpha');
+  });
+
+  it('ist der Plan schon lang genug, kommt er UNVERÄNDERT zurück', () => {
+    const plan = emptyManualPlan(PARAMS);
+    expect(planMitRahmen(plan, PARAMS)).toBe(plan);
+  });
+
+  it('schneidet NICHTS ab — ein längerer Plan behält seine Tage', () => {
+    const lang = emptyManualPlan({ ...PARAMS, tripLengthDays: 8 });
+    const gezogen = planMitRahmen(lang, PARAMS);
+    expect(gezogen.days).toHaveLength(8);
   });
 });
 

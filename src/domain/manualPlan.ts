@@ -92,6 +92,55 @@ export function planIsEmpty(plan: Plan): boolean {
 }
 
 /**
+ * DEN GESPEICHERTEN PLAN AUF DEN RAHMEN ZIEHEN.
+ *
+ * Ein Plan wird EINMAL angelegt (`emptyManualPlan`) und danach nur noch
+ * bearbeitet — seine Tage stehen also so lange fest, wie er lebt. Wächst der
+ * Törnrahmen danach, fehlen ihm die neuen Tage, und das ist keine
+ * Schönheitsfrage: `setDayTarget` lehnt einen Tag ab, den der Plan nicht kennt
+ * (`return null`), die Tagesansicht findet keine Etappe, und die neuen Tage
+ * stehen in der Achse, ohne bebaubar zu sein.
+ *
+ * GEMESSEN AM 2026-08-12: der Rahmen wuchs mitten im Törn von zwölf auf
+ * vierzehn Tage (Rückgabe Fr 21.8. statt Mi 19.8.), und der laufende Plan trug
+ * zwölf Tage. Tag 13 und 14 waren sichtbar und nicht planbar.
+ *
+ * Die fehlenden Tage kommen als HAFENTAGE dort an, wo der Plan zuletzt steht —
+ * die einzige Annahme, die nichts erfindet: das Boot bleibt liegen, bis der
+ * Skipper etwas anderes sagt. Ein Ziel zu raten wäre ein Vorschlag, und
+ * Vorschläge macht die Handplanung nicht.
+ *
+ * NUR ANFÜGEN, NIE ABSCHNEIDEN. Ein Plan, der über den Rahmen hinausreicht,
+ * behält seine Tage: sie zu löschen wäre stiller Datenverlust an der Arbeit des
+ * Skippers, und der Rahmen ist eine Konfiguration, kein Urteil über sie.
+ *
+ * Der Plan kommt UNVERÄNDERT (identisch) zurück, wenn nichts fehlt — damit
+ * hängt an der Normalisierung kein neuer Render und keine neue Speicherung.
+ */
+export function planMitRahmen(plan: Plan, params: Params): Plan {
+  const vorhanden = new Set(plan.days.map((d) => d.day));
+  const fehlende: number[] = [];
+  for (let day = 1; day <= params.tripLengthDays; day++) {
+    if (!vorhanden.has(day)) fehlende.push(day);
+  }
+  if (fehlende.length === 0) return plan;
+
+  const days = [...plan.days];
+  for (const day of fehlende) {
+    // Wo steht der Plan am Vorabend? `islandAtEndOfDay` liest das aus den
+    // schon vorhandenen Tagen; für einen Tag vor dem ersten ist es die Basis.
+    const davor = islandAtEndOfDay({ ...plan, days }, day - 1);
+    days.push({
+      kind: 'harbour',
+      day,
+      islandId: davor ?? params.baseIslandId,
+      source: 'skipper',
+    });
+  }
+  return { ...plan, days: days.sort((a, b) => a.day - b.day) };
+}
+
+/**
  * Die KÜRZESTE BEKANNTE KETTE zwischen zwei Inseln — Dijkstra über die
  * Etappen-Bibliothek (Gegenrichtungen eingeschlossen, Gewicht = Distanz).
  *
